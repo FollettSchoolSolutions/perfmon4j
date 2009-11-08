@@ -1,0 +1,53 @@
+<Perfmon4JConfig enabled='true'>
+	<appender name='webrequest-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+
+	<appender name='snapshot-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
+	</appender>
+
+	<monitor name='WebRequest'>
+		<appender name='webrequest-appender' pattern="."/> 
+	</monitor>
+
+	<snapShotMonitor name='JVMSnapShot' className='org.perfmon4j.java.management.JVMSnapShot'>
+			<appender name='snapshot-appender'/>
+	</snapShotMonitor>
+	
+	<snapShotMonitor name='Composite Garbage Collector' className='org.perfmon4j.java.management.GarbageCollectorSnapShot'>
+			<appender name='snapshot-appender'/>
+	</snapShotMonitor>
+
+	<snapShotMonitor name='Composite Memory Pool' 
+		className='org.perfmon4j.java.management.MemoryPoolSnapShot'>
+			<appender name='snapshot-appender'/>
+	</snapShotMonitor>
+
+	<snapShotMonitor name='TomcatRequestProcessor' 
+		className='org.perfmon4j.extras.tomcat55.GlobalRequestProcessorMonitorImpl'>
+			<appender name='snapshot-appender'/>
+<!--	Uncomment if you want to monitor a single tomcat thread pool			
+			<attribute name='instanceName'>http-8080</attribute>
+-->
+	</snapShotMonitor>
+
+	<snapShotMonitor name='TomcatThreadPool' 
+		className='org.perfmon4j.extras.tomcat55.ThreadPoolMonitorImpl'>
+			<appender name='snapshot-appender'/>
+<!--	Uncomment if you want to monitor a single tomcat thread pool			
+			<attribute name='instanceName'>http-8080</attribute>
+-->
+	</snapShotMonitor>
+
+	<!--
+	<snapShotMonitor name='PerfmonInstrumentation' className='org.perfmon4j.instrument.InstrumentationMonitor'>
+			<appender name='snapshot-appender'/>
+	</snapShotMonitor>
+
+
+	<threadTrace monitorName="WebRequest">
+		<appender name='high-res'/> 
+	</threadTrace>
+	-->
+</Perfmon4JConfig>
