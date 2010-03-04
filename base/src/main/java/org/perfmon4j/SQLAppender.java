@@ -65,6 +65,7 @@ public abstract class SQLAppender extends Appender {
 		} catch(SQLException ex) { 
 			resetConnection();
 			logger.logError("Error in output data", ex);
+			ex.printStackTrace();
 		} finally {
 			if (conn != null) {
 				releaseConnection(conn);
@@ -179,8 +180,12 @@ public abstract class SQLAppender extends Appender {
 			if (calc != null) {
 				medianResult = calc.getMedian();
 			}
-			if (medianResult != null && (medianResult.getOverflowFlag() == 0)) {
-				medianDuration = new Double(medianResult.getResult());
+			if (medianResult != null && medianResult.getOverflowFlag() == 0) {
+				Double d = medianResult.getResult();
+				if (d == null) {
+					d = Double.valueOf(0.0);
+				}
+				medianDuration = d;
 			}
 			insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS());
 

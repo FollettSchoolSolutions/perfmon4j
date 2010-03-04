@@ -21,8 +21,12 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
+
+import javax.sql.DataSource;
 
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
@@ -67,12 +71,25 @@ public class JDBCSQLAppender extends SQLAppender {
     	if (conn == null) {
     		try {
     			if (driverClass != null) {
-    				Class.forName(driverClass);
+    				Driver driver = (Driver)Class.forName(driverClass, true, PerfMon.getClassLoader()).newInstance();
+    				Properties credentials = new Properties();
+    				if (userName != null) {
+    					credentials.setProperty("user", userName);
+    				}
+    				if (password != null) {
+    					credentials.setProperty("password", password);
+    				}
+    				conn = driver.connect(jdbcURL, credentials);
+    			} else {
+    				conn = DriverManager.getConnection(jdbcURL, userName, password);
     			}
-    			conn = DriverManager.getConnection(jdbcURL, userName, password);
     			logger.logDebug("Created SQL Connection");
 			} catch (ClassNotFoundException e) {
 				throw new SQLException("Unable to load driver class: " + driverClass, e);
+			} catch (IllegalAccessException aec) {
+				throw new SQLException("Unable to access driver class: " + driverClass, aec);
+			} catch (InstantiationException e) {
+				throw new SQLException("Unable to instantiate driver class: " + driverClass, e);
 			}
     	}
     	return conn;
