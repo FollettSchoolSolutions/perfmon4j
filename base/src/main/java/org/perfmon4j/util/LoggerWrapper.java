@@ -230,7 +230,7 @@ class LoggerWrapper implements Logger {
 		try {
 			Logger delgate = getDelegate();
 			if (delgate != null) {
-				delgate.logDebug(msg);
+				delgate.logDebug(msg, th);
 				wasOutput = true;
 			}
 		} catch (Exception ex) {
@@ -265,7 +265,7 @@ class LoggerWrapper implements Logger {
 		try {
 			Logger delgate = getDelegate();
 			if (delgate != null) {
-				delgate.logError(msg);
+				delgate.logError(msg, th);
 				wasOutput = true;
 			}
 		} catch (Exception ex) {
@@ -300,7 +300,7 @@ class LoggerWrapper implements Logger {
 		try {
 			Logger delgate = getDelegate();
 			if (delgate != null) {
-				delgate.logInfo(msg);
+				delgate.logInfo(msg, th);
 				wasOutput = true;
 			}
 		} catch (Exception ex) {
@@ -335,7 +335,7 @@ class LoggerWrapper implements Logger {
 		try {
 			Logger delgate = getDelegate();
 			if (delgate != null) {
-				delgate.logWarn(msg);
+				delgate.logWarn(msg, th);
 				wasOutput = true;
 			}
 		} catch (Exception ex) {
