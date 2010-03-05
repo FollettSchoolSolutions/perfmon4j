@@ -26,8 +26,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-import javax.sql.DataSource;
-
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -41,19 +39,11 @@ public class JDBCSQLAppender extends SQLAppender {
 	private String jdbcURL = null;
 	private String userName = null;
 	private String password = null;
-	
+
 	public JDBCSQLAppender(AppenderID id) {
 		super(id);
 	}
 	
-	public JDBCSQLAppender(long intervalMillis) {
-		this(getAppenderID(intervalMillis));
-	}
-	
-    public static AppenderID getAppenderID(long intervalMillis) {
-        return Appender.getAppenderID(JDBCSQLAppender.class.getName(), intervalMillis);
-    }	
-
     public void deInit() {
     	if (conn != null) {
     		logger.logDebug("Closing connection");
@@ -137,7 +127,7 @@ public class JDBCSQLAppender extends SQLAppender {
 	}
 	
 	public static void main(String args[]) {
-		JDBCSQLAppender appender = new JDBCSQLAppender(1000);
+		JDBCSQLAppender appender = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()));
 		appender.setDriverClass("net.sourceforge.jtds.jdbc.Driver");
 		appender.setJdbcURL("jdbc:jtds:sqlserver:/localhost/perfmon4j");
 		appender.setUserName("sa");

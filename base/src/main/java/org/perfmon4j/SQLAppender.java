@@ -24,6 +24,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 
@@ -60,7 +61,7 @@ public abstract class SQLAppender extends Appender {
 			if (data instanceof IntervalData) {
 				outputIntervalData(conn, (IntervalData)data);
 			} else {
-				logger.logWarn("Data type not supported by appender: " + data.getClass().getName());
+				logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
 			}
 		} catch(SQLException ex) { 
 			resetConnection();
@@ -106,10 +107,10 @@ public abstract class SQLAppender extends Appender {
 	private final static String INSERT_INTERVAL_PS = "INSERT INTO %sP4JIntervalData (CategoryID, StartTime, EndTime, " +
 		"TotalHits, TotalCompletions, MaxActiveThreads, MaxActiveThreadsSet, MaxDuration, " +
 		"MaxDurationSet, MinDuration, MinDurationSet, averageDuration, standardDeviation,  " +
-		"normalizedThroughputPerMinute, medianDuration) VALUES(?, ?, ?, ?, ?, ?, ?, " +
-		"?, ?, ?, ?, ?, ?, ?, ?)";
-	private final static String INSERT_THRESHOLD_PS = "INSERT INTO %sP4JIntervalThreshold (CategoryID, StartTime, EndTime, ThresholdMillis, " +
-		"CompletionsOver, PercentOver) VALUES(?, ?, ?, ?, ?, ?)";
+		"normalizedThroughputPerMinute, durationSum, durationSumOfSquares, medianDuration) VALUES(?, ?, ?, ?, ?, ?, ?, " +
+		"?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	private final static String INSERT_THRESHOLD_PS = "INSERT INTO %sP4JIntervalThreshold (intervalID, ThresholdMillis, " +
+		"CompletionsOver, PercentOver) VALUES(?, ?, ?, ?)";
 
 	private long getOrCreateCategory(Connection conn, String categoryName) throws SQLException {
 		long result = 0;
@@ -125,11 +126,11 @@ public abstract class SQLAppender extends Appender {
 				JDBCHelper.closeNoThrow(rs);
 				rs = null;
 				
-				stmtInsert = conn.prepareStatement(getInsertCategoryPS());
+				stmtInsert = conn.prepareStatement(getInsertCategoryPS(), Statement.RETURN_GENERATED_KEYS);
 				stmtInsert.setString(1, categoryName);
 				stmtInsert.execute();
 				
-				rs = stmtQuery.executeQuery();
+				rs = stmtInsert.getGeneratedKeys();
 				rs.next();
 			}
 			result = rs.getLong(1);
@@ -155,6 +156,7 @@ public abstract class SQLAppender extends Appender {
 		
 		PreparedStatement insertIntervalStmt = null;
 		PreparedStatement insertThresholdStmt = null;
+		ResultSet generatedKeys = null;
 		try {
 			if (autoCommit) {
 				conn.setAutoCommit(false);
@@ -173,6 +175,8 @@ public abstract class SQLAppender extends Appender {
 			double averageDuration = data.getAverageDuration();
 			double standardDeviation = data.getStdDeviation();
 			double normalizedThroughputPerMinute = data.getThroughputPerMinute();
+			long durationSum = data.getTotalDuration();
+			long durationSumOfSquares = data.getSumOfSquares();
 			Double medianDuration = null;
 			
 			MedianCalculator calc = data.getMedianCalculator();
@@ -187,7 +191,7 @@ public abstract class SQLAppender extends Appender {
 				}
 				medianDuration = d;
 			}
-			insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS());
+			insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), Statement.RETURN_GENERATED_KEYS);
 
 			insertIntervalStmt.setLong(1, categoryID);
 			insertIntervalStmt.setTimestamp(2, new Timestamp(startTime));
@@ -203,9 +207,14 @@ public abstract class SQLAppender extends Appender {
 			insertIntervalStmt.setDouble(12, averageDuration);
 			insertIntervalStmt.setDouble(13, standardDeviation);
 			insertIntervalStmt.setDouble(14, normalizedThroughputPerMinute);
-			insertIntervalStmt.setObject(15, medianDuration, Types.DOUBLE);
+			insertIntervalStmt.setLong(15, durationSum);
+			insertIntervalStmt.setLong(16, durationSumOfSquares);
+			insertIntervalStmt.setObject(17, medianDuration, Types.DOUBLE);
 		
 			insertIntervalStmt.execute();
+			generatedKeys = insertIntervalStmt.getGeneratedKeys();
+			generatedKeys.next();
+			long intervalID = generatedKeys.getLong(1);
 			
 			// Now write out the thresholds...
 			ThresholdCalculator thCalc = data.getThresholdCalculator();
@@ -216,12 +225,10 @@ public abstract class SQLAppender extends Appender {
 				for (int i = 0; i < thresholds.length; i++) {
 					ThresholdResult thResult = thCalc.getResult(thresholds[i]);
 					
-					insertThresholdStmt.setLong(1, categoryID);
-					insertThresholdStmt.setTimestamp(2, new Timestamp(startTime));
-					insertThresholdStmt.setTimestamp(3, new Timestamp(endTime));
-					insertThresholdStmt.setLong(4, thresholds[i]);
-					insertThresholdStmt.setLong(5, thResult.getCountOverThreshold());
-					insertThresholdStmt.setFloat(6, thResult.getPercentOverThreshold());
+					insertThresholdStmt.setLong(1, intervalID);
+					insertThresholdStmt.setLong(2, thresholds[i]);
+					insertThresholdStmt.setLong(3, thResult.getCountOverThreshold());
+					insertThresholdStmt.setFloat(4, thResult.getPercentOverThreshold());
 					
 					insertThresholdStmt.execute();
 				}
@@ -231,6 +238,7 @@ public abstract class SQLAppender extends Appender {
 			throw se;
 		} finally {
 			try {
+				JDBCHelper.closeNoThrow(generatedKeys);
 				JDBCHelper.closeNoThrow(insertThresholdStmt);
 				JDBCHelper.closeNoThrow(insertIntervalStmt);
 				if (doRollback) {

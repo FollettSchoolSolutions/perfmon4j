@@ -31,7 +31,10 @@ import junit.textui.TestRunner;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.JDBCHelper;
+import org.perfmon4j.util.MedianCalculator;
+import org.perfmon4j.util.ThresholdCalculator;
 
 /* todo: this test needs a LOT of work!!! */
 public class JDBCSQLAppenderTest extends TestCase {
@@ -41,39 +44,40 @@ public class JDBCSQLAppenderTest extends TestCase {
     
     
     private final String DERBY_CREATE_CATEGORY = "CREATE TABLE mydb.P4JCategory(\r\n" +
-    	"categoryID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-    	"categoryName varchar(256) NOT NULL\r\n" +
+    	"CategoryID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
+    	"CategoryName varchar(450) NOT NULL\r\n" +
     	")";
 
     private final String DERBY_DROP_INTERVAL_DATA = "DROP TABLE mydb.P4JIntervalData";
     
     private final String DERBY_CREATE_INTERVAL_DATA = "CREATE TABLE mydb.P4JIntervalData (\r\n" +
-		"categoryID INT NOT NULL,\r\n" +
-		"startTime TIMESTAMP NOT NULL,\r\n" +
-		"endTime TIMESTAMP NOT NULL,\r\n" +
-		"totalHits BIGINT NOT NULL,\r\n" +
-		"totalCompletions BIGINT NOT NULL,\r\n" +
-		"maxActiveThreads BIGINT NOT NULL,\r\n" +
-		"maxActiveThreadsSet TIMESTAMP,\r\n" +
-		"maxDuration int NOT NULL,\r\n" +
-		"maxDurationSet TIMESTAMP,\r\n" +
-		"minDuration int NOT NULL,\r\n" +
-		"minDurationSet TIMESTAMP,\r\n" +
-		"averageDuration DECIMAL(18, 2) NOT NULL,\r\n" +
-		"medianDuration  DECIMAL(18, 2),\r\n " +
-		"standardDeviation DECIMAL(18, 2) NOT NULL,\r\n" +
-		"normalizedThroughputPerMinute DECIMAL(18, 2) NOT NULL\r\n" +
+		"CategoryID INT NOT NULL,\r\n" +
+		"IntervalID BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY," +
+		"StartTime TIMESTAMP NOT NULL,\r\n" +
+		"EndTime TIMESTAMP NOT NULL,\r\n" +
+		"TotalHits BIGINT NOT NULL,\r\n" +
+		"TotalCompletions BIGINT NOT NULL,\r\n" +
+		"MaxActiveThreads BIGINT NOT NULL,\r\n" +
+		"MaxActiveThreadsSet TIMESTAMP,\r\n" +
+		"MaxDuration int NOT NULL,\r\n" +
+		"MaxDurationSet TIMESTAMP,\r\n" +
+		"MinDuration int NOT NULL,\r\n" +
+		"MinDurationSet TIMESTAMP,\r\n" +
+		"AverageDuration DECIMAL(18, 2) NOT NULL,\r\n" +
+		"MedianDuration  DECIMAL(18, 2),\r\n " +
+		"StandardDeviation DECIMAL(18, 2) NOT NULL,\r\n" +
+		"NormalizedThroughputPerMinute DECIMAL(18, 2) NOT NULL," +
+		"DurationSum BIGINT NOT NULL," +
+		"DurationSumOfSquares BIGINT NOT NULL\r\n" +
 		")";
 
     private final String DERBY_DROP_THRESHOLD = "DROP TABLE mydb.P4JIntervalThreshold";
     
     private final String DERBY_CREATE_THRESHOLD = "CREATE TABLE mydb.P4JIntervalThreshold (\r\n" +
-		"categoryID INT NOT NULL,\r\n" +
-		"startTime TIMESTAMP NOT NULL,\r\n" +
-		"endTime TIMESTAMP NOT NULL,\r\n" +
-		"thresholdMillis INT NOT NULL,\r\n" +
-		"completionsOver BIGINT NOT NULL,\r\n" +
-		"percentOver DECIMAL(5, 2) NOT NULL\r\n" +
+		"IntervalID BIGINT NOT NULL,\r\n" +
+		"ThresholdMillis INT NOT NULL,\r\n" +
+		"CompletionsOver BIGINT NOT NULL,\r\n" +
+		"PercentOver DECIMAL(5, 2) NOT NULL\r\n" +
 		")";
     
     
@@ -93,7 +97,7 @@ public class JDBCSQLAppenderTest extends TestCase {
     public void setUp() throws Exception {
     	super.setUp();
     	
-    	appender = new JDBCSQLAppender(1000);
+    	appender = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()));
     	appender.setDbSchema("mydb");
 		appender.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver");
 		appender.setJdbcURL("jdbc:derby:memory:derbyDB;create=true");
@@ -135,9 +139,23 @@ public class JDBCSQLAppenderTest extends TestCase {
     	super.tearDown();
     }
     
-    
     private IntervalData createIntervalData(String category, long startTime, long duration) {
-		IntervalData d = new IntervalData(PerfMon.getMonitor(category), startTime);
+    	return createIntervalData(category, startTime, duration, null, null);
+    }
+    
+    private IntervalData createIntervalData(String category, long startTime, long duration, String medianConfig, String thresholdConfig) {
+		MedianCalculator mCalc = null;
+		ThresholdCalculator tCalc = null;
+    	
+		if (medianConfig != null) {
+			mCalc = new MedianCalculator(medianConfig);
+		}
+		
+		if (thresholdConfig != null) {
+			tCalc = new ThresholdCalculator(thresholdConfig);
+		}
+    	
+    	IntervalData d = new IntervalData(PerfMon.getMonitor(category), startTime, mCalc, tCalc);
 		d.setTimeStop(startTime + duration);
 		
 		return d;
@@ -167,6 +185,53 @@ public class JDBCSQLAppenderTest extends TestCase {
 		assertEquals("Should have 2 interval rows", 2, JDBCHelper.getQueryCount(conn, countInterval));
     }
 
+    public void testAddThreshold() throws Exception {
+    	long now = System.currentTimeMillis();
+    	
+    	Connection conn = appender.getConnection();
+    	String countThreshold = "SELECT COUNT(*) " +
+    			"FROM mydb.P4JIntervalThreshold t " +
+    			"JOIN mydb.P4JIntervalData d ON d.intervalID = t.intervalID";
+    	
+		appender.outputData(createIntervalData("a.b.c", now, 1000, null, "100, 1000"));
+
+		assertEquals("Should have added 2 thresholdRows", 2, JDBCHelper.getQueryCount(conn, countThreshold));
+    }
+
+    public void testDurationSum() throws Exception {
+    	long now = System.currentTimeMillis();
+    	
+    	Connection conn = appender.getConnection();
+    	String count = "SELECT COUNT(*) " +
+    			"FROM mydb.P4JIntervalData t " +
+    			"WHERE t.DurationSum = 100";
+    	
+    	IntervalData d = new IntervalData(PerfMon.getMonitor("a.b.c"), now);
+    	d.start(0, now);
+    	d.stop(100, 10000, now);
+		d.setTimeStop(now + 1000);
+    	appender.outputData(d);
+		
+		assertEquals("Should have record with durationSum", 1, JDBCHelper.getQueryCount(conn, count));
+    }    
+
+    public void testDurationSumOfSquares() throws Exception {
+    	long now = System.currentTimeMillis();
+    	
+    	Connection conn = appender.getConnection();
+    	String count = "SELECT COUNT(*) " +
+    			"FROM mydb.P4JIntervalData t " +
+    			"WHERE t.DurationSumOfSquares = 10000";
+    	
+    	IntervalData d = new IntervalData(PerfMon.getMonitor("a.b.c"), now);
+    	d.start(0, now);
+    	d.stop(100, 10000, now);
+		d.setTimeStop(now + 1000);
+    	appender.outputData(d);
+		
+		assertEquals("Should have record with durationSumOfSquares", 1, JDBCHelper.getQueryCount(conn, count));
+    }    
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
