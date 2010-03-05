@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,14 +14,13 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
 
 package org.perfmon4j;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
@@ -36,7 +35,6 @@ import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
-import org.perfmon4j.util.MiscHelper;
 
 
 public class PerfMonTest extends TestCase {
@@ -60,9 +58,12 @@ public class PerfMonTest extends TestCase {
         super.tearDown();
     }
     
+    private static final AppenderID bogusAppenderID = AppenderID.getAppenderID(BogusAppender.class.getName());
+    
+    
 /*----------------------------------------------------------------------------*/
     public void testSimple() throws Exception {
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         final String MONITOR_NAME = "testSimple";
         PerfMon perfMon = PerfMon.getMonitor(MONITOR_NAME);
@@ -83,7 +84,7 @@ public class PerfMonTest extends TestCase {
     
 /*----------------------------------------------------------------------------*/
     public void testAbort() throws Exception {
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         final String MONITOR_NAME = "testAbort";
         PerfMon perfMon = PerfMon.getMonitor(MONITOR_NAME);
@@ -106,7 +107,7 @@ public class PerfMonTest extends TestCase {
     
 /*----------------------------------------------------------------------------*/
     public void testNestedAbort() throws Exception {
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         final String MONITOR_NAME = "testNestedAbort";
         PerfMon perfMon = PerfMon.getMonitor(MONITOR_NAME);
@@ -127,7 +128,7 @@ public class PerfMonTest extends TestCase {
 
 /*----------------------------------------------------------------------------*/    
     public void testHirearchyAbort() throws Exception {
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         final String PARENT_MONITOR_NAME = "testHirearchyAbort";
         final String CHILD_MONITOR_NAME = PARENT_MONITOR_NAME + ".a";
@@ -149,7 +150,7 @@ public class PerfMonTest extends TestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testNestedCallsAreIgnored() throws Exception {
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         final String MONITOR_NAME = "testNestedCallsAreIgnored";
         
@@ -165,7 +166,7 @@ public class PerfMonTest extends TestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testSimpleHirearchy() throws Exception {
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         final String GRANDPARENT_MONITOR_NAME = "testSimpleHirearchy";
         final String PARENT_MONITOR_NAME = "testSimpleHirearchy.parent";
@@ -207,7 +208,7 @@ public class PerfMonTest extends TestCase {
 
 /*----------------------------------------------------------------------------*/    
     public void testActiveCount() throws Exception {
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         final String MONITOR_KEY = "testActiveCount";
         final int NUM_THREADS = 10;
@@ -225,7 +226,7 @@ public class PerfMonTest extends TestCase {
 /*----------------------------------------------------------------------------*/  
     public void testDurationIsThreadSafe() throws Exception {
         final String MONITOR_KEY = "testDurationIsThreadSafe";
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         TestPerfMonThread.resetLatch();
         
@@ -647,7 +648,7 @@ public class PerfMonTest extends TestCase {
         PerfMon mon = PerfMon.getMonitor(MON_NAME);
         
         assertFalse("Monitor is not active", mon.isActive());
-        mon.addAppender(BogusAppender.getAppenderID());
+        mon.addAppender(bogusAppenderID);
         assertTrue("Monitor is active", mon.isActive());
 
         PerfMonTimer timer = PerfMonTimer.start(MON_NAME);
@@ -660,7 +661,7 @@ public class PerfMonTest extends TestCase {
         
         
         // Make inactive and verify that the counters are reset...
-        mon.removeAppender(BogusAppender.getAppenderID());
+        mon.removeAppender(bogusAppenderID);
         assertFalse("Monitor is no longer active", mon.isActive());
         
         assertEquals("MaxDuration", 0, mon.getMaxDuration());
@@ -676,7 +677,7 @@ public class PerfMonTest extends TestCase {
             ,1, mon.getActiveThreadCount());
         
         // Add and appender and make the monitor active...
-        mon.addAppender(BogusAppender.getAppenderID());
+        mon.addAppender(bogusAppenderID);
         
         // The outstanding timer should update the active count, but none
         // of the other timers since the timer was started before it was active
@@ -989,7 +990,7 @@ public class PerfMonTest extends TestCase {
         PerfMon perfMon = PerfMon.getMonitor(MONITOR_NAME);
         int start = perfMon.getNumPerfMonTasks();
         
-        Appender.AppenderID id = TestAppender.getAppenderID();
+        Appender.AppenderID id = TestAppender.getAppenderID(1000);
         perfMon.addAppender(id);
         assertEquals("Number of perfmon data elements",start + 1, perfMon.getNumPerfMonTasks());
         
@@ -1001,12 +1002,8 @@ public class PerfMonTest extends TestCase {
     private static class TestAppender extends Appender {
         private List<PerfMonData> output = new Vector<PerfMonData>();
 
-        public static AppenderID getAppenderID() {
-            return Appender.getAppenderID(TestAppender.class.getName());
-        }
-        
         public static AppenderID getAppenderID(long intervalMillis) {
-            return Appender.getAppenderID(TestAppender.class.getName(), intervalMillis);
+        	return AppenderID.getAppenderID(TestAppender.class.getName(), intervalMillis);
         }
         
         public TestAppender(AppenderID id) {
@@ -1022,15 +1019,9 @@ public class PerfMonTest extends TestCase {
     private static class BogusAppender extends Appender {
         static int dataStopCount = 0;
         
-        public static AppenderID getAppenderID() {
-            return Appender.getAppenderID(BogusAppender.class.getName());
-        }
-        
         public BogusAppender(AppenderID id) {
             super(id);
         }
-        
-        
         
         public void outputData(@SuppressWarnings("unused") PerfMonData data) {
         }
@@ -1054,7 +1045,7 @@ public class PerfMonTest extends TestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testDuration() throws Exception {
-        PerfMon.getRootMonitor().addAppender(BogusAppender.getAppenderID());
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID);
         
         final String GRANDPARENT_MONITOR_NAME = "testDuration";
         final String PARENT_MONITOR_NAME = "testDuration.parent";
@@ -1105,7 +1096,7 @@ public class PerfMonTest extends TestCase {
         
         if (useMon && x == 0) {
             PerfMon mon = PerfMon.getMonitor("simple.test.a");
-            mon.addAppender(TestAppender.getAppenderID());
+            mon.addAppender(TestAppender.getAppenderID(1000));
         }
         
         if (useMon) {

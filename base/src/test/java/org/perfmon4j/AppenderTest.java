@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -25,6 +25,8 @@ import java.util.Properties;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.Appender.AppenderID;
+
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -39,9 +41,9 @@ public class AppenderTest extends TestCase {
 
 /*----------------------------------------------------------------------------*/
     public void testAppenderClassNameHashCode() throws Exception {
-        Appender.AppenderID a1 = Appender.getAppenderID("a");
-        Appender.AppenderID a2 = Appender.getAppenderID("a");
-        Appender.AppenderID b = Appender.getAppenderID("b");
+        Appender.AppenderID a1 = AppenderID.getAppenderID("a");
+        Appender.AppenderID a2 = AppenderID.getAppenderID("a");
+        Appender.AppenderID b = AppenderID.getAppenderID("b");
         
         assertTrue("Hash codes for items with same className should match", a1.hashCode() == a2.hashCode());
         assertTrue("AppenderID with same className should be equal", a1.equals(a2));
@@ -51,9 +53,9 @@ public class AppenderTest extends TestCase {
     
 /*----------------------------------------------------------------------------*/
     public void testAppenderIntervalHashCode() throws Exception {
-        Appender.AppenderID a1 = Appender.getAppenderID("a", 1);
-        Appender.AppenderID a2 = Appender.getAppenderID("a", 1);
-        Appender.AppenderID b = Appender.getAppenderID("a", 2);
+        Appender.AppenderID a1 = AppenderID.getAppenderID("a", 1);
+        Appender.AppenderID a2 = AppenderID.getAppenderID("a", 1);
+        Appender.AppenderID b = AppenderID.getAppenderID("a", 2);
         
         assertTrue("Hash codes for items with same className and interval should match", a1.hashCode() == a2.hashCode());
         assertTrue("AppenderID with same className and interval should be equal", a1.equals(a2));
@@ -82,9 +84,9 @@ public class AppenderTest extends TestCase {
         attrB.setProperty("E", "F");
         attrB.setProperty("G", "H");
         
-        Appender.AppenderID a1 = Appender.getAppenderID("a", 1, attrA1);
-        Appender.AppenderID a2 = Appender.getAppenderID("a", 1, attrA2);
-        Appender.AppenderID b = Appender.getAppenderID("a", 1, attrB);
+        Appender.AppenderID a1 = AppenderID.getAppenderID("a", 1, attrA1);
+        Appender.AppenderID a2 = AppenderID.getAppenderID("a", 1, attrA2);
+        Appender.AppenderID b = AppenderID.getAppenderID("a", 1, attrB);
         
         assertTrue("Hash codes for items with same className, interval and attributes should match", a1.hashCode() == a2.hashCode());
         assertTrue("AppenderID with same className, interval and attributes should be equal", a1.equals(a2));

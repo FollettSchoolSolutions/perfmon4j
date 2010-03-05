@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,13 +14,12 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
 package org.perfmon4j;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,6 +30,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -63,7 +63,7 @@ public class PerfMonConfiguration {
     public void defineAppender(String name, String className, 
         String interval, Properties attributes) {
         if (appenderMap.get(name) == null) {
-            appenderMap.put(name, Appender.getAppenderID(className, convertIntervalStringToMillis(interval), attributes));
+            appenderMap.put(name, AppenderID.getAppenderID(className, convertIntervalStringToMillis(interval), attributes));
         }
     }
     

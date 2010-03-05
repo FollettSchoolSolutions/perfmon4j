@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -63,7 +63,7 @@ public class SnapShotManagerTest extends TestCase {
         SnapShotMonitorID monitorID = SnapShotMonitor.getSnapShotMonitorID(TestSnapShotMonitor.class.getName(), "1");
         TestSnapShotMonitor monitor = (TestSnapShotMonitor)SnapShotManager.getOrCreateMonitor(monitorID);
         
-        AppenderID appenderID = Appender.getAppenderID(TestAppender.class.getName(), 100);
+        AppenderID appenderID = AppenderID.getAppenderID(TestAppender.class.getName(), 100);
         monitor.addAppender(appenderID);
         
         Thread.sleep(350);
@@ -88,8 +88,8 @@ public class SnapShotManagerTest extends TestCase {
         SnapShotMonitorID monitorID = SnapShotMonitor.getSnapShotMonitorID(TestSnapShotMonitor.class.getName(), "1");
         TestSnapShotMonitor monitor = (TestSnapShotMonitor)SnapShotManager.getOrCreateMonitor(monitorID);
         
-        AppenderID appenderID1 = Appender.getAppenderID(TestAppender.class.getName(), 100);
-        AppenderID appenderID2 = Appender.getAppenderID(TestAppender.class.getName(), 200);
+        AppenderID appenderID1 = AppenderID.getAppenderID(TestAppender.class.getName(), 100);
+        AppenderID appenderID2 = AppenderID.getAppenderID(TestAppender.class.getName(), 200);
         
         monitor.addAppender(appenderID1);
         monitor.addAppender(appenderID2);
@@ -123,7 +123,7 @@ public class SnapShotManagerTest extends TestCase {
         SnapShotMonitorID monitorID = SnapShotMonitor.getSnapShotMonitorID(TestSnapShotMonitor.class.getName(), "1");
         TestSnapShotMonitor monitor = (TestSnapShotMonitor)SnapShotManager.getOrCreateMonitor(monitorID);
         
-        AppenderID appenderID1 = Appender.getAppenderID(TestAppender.class.getName(), 100);
+        AppenderID appenderID1 = AppenderID.getAppenderID(TestAppender.class.getName(), 100);
         monitor.addAppender(appenderID1);
         
         Thread.sleep(475);
@@ -140,7 +140,7 @@ public class SnapShotManagerTest extends TestCase {
         SnapShotMonitorID monitorID = SnapShotMonitor.getSnapShotMonitorID(TestSnapShotMonitor.class.getName(), "1");
         TestSnapShotMonitor monitor = (TestSnapShotMonitor)SnapShotManager.getOrCreateMonitor(monitorID);
         
-        AppenderID appenderID1 = Appender.getAppenderID(TestAppender.class.getName(), 100);
+        AppenderID appenderID1 = AppenderID.getAppenderID(TestAppender.class.getName(), 100);
         monitor.addAppender(appenderID1);
         
         Thread.sleep(150);
@@ -212,7 +212,7 @@ public class SnapShotManagerTest extends TestCase {
         SnapShotMonitorID monitorID = SnapShotMonitor.getSnapShotMonitorID(TestSnapShotMonitor.class.getName(), "1");
         
         TestSnapShotMonitor monitor = (TestSnapShotMonitor)SnapShotManager.getOrCreateMonitor(monitorID);
-        AppenderID appenderID1 = Appender.getAppenderID(TestAppender.class.getName(), 100);
+        AppenderID appenderID1 = AppenderID.getAppenderID(TestAppender.class.getName(), 100);
         monitor.addAppender(appenderID1);
 
         // We should be running now

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -533,7 +533,7 @@ System.out.println(trace.toAppenderString());
         }
         
         public static AppenderID getAppenderID() {
-            return Appender.getAppenderID(TestAppender.class.getName());
+            return AppenderID.getAppenderID(TestAppender.class.getName());
         }
         
         public TestAppender(AppenderID id) {

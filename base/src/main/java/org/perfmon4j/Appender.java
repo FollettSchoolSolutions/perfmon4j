@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -56,6 +56,7 @@ public abstract class Appender {
     private final Object eventQueueLockToken = new Object();
     protected MedianCalculator medianCalculator = null;
     protected ThresholdCalculator thresholdCalculator = null;
+    private final AppenderID myAppenderID;
     
     
     private final long intervalMillis;
@@ -65,6 +66,7 @@ public abstract class Appender {
      * to ensure that we have singleton objects...
      */
     protected Appender(AppenderID id) {
+    	this.myAppenderID = id;
         this.intervalMillis = id.intervalMillis;
         maxQueueSize = Integer.getInteger(PERFMON_APPENDER_QUEUE_SIZE, DEFAULT_APPENDER_QUEUE_SIZE).intValue();
         long timerMillis = Long.getLong(PERFMON_APPENDER_ASYNC_TIMER_MILLIS, DEFUALT_APPENDER_ASYNC_TIMER_MILLIS).longValue();
@@ -83,20 +85,9 @@ public abstract class Appender {
             this.getClass().getName() + " interval " + intervalMillis);
     }
     
-    public static AppenderID getAppenderID(String className) {
-        return new AppenderID(className, DEFAULT_INTERVAL_MILLIS);
-    }
-
-    public static AppenderID getAppenderID(String className, long intervalMillis) {
-        return new AppenderID(className, intervalMillis);
-    }
-
-    public static AppenderID getAppenderID(String className, long intervalMillis, Properties attributes) {
-        return new AppenderID(className, intervalMillis, attributes);
-    }
     
     public AppenderID getMyAppenderID() {
-        return new AppenderID(this.getClass().getName(), intervalMillis);
+        return myAppenderID;
     }
     
     public void deInit() {
@@ -244,6 +235,19 @@ public abstract class Appender {
     
     public final static class AppenderID extends ObjectID {
         private final long intervalMillis;
+
+        public static AppenderID getAppenderID(String className) {
+            return new AppenderID(className, DEFAULT_INTERVAL_MILLIS);
+        }
+
+        public static AppenderID getAppenderID(String className, long intervalMillis) {
+            return new AppenderID(className, intervalMillis);
+        }
+
+        public static AppenderID getAppenderID(String className, long intervalMillis, Properties attributes) {
+            return new AppenderID(className, intervalMillis, attributes);
+        }
+        
         
         protected AppenderID(String className) {
             this(className, DEFAULT_INTERVAL_MILLIS);
