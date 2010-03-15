@@ -16,9 +16,12 @@ McHenry, IL 60050
 
 
 Changes
-*** Version 1.0.1.GA (released 2010-03-05) ***
+*** Version 1.0.1.GA (released 2010-03-15) ***
 - Feature Request: #2964325  - Add SQL Based appender for interval data. 
 	Now you can configure timing data to be written to an SQL database.
+	
+	See "Output Interval data to a SQL Database" in Perfmon4j-ConfigSamples.pdf 
+	for configuration examples.
 
 - Fixed severe defect: #2953547  - Release jars not compiled for Java 1.5
 - Fixed moderate defect: #2964274 - Log4j logger does not include Throwable
