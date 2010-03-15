@@ -8,8 +8,8 @@
 	This appender will log timing data to a SQL database using
 	the specified jdbcDriver and connection information.
 	Note: The tables must be manually configured.  See:
-	MSSQL-CreateP4JIntervalSchema.sql for an example of the
-	required tables 
+	MSSQL-CreateTables.sql and MySQL-CreateTables.sql for examples 
+	of the required tables 
 
 	MySQL Example:
 	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='20 seconds'>
@@ -38,7 +38,6 @@
 		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
 	</appender>
 	
-
 -->
 
 <!--  JDBC Based Appender - Option 2 (JDBCDataSource via JNDI)-
