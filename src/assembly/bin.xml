@@ -28,6 +28,13 @@
 			</includes>
 			<outputDirectory>doc</outputDirectory>
 		</fileSet>
+		<fileSet>
+			<directory>${basedir}/base/src/sql</directory>
+			<includes>
+				<include>**/*.sql</include>
+			</includes>
+			<outputDirectory>doc</outputDirectory>
+		</fileSet>	
 	</fileSets>
 	
 	
