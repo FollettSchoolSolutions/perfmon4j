@@ -3,6 +3,60 @@
 		<attribute name='medianCalculator'>factor=10</attribute>		
 		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
 	</appender>
+	
+<!--  JDBC Based Appender - Option 1 (Raw JDBC Connection)-
+	This appender will log timing data to a SQL database using
+	the specified jdbcDriver and connection information.
+	Note: The tables must be manually configured.  See:
+	MSSQL-CreateP4JIntervalSchema.sql for an example of the
+	required tables 
+
+	MySQL Example:
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='20 seconds'>
+		<attribute name='driverClass'>com.mysql.jdbc.Driver</attribute>		
+		<attribute name='driverPath'>/home/ddeucher/perfmon4j/mysql-connector-java-5.1.12/mysql-connector-java-5.1.12-bin.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:mysql://localhost/perfmon4j</attribute>		
+		<attribute name='dbSchema'>perfmon4j</attribute>		
+		<attribute name='userName'>perfmon4j</attribute>		
+		<attribute name='password'>p4jpassword</attribute>		
+
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+
+
+	Microsoft SQL Server W/JTDS Driver example:
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='20 seconds'>
+		<attribute name='driverClass'>net.sourceforge.jtds.jdbc.Driver</attribute>		
+		<attribute name='driverPath'>c:/drivers/jtds.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:jtds:sqlserver:/localhost/perfmon4j</attribute>		
+		<attribute name='dbSchema'>myschema</attribute>		
+		<attribute name='userName'>myusername</attribute>		
+		<attribute name='password'>mypassword</attribute>		
+
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+	
+
+-->
+
+<!--  JDBC Based Appender - Option 2 (JDBCDataSource via JNDI)-
+	This appender will log timing data to a SQL database.  This
+	configuration is used within application servers where a
+	connection can be retrieved friom a JNDI based pool.
+	Note: The tables must be manually configured.  See:
+	MSSQL-CreateP4JIntervalSchema.sql for an example of the
+	required tables 
+	
+	<appender name='pool' className='org.perfmon4j.PooledSQLAppender' interval='20 seconds'>
+		<attribute name='poolName'>java:/MSSQLDS</attribute>		
+		<attribute name='dbSchema'>myschema</attribute>		
+		
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+-->
 
 	<appender name='snapshot-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
 	</appender>
