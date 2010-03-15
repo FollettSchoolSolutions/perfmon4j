@@ -1,4 +1,4 @@
-Copyright 2008,2009 Follett Software Company 
+Copyright 2008,2009,2010 Follett Software Company 
  
 Perfmon4j(tm) is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License, version 3,
@@ -16,6 +16,13 @@ McHenry, IL 60050
 
 
 Changes
+*** Version 1.0.1.GA (released 2010-03-05) ***
+- Feature Request: #2964325  - Add SQL Based appender for interval data. 
+	Now you can configure timing data to be written to an SQL database.
+
+- Fixed severe defect: #2953547  - Release jars not compiled for Java 1.5
+- Fixed moderate defect: #2964274 - Log4j logger does not include Throwable
+- Fixed defect: #2964290 - Reloading appender fails to propagate attributes
 
 *** Version 1.0.0.GA (released 2009-11-07) ***
 
