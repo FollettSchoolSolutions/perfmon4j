@@ -20,6 +20,10 @@
 */
 package org.perfmon4j;
 
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -35,6 +39,7 @@ import org.perfmon4j.util.ThresholdCalculator;
 public class JDBCSQLAppender extends SQLAppender {
 	private static final Logger logger = LoggerFactory.initLogger(JDBCSQLAppender.class);
 	private Connection conn = null;
+	private String driverPath = null;
 	private String driverClass = null; 
 	private String jdbcURL = null;
 	private String userName = null;
@@ -61,7 +66,17 @@ public class JDBCSQLAppender extends SQLAppender {
     	if (conn == null) {
     		try {
     			if (driverClass != null) {
-    				Driver driver = (Driver)Class.forName(driverClass, true, PerfMon.getClassLoader()).newInstance();
+    				ClassLoader loader = null;
+    				if (driverPath != null) {
+    					File driverFile = new File(driverPath);
+    					if (!driverFile.exists()) {
+    						throw new SQLException("JDBCDriver file not found in path: " + driverPath);
+    					}
+    					loader = new URLClassLoader(new URL[]{driverFile.toURL()}, Thread.currentThread().getContextClassLoader());
+    				} else {
+    					loader = PerfMon.getClassLoader();
+    				}
+    				Driver driver = (Driver)Class.forName(driverClass, true, loader).newInstance();
     				Properties credentials = new Properties();
     				if (userName != null) {
     					credentials.setProperty("user", userName);
@@ -80,6 +95,8 @@ public class JDBCSQLAppender extends SQLAppender {
 				throw new SQLException("Unable to access driver class: " + driverClass, aec);
 			} catch (InstantiationException e) {
 				throw new SQLException("Unable to instantiate driver class: " + driverClass, e);
+			} catch (MalformedURLException e) {
+				throw new SQLException("Malformed URL for driver path", e);
 			}
     	}
     	return conn;
@@ -126,6 +143,14 @@ public class JDBCSQLAppender extends SQLAppender {
 		this.password = password;
 	}
 	
+	public String getDriverPath() {
+		return driverPath;
+	}
+
+	public void setDriverPath(String driverPath) {
+		this.driverPath = driverPath;
+	}
+
 	public static void main(String args[]) {
 		JDBCSQLAppender appender = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()));
 		appender.setDriverClass("net.sourceforge.jtds.jdbc.Driver");
