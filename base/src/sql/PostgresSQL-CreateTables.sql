@@ -22,7 +22,7 @@
 /*  ******************************************************************************
 Notes - This script contains the SQL required to build the tables required for 
 the "org.perfmon4j.JDBCSQLAppender" and "org.perfmon4j.PooledSQLAppender".
-This script has been tested and works with MySQL but should be
+This script has been tested and works with PostgresSQL but should be
 easily modified for other databases.
 ******************************************************************************  */
 
@@ -36,9 +36,10 @@ DROP TABLE P4JIntervalData;
 
 DROP TABLE P4JCategory;
 */
+
 CREATE TABLE P4JCategory (
-	CategoryID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	CategoryName NCHAR(255) NOT NULL
+	CategoryID SERIAL PRIMARY KEY,
+	CategoryName NCHAR(512) NOT NULL
 );
 
 CREATE  UNIQUE INDEX P4JCategory_CategoryName_idx
@@ -46,19 +47,20 @@ CREATE  UNIQUE INDEX P4JCategory_CategoryName_idx
 		CategoryName
 );
 
+
 CREATE TABLE P4JIntervalData (
-	IntervalID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	IntervalID SERIAL PRIMARY KEY,
 	CategoryID INT NOT NULL,
-	StartTime DATETIME NOT NULL,
-	EndTime DATETIME NOT NULL,
+	StartTime TIMESTAMP NOT NULL,
+	EndTime TIMESTAMP NOT NULL,
 	TotalHits BIGINT NOT NULL,
 	TotalCompletions BIGINT NOT NULL,
 	MaxActiveThreads INT NOT NULL,
-	MaxActiveThreadsSet DATETIME NULL,
+	MaxActiveThreadsSet TIMESTAMP NULL,
 	MaxDuration INT NOT NULL,
-	MaxDurationSet DATETIME NULL,
+	MaxDurationSet TIMESTAMP NULL,
 	MinDuration INT NOT NULL,
-	MinDurationSet DATETIME NULL,
+	MinDurationSet TIMESTAMP NULL,
 	AverageDuration DECIMAL(18, 2) NOT NULL,
 	MedianDuration DECIMAL(18, 2) NULL,
 	StandardDeviation DECIMAL(18, 2) NOT NULL,
