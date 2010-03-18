@@ -38,6 +38,19 @@
 		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
 	</appender>
 	
+
+	PostgresSQL example:
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='20 seconds'>
+		<attribute name='driverClass'>org.postgresql.Driver</attribute>		
+		<attribute name='driverPath'>/home/ddeucher/Desktop/perfmon4j/postgresql-8.4-701.jdbc4.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:postgresql://localhost/postgres</attribute>		
+		<attribute name='dbSchema'>perfmon4j</attribute>		
+		<attribute name='userName'>perfmon4j</attribute>		
+		<attribute name='password'>p4jpassword</attribute>		
+
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
 -->
 
 <!--  JDBC Based Appender - Option 2 (JDBCDataSource via JNDI)-
