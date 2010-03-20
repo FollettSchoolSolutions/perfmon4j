@@ -20,10 +20,16 @@
 */
 package org.perfmon4j;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.UserAgentParser;
 import org.perfmon4j.util.UserAgentVO;
@@ -96,7 +102,7 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
     
     
     
-    public static class UserAgentData extends SnapShotData {
+    public static class UserAgentData extends SnapShotData implements SQLWriteable {
         private final Integer offset;
         private final long startTime;
         private long stopTime = -1;
@@ -179,6 +185,106 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
 
         public Map<UserAgentVO, Counter> getUserAgentMap() {
             return userAgentMap;
-        }    
+        }
+
+        private void addOrUpdateOccuranceRow(Connection conn, String schema, Timestamp myTime, 
+        	Long browserID, Long browserVersionID, Long osID, Long osVersionID, 
+        	int count) throws SQLException {
+        	
+        	final String tableName = schema + "P4JUserAgentOccurance";
+        	
+        	final String sqlCount = "SELECT * FROM " + tableName +
+        			" WHERE CollectionDate=? " +
+        			" AND BrowserID=? " +
+        			" AND BrowserVersionID=? " +
+        			" AND OSID=? " +
+        			" AND OSVersionID=?";
+        	
+        	PreparedStatement ps = null;
+        	ResultSet rs = null;
+        	try {
+        		ps = conn.prepareStatement(sqlCount);
+        		ps.setTimestamp(1, myTime);
+        		ps.setLong(2, browserID);
+        		ps.setLong(3, browserVersionID);
+        		ps.setLong(4, osID);
+        		ps.setLong(5, osVersionID);
+        		
+        		rs = ps.executeQuery();
+        		if (!rs.next()) {
+        			JDBCHelper.closeNoThrow(rs);
+        			rs = null;
+        			JDBCHelper.closeNoThrow(ps);
+        			// Record does not exist... need to insert it.
+        			
+        			final String sqlInsert = "INSERT INTO " + tableName +
+        				" (CollectionDate, BrowserID, BrowserVersionID, OSID, OSVersionID) " +
+        				" VALUES(?, ?, ?, ?, ?)";
+        			ps = conn.prepareStatement(sqlInsert);
+        			ps.setTimestamp(1, myTime);
+        			ps.setLong(2, browserID);
+        			ps.setLong(3, browserVersionID);
+        			ps.setLong(4, osID);
+        			ps.setLong(5, osVersionID);
+        			ps.executeUpdate();
+        		}
+    			JDBCHelper.closeNoThrow(rs);
+    			rs = null;
+        		JDBCHelper.closeNoThrow(ps);
+        		// Now we know the record exists... 
+        		// Update it;
+        		final String sqlUpdate = "UPDATE " + tableName +
+					" SET RequestCount=RequestCount+"  + count +
+					" WHERE CollectionDate=? " +
+        			" AND BrowserID=? " +
+        			" AND BrowserVersionID=? " +
+        			" AND OSID=? " +
+        			" AND OSVersionID=?";
+        		
+        		ps = conn.prepareStatement(sqlUpdate);
+        		ps.setTimestamp(1, myTime);
+        		ps.setLong(2, browserID);
+        		ps.setLong(3, browserVersionID);
+        		ps.setLong(4, osID);
+        		ps.setLong(5, osVersionID);
+        		ps.executeUpdate();
+        	} finally {
+        		JDBCHelper.closeNoThrow(rs);
+        		JDBCHelper.closeNoThrow(ps);
+        	}
+        }
+        
+        
+        private String nullToUnknown(String v) {
+        	return v != null ? v : "[UNKNOWN]";
+        }
+        
+		public void writeToSQL(Connection conn, String schema) throws SQLException {
+			String s = (schema == null) ? "" : (schema + ".");
+			
+			
+			for (Map.Entry<UserAgentVO, Counter> entry: userAgentMap.entrySet()) {
+				UserAgentVO vo = entry.getKey();
+				String browserName = nullToUnknown(vo.getBrowserName());
+				String browserVersion = nullToUnknown(vo.getBrowserVersion());
+				String osName = nullToUnknown(vo.getOsName());
+				String osVersion = nullToUnknown(vo.getOsVersion());
+				int count = entry.getValue().count;
+			
+				
+				Timestamp now = new Timestamp(MiscHelper.calcDateOnlyFromMillis(stopTime > 0 ? stopTime : startTime));
+
+				Long browserID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentBrowser", "BrowserID", 
+						"BrowserName", browserName);
+				Long browserVersionID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentBrowserVersion", "BrowserVersionID", 
+						"BrowserVersion", browserVersion);
+				Long osID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentOS", "OSID", 
+						"OSName", osName);
+				Long osVersionID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentOSVersion", "OSVersionID", 
+						"OSVersion", osVersion);
+				addOrUpdateOccuranceRow(conn, s, now, browserID, browserVersionID, osID, 
+						osVersionID, count);
+			}
+		}    
     }
 }

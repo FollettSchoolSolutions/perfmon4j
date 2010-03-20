@@ -60,6 +60,8 @@ public abstract class SQLAppender extends Appender {
 			conn = getConnection();
 			if (data instanceof IntervalData) {
 				outputIntervalData(conn, (IntervalData)data);
+			} else if (data instanceof SQLWriteable){
+				((SQLWriteable)data).writeToSQL(conn, dbSchema);
 			} else {
 				logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
 			}

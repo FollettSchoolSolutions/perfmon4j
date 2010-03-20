@@ -26,6 +26,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -458,6 +460,18 @@ public class MiscHelper {
 				outStream.close();
 			}
 		}
+	}
+
+
+	public static long calcDateOnlyFromMillis(long currentTimeMillis) {
+		Calendar cal = new GregorianCalendar();
+		cal.setTimeInMillis(currentTimeMillis);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		
+		return cal.getTimeInMillis();
 	}
 
 }

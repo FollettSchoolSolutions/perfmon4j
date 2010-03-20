@@ -22,6 +22,9 @@
 package org.perfmon4j.util;
 
 import java.io.File;
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -303,6 +306,18 @@ public class MiscHelperTest extends TestCase {
 		}
 	}
 	
+	
+	public void testDateOnlyFromMillis() {
+		long millis = MiscHelper.calcDateOnlyFromMillis(System.currentTimeMillis());
+		
+		Calendar cal = new GregorianCalendar();
+		cal.setTimeInMillis(millis);
+		
+		assertEquals("Hour should be 0", 0, cal.get(Calendar.HOUR_OF_DAY));
+		assertEquals("Minute should be 0", 0, cal.get(Calendar.MINUTE));
+		assertEquals("Second should be 0", 0, cal.get(Calendar.SECOND));
+		assertEquals("MilliSecond should be 0", 0, cal.get(Calendar.MILLISECOND));
+	}
 	
 	
 /*----------------------------------------------------------------------------*/    

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -28,8 +28,7 @@ public class UserAgentVO {
  
     final String outputString;
     
-    // Package level constructor;
-    UserAgentVO(String browserName, String browserVersion, String osName, 
+    public UserAgentVO(String browserName, String browserVersion, String osName, 
         String osVersion, String suffix) {
         this.browserName = browserName;
         this.browserVersion = browserVersion;
@@ -55,8 +54,7 @@ public class UserAgentVO {
         outputString = builder.toString();
     }
     
-    // Package level constructor;
-    UserAgentVO(String userAgentString) {
+    public UserAgentVO(String userAgentString) {
         this.browserName = null;
         this.browserVersion = null;
         this.osName = null;

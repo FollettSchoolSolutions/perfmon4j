@@ -21,6 +21,7 @@
 package org.perfmon4j.util;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -96,5 +97,49 @@ public class JDBCHelper {
 		}
 		
 		return result;
+	}
+	
+	public static long simpleGetOrCreate(Connection conn, 
+			String tableName, String idColumnName, String descColumnName, String desc) throws SQLException {
+		long result = 0;
+		final String selectSQL = "SELECT " + idColumnName + " FROM " +
+			tableName + " WHERE " + descColumnName + "=?";
+		PreparedStatement stmtQuery = null;
+		PreparedStatement stmtInsert = null;
+		ResultSet rs = null;
+		
+		try {
+			stmtQuery = conn.prepareStatement(selectSQL);
+			stmtQuery.setString(1, desc);
+			rs = stmtQuery.executeQuery();
+			if (!rs.next()) {
+				JDBCHelper.closeNoThrow(rs);
+				final String insertSQL = "INSERT INTO " +
+					tableName + " (" + descColumnName + ")" +
+					" VALUES(?)";
+				rs = null;
+				
+				stmtInsert = conn.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS);
+				stmtInsert.setString(1, desc);
+				stmtInsert.execute();
+				
+				rs = stmtInsert.getGeneratedKeys();
+				rs.next();
+			}
+			result = rs.getLong(1);
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmtQuery);
+			JDBCHelper.closeNoThrow(stmtInsert);
+		}
+		return result;
+	}
+	
+	public static String buildEqualOrIsNULL(String fieldName, Number value) {
+		if (value == null) {
+			return fieldName + "IS NULL";
+		} else {
+			return fieldName + "=" + value.toString();
+		}
 	}
 }

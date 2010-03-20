@@ -24,33 +24,31 @@ import java.sql.Connection;
 import java.sql.Statement;
 import java.util.GregorianCalendar;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 
 /* todo: this test needs a LOT of work!!! */
-public class JDBCSQLAppenderTest extends TestCase {
+public class JDBCSQLAppenderTest extends SQLTest {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
-    private final String DERBY_DROP_CATEGORY = "DROP TABLE mydb.P4JCategory";
+    final String DERBY_DROP_CATEGORY = "DROP TABLE mydb.P4JCategory";
     
     
-    private final String DERBY_CREATE_CATEGORY = "CREATE TABLE mydb.P4JCategory(\r\n" +
+    final String DERBY_CREATE_CATEGORY = "CREATE TABLE mydb.P4JCategory(\r\n" +
     	"CategoryID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
     	"CategoryName varchar(450) NOT NULL\r\n" +
     	")";
 
-    private final String DERBY_DROP_INTERVAL_DATA = "DROP TABLE mydb.P4JIntervalData";
+    final String DERBY_DROP_INTERVAL_DATA = "DROP TABLE mydb.P4JIntervalData";
     
-    private final String DERBY_CREATE_INTERVAL_DATA = "CREATE TABLE mydb.P4JIntervalData (\r\n" +
+    final String DERBY_CREATE_INTERVAL_DATA = "CREATE TABLE mydb.P4JIntervalData (\r\n" +
 		"CategoryID INT NOT NULL,\r\n" +
 		"IntervalID BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY," +
 		"StartTime TIMESTAMP NOT NULL,\r\n" +
@@ -71,9 +69,9 @@ public class JDBCSQLAppenderTest extends TestCase {
 		"DurationSumOfSquares BIGINT NOT NULL\r\n" +
 		")";
 
-    private final String DERBY_DROP_THRESHOLD = "DROP TABLE mydb.P4JIntervalThreshold";
+    final String DERBY_DROP_THRESHOLD = "DROP TABLE mydb.P4JIntervalThreshold";
     
-    private final String DERBY_CREATE_THRESHOLD = "CREATE TABLE mydb.P4JIntervalThreshold (\r\n" +
+    final String DERBY_CREATE_THRESHOLD = "CREATE TABLE mydb.P4JIntervalThreshold (\r\n" +
 		"IntervalID BIGINT NOT NULL,\r\n" +
 		"ThresholdMillis INT NOT NULL,\r\n" +
 		"CompletionsOver BIGINT NOT NULL,\r\n" +
@@ -86,22 +84,14 @@ public class JDBCSQLAppenderTest extends TestCase {
     final long MINUTE = SECOND * 60;
     final long HOUR = MINUTE * 60;
     
-    private JDBCSQLAppender appender = null;
-    
-    
-/*----------------------------------------------------------------------------*/
+    /*----------------------------------------------------------------------------*/
     public JDBCSQLAppenderTest(String name) {
         super(name);
     }
     
     public void setUp() throws Exception {
     	super.setUp();
-    	
-    	appender = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()));
-    	appender.setDbSchema("mydb");
-		appender.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver");
-		appender.setJdbcURL("jdbc:derby:memory:derbyDB;create=true");
-    	
+    
 		Connection conn = appender.getConnection();
 		Statement stmt = null;
 		try {
@@ -133,10 +123,7 @@ public class JDBCSQLAppenderTest extends TestCase {
 			stmt = null;
 		}
 		
-		appender.deInit();
-		appender = null;
-		
-    	super.tearDown();
+		super.tearDown();
     }
     
     private IntervalData createIntervalData(String category, long startTime, long duration) {
