@@ -119,7 +119,7 @@ public class JDBCHelper {
 					" VALUES(?)";
 				rs = null;
 				
-				stmtInsert = conn.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS);
+				stmtInsert = conn.prepareStatement(insertSQL, new int[]{1});
 				stmtInsert.setString(1, desc);
 				stmtInsert.execute();
 				

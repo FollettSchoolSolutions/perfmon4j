@@ -49,8 +49,8 @@ public class JDBCSQLAppenderTest extends SQLTest {
     final String DERBY_DROP_INTERVAL_DATA = "DROP TABLE mydb.P4JIntervalData";
     
     final String DERBY_CREATE_INTERVAL_DATA = "CREATE TABLE mydb.P4JIntervalData (\r\n" +
-		"CategoryID INT NOT NULL,\r\n" +
 		"IntervalID BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY," +
+		"CategoryID INT NOT NULL,\r\n" +
 		"StartTime TIMESTAMP NOT NULL,\r\n" +
 		"EndTime TIMESTAMP NOT NULL,\r\n" +
 		"TotalHits BIGINT NOT NULL,\r\n" +
