@@ -133,7 +133,7 @@ Tables for the UserAgentSnapShotMonitor
 */
 CREATE TABLE dbo.P4JUserAgentBrowser(
 	BrowserID INT IDENTITY NOT NULL ,
-	BrowserName VARCHAR(100),
+	BrowserName VARCHAR(100) NOT NULL,
 	CONSTRAINT P4JUserAgentBrowser_pk PRIMARY KEY CLUSTERED (
 		BrowserID
 	)
@@ -204,13 +204,27 @@ CREATE TABLE dbo.P4JUserAgentOccurance (
 		BrowserVersionID,
 		OSID,
 		OSVersionID
-	) /*,
-	CONSTRAINT P4JIntervalThreshold_IntervalID_fk FOREIGN KEY (
-		IntervalID
-	) REFERENCES dbo.P4JIntervalData (
-		IntervalID
+	),
+	CONSTRAINT P4JUserAgentOccurance_BrowserID_fk FOREIGN KEY (
+		BrowserID
+	) REFERENCES dbo.P4JUserAgentBrowser (
+		BrowserID
+	) ON DELETE CASCADE,
+	CONSTRAINT P4JUserAgentOccurance_BrowserVersionID_fk FOREIGN KEY (
+		BrowserVersionID
+	) REFERENCES dbo.P4JUserAgentBrowserVersion (
+		BrowserVersionID
+	) ON DELETE CASCADE,
+	CONSTRAINT P4JUserAgentOccurance_OSID_fk FOREIGN KEY (
+		OSID
+	) REFERENCES dbo.P4JUserAgentOS (
+		OSID
+	) ON DELETE CASCADE,
+	CONSTRAINT P4JUserAgentOccurance_OSVersionID_fk FOREIGN KEY (
+		OSID
+	) REFERENCES dbo.P4JUserAgentOSVersion (
+		OSVersionID
 	) ON DELETE CASCADE
-*/
 )
 GO
 
@@ -227,3 +241,4 @@ JOIN dbo.P4JUserAgentBrowser b ON b.BrowserID = oc.BrowserID
 JOIN dbo.P4JUserAgentBrowserVersion bv ON bv.BrowserVersionID = oc.BrowserVersionID
 JOIN dbo.P4JUserAgentOS os ON os.OSID = oc.OSID
 JOIN dbo.P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID
+GO
