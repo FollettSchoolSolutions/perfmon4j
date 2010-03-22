@@ -28,6 +28,7 @@ easily modified for other versions.
 
 /* Uncomment the following lines to drop the existing
  tables */
+ 
  /*
 DROP VIEW P4JUserAgentView; 
 
@@ -74,7 +75,7 @@ DROP TABLE P4JCategory;
 
 CREATE TABLE P4JCategory (
 	CategoryID NUMBER PRIMARY KEY,
-	CategoryName NCHAR(512) NOT NULL
+	CategoryName VARCHAR2(512) NOT NULL
 );
 
 CREATE  UNIQUE INDEX P4JCategory_CategoryName_idx
@@ -165,7 +166,7 @@ CREATE TABLE P4JIntervalThreshold (
 
 CREATE TABLE P4JUserAgentBrowser(
 	BrowserID NUMBER PRIMARY KEY,
-	BrowserName NCHAR(100) NOT NULL
+	BrowserName VARCHAR2(100) NOT NULL
 );
 
 
@@ -192,7 +193,7 @@ END;
 
 CREATE TABLE P4JUserAgentBrowserVersion(
 	BrowserVersionID NUMBER PRIMARY KEY,
-	BrowserVersion NCHAR(50) NOT NULL
+	BrowserVersion VARCHAR2(50) NOT NULL
 );
 
 
@@ -219,7 +220,7 @@ END;
 
 CREATE TABLE P4JUserAgentOS(
 	OSID NUMBER PRIMARY KEY,
-	OSName NCHAR(100) NOT NULL
+	OSName VARCHAR2(100) NOT NULL
 );
 
 CREATE UNIQUE INDEX P4JUserAgentOS_OSName_idx
@@ -245,7 +246,7 @@ END;
 
 CREATE TABLE P4JUserAgentOSVersion(
 	OSVersionID NUMBER PRIMARY KEY,
-	OSVersion NCHAR(50) NOT NULL
+	OSVersion VARCHAR2(50) NOT NULL
 );
 
 CREATE UNIQUE INDEX P4JUAOV_idx
@@ -269,12 +270,12 @@ END;
 
 
 CREATE TABLE P4JUserAgentOccurance (
-	CollectionDate TIMESTAMP NOT NULL,
+	CollectionDate DATE NOT NULL,
 	BrowserID NUMBER NOT NULL,
 	BrowserVersionID NUMBER NOT NULL,
 	OSID NUMBER NOT NULL,
 	OSVersionID NUMBER NOT NULL,
-	RequestCount NUMBER NOT NULL,
+	RequestCount NUMBER DEFAULT 0,
 	CONSTRAINT P4JUserAgentOccurance_pk PRIMARY KEY (
 		CollectionDate,
 		BrowserID,
