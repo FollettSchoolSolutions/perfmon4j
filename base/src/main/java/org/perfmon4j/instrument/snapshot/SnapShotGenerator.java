@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -35,7 +35,9 @@ import javassist.CtField;
 import javassist.CtMethod;
 
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SnapShotData;
+import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -249,12 +251,18 @@ public class SnapShotGenerator {
 		final boolean useJMXConfig = jmxConfig != null;
 		boolean isStatic = false;
 		Class dataInterface = null;
+		Class sqlWriter = null;
 		
 		if (!useJMXConfig) {
 			SnapShotProvider provider =  (SnapShotProvider)dataProvider.getAnnotation(SnapShotProvider.class);
 			isStatic = SnapShotProvider.Type.STATIC.equals(provider.type());
 		
 			dataInterface =  provider.dataInterface();
+			sqlWriter = provider.sqlWriter();
+			if (SnapShotSQLWriter.class.equals(sqlWriter)) {
+				sqlWriter = null;
+			}
+			
 			if (void.class.equals(dataInterface)) {
 				dataInterface = null;
 			}
@@ -274,12 +282,17 @@ public class SnapShotGenerator {
 			String className = dataProvider.getName() + "SnapShot" + (++SERIAL_NUMBER);
 			CtClass superClass = classPool.get(SnapShotData.class.getName());
 			CtClass ctClass = classPool.makeClass(className, superClass);
-			
-			
+
 			if (dataInterface != null) {
 				CtClass ctInterface = classPool.get(dataInterface.getName());
 				ctClass.addInterface(ctInterface);
 			}
+
+			if (sqlWriter != null) {
+				CtClass ctSqlWriteableIntf = classPool.get(SQLWriteable.class.getName());
+				ctClass.addInterface(ctSqlWriteableIntf);
+			}
+			
 			CtClass lifeCycle = classPool.get(SnapShotLifecycle.class.getName());
 			ctClass.addInterface(lifeCycle);
 			
@@ -287,6 +300,17 @@ public class SnapShotGenerator {
 			constructor.setBody(";");
 			ctClass.addConstructor(constructor);
 
+			// Add static instance of our SQLWriter 
+			if (sqlWriter != null) {
+				final String s = "private static final org.perfmon4j.SnapShotSQLWriter sqlWriter = " +
+						" new " + sqlWriter.getName() + "();";
+				ctClass.addField(CtField.make(s, ctClass));
+				
+				final String m = "public void writeToSQL(java.sql.Connection conn, String dbSchema) throws java.sql.SQLException {" +
+						" sqlWriter.writeToSQL(conn, dbSchema, this);" +
+						"}";
+				addMethod(ctClass, m);
+			}
 			
 			// Add startTime, endTime and duration fields.
 			ctClass.addField(CtField.make("private long startTime = org.perfmon4j.PerfMon.NOT_SET;", ctClass));

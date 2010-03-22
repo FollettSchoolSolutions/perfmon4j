@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -26,6 +26,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.perfmon4j.SnapShotSQLWriter;
+
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface SnapShotProvider {
@@ -36,6 +38,7 @@ public @interface SnapShotProvider {
 	}
 	Type type() default Type.INSTANCE_PER_MONITOR;
     Class dataInterface() default void.class;
+    Class<? extends SnapShotSQLWriter> sqlWriter() default SnapShotSQLWriter.class;
     
     boolean usePriorityTimer() default false; // Indicate interval of snapshot very important.
 }
