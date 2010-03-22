@@ -16,6 +16,16 @@ McHenry, IL 60050
 
 
 Changes
+*** Version 1.0.2.GA (released 2010-??????) ***
+- Feature Request: #2972831 - Added a SQLAppender for UserAgentData.  This enables you to configure the
+	UserAgent logging to a SQL database.  When combined with the Perfmon4j Servlet filter or the 
+	Perfmon4j Apache Tomcat Valve this enables tracking the total number of request broken out by browser, 
+	browserVersion, clientOS amd clientOS version.
+	
+	See: "Example 9 – Output UserAgent (Browser Summary) data to a SQL Database' in 
+	Perfmon4j-ConfigSamples.pdf for configuration examples.
+
+
 *** Version 1.0.1.GA (released 2010-03-15) ***
 - Feature Request: #2964325  - Add SQL Based appender for interval data. 
 	Now you can configure timing data to be written to an SQL database.
