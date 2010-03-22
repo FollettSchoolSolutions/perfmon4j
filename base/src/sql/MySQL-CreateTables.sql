@@ -28,14 +28,26 @@ easily modified for other databases.
 
 /* Uncomment the following lines to drop the existing
  tables */
+ /*
+DROP VIEW P4JUserAgentView;
 
-/*
+DROP TABLE P4JUserAgentOccurance;
+
+DROP TABLE P4JUserAgentOSVersion;
+
+DROP TABLE P4JUserAgentOS;
+
+DROP TABLE P4JUserAgentBrowserVersion;
+
+DROP TABLE P4JUserAgentBrowser;
+
 DROP TABLE P4JIntervalThreshold;
 
 DROP TABLE P4JIntervalData;
 
 DROP TABLE P4JCategory;
 */
+
 CREATE TABLE P4JCategory (
 	CategoryID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	CategoryName NCHAR(255) NOT NULL
@@ -95,3 +107,99 @@ CREATE TABLE P4JIntervalThreshold (
 		IntervalID
 	) ON DELETE CASCADE
 ); 
+
+/*
+Tables for the UserAgentSnapShotMonitor
+*/
+CREATE TABLE P4JUserAgentBrowser(
+	BrowserID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	BrowserName NCHAR(100) NOT NULL
+);
+
+CREATE UNIQUE INDEX P4JUserAgentBrowser_BrowserName_idx
+	ON P4JUserAgentBrowser (
+		BrowserName
+);
+
+  
+CREATE TABLE P4JUserAgentBrowserVersion(
+	BrowserVersionID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	BrowserVersion NCHAR(50) NOT NULL
+);
+
+
+CREATE UNIQUE INDEX P4JUserAgentBrowserVersion_BrowserName_idx
+	ON P4JUserAgentBrowserVersion (
+		BrowserVersion
+);
+
+CREATE TABLE P4JUserAgentOS(
+	OSID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	OSName NCHAR(100) NOT NULL
+);
+
+CREATE UNIQUE INDEX P4JUserAgentOS_OSName_idx
+	ON P4JUserAgentOS (
+		OSName
+);
+
+CREATE TABLE P4JUserAgentOSVersion(
+	OSVersionID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	OSVersion NCHAR(50) NOT NULL
+);
+
+CREATE UNIQUE INDEX P4JUserAgentOSVersion_OSVersion_idx
+	ON P4JUserAgentOSVersion (
+		OSVersion
+);
+
+CREATE TABLE P4JUserAgentOccurance (
+	CollectionDate DATETIME NOT NULL,
+	BrowserID INT NOT NULL,
+	BrowserVersionID INT NOT NULL,
+	OSID INT NOT NULL,
+	OSVersionID INT NOT NULL,
+	RequestCount INT NOT NULL DEFAULT 0,
+	CONSTRAINT P4JUserAgentOccurance_pk PRIMARY KEY CLUSTERED (
+		CollectionDate,
+		BrowserID,
+		BrowserVersionID,
+		OSID,
+		OSVersionID
+	),
+	CONSTRAINT P4JUserAgentOccurance_BrowserID_fk FOREIGN KEY (
+		BrowserID
+	) REFERENCES dbo.P4JUserAgentBrowser (
+		BrowserID
+	) ON DELETE CASCADE,
+	CONSTRAINT P4JUserAgentOccurance_BrowserVersionID_fk FOREIGN KEY (
+		BrowserVersionID
+	) REFERENCES dbo.P4JUserAgentBrowserVersion (
+		BrowserVersionID
+	) ON DELETE CASCADE,
+	CONSTRAINT P4JUserAgentOccurance_OSID_fk FOREIGN KEY (
+		OSID
+	) REFERENCES dbo.P4JUserAgentOS (
+		OSID
+	) ON DELETE CASCADE,
+	CONSTRAINT P4JUserAgentOccurance_OSVersionID_fk FOREIGN KEY (
+		OSID
+	) REFERENCES dbo.P4JUserAgentOSVersion (
+		OSVersionID
+	) ON DELETE CASCADE
+);
+
+
+CREATE VIEW P4JUserAgentView AS
+SELECT 
+	oc.CollectionDate
+	,b.BrowserName
+	,bv.BrowserVersion
+	,os.OSName
+	,osv.OSVersion
+	,oc.RequestCount
+FROM P4JUserAgentOccurance oc
+JOIN P4JUserAgentBrowser b ON b.BrowserID = oc.BrowserID
+JOIN P4JUserAgentBrowserVersion bv ON bv.BrowserVersionID = oc.BrowserVersionID
+JOIN P4JUserAgentOS os ON os.OSID = oc.OSID
+JOIN P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID
