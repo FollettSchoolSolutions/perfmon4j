@@ -12,7 +12,7 @@
 	of the required tables 
 
 	MySQL Example:
-	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='20 seconds'>
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
 		<attribute name='driverClass'>com.mysql.jdbc.Driver</attribute>		
 		<attribute name='driverPath'>/home/ddeucher/perfmon4j/mysql-connector-java-5.1.12/mysql-connector-java-5.1.12-bin.jar</attribute>		
 		<attribute name='jdbcURL'>jdbc:mysql://localhost/perfmon4j</attribute>		
@@ -26,7 +26,7 @@
 
 
 	Microsoft SQL Server W/JTDS Driver example:
-	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='20 seconds'>
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
 		<attribute name='driverClass'>net.sourceforge.jtds.jdbc.Driver</attribute>		
 		<attribute name='driverPath'>c:/drivers/jtds.jar</attribute>		
 		<attribute name='jdbcURL'>jdbc:jtds:sqlserver:/localhost/perfmon4j</attribute>		
@@ -40,7 +40,7 @@
 	
 
 	PostgresSQL example:
-	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='20 seconds'>
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
 		<attribute name='driverClass'>org.postgresql.Driver</attribute>		
 		<attribute name='driverPath'>/home/ddeucher/Desktop/perfmon4j/postgresql-8.4-701.jdbc4.jar</attribute>		
 		<attribute name='jdbcURL'>jdbc:postgresql://localhost/postgres</attribute>		
@@ -51,6 +51,19 @@
 		<attribute name='medianCalculator'>factor=10</attribute>		
 		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
 	</appender>
+	
+	Oracle Example:
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
+		<attribute name='driverClass'>oracle.jdbc.driver.OracleDriver</attribute>		
+		<attribute name='driverPath'>c:/Data/jdbcDrivers/ojdbc14.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:oracle:thin:@192.168.119.129/XE</attribute>		
+		<attribute name='userName'>perfmon4j</attribute>		
+		<attribute name='password'>p4jpassword</attribute>		
+
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+	
 -->
 
 <!--  JDBC Based Appender - Option 2 (JDBCDataSource via JNDI)-
@@ -61,7 +74,7 @@
 	MSSQL-CreateP4JIntervalSchema.sql for an example of the
 	required tables 
 	
-	<appender name='pool' className='org.perfmon4j.PooledSQLAppender' interval='20 seconds'>
+	<appender name='pool' className='org.perfmon4j.PooledSQLAppender' interval='1 minute'>
 		<attribute name='poolName'>java:/MSSQLDS</attribute>		
 		<attribute name='dbSchema'>myschema</attribute>		
 		
@@ -107,6 +120,10 @@
 	</snapShotMonitor>
 
 	<!--
+	<snapShotMonitor name='UserAgent' className='org.perfmon4j.UserAgentSnapShotMonitor'>
+		<appender name='snapshot-appender'/>
+	</snapShotMonitor>
+
 	<snapShotMonitor name='PerfmonInstrumentation' className='org.perfmon4j.instrument.InstrumentationMonitor'>
 			<appender name='snapshot-appender'/>
 	</snapShotMonitor>
