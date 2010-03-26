@@ -44,6 +44,20 @@
 		<artifactId>catalina</artifactId>
 		<scope>provided</scope>
 	</dependency>
+	
+	<dependency>
+		<groupId>org.apache.derby</groupId>
+		<artifactId>derby</artifactId>
+		<version>10.5.3.0_1</version>
+		<scope>test</scope>
+	</dependency>
+	
+	<dependency>
+		<groupId>org.mockito</groupId>
+		<artifactId>mockito-all</artifactId>
+		<version>1.8.0</version>
+		<scope>test</scope>
+	</dependency>
 </dependencies>
  
 </project>

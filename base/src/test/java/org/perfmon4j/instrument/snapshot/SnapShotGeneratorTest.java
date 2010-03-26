@@ -21,6 +21,8 @@
 package org.perfmon4j.instrument.snapshot;
 
 import java.lang.reflect.Method;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
@@ -33,7 +35,9 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SnapShotData;
+import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -688,7 +692,6 @@ System.out.println(appenderString);
 	  		fail("Method " + methodName + " not found");
 	  	}
     }
-
     
     public static boolean implementsInterface(Class clazz, Class interfaceClazz) {
     	Class interfaces[] = clazz.getInterfaces();
@@ -699,6 +702,53 @@ System.out.println(appenderString);
 		}
     	return false;
     }
+
+
+    public interface SQLCompatibleData {
+    	public int getX();
+    }
+    
+    public static class MySQLDataWriter implements SnapShotSQLWriter {
+    	private static SnapShotData lastWritten = null;
+    	
+		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+				throws SQLException {
+			lastWritten = data;
+		}
+    }
+
+    @SnapShotProvider(type=SnapShotProvider.Type.STATIC, 
+    		dataInterface=SQLCompatibleData.class,
+    		sqlWriter=MySQLDataWriter.class)
+    public static class SQLCompatibleDataProvider {
+    	@SnapShotGauge
+		public static int getX() {
+			return 1;
+		}
+    }    
+
+    public void testCreateSQLWritableData() throws Exception {
+    	SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(SQLCompatibleDataProvider.class);
+    	SnapShotData data = bundle.newSnapShotData();
+    	
+    	assertTrue("Should implement the SQLWritable interface", data instanceof SQLWriteable);
+    	
+    	SQLWriteable w = (SQLWriteable)data;
+    	w.writeToSQL(null, "dave");
+    	assertTrue("Should have invoked our sql writer", w == MySQLDataWriter.lastWritten);
+    	
+    	// Should also implement the GeneratedData interface.
+    	assertTrue("Should implement the GeneratedData interface", data instanceof GeneratedData);
+    	
+    	GeneratedData d = (GeneratedData)data;
+ 
+    	// Just invoke the methods to make sure they really exists.
+    	d.getDuration();
+    	d.getEndTime();
+    	d.getName();
+    	d.getStartTime();
+    }
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

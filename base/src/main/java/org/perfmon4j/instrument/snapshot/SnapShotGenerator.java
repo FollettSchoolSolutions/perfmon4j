@@ -283,6 +283,8 @@ public class SnapShotGenerator {
 			CtClass superClass = classPool.get(SnapShotData.class.getName());
 			CtClass ctClass = classPool.makeClass(className, superClass);
 
+			ctClass.addInterface(classPool.get(GeneratedData.class.getName()));
+			
 			if (dataInterface != null) {
 				CtClass ctInterface = classPool.get(dataInterface.getName());
 				ctClass.addInterface(ctInterface);

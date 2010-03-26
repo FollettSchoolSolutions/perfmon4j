@@ -28,7 +28,16 @@ easily modified for other databases.
 
 /** Uncomment the following to drop existing tables **/
 -- DROP Tables
-/*
+--/*
+DROP TABLE dbo.P4JMemoryPool
+GO
+
+DROP TABLE dbo.P4JVMSnapShot
+GO
+
+DROP TABLE dbo.P4JGarbageCollection
+GO
+
 DROP VIEW dbo.P4JUserAgentView
 GO
 
@@ -55,7 +64,7 @@ GO
 
 DROP TABLE dbo.P4JCategory
 GO
-*/
+--*/
 
 CREATE TABLE dbo.P4JCategory (
 	CategoryID INT IDENTITY(1,1) NOT NULL,
@@ -242,3 +251,70 @@ JOIN dbo.P4JUserAgentBrowserVersion bv ON bv.BrowserVersionID = oc.BrowserVersio
 JOIN dbo.P4JUserAgentOS os ON os.OSID = oc.OSID
 JOIN dbo.P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID
 GO
+
+CREATE TABLE dbo.P4JGarbageCollection(
+	InstanceName NVARCHAR(200) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	NumCollections INT NOT NULL,
+	CollectionMillis INT NOT NULL,
+	NumCollectionsPerMinute DECIMAL(18,2) NOT NULL,
+	CollectionMillisPerMinute DECIMAL(18,2) NOT NULL,
+	CONSTRAINT P4JGarbageCollection_pk PRIMARY KEY CLUSTERED (
+		InstanceName,
+		StartTime,
+		EndTime 
+	)
+)
+GO
+
+CREATE TABLE dbo.P4JVMSnapShot(
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	CurrentClassLoadCount INT NOT NULL,
+	ClassLoadCountInPeriod INT NOT NULL,
+	ClassLoadCountPerMinute DECIMAL(18,2) NOT NULL,
+	ClassUnloadCountInPeriod INT NOT NULL,
+	ClassUnloadCountPerMinute DECIMAL(18,2) NOT NULL,
+	PendingClassFinalizationCount INT NOT NULL,
+	CurrentThreadCount INT NOT NULL,
+	CurrentDaemonThreadCount INT NOT NULL,
+	ThreadStartCountInPeriod INT NOT NULL,
+	ThreadStartCountPerMinute DECIMAL(18,2) NOT NULL,
+	HeapMemUsedMB  DECIMAL(18,2)  NOT NULL,
+	HeapMemCommitedMB DECIMAL(18,2) NOT NULL,
+	HeapMemMaxMB DECIMAL(18,2) NOT NULL,
+	NonHeapMemUsedMB  DECIMAL(18,2)  NOT NULL,
+	NonHeapMemCommittedUsedMB  DECIMAL(18,2) NOT NULL,
+	NonHeapMemMaxUsedMB  DECIMAL(18,2) NOT NULL,
+	SystemLoadAverage DECIMAL(5, 2) NULL,
+	CompilationMillisInPeriod  INT NULL,
+	CompilationMillisPerMinute DECIMAL(18,2) NULL,
+	CONSTRAINT P4JVMSnapShot_pk PRIMARY KEY CLUSTERED (
+		StartTime,
+		EndTime 
+	)
+)
+GO
+
+
+CREATE TABLE dbo.P4JMemoryPool(
+	InstanceName VARCHAR(200) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	InitialMB DECIMAL(18,2) NOT NULL,
+	UsedMB DECIMAL(18,2) NOT NULL,
+	CommittedMB DECIMAL(18,2) NOT NULL,
+	MaxMB DECIMAL(18,2) NOT NULL,
+	MemoryType VARCHAR(50) NULL,
+	CONSTRAINT P4JMemoryPool_pk PRIMARY KEY CLUSTERED (
+		InstanceName,
+		StartTime,
+		EndTime 
+	)
+)
+GO
+

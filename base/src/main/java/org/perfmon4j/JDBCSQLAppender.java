@@ -62,7 +62,7 @@ public class JDBCSQLAppender extends SQLAppender {
     	super.deInit();
     }
     
-    protected synchronized Connection getConnection() throws SQLException {
+    public synchronized Connection getConnection() throws SQLException {
     	if (conn == null) {
     		try {
     			if (driverClass != null) {
@@ -107,7 +107,7 @@ public class JDBCSQLAppender extends SQLAppender {
 		conn = null;
 	}
     
-    protected void releaseConnection(Connection conn) {
+    public void releaseConnection(Connection conn) {
     	// Only clear the connection in deInit!
     }
     

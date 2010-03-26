@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008,2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,26 +14,35 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
 package org.perfmon4j.java.management;
 
+import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.List;
 
-import java.lang.management.GarbageCollectorMXBean;
-
+import org.perfmon4j.SnapShotData;
+import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.snapshot.Delta;
+import org.perfmon4j.instrument.snapshot.GeneratedData;
+import org.perfmon4j.util.JDBCHelper;
 
 @SnapShotProvider(type = SnapShotProvider.Type.FACTORY, 
-		dataInterface=GarbageCollectorSnapShot.GarbageCollectorData.class)
+		dataInterface=GarbageCollectorSnapShot.GarbageCollectorData.class,
+		sqlWriter=GarbageCollectorSnapShot.SQLWriter.class)
 public class GarbageCollectorSnapShot {
-	public static interface GarbageCollectorData {
+	
+	public static interface GarbageCollectorData extends GeneratedData {
 		public String getInstanceName();
 		public Delta getCollectionCount();
 		public Delta getCollectionTime();
@@ -135,5 +144,42 @@ public class GarbageCollectorSnapShot {
 			}
 		}
 		return result;
+	}
+	
+	
+	public static class SQLWriter implements SnapShotSQLWriter {
+		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+			throws SQLException {
+			writeToSQL(conn, schema, (GarbageCollectorData)data);
+		}
+		
+		public void writeToSQL(Connection conn, String schema, GarbageCollectorData data)
+			throws SQLException {
+			schema = (schema == null) ? "" : (schema + ".");
+			
+			final String SQL = "INSERT INTO " + schema + "P4JGarbageCollection " +
+				"(InstanceName, StartTime, EndTime, Duration, NumCollections, " +
+				"CollectionMillis, NumCollectionsPerMinute, CollectionMillisPerMinute) " +
+				"VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
+			PreparedStatement stmt = null;
+			try {
+				stmt = conn.prepareStatement(SQL);
+				stmt.setString(1, data.getInstanceName());
+				stmt.setTimestamp(2, new Timestamp(data.getStartTime()));
+				stmt.setTimestamp(3, new Timestamp(data.getEndTime()));
+				stmt.setLong(4, data.getDuration());
+				stmt.setLong(5, data.getCollectionCount().getDelta());
+				stmt.setLong(6, data.getCollectionTime().getDelta());
+				stmt.setDouble(7, data.getCollectionCount().getDeltaPerMinute());
+				stmt.setDouble(8, data.getCollectionTime().getDeltaPerMinute());
+				
+				int count = stmt.executeUpdate();
+				if (count != 1) {
+					throw new SQLException("GarbageCollectorSnapShot failed to insert row");
+				}
+			} finally {
+				JDBCHelper.closeNoThrow(stmt);
+			}
+		}
 	}
 }

@@ -27,17 +27,29 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.ThreadMXBean;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.sql.Types;
 
+import org.perfmon4j.SnapShotData;
+import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.snapshot.Delta;
+import org.perfmon4j.instrument.snapshot.GeneratedData;
+import org.perfmon4j.java.management.GarbageCollectorSnapShot.GarbageCollectorData;
 import org.perfmon4j.util.ByteFormatter;
+import org.perfmon4j.util.JDBCHelper;
 
 @SnapShotProvider(type = SnapShotProvider.Type.INSTANCE_PER_MONITOR, 
-		dataInterface=JVMSnapShot.JVMData.class)
+		dataInterface=JVMSnapShot.JVMData.class,
+		sqlWriter=JVMSnapShot.SQLWriter.class
+		)
 @SnapShotRatios({
 		@SnapShotRatio(name="heapMemUsedCommitted", denominator="heapMemCommitted", 
 			numerator="heapMemUsed", displayAsPercentage=true),
@@ -49,7 +61,7 @@ import org.perfmon4j.util.ByteFormatter;
 			numerator="nonHeapMemUsed", displayAsPercentage=true)
 })
 public class JVMSnapShot {
-	public static interface JVMData {
+	public static interface JVMData extends GeneratedData {
 		public int getClassesLoaded();
 		public Delta getTotalLoadedClassCount();
 		public Delta getUnloadedClassCount();
@@ -205,7 +217,74 @@ public class JVMSnapShot {
 		return new JVMManagementObjects();
 	}
 
-//    public static void main(String args[]) throws Exception {
+	public static class SQLWriter implements SnapShotSQLWriter {
+		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+			throws SQLException {
+			writeToSQL(conn, schema, (JVMData)data);
+		}
+		
+		public void writeToSQL(Connection conn, String schema, JVMData data)
+			throws SQLException {
+			schema = (schema == null) ? "" : (schema + ".");
+			
+			final String SQL = "INSERT INTO " + schema + "P4JVMSnapShot " +
+				"(StartTime, EndTime, Duration, CurrentClassLoadCount, " +
+		    	" ClassLoadCountInPeriod, ClassLoadCountPerMinute, ClassUnloadCountInPeriod, " +
+		    	" ClassUnloadCountPerMinute, PendingClassFinalizationCount, " +  
+		    	" CurrentThreadCount, CurrentDaemonThreadCount, " +
+		    	" ThreadStartCountInPeriod, ThreadStartCountPerMinute, " +
+		    	" HeapMemUsedMB,  HeapMemCommitedMB,  HeapMemMaxMB, " +
+		    	" NonHeapMemUsedMB, NonHeapMemCommittedUsedMB, NonHeapMemMaxUsedMB, " +  
+		    	" SystemLoadAverage, CompilationMillisInPeriod, CompilationMillisPerMinute) " +
+				" VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			PreparedStatement stmt = null;
+			try {
+				stmt = conn.prepareStatement(SQL);
+	        	stmt.setTimestamp(1, new Timestamp(data.getStartTime()));
+	        	stmt.setTimestamp(2, new Timestamp(data.getEndTime()));
+	        	stmt.setLong(3, data.getDuration());
+	        	stmt.setInt(4, data.getClassesLoaded());
+	        	stmt.setLong(5, data.getTotalLoadedClassCount().getDelta());
+	        	stmt.setDouble(6, data.getTotalLoadedClassCount().getDeltaPerMinute());
+	        	stmt.setLong(7, data.getUnloadedClassCount().getDelta());
+	        	stmt.setDouble(8, data.getUnloadedClassCount().getDeltaPerMinute());
+	        	stmt.setLong(9, data.getPendingFinalization());
+	        	stmt.setLong(10, data.getThreadCount());
+	        	stmt.setLong(11, data.getDaemonThreadCount());
+	        	stmt.setLong(12, data.getThreadsStarted().getDelta());
+	        	stmt.setDouble(13, data.getThreadsStarted().getDeltaPerMinute());
+	        	stmt.setDouble(14, data.getHeapMemUsed() / (double)1024);
+	        	stmt.setDouble(15, data.getHeapMemCommitted() / (double)1024);
+	        	stmt.setDouble(16, data.getHeapMemMax() / (double)1024);
+	        	stmt.setDouble(17, data.getNonHeapMemUsed() / (double)1024);
+	        	stmt.setDouble(18, data.getNonHeapMemCommitted() / (double)1024);
+	        	stmt.setDouble(19, data.getNonHeapMemMax() / (double)1024);
+	        	
+	        	if (data.getSystemLoadAverage() < 0) {
+		        	stmt.setNull(20, Types.DECIMAL);
+	        	} else {
+	        		stmt.setDouble(20, data.getSystemLoadAverage());
+	        	}
+	        	
+	        	if (data.getCompilationTimeActive()) {
+		        	stmt.setLong(21, data.getCompilationTime().getDelta());
+		        	stmt.setDouble(22, data.getCompilationTime().getDeltaPerMinute());
+	        	} else {
+		        	stmt.setNull(21, Types.INTEGER);
+		        	stmt.setNull(22, Types.DECIMAL);
+	        	}
+				
+				int count = stmt.executeUpdate();
+				if (count != 1) {
+					throw new SQLException("JVMSnapShot failed to insert row");
+				}
+			} finally {
+				JDBCHelper.closeNoThrow(stmt);
+			}
+		}
+	}
+
+	//    public static void main(String args[]) throws Exception {
 //    	System.setProperty("PERFMON_APPENDER_ASYNC_TIMER_MILLIS", "500");
 //    	
 //    	BasicConfigurator.configure();

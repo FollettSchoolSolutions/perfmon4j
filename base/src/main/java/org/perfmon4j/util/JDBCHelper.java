@@ -23,6 +23,7 @@ package org.perfmon4j.util;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -78,6 +79,22 @@ public class JDBCHelper {
 		} catch (SQLException se) {
 			logger.logDebug("Error closing result set", se);
 		}
+	}
+	
+	public static long getQueryCount(PreparedStatement stmt) throws SQLException {
+		long result = 0;
+		
+		ResultSet rs = null;
+		try {
+			rs = stmt.executeQuery();
+			if (rs.next()) {
+				result = rs.getLong(1);
+			}
+		} finally {
+			closeNoThrow(rs);
+		}
+		
+		return result;
 	}
 	
 	public static long getQueryCount(Connection conn, String sql) throws SQLException {
@@ -141,5 +158,17 @@ public class JDBCHelper {
 		} else {
 			return fieldName + "=" + value.toString();
 		}
+	}
+	
+	public static String rsRowToString(ResultSet rs) throws SQLException {
+		String result = "";
+		
+		ResultSetMetaData d = rs.getMetaData();
+		int count = d.getColumnCount();
+		for (int i = 1; i <= count; i++) {
+			result += d.getColumnLabel(i) + "=" + rs.getString(i) + "\r\n";
+		}
+		
+		return result;
 	}
 }

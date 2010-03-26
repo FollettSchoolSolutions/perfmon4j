@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,22 +14,31 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
 
 package org.perfmon4j.extras.tomcat55;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+import org.perfmon4j.SnapShotData;
+import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotString;
+import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
 @SnapShotProvider(type=SnapShotProvider.Type.INSTANCE_PER_MONITOR, 
-		dataInterface=ThreadPoolMonitor.class)
+		dataInterface=ThreadPoolMonitor.class,
+		sqlWriter=ThreadPoolMonitorImpl.SQLWriter.class)
 public class ThreadPoolMonitorImpl extends JMXMonitorBase {
 	final private static Logger logger = LoggerFactory.initLogger(ThreadPoolMonitorImpl.class);
 	
@@ -62,5 +71,40 @@ public class ThreadPoolMonitorImpl extends JMXMonitorBase {
 	@SnapShotGauge
 	public long getCurrentThreadCount() {
 		return MiscHelper.sumMBeanAttributes(getMBeanServer(), getQueryObjectName(), "currentThreadCount");
+	}
+	
+	public static class SQLWriter implements SnapShotSQLWriter {
+		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+			throws SQLException {
+			writeToSQL(conn, schema, (ThreadPoolMonitor)data);
+		}
+		
+		public void writeToSQL(Connection conn, String schema, ThreadPoolMonitor data)
+			throws SQLException {
+			schema = (schema == null) ? "" : (schema + ".");
+			
+			final String SQL = "INSERT INTO " + schema + "P4JThreadPoolMonitor " +
+				"(ThreadPoolOwner, InstanceName, StartTime, EndTime, Duration,  " +
+				"CurrentThreadsBusy, CurrentThreadCount) " +
+				"VALUES(?, ?, ?, ?, ?, ?, ?)";
+			PreparedStatement stmt = null;
+			try {
+				stmt = conn.prepareStatement(SQL);
+				stmt.setString(1, "Apache/Tomcat");
+				stmt.setString(2, data.getInstanceName());
+				stmt.setTimestamp(3, new Timestamp(data.getStartTime()));
+				stmt.setTimestamp(4, new Timestamp(data.getEndTime()));
+				stmt.setLong(5, data.getDuration());
+				stmt.setLong(6, data.getCurrentThreadsBusy());
+				stmt.setLong(7, data.getCurrentThreadCount());
+				
+				int count = stmt.executeUpdate();
+				if (count != 1) {
+					throw new SQLException("ThreadPoolMonitor failed to insert row");
+				}
+			} finally {
+				JDBCHelper.closeNoThrow(stmt);
+			}
+		}
 	}
 }

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,15 +14,17 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
 
 package org.perfmon4j.extras.tomcat55;
 
+import org.perfmon4j.instrument.snapshot.GeneratedData;
 
-public interface ThreadPoolMonitor {
+
+public interface ThreadPoolMonitor extends GeneratedData {
 	public long getCurrentThreadsBusy();
 	public long getCurrentThreadCount();
 	public String getInstanceName();

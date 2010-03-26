@@ -23,15 +23,12 @@ package org.perfmon4j;
 
 import java.sql.Connection;
 import java.sql.Statement;
-import java.util.GregorianCalendar;
 
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.UserAgentVO;
 
 
 public class UserAgentSnapShotMonitorTest extends SQLTest {
-    final String DERBY_DROP_CATEGORY = "DROP TABLE mydb.P4JCategory";
-
     
     final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JUserAgentBrowser(\r\n" +
     	"	BrowserID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +

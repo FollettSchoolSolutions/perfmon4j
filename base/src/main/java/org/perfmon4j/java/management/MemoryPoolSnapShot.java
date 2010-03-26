@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008,2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -22,18 +22,28 @@ package org.perfmon4j.java.management;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.List;
 
+import org.perfmon4j.SnapShotData;
+import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.SnapShotString;
+import org.perfmon4j.instrument.snapshot.GeneratedData;
 import org.perfmon4j.instrument.snapshot.Ratio;
+import org.perfmon4j.java.management.GarbageCollectorSnapShot.GarbageCollectorData;
 import org.perfmon4j.util.ByteFormatter;
+import org.perfmon4j.util.JDBCHelper;
 
 @SnapShotProvider(type = SnapShotProvider.Type.FACTORY, 
-		dataInterface=MemoryPoolSnapShot.MemoryPoolData.class)
+		dataInterface=MemoryPoolSnapShot.MemoryPoolData.class,
+		sqlWriter=MemoryPoolSnapShot.SQLWriter.class)
 @SnapShotRatios({
 		@SnapShotRatio(name="usedCommittedRatio", denominator="Committed", 
 			numerator="Used", displayAsPercentage=true),
@@ -41,7 +51,7 @@ import org.perfmon4j.util.ByteFormatter;
 			numerator="Used", displayAsPercentage=true)
 })
 public class MemoryPoolSnapShot {
-	public static interface MemoryPoolData {
+	public static interface MemoryPoolData extends GeneratedData {
 		public String getInstanceName();
 		public long getInit();
 		public long getMax();
@@ -187,6 +197,43 @@ public class MemoryPoolSnapShot {
 		return result;
 	}
 
+	public static class SQLWriter implements SnapShotSQLWriter {
+		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+			throws SQLException {
+			writeToSQL(conn, schema, (MemoryPoolData)data);
+		}
+
+		public void writeToSQL(Connection conn, String schema, MemoryPoolData data)
+			throws SQLException {
+			schema = (schema == null) ? "" : (schema + ".");
+			
+			final String SQL = "INSERT INTO " + schema + "P4JMemoryPool " +
+				"(InstanceName, StartTime, EndTime, Duration, InitialMB, " +
+				"UsedMB, CommittedMB, MaxMB, MemoryType) " +
+				"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			PreparedStatement stmt = null;
+			try {
+				stmt = conn.prepareStatement(SQL);
+				stmt.setString(1, data.getInstanceName());
+				stmt.setTimestamp(2, new Timestamp(data.getStartTime()));
+				stmt.setTimestamp(3, new Timestamp(data.getEndTime()));
+				stmt.setLong(4, data.getDuration());
+				stmt.setLong(5, data.getInit()/1024);
+				stmt.setLong(6, data.getUsed()/1024);
+				stmt.setDouble(7, data.getCommitted()/1024);
+				stmt.setDouble(8, data.getMax()/1024);
+				stmt.setString(9, data.getType());
+				
+				int count = stmt.executeUpdate();
+				if (count != 1) {
+					throw new SQLException("MemoryPoolSnapShot failed to insert row");
+				}
+			} finally {
+				JDBCHelper.closeNoThrow(stmt);
+			}
+		}
+	}
+	
 //    public static void main(String args[]) throws Exception {
 //    	System.setProperty("PERFMON_APPENDER_ASYNC_TIMER_MILLIS", "500");
 //    	
