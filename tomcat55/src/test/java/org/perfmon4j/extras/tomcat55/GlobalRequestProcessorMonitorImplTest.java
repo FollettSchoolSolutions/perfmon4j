@@ -39,10 +39,10 @@ public class GlobalRequestProcessorMonitorImplTest extends SQLTest {
 	"	Duration INT NOT NULL,\r\n" +
 	"	RequestCountInPeriod INT NOT NULL,\r\n" +
 	"	RequestCountPerMinute DECIMAL(18,2) NOT NULL,\r\n" +
-	"	MBytesSentInPeriod DECIMAL(18, 2) NOT NULL,\r\n" +
-	"	MBytesSentPerMinute DECIMAL(18, 2) NOT NULL,\r\n" +
-	"	MBytesReceivedInPeriod DECIMAL(18, 2) NOT NULL,\r\n" +
-	"	MBytesReceivedPerMinute DECIMAL(18, 2) NOT NULL,\r\n" +
+	"	KBytesSentInPeriod DECIMAL(18, 2) NOT NULL,\r\n" +
+	"	KBytesSentPerMinute DECIMAL(18, 2) NOT NULL,\r\n" +
+	"	KBytesReceivedInPeriod DECIMAL(18, 2) NOT NULL,\r\n" +
+	"	KBytesReceivedPerMinute DECIMAL(18, 2) NOT NULL,\r\n" +
 	"	ProcessingMillisInPeriod INT NOT NULL,\r\n" +
 	"	ProcessingMillisPerMinute DECIMAL(18, 2) NOT NULL,\r\n" +
 	"	ErrorCountInPeriod INT NOT NULL,\r\n" +
@@ -102,10 +102,10 @@ public class GlobalRequestProcessorMonitorImplTest extends SQLTest {
 	    	" AND Duration=?\r\n" +
 	    	" AND RequestCountInPeriod=?\r\n" +
 	    	" AND RequestCountPerMinute=?\r\n" +
-	    	" AND MBytesSentInPeriod=?\r\n" +
-	    	" AND MBytesSentPerMinute=?\r\n" +
-	    	" AND MBytesReceivedInPeriod=?\r\n" +
-	    	" AND MBytesReceivedPerMinute=?\r\n" +
+	    	" AND KBytesSentInPeriod=?\r\n" +
+	    	" AND KBytesSentPerMinute=?\r\n" +
+	    	" AND KBytesReceivedInPeriod=?\r\n" +
+	    	" AND KBytesReceivedPerMinute=?\r\n" +
 	    	" AND ProcessingMillisInPeriod=?\r\n" +
 	    	" AND ProcessingMillisPerMinute=?\r\n" +
 	    	" AND ErrorCountInPeriod=?\r\n" +

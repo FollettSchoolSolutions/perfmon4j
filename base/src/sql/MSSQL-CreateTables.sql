@@ -29,6 +29,12 @@ easily modified for other databases.
 /** Uncomment the following to drop existing tables **/
 -- DROP Tables
 --/*
+DROP TABLE dbo.P4JThreadPoolMonitor
+GO
+
+DROP TABLE dbo.P4JGlobalRequestProcessor
+GO
+
 DROP TABLE dbo.P4JMemoryPool
 GO
 
@@ -318,3 +324,42 @@ CREATE TABLE dbo.P4JMemoryPool(
 )
 GO
 
+
+CREATE TABLE dbo.P4JGlobalRequestProcessor(
+	InstanceName VARCHAR(200) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	RequestCountInPeriod INT NOT NULL,
+	RequestCountPerMinute DECIMAL(18,2) NOT NULL,
+	KBytesSentInPeriod DECIMAL(18, 2) NOT NULL,
+	KBytesSentPerMinute DECIMAL(18, 2) NOT NULL,
+	KBytesReceivedInPeriod DECIMAL(18, 2) NOT NULL,
+	KBytesReceivedPerMinute DECIMAL(18, 2) NOT NULL,
+	ProcessingMillisInPeriod INT NOT NULL,
+	ProcessingMillisPerMinute DECIMAL(18, 2) NOT NULL,
+	ErrorCountInPeriod INT NOT NULL,
+	ErrorCountPerMinute DECIMAL(18, 2) NOT NULL,
+	CONSTRAINT P4JGlobalRequestProcessor_pk PRIMARY KEY CLUSTERED (
+		InstanceName,
+		StartTime,
+		EndTime 
+	)
+)
+
+
+CREATE TABLE dbo.P4JThreadPoolMonitor(
+	ThreadPoolOwner VARCHAR(50) NOT NULL,
+	InstanceName VARCHAR(200) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	CurrentThreadsBusy INT NOT NULL,
+	CurrentThreadCount INT NOT NULL,
+	CONSTRAINT P4JThredPoolMonitor_pk PRIMARY KEY CLUSTERED (
+		ThreadPoolOwner,
+		InstanceName,
+		StartTime,
+		EndTime 
+	)
+)

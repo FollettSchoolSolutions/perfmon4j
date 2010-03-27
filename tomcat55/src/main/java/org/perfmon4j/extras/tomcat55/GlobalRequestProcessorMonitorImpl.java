@@ -104,8 +104,8 @@ public class GlobalRequestProcessorMonitorImpl extends JMXMonitorBase {
 			
 			final String SQL = "INSERT INTO " + schema + "P4JGlobalRequestProcessor " +
 	    	" (InstanceName, StartTime, EndTime, Duration, " +
-	    	" RequestCountInPeriod, RequestCountPerMinute, MBytesSentInPeriod, " +
-	    	" MBytesSentPerMinute, MBytesReceivedInPeriod, MBytesReceivedPerMinute, " +
+	    	" RequestCountInPeriod, RequestCountPerMinute, KBytesSentInPeriod, " +
+	    	" KBytesSentPerMinute, KBytesReceivedInPeriod, KBytesReceivedPerMinute, " +
 	    	" ProcessingMillisInPeriod, ProcessingMillisPerMinute, ErrorCountInPeriod, " +
 	    	" ErrorCountPerMinute) " +				
 			" VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
