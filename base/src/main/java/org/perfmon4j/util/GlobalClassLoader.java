@@ -28,6 +28,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
+
 /**
  * The Global ClassLoader will contain a weak reference
  * to all classloaders found by the PerfMon4j Java Agent.
@@ -44,6 +45,15 @@ public class GlobalClassLoader extends ClassLoader {
     	classLoader = new GlobalClassLoader();
     }
     
+    private static ThreadLocal<RecursionPreventor> recursionPreventor = new ThreadLocal() {
+        protected synchronized RecursionPreventor initialValue() {
+            return new RecursionPreventor();
+        }
+    };    
+    
+    private static class RecursionPreventor {
+    	boolean threadInScope = false;
+    }
     
     private final ReadWriteLock LOCK = new ReentrantReadWriteLock();
     private long totalClassLoaders = 0; // This is a count of the total number of classloaders we have encountered
@@ -104,12 +114,20 @@ public class GlobalClassLoader extends ClassLoader {
 
     private static Class loadClassNoThrow(ClassLoader loader, String name) {
         Class result = null;
-        if (loader != null) {
-            try {
-                result = loader.loadClass(name);
-            } catch (ClassNotFoundException nfe) {
-                // Nothing todo...
-            }
+        RecursionPreventor preventor = recursionPreventor.get();
+        if (!preventor.threadInScope) {
+	        try {
+	        	preventor.threadInScope = true;
+		        if (loader != null) {
+		            try {
+		                result = loader.loadClass(name);
+		            } catch (ClassNotFoundException nfe) {
+		                // Nothing todo...
+		            }
+		        }
+	        } finally {
+	        	preventor.threadInScope = false;
+	        }
         }
         return result;
     }
