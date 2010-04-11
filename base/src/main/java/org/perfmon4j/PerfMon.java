@@ -253,7 +253,7 @@ public class PerfMon {
         ReferenceCount count = getThreadLocalReferenceCount();
         if (count.inc(systemTime) == 1) {
             ThreadTraceConfig config = threadTraceConfig;
-            if (config != null && config.shouldTraceBasedOnRandomSamplingFactor()) {
+            if (config != null && config.shouldTrace()) {
                 count.hasThreadTraceMonitor = true;
                 ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getThreadTracesOnStack();
                 tOnStack.start(getName(), config.getMaxDepth(), config.getMinDurationToCapture(), systemTime);

@@ -52,6 +52,80 @@ public class ThreadTraceMonitorTest extends TestCase {
         super.tearDown();
     }
 
+
+    private void doStartStopMonitor(PerfMon mon) {
+        PerfMonTimer timer = null;
+        try {
+            timer = PerfMonTimer.start(mon);
+        } finally {
+            PerfMonTimer.stop(timer);
+        }
+    }
+    
+    public void testSamplingBasedThreadName() throws Exception {
+        final String MONITOR_KEY = "testThreadBasedTrigger";
+        final Thread currentThread = Thread.currentThread();
+        final String originalThreadName = currentThread.getName();
+        final String TARGET_THREAD_NAME = originalThreadName + "X";
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        ThreadTraceConfig.Trigger trigger = new ThreadTraceConfig.ThreadNameTrigger(TARGET_THREAD_NAME);
+        config.setTriggers(new ThreadTraceConfig.Trigger[]{trigger});
+        
+        PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
+        mon.setThreadTraceConfig(config);
+        try {
+        	// First try where the thread name DOES not
+        	// contain matching thread name... It should not 
+        	// include a thread stack.
+        	doStartStopMonitor(mon);
+            int outputCount = TestAppender.getOutputCount();
+            assertEquals("Thread name does NOT match should NOT do a trace", 
+            		0, outputCount);
+            
+            // Now change our thread to match the monitor and retry
+            currentThread.setName(TARGET_THREAD_NAME);
+        	doStartStopMonitor(mon);
+            outputCount = TestAppender.getOutputCount();
+            assertEquals("Thread name does match should do a trace", 
+            		1, outputCount);
+        } finally {
+        	currentThread.setName(originalThreadName);
+        }
+    }
+
+    
+    public void testSamplingBasedOnThreadProperty() throws Exception {
+        final String MONITOR_KEY = "testThreadPropertyTrigger";
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        ThreadTraceConfig.Trigger trigger = new ThreadTraceConfig.ThreadPropertytTrigger("jobID", "156");
+        config.setTriggers(new ThreadTraceConfig.Trigger[]{trigger});
+        
+        PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
+        mon.setThreadTraceConfig(config);
+
+    	// First try where the thread name DOES not
+    	// contain matching thread property... It should not 
+    	// include a thread stack.
+    	doStartStopMonitor(mon);
+        int outputCount = TestAppender.getOutputCount();
+        assertEquals("Thread property does NOT exist should NOT do a trace", 
+        		0, outputCount);
+        try {
+            // Now push on the thread property and retry....
+        	ThreadTraceConfig.pushThreadProperty("jobID", "156");
+        	
+        	doStartStopMonitor(mon);
+            outputCount = TestAppender.getOutputCount();
+            assertEquals("Property matches should do a trace", 
+            		1, outputCount);
+        } finally {
+        	ThreadTraceConfig.popThreadProperty();
+        }
+    }
     
     
     public void testRandomSampling() throws Exception {
