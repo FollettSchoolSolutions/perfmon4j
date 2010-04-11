@@ -92,6 +92,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	// IF YOU DO, YOU ARE RISKING RECURSION!
         	try {
         		recursionPreventor.get().threadInScope = true;
+        		
+        		if (classBeingRedefined != null && !params.isBootStrapInstrumentationEnabled()) {
+        			// Only redefine classes if bootstrap implementation IS enabled....
+        			// TODO need an instrumentation count for this!
+        			return result;
+        		}
+        		
         		InstrumentationMonitor.incCurrentInstThreads();
                 if (loader != null) {
                     GlobalClassLoader.getClassLoader().addClassLoader(loader);
