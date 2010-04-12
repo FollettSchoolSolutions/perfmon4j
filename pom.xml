@@ -51,7 +51,7 @@
 				<activeByDefault>true</activeByDefault>
 			</activation>
 			<properties>
-				<buildVersion>1.0.2-SNAPSHOT</buildVersion>
+				<buildVersion>1.0.3-SNAPSHOT</buildVersion>
 			</properties>
 		</profile>  
 		<profile>
@@ -60,7 +60,7 @@
 				<activeByDefault>false</activeByDefault>
 			</activation>
 			<properties>
-				<buildVersion>1.0.2.GA</buildVersion>
+				<buildVersion>1.0.3.GA</buildVersion>
 			</properties>
 		</profile>  
 	</profiles>
