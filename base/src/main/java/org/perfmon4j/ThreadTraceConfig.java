@@ -130,7 +130,7 @@ public class ThreadTraceConfig {
 		}
 	}
 	
-	protected static class Trigger {
+	public static class Trigger {
 		private final TriggerType type;
 		private final String triggerString;
 		
@@ -187,11 +187,15 @@ public class ThreadTraceConfig {
 	}
 	
 	public static class ThreadNameTrigger extends Trigger {
-		final String threadName;
+		final private String threadName;
 		
 		public ThreadNameTrigger(String threadName) {
 			super(TriggerType.THREAD_NAME, threadName);
 			this.threadName = threadName;
+		}
+		
+		public String getThreadName() {
+			return threadName;
 		}
 		
 		private boolean matchesCurrentThread() {
@@ -237,4 +241,8 @@ public class ThreadTraceConfig {
 		validatorsOnThread.get().pop();
 	}
 	
+	public static TriggerValidator[] getValidatorsOnThread() {
+		Stack<TriggerValidator> v = validatorsOnThread.get();
+		return v.toArray(new TriggerValidator[v.size()]);
+	}
 }

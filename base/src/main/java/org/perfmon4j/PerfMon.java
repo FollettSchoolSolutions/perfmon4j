@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
@@ -781,6 +780,27 @@ public class PerfMon {
         }
     }
     
+    // A count of the number of thread traces that have 
+    // Triggers assigned to them.  This is used to inform the 
+    // HttpRequestFilter if it should push the HttpRequest parameter
+    // onto the request processing thread.
+    private static int requestBasedTriggerCount = 0;
+    
+    public static boolean  hasHttpRequestBasedThreadTraceTriggers() {
+    	return configured && (requestBasedTriggerCount > 0);
+    }
+
+    // A count of the number of thread traces that have 
+    // Triggers assigned to them.  This is used to inform the 
+    // HttpRequestFilter if it should push the HttpSessionValidator
+    // onto the request processing thread.
+    private static int sessionBasedTriggerCount = 0;
+    
+    public static boolean  hasHttpSessionBasedThreadTraceTriggers() {
+    	return configured && (sessionBasedTriggerCount > 0);
+    }
+    
+    
 /*----------------------------------------------------------------------------*/    
     public static void configure(PerfMonConfiguration config) throws InvalidConfigException {
         // First flush all active appenders..
@@ -815,13 +835,29 @@ public class PerfMon {
         
         Appender.purgeUnusedAppenders(config);
         
+        int numHttpRequestTriggers = 0;
+        int numHttpSessionTriggers = 0;
+        
         // Apply any threadTrace configurations...
         Map<String, ThreadTraceConfig> threadTraceMap = config.getThreadTraceConfigMap();
         Iterator<Map.Entry<String, ThreadTraceConfig>> threadTraceItr = threadTraceMap.entrySet().iterator();
         while (threadTraceItr.hasNext()) {
             Map.Entry<String, ThreadTraceConfig> current = threadTraceItr.next();
-            PerfMon.getMonitor(current.getKey()).setThreadTraceConfig(current.getValue());
+            ThreadTraceConfig traceConfig = current.getValue();
+            ThreadTraceConfig.Trigger triggers[] = traceConfig.getTriggers();
+            if (triggers != null) {
+            	for (int i = 0; i < triggers.length; i++) {
+					if (triggers[i] instanceof ThreadTraceConfig.HTTPRequestTrigger) {
+						numHttpRequestTriggers++;
+					} else if (triggers[i] instanceof ThreadTraceConfig.HTTPSessionTrigger) {
+						numHttpSessionTriggers++;
+					}
+				}
+            }
+            PerfMon.getMonitor(current.getKey()).setThreadTraceConfig(traceConfig);
         }
+        requestBasedTriggerCount = numHttpRequestTriggers;
+        sessionBasedTriggerCount = numHttpSessionTriggers;
         
         // Remove any ThreadTraceConfigs that are no longer active...
         String threadTraceMonitors[] = PerfMon.getMonitorNamesWithThreadTraceConfigAttached();

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -24,8 +24,10 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.Vector;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -85,7 +87,11 @@ class XMLConfigurationParser extends DefaultHandler {
     private final static String ATTRIBUTE_NAME = "attribute";
     private final static String SNAP_SHOT_MONITOR_NAME = "snapShotMonitor";
     private final static String THREAD_TRACE_NAME = "threadTrace";
-    
+    private final static String THREAD_TRACE_TRIGGERS_NAME = "Triggers";
+    private final static String HTTP_REQUEST_TRIGGER_NAME = "HttpRequestTrigger";
+    private final static String HTTP_SESSION_TRIGGER_NAME = "HTTPSessionTrigger";
+    private final static String THREAD_NAME_TRIGGER_NAME = "ThreadNameTrigger";
+    private final static String THREAD_PROPERTY_TRIGGER_NAME = "ThreadPropertyTrigger";
     
     
     private final int STATE_UNDEFINED                           = 0;
@@ -96,7 +102,8 @@ class XMLConfigurationParser extends DefaultHandler {
     private final int STATE_IN_SNAP_SHOT_MONITOR                = 5;
     private final int STATE_IN_SNAP_SHOT_ATTRIBUTE              = 6;
     private final int STATE_IN_THREAD_TRACE                     = 7;
-    private final int STATE_DONE                                = 8;
+    private final int STATE_IN_THREAD_TRACE_TRIGGERS          	= 8;
+    private final int STATE_DONE                                = 9;
     
     private int currentState = STATE_UNDEFINED;
     private String currentMonitorName = null;
@@ -114,6 +121,7 @@ class XMLConfigurationParser extends DefaultHandler {
   
     // Current ThreadTraceConfig
     private ThreadTraceConfig currentThreadTraceConfig = null;
+    private List<ThreadTraceConfig.Trigger> currentTriggers = null;
     
     
     @Override() public void startElement(@SuppressWarnings("unused") String uri, String name, @SuppressWarnings("unused") String qName,
@@ -243,11 +251,53 @@ class XMLConfigurationParser extends DefaultHandler {
                     
                     validateArg(THREAD_TRACE_NAME + "." + APPENDER_NAME, "name", nameAttr);
                     currentThreadTraceConfig.addAppender(config.getAppenderForName(nameAttr));
-                } else {
+                } else if (THREAD_TRACE_TRIGGERS_NAME.equalsIgnoreCase(name)) {
+                	currentState = STATE_IN_THREAD_TRACE_TRIGGERS;
+                	currentTriggers = new Vector<ThreadTraceConfig.Trigger>();
+                }  else {
                     throw new SAXException("Unexpected element: " + name);
                 }
                 break;
         
+            case STATE_IN_THREAD_TRACE_TRIGGERS:
+                if (HTTP_REQUEST_TRIGGER_NAME.equalsIgnoreCase(name)) {
+                    String nameParam = atts.getValue("name");
+                    String valueParam = atts.getValue("value");
+
+                    String location = THREAD_TRACE_NAME + "." + THREAD_TRACE_TRIGGERS_NAME + "." + HTTP_REQUEST_TRIGGER_NAME;
+                    validateArg(location, "name", nameParam);
+                    validateArg(location, "value", valueParam);
+                    
+                    currentTriggers.add(new ThreadTraceConfig.HTTPRequestTrigger(nameParam, valueParam));
+                } else if (HTTP_SESSION_TRIGGER_NAME.equalsIgnoreCase(name)) {
+                    String nameParam = atts.getValue("attributeName");
+                    String valueParam = atts.getValue("attributeValue");
+
+                    String location = THREAD_TRACE_NAME + "." + THREAD_TRACE_TRIGGERS_NAME + "." + HTTP_SESSION_TRIGGER_NAME;
+                    validateArg(location, "attributeName", nameParam);
+                    validateArg(location, "attributeValue", valueParam);
+                    
+                    currentTriggers.add(new ThreadTraceConfig.HTTPSessionTrigger(nameParam, valueParam));
+                } else if (THREAD_NAME_TRIGGER_NAME.equalsIgnoreCase(name)) {
+                    String threadNameParam = atts.getValue("threadName");
+
+                    String location = THREAD_TRACE_NAME + "." + THREAD_TRACE_TRIGGERS_NAME + "." + THREAD_NAME_TRIGGER_NAME;
+                    validateArg(location, "threadName", threadNameParam);
+                    
+                    currentTriggers.add(new ThreadTraceConfig.ThreadNameTrigger(threadNameParam));
+                } else if (THREAD_PROPERTY_TRIGGER_NAME.equalsIgnoreCase(name)) {
+                    String nameParam = atts.getValue("name");
+                    String valueParam = atts.getValue("value");
+
+                    String location = THREAD_TRACE_NAME + "." + THREAD_TRACE_TRIGGERS_NAME + "." + THREAD_PROPERTY_TRIGGER_NAME;
+                    validateArg(location, "name", nameParam);
+                    validateArg(location, "value", valueParam);
+                    
+                    currentTriggers.add(new ThreadTraceConfig.ThreadPropertytTrigger(nameParam, valueParam));
+                } else {
+                    throw new SAXException("Unexpected element: " + name);
+                }
+                break;
         }
     }
 
@@ -275,6 +325,11 @@ class XMLConfigurationParser extends DefaultHandler {
         if (THREAD_TRACE_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_THREAD_TRACE) {
             currentThreadTraceConfig = null;
             currentState = STATE_IN_ROOT;
+        }
+
+        if (THREAD_TRACE_TRIGGERS_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_THREAD_TRACE_TRIGGERS) {
+        	currentThreadTraceConfig.setTriggers(currentTriggers.toArray(new ThreadTraceConfig.Trigger[]{}));
+        	currentState = STATE_IN_THREAD_TRACE;
         }
         
         if (SNAP_SHOT_MONITOR_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_SNAP_SHOT_MONITOR) {

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -65,7 +65,6 @@ public class XMLConfigurationParserTest extends TestCase {
             "       <appender name='5 minute'/>" +
             "   </monitor>" +
             "</Perfmon4JConfig>";
-        
         
         final String XML_DEFAULT =
             "<Perfmon4JConfig>" +
@@ -230,6 +229,67 @@ public class XMLConfigurationParserTest extends TestCase {
         assertEquals("maxDepth", 10, webRequestThreadTrace.getMaxDepth());
         assertEquals("minDurationToCapture", 1000, webRequestThreadTrace.getMinDurationToCapture());
         assertEquals("randomSamplingFactor",500, webRequestThreadTrace.getRandomSamplingFactor());
+    }
+
+    
+    
+
+    public void testParseThreadTraceConfigWithRequestParameterToken() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig>" +
+            "   <threadTrace monitorName='WebRequest'>" +
+            "		<Triggers>" +
+            "       	<HTTPRequestTrigger name='BibID' value='100'/>" +
+            "       	<HTTPSessionTrigger attributeName='UserID' attributeValue='200'/>" +
+            "       	<ThreadNameTrigger threadName='Processor-http:localhost:8080'/>" +
+            "       	<ThreadPropertyTrigger name='jobID' value='300'/>" +
+            "		</Triggers>" +
+            "   </threadTrace>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+        ThreadTraceConfig webRequestThreadTrace = config.getThreadTraceConfigMap().get("WebRequest");
+        assertNotNull("Should have WebRequest Thread Trace", webRequestThreadTrace);
+        
+        assertNotNull("Should have triggers", webRequestThreadTrace.getTriggers());
+        assertEquals("Should have 4 triggers", 4, webRequestThreadTrace.getTriggers().length);
+       
+   
+        // Trigger 1
+        ThreadTraceConfig.Trigger trigger  = webRequestThreadTrace.getTriggers()[0];
+        assertTrue("Should be an HTTPRequestTrigger", trigger instanceof ThreadTraceConfig.HTTPRequestTrigger);
+        
+        ThreadTraceConfig.HTTPRequestTrigger httpTrigger = (ThreadTraceConfig.HTTPRequestTrigger)trigger;
+        
+        assertEquals("BibID", httpTrigger.getName());
+        assertEquals("100", httpTrigger.getValue());
+
+    
+        // Trigger 2
+        trigger  = webRequestThreadTrace.getTriggers()[1];
+        assertTrue("Should be an HTTPSessionTrigger", trigger instanceof ThreadTraceConfig.HTTPSessionTrigger);
+        
+        ThreadTraceConfig.HTTPSessionTrigger sessionTrigger = (ThreadTraceConfig.HTTPSessionTrigger)trigger;
+        
+        assertEquals("UserID", sessionTrigger.getName());
+        assertEquals("200", sessionTrigger.getValue());
+        
+        // Trigger 3
+        trigger  = webRequestThreadTrace.getTriggers()[2];
+        assertTrue("Should be an ThreadNameTrigger", trigger instanceof ThreadTraceConfig.ThreadNameTrigger);
+        
+        ThreadTraceConfig.ThreadNameTrigger threadNameTrigger = (ThreadTraceConfig.ThreadNameTrigger)trigger;
+        assertEquals("Processor-http:localhost:8080", threadNameTrigger.getThreadName());
+        
+        // Trigger 4
+        trigger  = webRequestThreadTrace.getTriggers()[3];
+        assertTrue("Should be an ThreadPropertyTrigger", trigger instanceof ThreadTraceConfig.ThreadPropertytTrigger);
+        
+        ThreadTraceConfig.ThreadPropertytTrigger threadProp = (ThreadTraceConfig.ThreadPropertytTrigger)trigger;
+        
+        assertEquals("jobID", threadProp.getName());
+        assertEquals("300", threadProp.getValue());
+    
     }
     
     

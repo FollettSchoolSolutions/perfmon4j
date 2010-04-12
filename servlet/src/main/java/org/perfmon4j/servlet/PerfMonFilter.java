@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -34,10 +34,13 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
+import javax.servlet.http.HttpSession;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.UserAgentSnapShotMonitor;
+import org.perfmon4j.ThreadTraceConfig.Trigger;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -101,6 +104,7 @@ public class PerfMonFilter implements Filter {
     	}
     }
     
+    
 /*----------------------------------------------------------------------------*/    
     protected void doFilterHttpRequest(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {    
         Long localStartTime = null;
@@ -112,9 +116,26 @@ public class PerfMonFilter implements Filter {
         if (outputRequestAndDuration) {
         	localStartTime = new Long(MiscHelper.currentTimeWithMilliResolution());
         }
+        boolean pushedRequestValidator = false;
+        boolean pushedSessionValidator = false;
         try {
+        	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
+        		ThreadTraceConfig.pushValidator(new HttpRequestValidator(request));
+        		pushedRequestValidator = true;
+        	}
+        	if (PerfMon.hasHttpSessionBasedThreadTraceTriggers()) {
+        		ThreadTraceConfig.pushValidator(new HttpSessionValidator(request));
+        		pushedSessionValidator = true;
+        	}
+        	
             chain.doFilter(request, response);
         } finally {
+        	if (pushedRequestValidator) {
+        		ThreadTraceConfig.popValidator();
+        	}
+        	if (pushedSessionValidator) {
+        		ThreadTraceConfig.popValidator();
+        	}
             boolean doAbort = false;
             
             if (abortTimerOnRedirect && ResponseWrapper.isRedirect(response)) {
@@ -242,5 +263,53 @@ public class PerfMonFilter implements Filter {
             redirect = true;
             super.sendRedirect(url);
         }
+    }
+    
+    public static class HttpRequestValidator implements ThreadTraceConfig.TriggerValidator {
+    	private final HttpServletRequest request;
+    	
+    	HttpRequestValidator(HttpServletRequest request) {
+    		this.request = request;
+    	}
+    	
+		public boolean isValid(Trigger trigger) {
+			boolean result = false;
+			
+			if (trigger.getType() == ThreadTraceConfig.TriggerType.HTTP_REQUEST_PARAM) {
+				ThreadTraceConfig.HTTPRequestTrigger t = (ThreadTraceConfig.HTTPRequestTrigger)trigger;
+				
+				String values[] = request.getParameterValues(t.getName());
+				if (values != null) {
+					for (int i = 0; (i < values.length) && !result; i++) {
+						result = t.getValue().equals(values[i]);
+					}
+				}
+			}
+			return result;
+		}
+    }
+
+    public static class HttpSessionValidator implements ThreadTraceConfig.TriggerValidator {
+    	private final HttpServletRequest request;
+    	
+    	HttpSessionValidator(HttpServletRequest request) {
+    		this.request = request;
+    	}
+    	
+		public boolean isValid(Trigger trigger) {
+			boolean result = false;
+			
+			if (trigger.getType() == ThreadTraceConfig.TriggerType.HTTP_SESSION_PARAM) {
+				HttpSession session = request.getSession(false);
+				if (session != null) {
+					ThreadTraceConfig.HTTPSessionTrigger t = (ThreadTraceConfig.HTTPSessionTrigger)trigger;
+					Object value = session.getAttribute(t.getName());
+					if (value != null) {
+						result = t.getValue().equals(value.toString());
+					}
+				}
+			}
+			return result;
+		}
     }
 }
