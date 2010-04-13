@@ -27,7 +27,6 @@ import java.sql.Statement;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.UserAgentVO;
 
-
 public class UserAgentSnapShotMonitorTest extends SQLTest {
     
     final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JUserAgentBrowser(\r\n" +
@@ -202,5 +201,4 @@ public class UserAgentSnapShotMonitorTest extends SQLTest {
 		assertEquals("OS Version Count", 1, osVersionCount);
 		assertEquals("requestCount", 1, requestCount);
 	}
-
 }

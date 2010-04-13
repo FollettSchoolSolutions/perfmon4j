@@ -28,7 +28,10 @@ easily modified for other databases.
 
 /** Uncomment the following to drop existing tables **/
 -- DROP Tables
---/*
+/*
+DROP TABLE dbo.P4JThreadTrace
+GO
+
 DROP TABLE dbo.P4JThreadPoolMonitor
 GO
 
@@ -70,7 +73,7 @@ GO
 
 DROP TABLE dbo.P4JCategory
 GO
---*/
+*/
 
 CREATE TABLE dbo.P4JCategory (
 	CategoryID INT IDENTITY(1,1) NOT NULL,
@@ -346,7 +349,7 @@ CREATE TABLE dbo.P4JGlobalRequestProcessor(
 		EndTime 
 	)
 )
-
+GO
 
 CREATE TABLE dbo.P4JThreadPoolMonitor(
 	ThreadPoolOwner VARCHAR(50) NOT NULL,
@@ -363,3 +366,41 @@ CREATE TABLE dbo.P4JThreadPoolMonitor(
 		EndTime 
 	)
 )
+GO
+
+CREATE TABLE dbo.P4JThreadTrace(
+	RowID INT IDENTITY NOT NULL,
+	ParentRowID INT NULL,
+	CategoryID INT NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	CONSTRAINT P4JThreadTrace_pk PRIMARY KEY CLUSTERED (
+		RowID 
+	),
+	CONSTRAINT P4JThreadTraceCategoryID_fk FOREIGN KEY (
+		CategoryID
+	) REFERENCES dbo.P4JCategory (
+		CategoryID
+	) ON DELETE CASCADE,
+	CONSTRAINT P4JParentRowID_fk FOREIGN KEY (
+		ParentRowID
+	) REFERENCES dbo.P4JThreadTrace (
+		RowID
+	) 
+)
+GO
+
+CREATE INDEX P4JThreadTrace_StartTime_idx
+	ON dbo.P4JThreadTrace (
+		StartTime,
+		CategoryID
+	)
+GO
+
+CREATE INDEX P4JThreadTrace_ParentRowID_idx
+	ON dbo.P4JThreadTrace (
+		ParentRowID
+	)
+GO
+

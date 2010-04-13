@@ -171,4 +171,26 @@ public class JDBCHelper {
 		
 		return result;
 	}
+	
+	public static String dumpQuery(Connection conn, String SQL) throws SQLException {
+		String result = "";
+		
+		Statement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(SQL);
+			while (rs.next()) {
+				result += rsRowToString(rs);
+				result += "*********************************************\r\n";
+			}
+			
+		} finally {
+			closeNoThrow(rs);
+			closeNoThrow(stmt);
+		}
+		
+		return result;
+	}
+
 }

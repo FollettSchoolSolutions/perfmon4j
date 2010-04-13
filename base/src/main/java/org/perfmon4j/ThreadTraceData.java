@@ -21,13 +21,25 @@
 
 package org.perfmon4j;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 
+import org.perfmon4j.UserAgentSnapShotMonitor.Counter;
+import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.UserAgentVO;
 
 
-public class ThreadTraceData implements PerfMonData {
+public class ThreadTraceData implements PerfMonData, SQLWriteable {
     private ThreadTraceData parent;
     private final String name;
     private final List<ThreadTraceData> children = new Vector<ThreadTraceData>();
@@ -124,4 +136,68 @@ public class ThreadTraceData implements PerfMonData {
             parent = null;
         }
     }
+
+	private void writeToSQL(Long parentRowID, ThreadTraceData data, 
+			Connection conn, String schema,
+			Map categoryNameCache) throws SQLException {
+		Long myRowID = null;
+		String s = (schema == null) ? "" : (schema + ".");
+
+		String categoryName = data.getName();
+		Long categoryID = (Long)categoryNameCache.get(categoryName);
+		if (categoryID == null) {
+			categoryID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JCategory", "CategoryID", 
+					"CategoryName", categoryName);
+			categoryNameCache.put(categoryID, categoryName);
+		}
+		
+		PreparedStatement stmtInsert = null;
+		ResultSet rs = null;
+		try {
+			stmtInsert = conn.prepareStatement("INSERT INTO " + s + "P4JThreadTrace\r\n" +
+				"	(ParentRowID, CategoryID, StartTime, EndTime, Duration)\r\n" +
+				"	VALUES(?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+			stmtInsert.setObject(1, parentRowID, Types.INTEGER);
+			stmtInsert.setLong(2, categoryID.longValue());
+			stmtInsert.setTimestamp(3, new Timestamp(data.getStartTime()));
+			stmtInsert.setTimestamp(4, new Timestamp(data.getEndTime()));
+			stmtInsert.setLong(5, data.getEndTime() - data.getStartTime());
+
+			stmtInsert.execute();
+			rs = stmtInsert.getGeneratedKeys();
+			rs.next();
+			myRowID = new Long(rs.getLong(1));
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmtInsert);
+		}
+		
+		ThreadTraceData children[] = data.getChildren();
+		for (int i = 0; i < children.length; i++) {
+			writeToSQL(myRowID, children[i], conn, schema, categoryNameCache);
+		}
+	}    
+    
+	public void writeToSQL(Connection conn, String dbSchema)
+		throws SQLException {
+
+		boolean originalAutoCommit = conn.getAutoCommit();
+		boolean success = false;
+
+		try {
+			conn.setAutoCommit(false);
+			try {
+				writeToSQL(null, this, conn, dbSchema, new HashMap());
+				success = true;
+			} finally {
+				if (!success) {
+					JDBCHelper.rollbackNoThrow(conn);
+				} else {
+					conn.commit();
+				}
+			}
+		} finally {
+			conn.setAutoCommit(originalAutoCommit);
+		}
+	}
 }
