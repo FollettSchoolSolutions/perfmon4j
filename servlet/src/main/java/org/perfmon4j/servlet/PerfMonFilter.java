@@ -113,15 +113,12 @@ public class PerfMonFilter implements Filter {
     	if (abortTimerOnRedirect) {
             response = new ResponseWrapper(response);
         }
-        
-        PerfMonTimer timer = startTimerForRequest(request);
-        if (outputRequestAndDuration) {
-        	localStartTime = new Long(MiscHelper.currentTimeWithMilliResolution());
-        }
+
         boolean pushedRequestValidator = false;
         boolean pushedSessionValidator = false;
         boolean pushedCookieValidator = false;
-        try {
+        
+    	try {
         	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
         		ThreadTraceConfig.pushValidator(new HttpRequestValidator(request));
         		pushedRequestValidator = true;
@@ -136,7 +133,41 @@ public class PerfMonFilter implements Filter {
         		pushedCookieValidator = true;
         	}
         	
-            chain.doFilter(request, response);
+	        PerfMonTimer timer = startTimerForRequest(request);
+	        if (outputRequestAndDuration) {
+	        	localStartTime = new Long(MiscHelper.currentTimeWithMilliResolution());
+	        }
+	        try {
+	            chain.doFilter(request, response);
+	        } finally {
+	            boolean doAbort = false;
+	            
+	            if (abortTimerOnRedirect && ResponseWrapper.isRedirect(response)) {
+	                doAbort = true;
+	            }
+	            
+	            if (!doAbort && abortTimerOnImageResponse) {
+	                String contentType = response.getContentType();
+	                doAbort = contentType != null && contentType.startsWith("image");
+	            }
+	            
+	            if (!doAbort && (abortTimerOnURLPattern != null)) {
+	                String path = request.getServletPath();
+	                Matcher matcher = abortTimerOnURLPattern.matcher(path);
+	                doAbort = matcher.matches();
+	            }
+	            
+	            if (doAbort) {
+	            	abortTimer(timer, request, response);
+	            } else {
+	            	stopTimer(timer, request, response);
+	            	if (localStartTime != null) {
+	            		long duration = Math.min(MiscHelper.currentTimeWithMilliResolution() -
+	            			localStartTime.longValue(), 0);
+	            		logger.logInfo(duration + " " + buildRequestDescription(request));
+	            	}
+	            }
+	        }
         } finally {
         	if (pushedRequestValidator) {
         		ThreadTraceConfig.popValidator();
@@ -147,33 +178,6 @@ public class PerfMonFilter implements Filter {
         	if (pushedCookieValidator) {
         		ThreadTraceConfig.popValidator();
         	}
-            boolean doAbort = false;
-            
-            if (abortTimerOnRedirect && ResponseWrapper.isRedirect(response)) {
-                doAbort = true;
-            }
-            
-            if (!doAbort && abortTimerOnImageResponse) {
-                String contentType = response.getContentType();
-                doAbort = contentType != null && contentType.startsWith("image");
-            }
-            
-            if (!doAbort && (abortTimerOnURLPattern != null)) {
-                String path = request.getServletPath();
-                Matcher matcher = abortTimerOnURLPattern.matcher(path);
-                doAbort = matcher.matches();
-            }
-            
-            if (doAbort) {
-            	abortTimer(timer, request, response);
-            } else {
-            	stopTimer(timer, request, response);
-            	if (localStartTime != null) {
-            		long duration = Math.min(MiscHelper.currentTimeWithMilliResolution() -
-            			localStartTime.longValue(), 0);
-            		logger.logInfo(duration + " " + buildRequestDescription(request));
-            	}
-            }
         }
     }
 
