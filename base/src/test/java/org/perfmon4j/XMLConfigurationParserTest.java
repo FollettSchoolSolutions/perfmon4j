@@ -243,6 +243,7 @@ public class XMLConfigurationParserTest extends TestCase {
             "       	<HTTPSessionTrigger attributeName='UserID' attributeValue='200'/>" +
             "       	<ThreadNameTrigger threadName='Processor-http:localhost:8080'/>" +
             "       	<ThreadPropertyTrigger name='jobID' value='300'/>" +
+            "       	<HTTPCookieTrigger name='JSESSIONID' value='400'/>" +
             "		</Triggers>" +
             "   </threadTrace>" +
             "</Perfmon4JConfig>";
@@ -252,7 +253,7 @@ public class XMLConfigurationParserTest extends TestCase {
         assertNotNull("Should have WebRequest Thread Trace", webRequestThreadTrace);
         
         assertNotNull("Should have triggers", webRequestThreadTrace.getTriggers());
-        assertEquals("Should have 4 triggers", 4, webRequestThreadTrace.getTriggers().length);
+        assertEquals("Should have 5 triggers", 5, webRequestThreadTrace.getTriggers().length);
        
    
         // Trigger 1
@@ -289,7 +290,15 @@ public class XMLConfigurationParserTest extends TestCase {
         
         assertEquals("jobID", threadProp.getName());
         assertEquals("300", threadProp.getValue());
-    
+
+        // Trigger 5
+        trigger  = webRequestThreadTrace.getTriggers()[4];
+        assertTrue("Should be an HttpCookieTrigger", trigger instanceof ThreadTraceConfig.HTTPCookieTrigger);
+        
+        ThreadTraceConfig.HTTPCookieTrigger cookieTrigger = (ThreadTraceConfig.HTTPCookieTrigger)trigger;
+        
+        assertEquals("JSESSIONID", cookieTrigger.getName());
+        assertEquals("400", cookieTrigger.getValue());
     }
     
     

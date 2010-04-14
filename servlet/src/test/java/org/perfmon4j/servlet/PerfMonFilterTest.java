@@ -28,6 +28,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -196,23 +197,47 @@ public class PerfMonFilterTest extends TestCase {
 		assertEquals("Filter must not leave validators on the thread", 0, ThreadTraceConfig.getValidatorsOnThread().length);
 	}
 
+	public void testHttpCookieTriggerIsValid() {
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		Mockito.when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("JSESSIONID", "700")});
+		
+		PerfMonFilter.HttpCookieValidator v = new PerfMonFilter.HttpCookieValidator(request);
+		
+		ThreadTraceConfig.HTTPCookieTrigger tMatch = new ThreadTraceConfig.HTTPCookieTrigger("JSESSIONID", "700");
+		assertTrue("expected match for JSESSIONID=700",  v.isValid(tMatch));
+		
+		ThreadTraceConfig.HTTPCookieTrigger tNoMatch = new ThreadTraceConfig.HTTPCookieTrigger("JSESSIONID", "701");
+		assertFalse("expected match for JSESSIONID=701",  v.isValid(tNoMatch));
+	}
+	
+	public void testHttpCookieTriggerIsActive() throws Exception {
+		ThreadTraceConfig traceConfig = new ThreadTraceConfig();
+		ThreadTraceConfig.HTTPCookieTrigger t1 = new ThreadTraceConfig.HTTPCookieTrigger("JSESSIONID", "700");
+		
+		traceConfig.setTriggers(new ThreadTraceConfig.Trigger[]{t1});
+		configurePerfMon(traceConfig);
+		
+		MyChain chain = runRequestThroughChain(false);
+		
+		assertEquals("Filter should have inserted validator on stack", 1, chain.validators.length);
+		assertEquals("Filter must not leave validators on the thread", 0, ThreadTraceConfig.getValidatorsOnThread().length);
+	}
+	
+	
 	public void testTriggersAreCleanedUpOnException() throws Exception {
 		ThreadTraceConfig traceConfig = new ThreadTraceConfig();
 		ThreadTraceConfig.HTTPRequestTrigger t1 = new ThreadTraceConfig.HTTPRequestTrigger("bibID", "100");
 		ThreadTraceConfig.HTTPSessionTrigger t2 = new ThreadTraceConfig.HTTPSessionTrigger("userID", "200");
+		ThreadTraceConfig.HTTPCookieTrigger  t3 = new ThreadTraceConfig.HTTPCookieTrigger("JSEE=SION", "200");
 		
-		traceConfig.setTriggers(new ThreadTraceConfig.Trigger[]{t1, t2});
+		traceConfig.setTriggers(new ThreadTraceConfig.Trigger[]{t1, t2, t3});
 		
 		configurePerfMon(traceConfig);
 		
 		MyChain chain = null;
 		chain = runRequestThroughChain(true);
 		
-		assertEquals("Filter should have inserted validators on stack", 2, chain.validators.length);
+		assertEquals("Filter should have inserted validators on stack", 3, chain.validators.length);
 		assertEquals("Filter must NOT leave validators on the thread", 0, ThreadTraceConfig.getValidatorsOnThread().length);
 	}
-	
-	
-	
-	
 }

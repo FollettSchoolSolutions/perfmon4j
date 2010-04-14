@@ -116,6 +116,7 @@ public class ThreadTraceConfig {
 	public static enum TriggerType {
 		HTTP_REQUEST_PARAM("HTTP"),
 		HTTP_SESSION_PARAM("HTTP_SESSION"),
+		HTTP_COOKIE_PARAM("HTTP_COOKIE"),
 		THREAD_NAME("THREAD_NAME"),
 		THREAD_PROPERTY("THREAD_PROPERTY");
 		
@@ -183,6 +184,12 @@ public class ThreadTraceConfig {
 	public static class HTTPSessionTrigger extends PropertyTrigger {
 		public HTTPSessionTrigger(String name, String value) {
 			super(TriggerType.HTTP_SESSION_PARAM, name, value);
+		}
+	}
+
+	public static class HTTPCookieTrigger extends PropertyTrigger {
+		public HTTPCookieTrigger(String name, String value) {
+			super(TriggerType.HTTP_COOKIE_PARAM, name, value);
 		}
 	}
 	

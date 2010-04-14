@@ -800,6 +800,15 @@ public class PerfMon {
     	return configured && (sessionBasedTriggerCount > 0);
     }
     
+    // A count of the number of thread traces that have 
+    // Triggers assigned to them.  This is used to inform the 
+    // HttpRequestFilter if it should push the HttpCookieValidator
+    // onto the request processing thread.
+    private static int cookieBasedTriggerCount = 0;
+    
+    public static boolean  hasHttpCookieBasedThreadTraceTriggers() {
+    	return configured && (cookieBasedTriggerCount > 0);
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void configure(PerfMonConfiguration config) throws InvalidConfigException {
@@ -837,6 +846,7 @@ public class PerfMon {
         
         int numHttpRequestTriggers = 0;
         int numHttpSessionTriggers = 0;
+        int numHttpCookieTriggers = 0;
         
         // Apply any threadTrace configurations...
         Map<String, ThreadTraceConfig> threadTraceMap = config.getThreadTraceConfigMap();
@@ -851,6 +861,8 @@ public class PerfMon {
 						numHttpRequestTriggers++;
 					} else if (triggers[i] instanceof ThreadTraceConfig.HTTPSessionTrigger) {
 						numHttpSessionTriggers++;
+					} else if (triggers[i] instanceof ThreadTraceConfig.HTTPCookieTrigger) {
+						numHttpCookieTriggers++;
 					}
 				}
             }
@@ -858,6 +870,7 @@ public class PerfMon {
         }
         requestBasedTriggerCount = numHttpRequestTriggers;
         sessionBasedTriggerCount = numHttpSessionTriggers;
+        cookieBasedTriggerCount = numHttpCookieTriggers;
         
         // Remove any ThreadTraceConfigs that are no longer active...
         String threadTraceMonitors[] = PerfMon.getMonitorNamesWithThreadTraceConfigAttached();

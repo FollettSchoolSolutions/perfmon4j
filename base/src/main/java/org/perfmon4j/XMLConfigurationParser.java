@@ -90,9 +90,9 @@ class XMLConfigurationParser extends DefaultHandler {
     private final static String THREAD_TRACE_TRIGGERS_NAME = "Triggers";
     private final static String HTTP_REQUEST_TRIGGER_NAME = "HttpRequestTrigger";
     private final static String HTTP_SESSION_TRIGGER_NAME = "HTTPSessionTrigger";
+    private final static String HTTP_COOKIE_TRIGGER_NAME = "HTTPCookieTrigger";
     private final static String THREAD_NAME_TRIGGER_NAME = "ThreadNameTrigger";
     private final static String THREAD_PROPERTY_TRIGGER_NAME = "ThreadPropertyTrigger";
-    
     
     private final int STATE_UNDEFINED                           = 0;
     private final int STATE_IN_ROOT                             = 1;
@@ -278,6 +278,15 @@ class XMLConfigurationParser extends DefaultHandler {
                     validateArg(location, "attributeValue", valueParam);
                     
                     currentTriggers.add(new ThreadTraceConfig.HTTPSessionTrigger(nameParam, valueParam));
+                } else if (HTTP_COOKIE_TRIGGER_NAME.equalsIgnoreCase(name)) {
+                    String nameParam = atts.getValue("name");
+                    String valueParam = atts.getValue("value");
+
+                    String location = THREAD_TRACE_NAME + "." + THREAD_TRACE_TRIGGERS_NAME + "." + HTTP_COOKIE_TRIGGER_NAME;
+                    validateArg(location, "name", nameParam);
+                    validateArg(location, "value", valueParam);
+                    
+                    currentTriggers.add(new ThreadTraceConfig.HTTPCookieTrigger(nameParam, valueParam));
                 } else if (THREAD_NAME_TRIGGER_NAME.equalsIgnoreCase(name)) {
                     String threadNameParam = atts.getValue("threadName");
 

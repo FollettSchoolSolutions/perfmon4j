@@ -21,6 +21,7 @@
 package org.perfmon4j.servlet;
 
 import java.io.IOException;
+import java.net.CookieStore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -31,6 +32,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
@@ -118,6 +120,7 @@ public class PerfMonFilter implements Filter {
         }
         boolean pushedRequestValidator = false;
         boolean pushedSessionValidator = false;
+        boolean pushedCookieValidator = false;
         try {
         	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
         		ThreadTraceConfig.pushValidator(new HttpRequestValidator(request));
@@ -128,12 +131,20 @@ public class PerfMonFilter implements Filter {
         		pushedSessionValidator = true;
         	}
         	
+        	if (PerfMon.hasHttpCookieBasedThreadTraceTriggers()) {
+        		ThreadTraceConfig.pushValidator(new HttpCookieValidator(request));
+        		pushedCookieValidator = true;
+        	}
+        	
             chain.doFilter(request, response);
         } finally {
         	if (pushedRequestValidator) {
         		ThreadTraceConfig.popValidator();
         	}
         	if (pushedSessionValidator) {
+        		ThreadTraceConfig.popValidator();
+        	}
+        	if (pushedCookieValidator) {
         		ThreadTraceConfig.popValidator();
         	}
             boolean doAbort = false;
@@ -312,4 +323,30 @@ public class PerfMonFilter implements Filter {
 			return result;
 		}
     }
+
+
+    public static class HttpCookieValidator implements ThreadTraceConfig.TriggerValidator {
+    	private final HttpServletRequest request;
+    	
+    	HttpCookieValidator(HttpServletRequest request) {
+    		this.request = request;
+    	}
+    	
+		public boolean isValid(Trigger trigger) {
+			boolean result = false;
+			
+			if (trigger.getType() == ThreadTraceConfig.TriggerType.HTTP_COOKIE_PARAM) {
+				Cookie cookies[] = request.getCookies();
+				ThreadTraceConfig.HTTPCookieTrigger t = (ThreadTraceConfig.HTTPCookieTrigger)trigger;
+				for (int i = 0; (cookies != null) && (i < cookies.length) && !result; i++) {
+					Cookie c = cookies[i];
+					result = t.getName().equalsIgnoreCase(c.getName()) &&
+						t.getValue().equalsIgnoreCase(c.getValue());
+				}
+			}
+			return result;
+		}
+    }
+
+
 }
