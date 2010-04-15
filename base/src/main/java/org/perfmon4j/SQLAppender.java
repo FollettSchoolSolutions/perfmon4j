@@ -128,7 +128,7 @@ public abstract class SQLAppender extends Appender {
 				JDBCHelper.closeNoThrow(rs);
 				rs = null;
 				
-				stmtInsert = conn.prepareStatement(getInsertCategoryPS(), new int[]{1});
+				stmtInsert = conn.prepareStatement(getInsertCategoryPS(), Statement.RETURN_GENERATED_KEYS);
 				stmtInsert.setString(1, categoryName);
 				stmtInsert.execute();
 				
@@ -193,7 +193,7 @@ public abstract class SQLAppender extends Appender {
 				}
 				medianDuration = d;
 			}
-			insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), new int[]{1});
+			insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), Statement.RETURN_GENERATED_KEYS);
 
 			insertIntervalStmt.setLong(1, categoryID);
 			insertIntervalStmt.setTimestamp(2, new Timestamp(startTime));

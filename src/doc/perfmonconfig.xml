@@ -3,7 +3,11 @@
 		<attribute name='medianCalculator'>factor=10</attribute>		
 		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
 	</appender>
-	
+
+	<appender name='snapshot-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
+	</appender>
+
+
 <!--  JDBC Based Appender - Option 1 (Raw JDBC Connection)-
 	This appender will log timing data to a SQL database using
 	the specified jdbcDriver and connection information.
@@ -74,7 +78,7 @@
 	MSSQL-CreateP4JIntervalSchema.sql for an example of the
 	required tables 
 	
-	<appender name='pool' className='org.perfmon4j.PooledSQLAppender' interval='1 minute'>
+	<appender name='jdbc' className='org.perfmon4j.PooledSQLAppender' interval='1 minute'>
 		<attribute name='poolName'>java:/MSSQLDS</attribute>		
 		<attribute name='dbSchema'>myschema</attribute>		
 		
@@ -83,19 +87,54 @@
 	</appender>
 -->
 
-	<appender name='snapshot-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
-	</appender>
-
-	<monitor name='WebRequest'>
+	<!-- WebRequest appender is only valid for a web based application server.  
+		Requires the PerfMonFilter or PerfMonValve to be installed -->
+	<monitor name='WebRequest'> 
 		<appender name='webrequest-appender' pattern="."/> 
+
+		<!-- 	Uncomment if you want to use a jdbc appender... 
+			JDBCAppender must be configured using Option 1 (Direct JDBC connection)
+			or Option 2 (JDBC Pool) defined above.
+		-->	
+		<!--
+			<appender name='jdbc' pattern="."/> 
+		-->
 	</monitor>
+	
+	<!-- UserAgent monitoring can be useful for a web based application to collect data
+		regarding the browser hitting your application
+		
+		In order to collect the data in a usable format you should configure a
+		JDBCAppender  using Option 1 (Direct JDBC connection)
+		or Option 2 (JDBC Pool) defined above.
+		
+		Requires the PerfMonFilter or PerfMonValve to be installed
+		
+		to see the output 
+			"select * from P4JUserAgentView"
+	-->
+	<!--
+	<snapShotMonitor name='UserAgent' className='org.perfmon4j.UserAgentSnapShotMonitor'>
+		<appender name='jdbc'/> 
+	</snapShotMonitor>
+	-->
 
 	<snapShotMonitor name='JVMSnapShot' className='org.perfmon4j.java.management.JVMSnapShot'>
 			<appender name='snapshot-appender'/>
+		<!-- 	Uncomment if you want to use a jdbc appender... 
+			JDBCAppender must be configured using Option 1 (Direct JDBC connection)
+			or Option 2 (JDBC Pool) defined above.
+			
+			
+		-->	
+		<!--
+			<appender name='jdbc' pattern="."/> 
+		-->
 	</snapShotMonitor>
 	
 	<snapShotMonitor name='Composite Garbage Collector' className='org.perfmon4j.java.management.GarbageCollectorSnapShot'>
 			<appender name='snapshot-appender'/>
+			
 	</snapShotMonitor>
 
 	<snapShotMonitor name='Composite Memory Pool' 
@@ -128,9 +167,14 @@
 			<appender name='snapshot-appender'/>
 	</snapShotMonitor>
 
-
 	<threadTrace monitorName="WebRequest">
-		<appender name='high-res'/> 
+		<appender name='webrequest-appender'/> 
 	</threadTrace>
 	-->
+	
+<!--
+	jdbc appender examples.  To use these examples you must define a jdb appender using either Option 1 (direct 
+	jdbc connection) or Option 2 (connection pool) defined above.
+-->	
+	
 </Perfmon4JConfig>
