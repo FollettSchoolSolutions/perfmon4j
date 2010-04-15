@@ -310,7 +310,7 @@ GO
 
 
 CREATE TABLE dbo.P4JMemoryPool(
-	InstanceName VARCHAR(200) NOT NULL,
+	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
 	Duration INT NOT NULL,
@@ -318,7 +318,7 @@ CREATE TABLE dbo.P4JMemoryPool(
 	UsedMB DECIMAL(18,2) NOT NULL,
 	CommittedMB DECIMAL(18,2) NOT NULL,
 	MaxMB DECIMAL(18,2) NOT NULL,
-	MemoryType VARCHAR(50) NULL,
+	MemoryType NVARCHAR(50) NULL,
 	CONSTRAINT P4JMemoryPool_pk PRIMARY KEY CLUSTERED (
 		InstanceName,
 		StartTime,
@@ -329,7 +329,7 @@ GO
 
 
 CREATE TABLE dbo.P4JGlobalRequestProcessor(
-	InstanceName VARCHAR(200) NOT NULL,
+	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
 	Duration INT NOT NULL,
@@ -352,8 +352,8 @@ CREATE TABLE dbo.P4JGlobalRequestProcessor(
 GO
 
 CREATE TABLE dbo.P4JThreadPoolMonitor(
-	ThreadPoolOwner VARCHAR(50) NOT NULL,
-	InstanceName VARCHAR(200) NOT NULL,
+	ThreadPoolOwner NVARCHAR(50) NOT NULL,
+	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
 	Duration INT NOT NULL,

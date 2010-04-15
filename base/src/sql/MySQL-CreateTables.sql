@@ -28,7 +28,19 @@ easily modified for other databases.
 
 /* Uncomment the following lines to drop the existing
  tables */
- /*
+/*
+DROP TABLE P4JThreadTrace;
+
+DROP TABLE P4JThreadPoolMonitor;
+
+DROP TABLE P4JGlobalRequestProcessor;
+
+DROP TABLE P4JMemoryPool;
+
+DROP TABLE P4JVMSnapShot;
+
+DROP TABLE P4JGarbageCollection;
+
 DROP VIEW P4JUserAgentView;
 
 DROP TABLE P4JUserAgentOccurance;
@@ -169,22 +181,22 @@ CREATE TABLE P4JUserAgentOccurance (
 	),
 	CONSTRAINT P4JUserAgentOccurance_BrowserID_fk FOREIGN KEY (
 		BrowserID
-	) REFERENCES dbo.P4JUserAgentBrowser (
+	) REFERENCES P4JUserAgentBrowser (
 		BrowserID
 	) ON DELETE CASCADE,
 	CONSTRAINT P4JUserAgentOccurance_BrowserVersionID_fk FOREIGN KEY (
 		BrowserVersionID
-	) REFERENCES dbo.P4JUserAgentBrowserVersion (
+	) REFERENCES P4JUserAgentBrowserVersion (
 		BrowserVersionID
 	) ON DELETE CASCADE,
 	CONSTRAINT P4JUserAgentOccurance_OSID_fk FOREIGN KEY (
 		OSID
-	) REFERENCES dbo.P4JUserAgentOS (
+	) REFERENCES P4JUserAgentOS (
 		OSID
 	) ON DELETE CASCADE,
 	CONSTRAINT P4JUserAgentOccurance_OSVersionID_fk FOREIGN KEY (
 		OSID
-	) REFERENCES dbo.P4JUserAgentOSVersion (
+	) REFERENCES P4JUserAgentOSVersion (
 		OSVersionID
 	) ON DELETE CASCADE
 );
@@ -202,4 +214,138 @@ FROM P4JUserAgentOccurance oc
 JOIN P4JUserAgentBrowser b ON b.BrowserID = oc.BrowserID
 JOIN P4JUserAgentBrowserVersion bv ON bv.BrowserVersionID = oc.BrowserVersionID
 JOIN P4JUserAgentOS os ON os.OSID = oc.OSID
-JOIN P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID
+JOIN P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID;
+
+CREATE TABLE P4JGarbageCollection(
+	InstanceName NVARCHAR(200) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	NumCollections INT NOT NULL,
+	CollectionMillis INT NOT NULL,
+	NumCollectionsPerMinute DECIMAL(18,2) NOT NULL,
+	CollectionMillisPerMinute DECIMAL(18,2) NOT NULL,
+	CONSTRAINT P4JGarbageCollection_pk PRIMARY KEY CLUSTERED (
+		InstanceName,
+		StartTime,
+		EndTime 
+	)
+);
+
+CREATE TABLE P4JVMSnapShot(
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	CurrentClassLoadCount INT NOT NULL,
+	ClassLoadCountInPeriod INT NOT NULL,
+	ClassLoadCountPerMinute DECIMAL(18,2) NOT NULL,
+	ClassUnloadCountInPeriod INT NOT NULL,
+	ClassUnloadCountPerMinute DECIMAL(18,2) NOT NULL,
+	PendingClassFinalizationCount INT NOT NULL,
+	CurrentThreadCount INT NOT NULL,
+	CurrentDaemonThreadCount INT NOT NULL,
+	ThreadStartCountInPeriod INT NOT NULL,
+	ThreadStartCountPerMinute DECIMAL(18,2) NOT NULL,
+	HeapMemUsedMB  DECIMAL(18,2)  NOT NULL,
+	HeapMemCommitedMB DECIMAL(18,2) NOT NULL,
+	HeapMemMaxMB DECIMAL(18,2) NOT NULL,
+	NonHeapMemUsedMB  DECIMAL(18,2)  NOT NULL,
+	NonHeapMemCommittedUsedMB  DECIMAL(18,2) NOT NULL,
+	NonHeapMemMaxUsedMB  DECIMAL(18,2) NOT NULL,
+	SystemLoadAverage DECIMAL(5, 2) NULL,
+	CompilationMillisInPeriod  INT NULL,
+	CompilationMillisPerMinute DECIMAL(18,2) NULL,
+	CONSTRAINT P4JVMSnapShot_pk PRIMARY KEY CLUSTERED (
+		StartTime,
+		EndTime 
+	)
+);
+
+CREATE TABLE P4JMemoryPool(
+	InstanceName VARCHAR(200) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	InitialMB DECIMAL(18,2) NOT NULL,
+	UsedMB DECIMAL(18,2) NOT NULL,
+	CommittedMB DECIMAL(18,2) NOT NULL,
+	MaxMB DECIMAL(18,2) NOT NULL,
+	MemoryType VARCHAR(50) NULL,
+	CONSTRAINT P4JMemoryPool_pk PRIMARY KEY CLUSTERED (
+		InstanceName,
+		StartTime,
+		EndTime 
+	)
+);
+
+CREATE TABLE P4JGlobalRequestProcessor(
+	InstanceName VARCHAR(200) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	RequestCountInPeriod INT NOT NULL,
+	RequestCountPerMinute DECIMAL(18,2) NOT NULL,
+	KBytesSentInPeriod DECIMAL(18, 2) NOT NULL,
+	KBytesSentPerMinute DECIMAL(18, 2) NOT NULL,
+	KBytesReceivedInPeriod DECIMAL(18, 2) NOT NULL,
+	KBytesReceivedPerMinute DECIMAL(18, 2) NOT NULL,
+	ProcessingMillisInPeriod INT NOT NULL,
+	ProcessingMillisPerMinute DECIMAL(18, 2) NOT NULL,
+	ErrorCountInPeriod INT NOT NULL,
+	ErrorCountPerMinute DECIMAL(18, 2) NOT NULL,
+	CONSTRAINT P4JGlobalRequestProcessor_pk PRIMARY KEY CLUSTERED (
+		InstanceName,
+		StartTime,
+		EndTime 
+	)
+);
+
+CREATE TABLE P4JThreadPoolMonitor(
+	ThreadPoolOwner VARCHAR(50) NOT NULL,
+	InstanceName VARCHAR(200) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	CurrentThreadsBusy INT NOT NULL,
+	CurrentThreadCount INT NOT NULL,
+	CONSTRAINT P4JThredPoolMonitor_pk PRIMARY KEY CLUSTERED (
+		ThreadPoolOwner,
+		InstanceName,
+		StartTime,
+		EndTime 
+	)
+);
+
+CREATE TABLE P4JThreadTrace(
+	RowID INT NOT NULL AUTO_INCREMENT,
+	ParentRowID INT NULL,
+	CategoryID INT NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	CONSTRAINT P4JThreadTrace_pk PRIMARY KEY CLUSTERED (
+		RowID 
+	),
+	CONSTRAINT P4JThreadTraceCategoryID_fk FOREIGN KEY (
+		CategoryID
+	) REFERENCES P4JCategory (
+		CategoryID
+	) ON DELETE CASCADE,
+	CONSTRAINT P4JParentRowID_fk FOREIGN KEY (
+		ParentRowID
+	) REFERENCES P4JThreadTrace (
+		RowID
+	) 
+);
+
+CREATE INDEX P4JThreadTrace_StartTime_idx
+	ON P4JThreadTrace (
+		StartTime,
+		CategoryID
+);
+
+CREATE INDEX P4JThreadTrace_ParentRowID_idx
+	ON P4JThreadTrace (
+		ParentRowID
+);
+
