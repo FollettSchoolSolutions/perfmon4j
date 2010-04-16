@@ -369,14 +369,14 @@ CREATE TABLE dbo.P4JThreadPoolMonitor(
 GO
 
 CREATE TABLE dbo.P4JThreadTrace(
-	RowID INT IDENTITY NOT NULL,
+	TraceRowID INT IDENTITY NOT NULL,
 	ParentRowID INT NULL,
 	CategoryID INT NOT NULL,
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
 	Duration INT NOT NULL,
 	CONSTRAINT P4JThreadTrace_pk PRIMARY KEY CLUSTERED (
-		RowID 
+		TraceRowID 
 	),
 	CONSTRAINT P4JThreadTraceCategoryID_fk FOREIGN KEY (
 		CategoryID
@@ -386,7 +386,7 @@ CREATE TABLE dbo.P4JThreadTrace(
 	CONSTRAINT P4JParentRowID_fk FOREIGN KEY (
 		ParentRowID
 	) REFERENCES dbo.P4JThreadTrace (
-		RowID
+		TraceRowID
 	) 
 )
 GO

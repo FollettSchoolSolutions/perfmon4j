@@ -166,7 +166,7 @@ CREATE UNIQUE INDEX P4JUserAgentOSVersion_OSVersion_idx
 );
 
 CREATE TABLE P4JUserAgentOccurance (
-	CollectionDate TIMESTAMP NOT NULL,
+	CollectionDate DATE NOT NULL,
 	BrowserID INT NOT NULL,
 	BrowserVersionID INT NOT NULL,
 	OSID INT NOT NULL,
@@ -317,7 +317,7 @@ CREATE TABLE P4JThreadPoolMonitor(
 );
 
 CREATE TABLE P4JThreadTrace(
-	RowID SERIAL PRIMARY KEY,
+	TraceRowID SERIAL PRIMARY KEY,
 	ParentRowID INT NULL,
 	CategoryID INT NOT NULL,
 	StartTime TIMESTAMP NOT NULL,
@@ -331,7 +331,7 @@ CREATE TABLE P4JThreadTrace(
 	CONSTRAINT P4JParentRowID_fk FOREIGN KEY (
 		ParentRowID
 	) REFERENCES P4JThreadTrace (
-		RowID
+		TraceRowID
 	) 
 );
 

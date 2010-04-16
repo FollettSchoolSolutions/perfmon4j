@@ -317,14 +317,14 @@ CREATE TABLE P4JThreadPoolMonitor(
 );
 
 CREATE TABLE P4JThreadTrace(
-	RowID INT NOT NULL AUTO_INCREMENT,
+	TraceRowID INT NOT NULL AUTO_INCREMENT,
 	ParentRowID INT NULL,
 	CategoryID INT NOT NULL,
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
 	Duration INT NOT NULL,
 	CONSTRAINT P4JThreadTrace_pk PRIMARY KEY CLUSTERED (
-		RowID 
+		TraceRowID 
 	),
 	CONSTRAINT P4JThreadTraceCategoryID_fk FOREIGN KEY (
 		CategoryID
@@ -334,7 +334,7 @@ CREATE TABLE P4JThreadTrace(
 	CONSTRAINT P4JParentRowID_fk FOREIGN KEY (
 		ParentRowID
 	) REFERENCES P4JThreadTrace (
-		RowID
+		TraceRowID
 	) 
 );
 
@@ -348,4 +348,3 @@ CREATE INDEX P4JThreadTrace_ParentRowID_idx
 	ON P4JThreadTrace (
 		ParentRowID
 );
-
