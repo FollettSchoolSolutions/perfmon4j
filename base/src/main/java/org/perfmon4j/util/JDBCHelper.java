@@ -26,6 +26,8 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public class JDBCHelper {
 	private static final Logger logger = LoggerFactory.initLogger(JDBCHelper.class);
@@ -119,6 +121,7 @@ public class JDBCHelper {
 	public static long simpleGetOrCreate(Connection conn, 
 			String tableName, String idColumnName, String descColumnName, String desc) throws SQLException {
 		long result = 0;
+		final boolean oracleConnection = isOracleConnection(conn);
 		final String selectSQL = "SELECT " + idColumnName + " FROM " +
 			tableName + " WHERE " + descColumnName + "=?";
 		PreparedStatement stmtQuery = null;
@@ -136,7 +139,11 @@ public class JDBCHelper {
 					" VALUES(?)";
 				rs = null;
 				
-				stmtInsert = conn.prepareStatement(insertSQL, new int[]{1});
+				if (oracleConnection) {
+					stmtInsert = conn.prepareStatement(insertSQL, new int[]{1});
+				} else {
+					stmtInsert = conn.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS);
+				}
 				stmtInsert.setString(1, desc);
 				stmtInsert.execute();
 				
@@ -193,4 +200,14 @@ public class JDBCHelper {
 		return result;
 	}
 
+	
+	public static boolean isOracleConnection(Connection conn) throws SQLException {
+		boolean result = false;
+		
+		if (conn != null) {
+			result = conn.getMetaData().getDriverName().equalsIgnoreCase("Oracle JDBC driver");
+		}
+		
+		return result;
+	}
 }

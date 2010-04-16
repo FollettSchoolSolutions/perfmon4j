@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2009, 2010 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -33,10 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-import org.perfmon4j.UserAgentSnapShotMonitor.Counter;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MiscHelper;
-import org.perfmon4j.util.UserAgentVO;
 
 
 public class ThreadTraceData implements PerfMonData, SQLWriteable {
@@ -142,6 +140,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 			Map categoryNameCache) throws SQLException {
 		Long myRowID = null;
 		String s = (schema == null) ? "" : (schema + ".");
+		final boolean oracleConnection = JDBCHelper.isOracleConnection(conn);
 
 		String categoryName = data.getName();
 		Long categoryID = (Long)categoryNameCache.get(categoryName);
@@ -154,9 +153,15 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		PreparedStatement stmtInsert = null;
 		ResultSet rs = null;
 		try {
-			stmtInsert = conn.prepareStatement("INSERT INTO " + s + "P4JThreadTrace\r\n" +
+			final String sql = "INSERT INTO " + s + "P4JThreadTrace\r\n" +
 				"	(ParentRowID, CategoryID, StartTime, EndTime, Duration)\r\n" +
-				"	VALUES(?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+				"	VALUES(?, ?, ?, ?, ?)";
+			
+			if (oracleConnection) {
+				stmtInsert = conn.prepareStatement(sql, new int[]{1});
+			} else {
+				stmtInsert = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+			}
 			stmtInsert.setObject(1, parentRowID, Types.INTEGER);
 			stmtInsert.setLong(2, categoryID.longValue());
 			stmtInsert.setTimestamp(3, new Timestamp(data.getStartTime()));

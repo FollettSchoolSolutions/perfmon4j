@@ -116,6 +116,7 @@ public abstract class SQLAppender extends Appender {
 
 	private long getOrCreateCategory(Connection conn, String categoryName) throws SQLException {
 		long result = 0;
+		final boolean oracleConnection = JDBCHelper.isOracleConnection(conn);
 		PreparedStatement stmtQuery = null;
 		PreparedStatement stmtInsert = null;
 		ResultSet rs = null;
@@ -127,8 +128,12 @@ public abstract class SQLAppender extends Appender {
 			if (!rs.next()) {
 				JDBCHelper.closeNoThrow(rs);
 				rs = null;
-				
-				stmtInsert = conn.prepareStatement(getInsertCategoryPS(), Statement.RETURN_GENERATED_KEYS);
+		
+				if (oracleConnection) {
+					stmtInsert = conn.prepareStatement(getInsertCategoryPS(), new int[]{1});
+				} else {
+					stmtInsert = conn.prepareStatement(getInsertCategoryPS(), Statement.RETURN_GENERATED_KEYS);
+				}
 				stmtInsert.setString(1, categoryName);
 				stmtInsert.execute();
 				
@@ -153,6 +158,7 @@ public abstract class SQLAppender extends Appender {
 			logger.logWarn("Skipping SQL insert for data timeStart and/or timeEnd missing");
 			return;
 		}
+		final boolean oracleConnection = JDBCHelper.isOracleConnection(conn);
 		boolean autoCommit = conn.getAutoCommit();
 		boolean doRollback = false;
 		
@@ -193,8 +199,11 @@ public abstract class SQLAppender extends Appender {
 				}
 				medianDuration = d;
 			}
-			insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), Statement.RETURN_GENERATED_KEYS);
-
+			if (oracleConnection) {
+				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), new int[]{1});
+			} else {
+				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), Statement.RETURN_GENERATED_KEYS);
+			}
 			insertIntervalStmt.setLong(1, categoryID);
 			insertIntervalStmt.setTimestamp(2, new Timestamp(startTime));
 			insertIntervalStmt.setTimestamp(3, new Timestamp(endTime));

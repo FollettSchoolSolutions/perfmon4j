@@ -52,7 +52,7 @@ public class ThreadTraceDataTest extends SQLTest {
 	")";
 
     final String DERBY_CREATE_2 = "CREATE TABLE p4j.P4JThreadTrace(\r\n" +
-    	"	RowID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
+    	"	ThreadRowID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
     	"	ParentRowID INT,\r\n" +
     	"	CategoryID INT NOT NULL,\r\n" +
     	"	StartTime TIMESTAMP NOT NULL,\r\n" +
@@ -135,7 +135,7 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
 		long parentCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
 			"	FROM p4j.P4JThreadTrace tt\r\n" +
 			"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n" +
-			"	WHERE tt.RowID = 1\r\n" +
+			"	WHERE tt.ThreadRowID = 1\r\n" +
 			"	AND tt.ParentRowID IS NULL\r\n" +
 			"	AND c.CategoryName = 'com.perfmon4j.Test.test'\r\n" +
 			"	AND tt.StartTime = '2007-01-01-01.01.00.0'\r\n" +
@@ -145,7 +145,7 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
 		long childCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
 				"	FROM p4j.P4JThreadTrace tt\r\n" +
 				"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n" +
-				"	WHERE tt.RowID = 2\r\n" +
+				"	WHERE tt.ThreadRowID = 2\r\n" +
 				"	AND tt.ParentRowID = 1\r\n" +
 				"	AND c.CategoryName = 'com.perfmon4j.MiscHelper.formatString'\r\n" +
 				"	AND tt.StartTime = '2007-01-01-01.01.01.0'\r\n" +
