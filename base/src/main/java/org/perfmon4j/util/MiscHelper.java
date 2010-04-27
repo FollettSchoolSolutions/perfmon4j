@@ -26,11 +26,14 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -472,6 +475,24 @@ public class MiscHelper {
 		cal.set(Calendar.MILLISECOND, 0);
 		
 		return cal.getTimeInMillis();
+	}
+	
+	
+	public static String[] tokenizeCSVString(String src) {
+		String[] result = null;
+		
+		if (src != null && !src.trim().equals("")) {
+			List<String> x = new ArrayList<String>();
+			StringTokenizer t = new StringTokenizer(src, ",");
+			while (t.hasMoreTokens()) {
+				String str = t.nextToken().trim();
+				if (!str.equals("")) {
+					x.add(str);
+				}
+			}
+			result = x.toArray(new String[]{});
+		}
+		return result;
 	}
 
 }

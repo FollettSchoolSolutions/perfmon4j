@@ -22,7 +22,9 @@
 package org.perfmon4j.util;
 
 import java.io.File;
+import java.sql.Array;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Properties;
@@ -318,6 +320,15 @@ public class MiscHelperTest extends TestCase {
 		assertEquals("Second should be 0", 0, cal.get(Calendar.SECOND));
 		assertEquals("MilliSecond should be 0", 0, cal.get(Calendar.MILLISECOND));
 	}
+
+	
+	public void testStringTokenizer() {
+		assertTrue(Arrays.equals(new String[]{"*"}, MiscHelper.tokenizeCSVString("*")));
+		assertTrue(Arrays.equals(new String[]{"cat", "dog", "tv remote" }, MiscHelper.tokenizeCSVString("cat,   dog,  tv remote")));
+		assertNull(MiscHelper.tokenizeCSVString(""));
+		assertNull(MiscHelper.tokenizeCSVString(null));
+	}
+	
 	
 	
 /*----------------------------------------------------------------------------*/    
