@@ -22,6 +22,8 @@
 package org.perfmon4j.servlet;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -240,4 +242,59 @@ public class PerfMonFilterTest extends TestCase {
 		assertEquals("Filter should have inserted validators on stack", 3, chain.validators.length);
 		assertEquals("Filter must NOT leave validators on the thread", 0, ThreadTraceConfig.getValidatorsOnThread().length);
 	}
+	
+	public void testBuildRequestDescription() {
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		
+		Mockito.when(request.getContextPath()).thenReturn("/default");
+		Mockito.when(request.getQueryString()).thenReturn(null);
+		Mockito.when(request.getServletPath()).thenReturn("/something.do");
+
+		String parameterNames[] = new String[] {
+				"site", "user"
+		};
+		Mockito.when(request.getParameterNames()).thenReturn(Collections.enumeration(
+				Arrays.asList(parameterNames)));
+		Mockito.when(request.getParameterValues("site")).thenReturn(new String[]{"100", "200"});
+		Mockito.when(request.getParameterValues("user")).thenReturn(new String[]{"300"});
+		
+		String result = PerfMonFilter.buildRequestDescription(request);
+		assertEquals("", "/default/something.do?site=100&site=200&user=300", result);
+	}
+	
+	public void testBuildRequestDescriptionEncodesParameters() {
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		
+		Mockito.when(request.getContextPath()).thenReturn("/default");
+		Mockito.when(request.getQueryString()).thenReturn(null);
+		Mockito.when(request.getServletPath()).thenReturn("/something.do");
+
+		String parameterNames[] = new String[] {
+				"site"
+		};
+		Mockito.when(request.getParameterNames()).thenReturn(Collections.enumeration(
+				Arrays.asList(parameterNames)));
+		Mockito.when(request.getParameterValues("site")).thenReturn(new String[]{"description=this is my site"});
+		
+		String result = PerfMonFilter.buildRequestDescription(request);
+		assertEquals("", "/default/something.do?site=description%3Dthis+is+my+site", result);
+	}	
+	
+	public void testValueContainingPasswordIsBlocked() {
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		
+		Mockito.when(request.getContextPath()).thenReturn("/default");
+		Mockito.when(request.getQueryString()).thenReturn(null);
+		Mockito.when(request.getServletPath()).thenReturn("/something.do");
+
+		String parameterNames[] = new String[] {
+				"mypassword"
+		};
+		Mockito.when(request.getParameterNames()).thenReturn(Collections.enumeration(
+				Arrays.asList(parameterNames)));
+		Mockito.when(request.getParameterValues("mypassword")).thenReturn(new String[]{"secret"});
+		
+		String result = PerfMonFilter.buildRequestDescription(request);
+		assertEquals("", "/default/something.do?mypassword=*******", result);
+	}	
 }

@@ -21,7 +21,9 @@
 package org.perfmon4j.servlet;
 
 import java.io.IOException;
-import java.net.CookieStore;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.Enumeration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -65,6 +67,8 @@ public class PerfMonFilter implements Filter {
     protected boolean abortTimerOnImageResponse = false;
     protected Pattern abortTimerOnURLPattern = null;
     protected boolean outputRequestAndDuration = false;
+    
+    
  
     protected static String getInitParameter(FilterConfig filterConfig, String key, 
         String defaultValue) {
@@ -82,11 +86,8 @@ public class PerfMonFilter implements Filter {
         abortTimerOnImageResponse = Boolean.parseBoolean(getInitParameter(filterConfig, PROPERTY_ABORT_TIMER_ON_IMAGE_RESPONSE, Boolean.FALSE.toString()));
         outputRequestAndDuration = Boolean.parseBoolean(getInitParameter(filterConfig, PROPERTY_OUTPUT_REQUEST_AND_DURATION, Boolean.toString(outputRequestAndDuration)));
         
-        if (outputRequestAndDuration) {
-        	logger.enableInfo();
-        }
-         
-        String pattern = getInitParameter(filterConfig, PROPERTY_ABORT_TIMER_ON_URL_PATTERN, null);
+        
+        String pattern= getInitParameter(filterConfig, PROPERTY_ABORT_TIMER_ON_URL_PATTERN, null);
         if (pattern != null) {
             try {
                 abortTimerOnURLPattern = Pattern.compile(pattern, 
@@ -162,7 +163,7 @@ public class PerfMonFilter implements Filter {
 	            } else {
 	            	stopTimer(timer, request, response);
 	            	if (localStartTime != null) {
-	            		long duration = Math.min(MiscHelper.currentTimeWithMilliResolution() -
+	            		long duration = Math.max(MiscHelper.currentTimeWithMilliResolution() -
 	            			localStartTime.longValue(), 0);
 	            		logger.logInfo(duration + " " + buildRequestDescription(request));
 	            	}
@@ -186,21 +187,49 @@ public class PerfMonFilter implements Filter {
     }
     
     
-    protected String buildRequestDescription(HttpServletRequest request) {
-    	String result = "";
+    private static String encodeNoThrow(String value) {
+    	String result = value;
+    	try {
+			result = URLEncoder.encode(value, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			if (logger.isDebugEnabled()) {
+				logger.logDebug("Error: unable to encode string: \"" + value + "\"", e);
+			}
+		}
+    	return result;
+    }
+    
+    
+    static String buildRequestDescription(HttpServletRequest request) {
+    	StringBuilder result = new StringBuilder();
     	if (request != null) {
 			final String contextPath = request.getContextPath();
 			if (contextPath != null) {
-				result = contextPath;
+				result.append(contextPath);
 			}
-			result += request.getServletPath();
-			
-			final String queryString = request.getQueryString();
-			if (queryString != null) {
-				result += "?" + queryString; 
+			result.append(request.getServletPath());
+
+			Enumeration<String> names = request.getParameterNames();
+			boolean firstParam = true;
+			while (names.hasMoreElements()) {
+				String paramName = names.nextElement();
+				final boolean isPassword = paramName.contains("password");
+				String params[] = request.getParameterValues(paramName);
+				for (int i = 0; i < params.length; i++) {
+					if (firstParam) {
+						result.append("?");
+						firstParam = false;
+					} else {
+						result.append("&");
+					}
+					String value = isPassword ? "*******" : encodeNoThrow(params[i]);
+					result.append(encodeNoThrow(paramName))
+						.append("=")
+						.append(value);
+				}
 			}
     	}
-    	return result;
+    	return result.toString();
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -351,6 +380,4 @@ public class PerfMonFilter implements Filter {
 			return result;
 		}
     }
-
-
 }

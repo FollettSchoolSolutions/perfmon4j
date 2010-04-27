@@ -44,6 +44,7 @@ import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
 import org.apache.catalina.valves.ValveBase;
 import org.perfmon4j.servlet.PerfMonFilter;
+import org.perfmon4j.servlet.PerfMonNDCFilter;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -58,7 +59,11 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
     private boolean abortTimerOnImageResponse = false;
     private String abortTimerOnURLPattern = null;
     private boolean outputRequestAndDuration = false;
- 	
+    private String pushCookiesOnNDC = null;
+    private String pushSessionAttributesOnNDC = null;
+    private boolean pushClientInfoOnNDC = false;
+    
+    
 	public void invoke(Request request, Response response) throws IOException, ServletException {
 		if ((filter != null) && (request instanceof ServletRequest) 
 				&& (response instanceof ServletResponse)) {
@@ -78,7 +83,14 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_OUTPUT_REQUEST_AND_DURATION, 
 					Boolean.toString(isOutputRequestAndDuration()));
 			
-			filter = new PerfMonFilter();
+			filterConfig.setInitParameter(PerfMonNDCFilter.PROPERTY_PUSH_CLIENT_INFO, 
+					Boolean.toString(isPushClientInfoOnNDC()));
+			filterConfig.setInitParameter(PerfMonNDCFilter.PROPERTY_PUSH_COOKIES, 
+				getPushCookiesOnNDC());
+			filterConfig.setInitParameter(PerfMonNDCFilter.PROPERTY_PUSH_SESSION_ATTRIBUTES, 
+					getPushSessionAttributesOnNDC());
+			
+			filter = new PerfMonNDCFilter();
 			filter.init(filterConfig);
 
 			logger.logInfo(this.getClass().getSimpleName() + " started.");
@@ -136,6 +148,30 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
 
 	public void setAbortTimerOnURLPattern(String abortTimerOnURLPattern) {
 		this.abortTimerOnURLPattern = abortTimerOnURLPattern;
+	}
+	
+	public String getPushCookiesOnNDC() {
+		return pushCookiesOnNDC;
+	}
+
+	public void setPushCookiesOnNDC(String pushCookiesOnNDC) {
+		this.pushCookiesOnNDC = pushCookiesOnNDC;
+	}
+
+	public String getPushSessionAttributesOnNDC() {
+		return pushSessionAttributesOnNDC;
+	}
+
+	public void setPushSessionAttributesOnNDC(String pushSessionAttributesOnNDC) {
+		this.pushSessionAttributesOnNDC = pushSessionAttributesOnNDC;
+	}
+
+	public boolean isPushClientInfoOnNDC() {
+		return pushClientInfoOnNDC;
+	}
+
+	public void setPushClientInfoOnNDC(boolean pushClientInfoOnNDC) {
+		this.pushClientInfoOnNDC = pushClientInfoOnNDC;
 	}
 
 	public void addLifecycleListener(LifecycleListener listener) {
