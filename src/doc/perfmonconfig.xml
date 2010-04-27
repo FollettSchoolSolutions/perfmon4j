@@ -18,8 +18,8 @@
 	MySQL Example:
 	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
 		<attribute name='driverClass'>com.mysql.jdbc.Driver</attribute>		
-		<attribute name='driverPath'>/home/ddeucher/perfmon4j/mysql-connector-java-5.1.12/mysql-connector-java-5.1.12-bin.jar</attribute>		
-		<attribute name='jdbcURL'>jdbc:mysql://localhost/perfmon4j</attribute>		
+		<attribute name='driverPath'>c:/drivers/mysql-connector-java-5.1.12-bin.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:mysql://192.168.42.100/perfmon4j</attribute>		
 		<attribute name='dbSchema'>perfmon4j</attribute>		
 		<attribute name='userName'>perfmon4j</attribute>		
 		<attribute name='password'>p4jpassword</attribute>		
@@ -46,8 +46,8 @@
 	PostgresSQL example:
 	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
 		<attribute name='driverClass'>org.postgresql.Driver</attribute>		
-		<attribute name='driverPath'>/home/ddeucher/Desktop/perfmon4j/postgresql-8.4-701.jdbc4.jar</attribute>		
-		<attribute name='jdbcURL'>jdbc:postgresql://localhost/postgres</attribute>		
+		<attribute name='driverPath'>c:/drivers/postgresql-8.4-701.jdbc4.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:postgresql://192.168.42.100/perfmon4j</attribute>		
 		<attribute name='dbSchema'>perfmon4j</attribute>		
 		<attribute name='userName'>perfmon4j</attribute>		
 		<attribute name='password'>p4jpassword</attribute>		
@@ -60,7 +60,7 @@
 	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
 		<attribute name='driverClass'>oracle.jdbc.driver.OracleDriver</attribute>		
 		<attribute name='driverPath'>c:/Data/jdbcDrivers/ojdbc14.jar</attribute>		
-		<attribute name='jdbcURL'>jdbc:oracle:thin:@192.168.119.129/XE</attribute>		
+		<attribute name='jdbcURL'>jdbc:oracle:thin:@192.168.42.101/XE</attribute>		
 		<attribute name='userName'>perfmon4j</attribute>		
 		<attribute name='password'>p4jpassword</attribute>		
 
