@@ -89,6 +89,10 @@ public class RuntimeTimerInjector {
 
     }
     
+    public static void disableSystemGC(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
+    	CtMethod gcMethod = clazz.getDeclaredMethod("gc");
+    	gcMethod.insertBefore("if (1==1) {return;}\r\n");
+    }
     
     public static int injectPerfMonTimers(CtClass clazz, boolean beingRedefined, TransformerParams params) throws ClassNotFoundException, NotFoundException, CannotCompileException {
         int mode = TransformerParams.MODE_ANNOTATE;

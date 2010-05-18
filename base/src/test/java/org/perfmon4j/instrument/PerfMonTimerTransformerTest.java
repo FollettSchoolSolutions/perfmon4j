@@ -46,7 +46,6 @@ public class PerfMonTimerTransformerTest extends TestCase {
         super(name);
     }
     
-    
 /*----------------------------------------------------------------------------*/
     public void setUp() throws Exception {
         super.setUp();
@@ -56,7 +55,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
         perfmon4jJar.mkdir();
         perfmon4jJar = new File(perfmon4jJar, "perfmon4j.jar");
         
-        Properties props = new Properties();
+        Properties props = new Properties();	
 		props.setProperty("Premain-Class", "org.perfmon4j.instrument.PerfMonTimerTransformer");
 		props.setProperty("Can-Redefine-Classes", "true");
 		
@@ -136,6 +135,17 @@ public class PerfMonTimerTransformerTest extends TestCase {
     	
     }
 
+    /*----------------------------------------------------------------------------*/    
+    public void testAnnotateSystemClass() throws Exception {
+    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "-dtrue,-ejava.lang.System,-btrue", perfmon4jJar);
+
+    	final String validationString = "BootStrapMonitor: java.lang.System.checkKey";
+    	
+    	assertTrue("Should have added a bootstrap monitor: " + output,
+    			output.contains(validationString));
+    }
+
+    
     /*----------------------------------------------------------------------------*/    
     /**
      * This test is implemented to ensure that the GlobalClassLoader does NOT contain
@@ -274,12 +284,47 @@ System.out.println(output);
     		x++;
     	}
     }
+
+	public static class SystemGCDisablerTester implements Runnable {
+		public void run() {
+			WeakReference<byte[]> x = new WeakReference<byte[]>(new byte[10240]);
+			System.gc();
+			
+			if (x.get() == null) {
+				System.out.println("System.gc() appears enabled.");
+			} else {
+				System.out.println("System.gc() appears disabled.");
+			}
+		}
+	}
 	
+    public void testDisableSystemGCWithBootstrapEnabled() throws Exception {
+    	String output = LaunchRunnableInVM.run(SystemGCDisablerTester.class, "-gtrue,-btrue", "", perfmon4jJar);
+    	final String validateInstalled = "System.gc() appears disabled.";
+		assertTrue("SystemGC should have been disabled", output.contains(validateInstalled));
+    	
+    	output = LaunchRunnableInVM.run(SystemGCDisablerTester.class, "-gfalse,-btrue", "", perfmon4jJar);
+    	final String validateNOTInstalled = "System.gc() appears enabled.";
+		assertTrue("SystemGC should NOT have been disabled", output.contains(validateNOTInstalled));
+    }
+
+    public void testDisableSystemGCWithBootstrapDisabled() throws Exception {
+    	String output = LaunchRunnableInVM.run(SystemGCDisablerTester.class, "-gtrue", "", perfmon4jJar);
+    	final String validateInstalled = "System.gc() appears disabled.";
+		assertTrue("SystemGC should have been disabled", output.contains(validateInstalled));
+System.out.println(output);		
+    	
+    	output = LaunchRunnableInVM.run(SystemGCDisablerTester.class, "-gfalse", "", perfmon4jJar);
+    	final String validateNOTInstalled = "System.gc() appears enabled.";
+		assertTrue("SystemGC should NOT have been disabled", output.contains(validateNOTInstalled));
+    }
+    
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
-//        System.setProperty("Perfmon4j.debugEnabled", "true");
-//        System.setProperty("JAVASSIST_JAR",  "C:\\Users\\ddeucher\\.m2\\repository\\javassist\\javassist\\3.11.0.GA\\javassist-3.11.0.GA.jar");
+        System.setProperty("Perfmon4j.debugEnabled", "true");
+        System.setProperty("JAVASSIST_JAR",  "C:\\Users\\ddeucher\\.m2\\repository\\javassist\\javassist\\3.10.0.GA\\javassist-3.10.0.GA.jar");
         
         Logger.getLogger(PerfMonTimerTransformerTest.class.getPackage().getName()).setLevel(Level.INFO);
         String[] testCaseName = {PerfMonTimerTransformerTest.class.getName()};
@@ -287,6 +332,7 @@ System.out.println(output);
         TestRunner.main(testCaseName);
     }
 
+    
 /*----------------------------------------------------------------------------*/
     public static junit.framework.Test suite() {
 
@@ -297,7 +343,8 @@ System.out.println(output);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new PerfMonTimerTransformerTest("testVerboseOutput"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testDisableSystemGCWithBootstrapEnabled"));
+        newSuite.addTest(new PerfMonTimerTransformerTest("testDisableSystemGCWithBootstrapDisabled"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

@@ -84,6 +84,26 @@ public class TransformerParamsTest extends TestCase {
     	params = new TransformerParams("b=TRUE");
     	assertTrue("b=TRUE should enable bootStrap instrumentation", params.isBootStrapInstrumentationEnabled());
     }
+
+    /*----------------------------------------------------------------------------*/    
+    public void testDisableSystemGC() {
+    	TransformerParams params = new TransformerParams();
+    	
+    	assertFalse("Disable java.lang.System.gc should be off by default", params.isDisableSystemGC());
+    
+    	params = new TransformerParams("g=anything");
+    	assertFalse("g=anything should not disable system gc", params.isDisableSystemGC());
+    	
+    	params = new TransformerParams("g=true");
+    	assertTrue("g=true should disable system gc", params.isDisableSystemGC());
+    	
+    	params = new TransformerParams("g=TRUE");
+    	assertTrue("g=TRUE should enable system gc", params.isDisableSystemGC());
+    	
+    	params = new TransformerParams("-gTRUE");
+    	assertTrue("-gTRUE should enable system gc", params.isDisableSystemGC());
+    }
+    
     
 /*----------------------------------------------------------------------------*/    
     public void testBlackList() {

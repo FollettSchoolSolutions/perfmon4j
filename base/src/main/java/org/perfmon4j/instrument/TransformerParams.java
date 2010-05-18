@@ -62,6 +62,7 @@ class TransformerParams {
     private int reloadConfigSeconds = 60;
     private boolean debugEnabled = Boolean.getBoolean("PerfMon4j.debugEnabled");
     private boolean verboseEnabled = false;
+    private boolean disableSystemGC = false;
     
     
 	TransformerParams() {
@@ -138,6 +139,9 @@ class TransformerParams {
                 } else if (isParam('i', params)) {
                 	nextParam = getNextParam(params);
                     ignoreList.add(nextParam.parameter);
+                } else if (isParam('g', params)) {
+                	nextParam = getNextParam(params);
+                    disableSystemGC = Boolean.parseBoolean(nextParam.parameter);
                 } else if (isParam('r', params)) {
                 	nextParam = getNextParam(params);
                 	String val = nextParam.parameter;
@@ -363,5 +367,9 @@ class TransformerParams {
 
 	public boolean isAnnotationInstrumentationEnabled() {
 		return !annotateList.isEmpty();
+	}
+	
+	public boolean isDisableSystemGC() {
+		return disableSystemGC;
 	}
 }

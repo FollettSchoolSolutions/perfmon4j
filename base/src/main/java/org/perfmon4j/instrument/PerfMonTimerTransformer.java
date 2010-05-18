@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
@@ -155,6 +156,43 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         return result;
     }
     
+    private static class SystemGCDisabler implements ClassFileTransformer {
+        public byte[] transform(ClassLoader loader, String className, 
+                Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
+                byte[] classfileBuffer) {
+            byte[] result = null;
+            
+            if ("java/lang/System".equals(className)) {
+	            try {
+	            	ClassPool classPool;
+		            
+		            
+		            if (loader == null) {
+		                classPool = new ClassPool(true);
+		            } else {
+		                classPool = new ClassPool(false);
+		                classPool.appendClassPath(new LoaderClassPath(loader));
+		            }
+		            
+		            ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+		            CtClass clazz = classPool.makeClass(inStream);
+		            if (clazz.isFrozen()) {
+		                clazz.defrost();
+		            }
+		            RuntimeTimerInjector.disableSystemGC(clazz);
+		            result = clazz.toBytecode();
+		            logger.logInfo("Perfmon4j disabled System.gc()");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to disable System.gc()", ex);
+	            }
+            }
+			
+			return result;
+		}
+    	
+    }
+    
+    
     public static void premain(String packageName,  Instrumentation inst)  {
         logger.logInfo("Perfmon4j Instrumentation Agent v." + PerfMonTimerTransformer.class.getPackage().getImplementationVersion() + " installed. (http://perfmon4j.org)");
 
@@ -168,17 +206,51 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled());
         LoggerFactory.setVerboseInstrumentationEnabled(t.params.isVerboseInstrumentationEnabled());
         
-        inst.addTransformer(t);
-        
         logger.logInfo("Perfmon4j transformer paramsString: " + (packageName == null ? "" : packageName));
         if (t.params.isExtremeInstrumentationEnabled() && !t.params.isVerboseInstrumentationEnabled()) {
         	logger.logInfo("Perfmon4j verbose instrumentation logging disabled.  Add -vtrue to javaAgent parameters to enable.");
+        }
+        SystemGCDisabler disabler = null;
+        
+        inst.addTransformer(t);
+        if (t.params.isDisableSystemGC()) {
+    		if (inst.isRedefineClassesSupported()) {
+	        	disabler = new SystemGCDisabler();
+	        	inst.addTransformer(disabler);
+    		} else {
+    			logger.logError("Perfmon4j can not disable java.lang.System.gc() JVM does not support redefining classes");
+    		}
         }
         
         // Check for all the preloaded classes and try to instrument any that might
         // match our perfmon4j javaagent configuration
         if (!t.params.isBootStrapInstrumentationEnabled()) {
         	logger.logInfo("Perfmon4j bootstrap implementation disabled.  Add -btrue to javaAgent parameters to enable.");
+        	if (disabler != null) {
+        		try {
+	        		Class clazz = System.class;       		
+	                ClassLoader loader = clazz.getClassLoader();
+	                if (loader == null) {
+	                    loader = ClassLoader.getSystemClassLoader();
+	                }
+	                String resourceName =  clazz.getName().replace('.', '/') + ".class";
+	                InputStream stream = loader.getResourceAsStream(resourceName);
+	                if (stream == null) {
+	                    logger.logError("Unable to load bytes for resourcename: " + resourceName 
+	                        + " from loader: " + loader.toString());
+	                } else {
+	                    ByteArrayOutputStream o = new ByteArrayOutputStream();
+	                    int c = 0;
+	                    while ((c = stream.read()) != -1) {
+	                        o.write(c);
+	                    }
+	                    ClassDefinition def = new ClassDefinition(clazz, o.toByteArray()); 
+	                    inst.redefineClasses(def);
+	                }
+        		} catch (Exception ex) {
+        			logger.logError("Perfmon4j failed disabling System.gc()", ex);
+        		}
+        	}
         } else {
 	        Class loadedClasses[] = inst.getAllLoadedClasses();
 	        List<ClassDefinition> redefineList = new ArrayList<ClassDefinition>(loadedClasses.length);
@@ -247,6 +319,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                }
 	            }
 	        }
+        }
+        
+        if (disabler != null) {
+        	inst.removeTransformer(disabler);
         }
         
         String xmlFileToConfig = t.params.getXmlFileToConfig();
