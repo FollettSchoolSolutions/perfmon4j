@@ -43,7 +43,7 @@ public class PooledSQLAppender extends SQLAppender {
                 InitialContext initialContext = new InitialContext(props);
 				dataSource = (DataSource)initialContext.lookup(poolName);
 			} catch (NamingException e) {
-				throw new SQLException("Unabled find datasource: " + poolName, e);
+				throw new SQLException("Unabled find datasource: " + poolName + ": " + e.getMessage());
 			} 
     	}
     	result = dataSource.getConnection();

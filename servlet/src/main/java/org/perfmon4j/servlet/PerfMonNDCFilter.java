@@ -21,22 +21,17 @@
 package org.perfmon4j.servlet;
 
 import java.io.IOException;
-import java.net.CookieStore;
 import java.util.Enumeration;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.log4j.NDC;
-import org.perfmon4j.PerfMonTimer;
-import org.perfmon4j.UserAgentSnapShotMonitor;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;

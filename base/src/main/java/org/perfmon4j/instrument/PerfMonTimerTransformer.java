@@ -245,7 +245,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                        o.write(c);
 	                    }
 	                    ClassDefinition def = new ClassDefinition(clazz, o.toByteArray()); 
-	                    inst.redefineClasses(def);
+	                    inst.redefineClasses(new ClassDefinition[]{def});
 	                }
         		} catch (Exception ex) {
         			logger.logError("Perfmon4j failed disabling System.gc()", ex);

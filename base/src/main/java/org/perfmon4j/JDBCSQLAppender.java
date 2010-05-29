@@ -90,13 +90,13 @@ public class JDBCSQLAppender extends SQLAppender {
     			}
     			logger.logDebug("Created SQL Connection");
 			} catch (ClassNotFoundException e) {
-				throw new SQLException("Unable to load driver class: " + driverClass, e);
+				throw new SQLException("Unable to load driver class: " + driverClass + ": " + e.getMessage());
 			} catch (IllegalAccessException aec) {
-				throw new SQLException("Unable to access driver class: " + driverClass, aec);
+				throw new SQLException("Unable to access driver class: " + driverClass + ": " + aec.getMessage());
 			} catch (InstantiationException e) {
-				throw new SQLException("Unable to instantiate driver class: " + driverClass, e);
+				throw new SQLException("Unable to instantiate driver class: " + driverClass + ": " + e.getMessage());
 			} catch (MalformedURLException e) {
-				throw new SQLException("Malformed URL for driver path", e);
+				throw new SQLException("Malformed URL for driver path" + ": " + e.getMessage());
 			}
     	}
     	return conn;
