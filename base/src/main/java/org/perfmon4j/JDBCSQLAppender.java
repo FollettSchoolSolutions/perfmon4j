@@ -150,21 +150,4 @@ public class JDBCSQLAppender extends SQLAppender {
 	public void setDriverPath(String driverPath) {
 		this.driverPath = driverPath;
 	}
-
-	public static void main(String args[]) {
-		JDBCSQLAppender appender = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()));
-		appender.setDriverClass("net.sourceforge.jtds.jdbc.Driver");
-		appender.setJdbcURL("jdbc:jtds:sqlserver:/localhost/perfmon4j");
-		appender.setUserName("sa");
-		appender.setPassword("stuffy");
-
-		long now = System.currentTimeMillis();
-		IntervalData d = new IntervalData(PerfMon.getMonitor("Xdave"), now, new MedianCalculator(),
-				new ThresholdCalculator(new long[]{10, 100, 500}));
-		d.start(0, now);
-		d.stop(100, 10000, now + 500);
-		d.setTimeStop(now + 1000);
-		
-		appender.outputData(d);
-	}
 }
