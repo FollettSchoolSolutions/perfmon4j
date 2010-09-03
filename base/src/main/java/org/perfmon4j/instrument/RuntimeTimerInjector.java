@@ -41,6 +41,7 @@ import javassist.NotFoundException;
 import javassist.SerialVersionUID;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.AttributeInfo;
+import javassist.bytecode.ParameterAnnotationsAttribute;
 
 public class RuntimeTimerInjector {
     final private static String IMPL_METHOD_SUFFIX = "$Impl";
@@ -311,7 +312,7 @@ public class RuntimeTimerInjector {
         
         for(int i = sAttributes.size(); i > 0; i--) {
             AttributeInfo attr = (AttributeInfo)sAttributes.get(i-1);
-            if (attr instanceof AnnotationsAttribute) {
+            if (attr instanceof AnnotationsAttribute || attr instanceof ParameterAnnotationsAttribute) {
                 dAttributes.add(sAttributes.remove(i-1));
             }
         }
