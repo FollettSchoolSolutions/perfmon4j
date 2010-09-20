@@ -91,6 +91,12 @@ public class LaunchRunnableInVM {
     	final String javaAgentPath = perfmonJar.getCanonicalPath();
     	
     	String cmdString = quoteIfNeeded(javaCmd);
+    	
+    	String myClassPath = quoteIfNeeded(System.getProperty("java.class.path").replaceAll("\\\\", "/"));
+System.out.println("CLASSPATH=" + myClassPath); 
+		cmdString += " -classpath " + myClassPath;
+    	
+    	
     	cmdString +=  " -javaagent:" + quoteIfNeeded(javaAgentPath);
     	if (javaAgentParams != null) {
     		cmdString += "=" + javaAgentParams;
@@ -102,6 +108,7 @@ public class LaunchRunnableInVM {
     	}
     	File javassistJar = new File(javaAssistProp);
     	final String pathSeparator = System.getProperty("path.separator");
+    	
     	
     	cmdString +=  " -DPerfMon4j.preferredLogger=stdout -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath() + pathSeparator + javassistJar.getParentFile().getCanonicalPath());
     	

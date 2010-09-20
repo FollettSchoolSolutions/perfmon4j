@@ -38,6 +38,7 @@ import javassist.CtClass;
 import javassist.LoaderClassPath;
 
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.SQLTime;
 import org.perfmon4j.XMLConfigurator;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
@@ -108,7 +109,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                startMillis = MiscHelper.currentTimeWithMilliResolution();
 	                logger.logDebug("Loading class: " + className);
 	                
-	                if (params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE) {
+	                if (true || (params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE)  
+	                		|| params.isPossibleJDBCDriver(className.replace('/', '.')) ) {
 	                    ClassPool classPool = null;
 	                    if (loader == null) {
 	                        classPool = new ClassPool(true);
@@ -211,6 +213,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	logger.logInfo("Perfmon4j verbose instrumentation logging disabled.  Add -vtrue to javaAgent parameters to enable.");
         }
         SystemGCDisabler disabler = null;
+        
+        if (t.params.isExtremeSQLMonitorEnabled()) {
+        	SQLTime.enableSQLTime();
+        	logger.logInfo("Perfmon4j SQL instrumentation enabled.");
+        } else {
+        	logger.logInfo("Perfmon4j SQL instrumentation disabled.  Add -eSQL to javaAgent parameters to enable.");
+        }
         
         inst.addTransformer(t);
         if (t.params.isDisableSystemGC()) {

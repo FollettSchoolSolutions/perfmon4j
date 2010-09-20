@@ -21,8 +21,11 @@
 package org.perfmon4j.instrument;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Stack;
 import java.util.Vector;
 
@@ -73,6 +76,10 @@ public class RuntimeTimerInjector {
     		annotationMessages.add("** Adding extreme monitor: " + monitorName);
     	}
 
+    	public void addExtremeSQLMsg(String monitorName) {
+    		annotationMessages.add("** Adding extreme SQLmonitor: " + monitorName);
+    	}
+
 		public void addAnnotationMsg(String methodName, String timerKeyAnnotation) {
     		annotationMessages.add("** Adding annotation monitor ("  + timerKeyAnnotation + ") to method: " + methodName);
 		}
@@ -89,6 +96,18 @@ public class RuntimeTimerInjector {
 		}
 
     }
+ 
+    static Set<CtClass> getInterfaces(CtClass clazz) throws NotFoundException {
+    	Set<CtClass> result = new HashSet<CtClass>();
+    	
+    	CtClass interfaces[] = clazz.getInterfaces();
+    	for (int i = 0; i < interfaces.length; i++) {
+    		result.add(interfaces[i]);
+    		result.addAll(getInterfaces(interfaces[i]));
+		}
+    	
+    	return result;
+    }
     
     public static void disableSystemGC(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
     	CtMethod gcMethod = clazz.getDeclaredMethod("gc");
@@ -100,6 +119,7 @@ public class RuntimeTimerInjector {
         TransformerParams.TransformOptions transformOptions = TransformerParams.TransformOptions.DEFAULT;
         int numTimers = 0;
         List<PendingTimer> pendingTimers = new Vector();
+        boolean extremeSQLClass = false;
         
         logger.logDebug("Injecting timer into: " + clazz.getName());
         
@@ -107,9 +127,23 @@ public class RuntimeTimerInjector {
             if (params != null) {
                 mode = params.getTransformMode(clazz.getName());
                 transformOptions = params.getTransformOptions(clazz.getName());
+                extremeSQLClass = params.isPossibleJDBCDriver(clazz.getName()) && params.isExtremeSQLClass(clazz);
+				if (extremeSQLClass) {
+					String n = clazz.getName();
+					String interfaces = "";
+					
+					CtClass intf[] = getInterfaces(clazz).toArray(new CtClass[]{});
+					for (int i = 0; i < intf.length; i++) {
+						if (i > 0) {
+							interfaces += ", ";
+						}
+						interfaces += intf[i].getName();
+					}
+					System.out.println(n + " interfaces: " + interfaces);
+				}
             }
             
-            if (mode != TransformerParams.MODE_NONE) {
+            if ((mode != TransformerParams.MODE_NONE) || extremeSQLClass) {
                 /**
                  * Make sure we do not change the serial version ID of the class
                  * by inserting our instrumentation...
@@ -151,6 +185,8 @@ public class RuntimeTimerInjector {
                         } 
  
                         String originalMethodName = clazz.getName() + "." + method.getName();
+                        
+                        
                         if (((mode == TransformerParams.MODE_BOTH) || (mode == TransformerParams.MODE_EXTREME))
                             && !isGetterOrSetter(method, transformOptions, verboseMessages, originalMethodName)) {
                             timerKeyExtreme = originalMethodName;
@@ -162,10 +198,19 @@ public class RuntimeTimerInjector {
                             }
                         }
                         
-                        if ((timerKeyAnnotation != null) || (timerKeyExtreme != null)) {
+                        String extremeSQLKey = null;
+                        if (extremeSQLClass) {
+                        	extremeSQLKey = "SQL";  // Any method on a JDBC Class will be monitored...
+                        	if (params.isMonitoredSQLMethod(method.getName())) {
+                        		// Specific methods will be isolated based on method name.
+                        		extremeSQLKey += method.getName();
+                        	}
+                        }
+                        if ((timerKeyAnnotation != null) || (timerKeyExtreme != null) || (extremeSQLKey != null)) {
                             numTimers += timerKeyAnnotation != null ? 1 : 0;
                             numTimers += timerKeyExtreme != null ? 1 : 0;
-                            pendingTimers.add(new PendingTimer(originalMethodName, method, timerKeyAnnotation, timerKeyExtreme));
+                            numTimers += extremeSQLKey != null ? 1 : 0;
+                            pendingTimers.add(new PendingTimer(originalMethodName, method, timerKeyAnnotation, timerKeyExtreme, extremeSQLKey));
                         }
                     }
                 }
@@ -205,7 +250,7 @@ public class RuntimeTimerInjector {
                             offset = insertPerfMonTimerIntoRedefinedClass(clazz, t.method, t.timerKeyAnnotation, 
                                 t.timerKeyExtreme, offset, offsetInStaticMonitorArray);
                         } else {
-                            offset = insertPerfMonTimer(clazz, t.method, t.timerKeyAnnotation, t.timerKeyExtreme, offset);
+                            offset = insertPerfMonTimer(clazz, t.method, t.timerKeyAnnotation, t.timerKeyExtreme, t.extremeSQLKey, offset);
                         }
                         if (verboseMessages != null) {
                         	if (t.timerKeyAnnotation != null) {
@@ -215,6 +260,11 @@ public class RuntimeTimerInjector {
                         	if (t.timerKeyExtreme != null) {
                         		verboseMessages.addExtremeMsg(t.timerKeyExtreme);
                         	}
+
+                        	if (t.extremeSQLKey != null) {
+                        		verboseMessages.addExtremeSQLMsg(t.extremeSQLKey);
+                        	}
+                        
                         }
                             
                     }
@@ -232,13 +282,15 @@ public class RuntimeTimerInjector {
         final CtMethod method;
         final String timerKeyAnnotation;
         final String timerKeyExtreme;
+        final String extremeSQLKey;
        
         
-        PendingTimer(String originalMethodName, CtMethod method, String timerKeyAnnotation, String timerKeyExtreme) {
+        PendingTimer(String originalMethodName, CtMethod method, String timerKeyAnnotation, String timerKeyExtreme, String extremeSQLKey) {
         	this.originalMethodName = originalMethodName;
         	this.method = method;
             this.timerKeyAnnotation = timerKeyAnnotation;
             this.timerKeyExtreme = timerKeyExtreme;
+            this.extremeSQLKey = extremeSQLKey;
         }
     }
     
@@ -322,14 +374,13 @@ public class RuntimeTimerInjector {
         return Modifier.setPrivate(modifier) | Modifier.FINAL;
     }
     
+    
     private static int insertPerfMonTimer(CtClass clazz, CtMethod method, String timerKeyAnnotation, 
-        String timerKeyExtreme, int offset) throws NotFoundException {
+        String timerKeyExtreme, String extremeSQLKey, int offset) throws NotFoundException {
     	
         final String originalMethodName = method.getName();
         final int originalModifiers = method.getModifiers();
         boolean wrapperInserted = false;
-        boolean annotationsMoved = false;
-        
         CtMethod wrapperMethod = null;
         
         String implMethod = originalMethodName + "$" + serialNumber + IMPL_METHOD_SUFFIX;
@@ -337,6 +388,8 @@ public class RuntimeTimerInjector {
         // Rename the method to be timed...
         method.setName(implMethod);
         
+        
+        String sqlMonitorKey = null;
         
         try {
 	        // Now create the new method with the original name....
@@ -373,6 +426,14 @@ public class RuntimeTimerInjector {
 	                .append("\torg.perfmon4j.PerfMonTimer pm$TimerExtreme = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n");
 	            offset++;
 	        }
+	        if (extremeSQLKey != null) {
+	            body.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
+	                .append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + extremeSQLKey + "\");\n")
+	                .append("\t}\n")
+	                .append("\torg.perfmon4j.PerfMonTimer pm$TimerExtremeSQL = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n")
+                	.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
+	            offset++;
+	        }
 	        body.append("\ttry {\n");
 	        
 	        body.append("\t\t" + buildCallToMethod(method));
@@ -383,6 +444,10 @@ public class RuntimeTimerInjector {
 	        }
 	        if (timerKeyAnnotation != null) {
 	            body.append("\t\torg.perfmon4j.PerfMonTimer.stop(pm$TimerAnnotation);\n");
+	        }
+	        if (extremeSQLKey != null) {
+	            body.append("\t\torg.perfmon4j.PerfMonTimer.stop(pm$TimerExtremeSQL);\n")
+            		.append("\torg.perfmon4j.SQLTime.stopTimerForThread();\n");
 	        }
 	        body.append("\t}\n")
 	            .append("}");

@@ -22,7 +22,13 @@
 package org.perfmon4j.instrument;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import javassist.CtClass;
+import javassist.NotFoundException;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -63,6 +69,7 @@ class TransformerParams {
     private boolean debugEnabled = Boolean.getBoolean("PerfMon4j.debugEnabled");
     private boolean verboseEnabled = false;
     private boolean disableSystemGC = false;
+    private boolean extremeSQLMonitorEnabled = true;
     
     
 	TransformerParams() {
@@ -117,13 +124,15 @@ class TransformerParams {
                     annotateList.add(nextParam.parameter);
                 } else if (isParam('e', params)) {
                     nextParam = getNextParam(params);
-                    
-                     TransformOptions o = parseOptions(nextParam);
-                     if (o == null) {
-                    	 throw new RuntimeException ("Illegal javassist params: " + nextParam);
-                     }
-                     
-                    extremeList.add(new ExtremeListElement(o,nextParam.parameter));
+                    if ("SQL".equals(nextParam.parameter)) {
+                    	extremeSQLMonitorEnabled = true;
+                    } else {
+	                     TransformOptions o = parseOptions(nextParam);
+	                     if (o == null) {
+	                    	 throw new RuntimeException ("Illegal javassist params: " + nextParam);
+	                     }
+	                     extremeList.add(new ExtremeListElement(o,nextParam.parameter));
+                    }
                 } else if (isParam('f', params)) {
                     nextParam = getNextParam(params);
                     xmlFileToConfig = nextParam.parameter;
@@ -371,5 +380,103 @@ class TransformerParams {
 	
 	public boolean isDisableSystemGC() {
 		return disableSystemGC;
+	}
+	
+	public boolean isExtremeSQLMonitorEnabled() {
+		return extremeSQLMonitorEnabled;
+	} 
+	
+    // Doing a binary search on this...  These must be in alpha-sorted order.
+    private final static String SQL_CLASSES[] = {
+    	"java.sql.CallableStatement",
+    	"java.sql.Connection",
+    	"java.sql.Driver",
+    	"java.sql.PreparedStatement",
+    	"java.sql.ResultSet",
+    	"java.sql.Statement",
+    };
+	
+    
+    private final static String SQL_METHODS[] = {
+    	"addBatch",
+    	"close",
+    	"commit",
+    	"connect",
+    	"createStatement",
+    	"execute",
+    	"executeBatch",
+    	"executeQuery",
+    	"executeUpdate",
+    	"executeStatement",
+    	"prepareCall",
+    	"prepareStatement",
+    	"rollback"
+    };
+    
+
+    
+    
+    public boolean isMonitoredSQLMethod(String methodName) {
+    	return Arrays.binarySearch(SQL_METHODS, methodName) > 0;
+    }
+    
+    // Package level for testing...
+	boolean isExtremeSQLInterface(String className) {
+		return Arrays.binarySearch(SQL_CLASSES, className) >= 0;
+	}
+	
+    private static Set<CtClass> getInterfaces(CtClass clazz) throws NotFoundException {
+    	Set<CtClass> result = new HashSet<CtClass>();
+    	
+    	CtClass interfaces[] = clazz.getInterfaces();
+    	for (int i = 0; i < interfaces.length; i++) {
+    		result.add(interfaces[i]);
+    		result.addAll(getInterfaces(interfaces[i]));
+		}
+    	
+    	return result;
+    }
+	
+    private static Set<Class> getInterfaces(Class clazz) {
+    	Set<Class> result = new HashSet<Class>();
+    	
+    	Class interfaces[] = clazz.getInterfaces();
+    	for (int i = 0; i < interfaces.length; i++) {
+    		result.add(interfaces[i]);
+    		result.addAll(getInterfaces(interfaces[i]));
+		}
+    	
+    	return result;
+    }
+	
+	public boolean isExtremeSQLClass(CtClass clazz) {
+		boolean result = false;
+		if (extremeSQLMonitorEnabled && isPossibleJDBCDriver(clazz.getName())) {
+			try {
+				CtClass interfaces[] = getInterfaces(clazz).toArray(new CtClass[]{});
+				for (int i = 0; i < interfaces.length && !result; i++) {
+					result = isExtremeSQLInterface(interfaces[i].getName());
+				}
+			} catch (NotFoundException ex) {
+				// nothing todo...
+			}
+		}
+		return result;
+	}
+	
+	public boolean isExtremeSQLClass(Class clazz) {
+		boolean result = false;
+		if (extremeSQLMonitorEnabled && isPossibleJDBCDriver(clazz.getName())) {
+			Class<?> interfaces[] = getInterfaces(clazz).toArray(new Class[]{});
+			for (int i = 0; i < interfaces.length && !result; i++) {
+				result = isExtremeSQLInterface(interfaces[i].getName());
+			}
+		}
+		return result;
+	}
+
+	public boolean isPossibleJDBCDriver(String className) {
+		return className.startsWith("org.apache.derby") 
+			|| className.startsWith("net.sourceforge.jtds");
 	}
 }
