@@ -48,6 +48,29 @@ public class IntervalData implements PerfMonData {
     private long totalDuration = 0;
     private long sumOfSquares = 0;
 
+
+    /** SQL Durations...  NOTE SQLDuration are only valid if SQLTime.isEnabled() **/
+    private long maxSQLDuration = 0;
+    private long timeMaxSQLDurationSet = PerfMon.NOT_SET;
+    
+    private long minSQLDuration = PerfMon.NOT_SET;
+    private long timeMinSQLDurationSet = PerfMon.NOT_SET;
+    
+    private long totalSQLDuration = 0;
+    private long sumOfSQLSquares = 0;
+
+//    private long lifetimeMaxSQLDuration = 0;
+//    private long timeLifetimeMaxSQLDurationSet = PerfMon.NOT_SET;
+//    
+//    private long lifetimeMinSQLDuration = PerfMon.NOT_SET;
+//    private long timeLifetimeMinSQLDurationSet = PerfMon.NOT_SET;
+//
+//    private long lifetimeTotalSQLDuration = 0;
+//    private long lifetimeSumOfSQLSquares = 0;
+    
+    /** SQL Durations END **/
+
+    
     private long lifetimeStartTime = 0;
     private long lifetimeMaxDuration = 0;
     private long timeLifetimeMaxDurationSet = PerfMon.NOT_SET;
@@ -202,10 +225,20 @@ public class IntervalData implements PerfMonData {
     public long getMaxDuration() {
         return maxDuration;
     }
+
+/*----------------------------------------------------------------------------*/    
+    public long getMaxSQLDuration() {
+        return maxSQLDuration;
+    }
     
 /*----------------------------------------------------------------------------*/    
     public long getMinDuration() {
         return Math.max(minDuration, 0); // Mask PerfMon.NOT_SET
+    }
+
+/*----------------------------------------------------------------------------*/    
+    public long getMinSQLDuration() {
+        return Math.max(minSQLDuration, 0); // Mask PerfMon.NOT_SET
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -237,9 +270,23 @@ public class IntervalData implements PerfMonData {
         totalHits++;
     }
     
+    
 /*----------------------------------------------------------------------------*/    
-    void stop(long duration, long durationSquared, long systemTime) {
+    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared) {
         totalCompletions++;
+        if (SQLTime.isEnabled()) {
+            if (sqlDuration >= maxSQLDuration) {
+                maxSQLDuration = sqlDuration;
+                timeMaxSQLDurationSet = systemTime;
+            }
+            if ((sqlDuration <= minSQLDuration) || minSQLDuration == PerfMon.NOT_SET) {
+                minSQLDuration = sqlDuration;
+                timeMinSQLDurationSet = systemTime;
+            }
+            totalSQLDuration += sqlDuration;
+            sumOfSQLSquares += sqlDurationSquared;
+        }
+        
         if (duration >= maxDuration) {
             maxDuration = duration;
             timeMaxDurationSet = systemTime;
@@ -345,6 +392,16 @@ public class IntervalData implements PerfMonData {
         return result;
     }
     
+
+    /*----------------------------------------------------------------------------*/    
+    public long getAverageSQLDuration() {
+        long result = 0;
+        if (totalCompletions > 0) {
+            result = totalSQLDuration / totalCompletions;
+        }
+        return result;
+    }
+    
     
     private static String formatTimeDataSet(long time) {
         String result = "";
@@ -389,6 +446,22 @@ public class IntervalData implements PerfMonData {
         if (owner != null) {
             name = owner.getName();
         }
+
+        String sqlDurationInfo = "";
+        if (SQLTime.isEnabled()) {
+        	sqlDurationInfo = String.format(
+	                " (SQL)Avg. Duration. %.2f\r\n" +
+	                " (SQL)Std. Dev...... %.2f\r\n" +
+	                " (SQL)Max Duration.. %d %s\r\n" +
+	                " (SQL)Min Duration.. %d %s\r\n",
+	                new Double(getAverageSQLDuration()),
+	                new Double(getStdDeviationSQL()),
+	                new Long(getMaxSQLDuration()), 
+	                formatTimeDataSet(timeMaxSQLDurationSet),
+	                new Long(getMinSQLDuration()),
+	                formatTimeDataSet(timeMinSQLDurationSet)
+	            );
+        }
         
         String result = String.format(
             "\r\n********************************************************************************\r\n" +
@@ -403,7 +476,8 @@ public class IntervalData implements PerfMonData {
             " Max Duration....... %d %s\r\n" +
             " Min Duration....... %d %s\r\n" +
             " Total Hits......... %d\r\n" +
-            " Total Completions.. %d\r\n",
+            " Total Completions.. %d\r\n" +
+            "%s",
             name,
             MiscHelper.formatTimeAsString(getTimeStart()),
             MiscHelper.formatTimeAsString(getTimeStop()),
@@ -419,7 +493,8 @@ public class IntervalData implements PerfMonData {
             new Long(getMinDuration()),
             formatTimeDataSet(timeMaxDurationSet),
             new Long(getTotalHits()), 
-            new Long(getTotalCompletions()) 
+            new Long(getTotalCompletions()),
+            sqlDurationInfo
         );
         if (haveLifetimeStats) {
             result += String.format(
@@ -488,6 +563,10 @@ public class IntervalData implements PerfMonData {
     public double getStdDeviation() {
         return MiscHelper.calcStdDeviation(totalCompletions, totalDuration, sumOfSquares);
     }
+
+    public double getStdDeviationSQL() {
+        return MiscHelper.calcStdDeviation(totalCompletions, totalSQLDuration, sumOfSQLSquares);
+    }
     
     public long getSumOfSquares() {
         return this.sumOfSquares;
@@ -512,4 +591,19 @@ public class IntervalData implements PerfMonData {
             ")";
     }
 
+//    public static void main(String args[]) {
+//        String sqlDurationInfo = String.format(
+//	                " (SQL)Avg. Duration. %.2f \r\n" +
+//	                " (SQL)Std. Dev...... %.2f \r\n" +
+//	                " (SQL)Max Duration.. %d %s\r\n" +
+//	                " (SQL)Min Duration.. %d %s\r\n", 
+//	                new Double(1),
+//	                new Double(1),
+//	                new Long(1), 
+//	                formatTimeDataSet(0),
+//	                new Long(1),
+//	                formatTimeDataSet(0)
+//	            );
+//    }	
 }
+    

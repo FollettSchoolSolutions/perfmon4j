@@ -84,6 +84,7 @@ public class PerfMon {
     
     private final List<Appender> appenderList = Collections.synchronizedList(new Vector<Appender>());
     private final Map<Appender, String> appenderPatternMap = Collections.synchronizedMap(new HashMap<Appender, String>());
+    private final Set<Appender> appendersAssociatedWithChildren = Collections.synchronizedSet(new HashSet<Appender>());
     
     private final Object dataArrayInsertLockToken = new Object();
     private final PushAppenderDataTask dataArray[] = new PushAppenderDataTask[MAX_APPENDERS_PER_MONITOR];
@@ -102,6 +103,18 @@ public class PerfMon {
     private int totalHits = 0;
     private int activeThreadCount = 0;
     private int totalCompletions = 0;
+    
+    /** Optional data...  May be null if SQL profiling is NOT enabled **/
+    /** SQL/JDBC profiling START **/
+    private long maxSQLDuration = 0;
+    private long timeMaxSQLDurationSet = NOT_SET;
+    
+    private long minSQLDuration = 0;
+    private long timeMinSQLDurationSet = NOT_SET;
+    
+    private long totalSQLDuration = 0;
+    private long sumOfSQLSquares = 0;
+    /** SQL/JDBC profiling END **/
     
     private long maxDuration = 0;
     private long timeMaxDurationSet = NOT_SET;
@@ -127,7 +140,7 @@ public class PerfMon {
              return new HashMap<Long, ReferenceCount>();
          }
     };
-
+    
 /*----------------------------------------------------------------------------*/    
     private PerfMon(PerfMon parent, String name) {
         this.name = parent == null ? ROOT_MONITOR_NAME : name;
@@ -217,8 +230,26 @@ public class PerfMon {
         return rootMonitor;
     }
     
-/*----------------------------------------------------------------------------*/    
+/*----------------------------------------------------------------------------*/
+    public static PerfMon getMonitorNoCreate_TESTONLY(String key) {
+    	synchronized (mapMonitorLockToken) {
+			return mapMonitors.get(key);
+		}
+    }
+
     public static PerfMon getMonitor(String key) {
+    	return getMonitor(key, false);
+    }
+    
+    /**
+     * The isDynamicPath is used to limit the number of monitors
+     * that are created and maintiained in memory.
+     * 
+     * For most purposed you want to call this with a value of false
+     * however if you are calling with a "dynamically" generated key
+     * value you would only want the monitor created an appender exists.
+     */
+    public static PerfMon getMonitor(String key, boolean isDynamicPath) {
         PerfMon result = null;
         
         synchronized(mapMonitorLockToken) {
@@ -231,12 +262,16 @@ public class PerfMon {
                 PerfMon parent = null;
                 String[] h = parseMonitorHirearchy(key);
                 if (h.length > 1) {
-                    parent = getMonitor(h[h.length-2]);
+                    parent = getMonitor(h[h.length-2], isDynamicPath);
                 } else {
                     parent = rootMonitor;
                 }
-                result = new PerfMon(parent, key);
-                mapMonitors.put(key, result);
+                if (!isDynamicPath || parent.shouldChildBeDynamicallyCreated()) {
+                	result = new PerfMon(parent, key);
+                	mapMonitors.put(key, result);
+                } else {
+                	result = parent;
+                }
             }
         }
         return result;
@@ -298,7 +333,30 @@ public class PerfMon {
                 long eventStartTime = count.getStartTime();
                 activeThreadCount--;
                 if (isActive() && (startTime.longValue() <= eventStartTime) && !abort) {
-                    totalCompletions++;
+                	long sqlDuration = 0;
+                	long sqlDurationSquared = 0;
+                	
+                	if (SQLTime.isEnabled()) {
+                    	/** We have SQL logging enabled... Monitor the SQLDurations. **/
+                    	sqlDuration = SQLTime.getSQLTime() - count.getSQLStartMillis();
+                    	sqlDurationSquared = (sqlDuration * sqlDuration);
+                    	
+                    	this.totalSQLDuration += sqlDuration;
+                    	this.sumOfSQLSquares += sqlDurationSquared;
+                    	
+                        if (sqlDuration >= this.maxSQLDuration) {
+                            this.timeMaxSQLDurationSet = systemTime;
+                            this.maxSQLDuration = sqlDuration;
+                        }
+                        if ((sqlDuration <= this.minSQLDuration) || (this.minSQLDuration == NOT_SET)) {
+                            this.minSQLDuration = sqlDuration;
+                            this.timeMinSQLDurationSet = systemTime;
+                        }                    	
+                    	/** We have SQL logging enabled... Monitor the SQLDurations. **/
+                    }
+                    
+                	
+                	totalCompletions++;
                     
                     long duration = systemTime - eventStartTime;
                     if (duration < 0) {
@@ -328,7 +386,7 @@ public class PerfMon {
                     for (int i = 0; i < dataArray.length; i++) {
                         PushAppenderDataTask data = dataArray[i];
                         if (data != null) {
-                            data.perfMonData.stop(duration, durationSquared, systemTime);
+                            data.perfMonData.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
                         }
                     }
                 }
@@ -397,7 +455,7 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-    private boolean isRootMonitor() {
+    public boolean isRootMonitor() {
         return parent == null;
     }
     
@@ -405,6 +463,7 @@ public class PerfMon {
     private static class ReferenceCount {
         private int refCount = 0;
         private long startTime;
+        private long sqlStartMillis = 0;
         boolean hasThreadTraceMonitor = false;
         
         /**
@@ -413,6 +472,7 @@ public class PerfMon {
         private int inc(long startTime) {
             if (refCount == 0) {
                 this.startTime = startTime;
+                this.sqlStartMillis = SQLTime.getSQLTime(); // Will always be 0 of SQLtime is NOT enabled.
             }
             return ++refCount;
         }
@@ -426,6 +486,10 @@ public class PerfMon {
         
        private long getStartTime() {
            return startTime;
+       }
+       
+       private long getSQLStartMillis() {
+    	   return sqlStartMillis;
        }
     }
 
@@ -512,6 +576,11 @@ public class PerfMon {
         addAppender(appender, cascadeToChildren, APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS);
     }
 
+
+/*----------------------------------------------------------------------------*/    
+    private boolean shouldChildBeDynamicallyCreated() {
+    	return !appendersAssociatedWithChildren.isEmpty();
+    }
     
 /*----------------------------------------------------------------------------*/    
     private void addAppender(Appender appender, boolean cascadeToChildren, String appenderPattern)  {
@@ -533,6 +602,11 @@ public class PerfMon {
             }
             appenderList.add(appender);
             appenderPatternMap.put(appender, appenderPattern);
+            
+            if (appenderPattern != null && appenderPattern.endsWith("*")) {
+                appendersAssociatedWithChildren.add(appender);
+            }
+            
             int index = -1;
             
             if (!isRootMonitor() && !APPENDER_PATTERN_ALL_DESCENDENTS.equals(appenderPattern)
@@ -585,7 +659,10 @@ public class PerfMon {
 /*----------------------------------------------------------------------------*/    
     private void removeAppender(Appender appender, boolean cascadeToChildren, String appenderPattern,
         boolean deinitUnusedAppenders)  {
-        if (cascadeToChildren && APPENDER_PATTERN_PARENT_ONLY.equals(appenderPattern)) {
+        
+    	appendersAssociatedWithChildren.remove(appender);
+    	
+    	if (cascadeToChildren && APPENDER_PATTERN_PARENT_ONLY.equals(appenderPattern)) {
             cascadeToChildren = false;
         }
         
@@ -758,6 +835,17 @@ public class PerfMon {
         SnapShotManager.deInit();
     }
     
+
+    /**
+     * TESTONLY Dont Call this outside of TEST... Could have
+     * Bad side effects!
+     */
+    public static void deInitAndCleanMonitors_TESTONLY() {
+    	deInit();
+    	synchronized (mapMonitorLockToken) {
+    		mapMonitors.clear();
+		}
+    }
     
 /*----------------------------------------------------------------------------*/ 
     protected void clearCachedPerfMonTimer() {

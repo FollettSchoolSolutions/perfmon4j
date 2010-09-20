@@ -84,13 +84,28 @@ public class PerfMonTimer {
         
         return result;
     }
-    
+
     public static PerfMonTimer start(String key) {
+    	return start(key, false);
+    }
+    
+    /**
+     * Pass in true if this is a dynamically generated key (i.e. not a method
+     * name or some know value.  This prevents monitors from being created
+     * that are not actively attached to appenders.
+     * 
+     * for example:
+     * 	   private void lookupUser(String userName) {
+     * 		    PerfMonTimer.start("lookupUser." + userName, true); 
+     * 			...
+     * 	   }
+     */
+    public static PerfMonTimer start(String key, boolean isDynamicKey) {
         PerfMonTimer result = NULL_TIMER;
         
         try {
             if (PerfMon.isConfigured()) {
-                result = start(PerfMon.getMonitor(key));
+                result = start(PerfMon.getMonitor(key, isDynamicKey));
             }
         } catch (ThreadDeath th) {
             throw th;   // Always rethrow this error
@@ -101,6 +116,7 @@ public class PerfMonTimer {
         
         return result;
     }
+
     
     private void start(long now) {
         if (perfMon != null) {
