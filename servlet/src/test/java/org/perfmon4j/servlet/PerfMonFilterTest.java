@@ -42,6 +42,7 @@ import org.perfmon4j.Appender;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
+import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceData;
 
@@ -52,7 +53,7 @@ public class PerfMonFilterTest extends TestCase {
 	}
 
 	protected void tearDown() throws Exception {
-		PerfMon.deInit();
+		PerfMon.deInitAndCleanMonitors_TESTONLY();
 		super.tearDown();
 	}
 
@@ -296,5 +297,65 @@ public class PerfMonFilterTest extends TestCase {
 		
 		String result = PerfMonFilter.buildRequestDescription(request);
 		assertEquals("", "/default/something.do?mypassword=*******", result);
-	}	
+	}
+	
+	/**
+	 * With the increased usage of RESTFUL frameworks dynamic URL's are
+	 * increasing dynamic url paths we should not "create" monitors
+	 * dynamically in response to a URL.  We should only create them if
+	 * a specific appender is attached to the monitor OR an appender pattern
+	 * instructs us to create them.
+	 */
+	public void testMonitorIsLazilyCreated() throws Exception {
+		PerfMonConfiguration config = new PerfMonConfiguration();
+		PerfMon.configure(config);
+		
+		HttpSession session = Mockito.mock(HttpSession.class);
+		
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		Mockito.when(request.getSession(false)).thenReturn(session);
+		
+		Mockito.when(request.getContextPath()).thenReturn("");
+		Mockito.when(request.getServletPath()).thenReturn("/circulation/getstat/444");
+		
+		PerfMonFilter f = new PerfMonFilter();
+		f.init(Mockito.mock(FilterConfig.class));
+		
+		f.doFilter(request, Mockito.mock(HttpServletResponse.class), Mockito.mock(FilterChain.class));
+		assertNull("Should not create default category", 
+				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest"));
+		
+		assertNull("Should not create monitor without an attatched appender", 
+				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation"));
+		
+		// Now configure a CHILD based appender on WebRequest.  We should now
+		// create the WebRequest.circulation monitor.
+		config = new PerfMonConfiguration();
+		config.defineAppender("DEFAULT", TextAppender.class.getName(), "10 seconds");
+		config.defineMonitor("WebRequest");
+		config.attachAppenderToMonitor("WebRequest", "DEFAULT", "./*");
+		PerfMon.configure(config);
+		
+		f.doFilter(request, Mockito.mock(HttpServletResponse.class), Mockito.mock(FilterChain.class));
+		assertNotNull("Now we should have created the child monitor", 
+				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation"));
+		
+		assertNull("Should NOT have created GRAND child monitor", 
+				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation.getstat"));
+		
+		// Now configure a CHILD and ALL Descendentsbased appender on WebRequest.  
+		// We should now create the WebRequest.circulation monitor.
+		config = new PerfMonConfiguration();
+		config.defineAppender("DEFAULT", TextAppender.class.getName(), "10 seconds");
+		config.defineMonitor("WebRequest");
+		config.attachAppenderToMonitor("WebRequest", "DEFAULT", "./**");
+		PerfMon.configure(config);
+		
+		f.doFilter(request, Mockito.mock(HttpServletResponse.class), Mockito.mock(FilterChain.class));
+		
+		assertNotNull("Should have created GREAT GRAND child monitor", 
+				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation.getstat"));
+		assertNotNull("Should have created GREAT GREAT GRAND child monitor", 
+				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation.getstat.444"));
+	}
 }

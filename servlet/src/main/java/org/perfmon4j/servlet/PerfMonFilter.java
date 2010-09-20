@@ -259,7 +259,7 @@ public class PerfMonFilter implements Filter {
         if (PerfMon.isConfigured()) {
             String monitorCategory = buildMonitorCategory(request);
             if (monitorCategory != null) {
-                result = PerfMonTimer.start(monitorCategory);
+                result = PerfMonTimer.start(monitorCategory, true);
             }
         }
         return result;
