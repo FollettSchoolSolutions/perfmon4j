@@ -53,7 +53,7 @@ public class IntervalDataTest extends TestCase {
         
         IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), FIVE_MINUTES_AGO, null, null, NOW);
         data.setTotalCompletions(5*60);
-        data.stop(FIVE_MINUTES, FIVE_MINUTES * FIVE_MINUTES, NOW);
+        data.stop(FIVE_MINUTES, FIVE_MINUTES * FIVE_MINUTES, NOW, 0, 0);
         
         System.err.println(data.toString());
     }

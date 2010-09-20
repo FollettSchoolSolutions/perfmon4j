@@ -1,7 +1,9 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.Statement;
+import java.util.Properties;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.JDBCHelper;
@@ -22,7 +24,7 @@ public abstract class SQLTest extends TestCase {
 
 	protected void setUp() throws Exception {
 		super.setUp();
-		
+
 		appender = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()));
 		appender.setDbSchema("mydb");
 		appender.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver");

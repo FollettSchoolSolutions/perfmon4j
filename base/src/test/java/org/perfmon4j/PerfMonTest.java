@@ -54,7 +54,7 @@ public class PerfMonTest extends TestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void tearDown() throws Exception {
-        PerfMon.deInit();
+        PerfMon.deInitAndCleanMonitors_TESTONLY();
         super.tearDown();
     }
     
@@ -81,6 +81,122 @@ public class PerfMonTest extends TestCase {
         // It's not considerd complete until stop.
         assertEquals("totalCompletions", 1, PerfMon.getMonitor(MONITOR_NAME).getTotalCompletions());
     }
+
+    
+    /*----------------------------------------------------------------------------*/
+    public void testGetDynamicOnChildOfRoot() throws Exception {
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID, ".");
+        
+        PerfMon monitor = PerfMon.getMonitor("xyz", true);
+        assertEquals("Should return the root monitor because their is no appender attachted to monitor",
+        		"<ROOT>", monitor.getName());
+        
+        // Now put an appender on the root where we are monitoring
+        // children...  In this case we should create and return a child
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID, "./*");
+        
+        monitor = PerfMon.getMonitor("xyz", true);
+        assertEquals("Should return the root monitor because their is no appender attachted to monitor",
+        		"xyz", monitor.getName());
+        
+        // Now remove the child based appender...  
+        PerfMon.getRootMonitor().addAppender(bogusAppenderID, ".");
+        
+        // We will still return any child monitor that a
+        monitor = PerfMon.getMonitor("xyz", true);
+        assertEquals("Should still return child that has already been created",
+        		"xyz", monitor.getName());
+        
+        // We will still return any child monitor that a
+        monitor = PerfMon.getMonitor("lmn", true);
+        assertEquals("Will no longer create new children",
+        		"<ROOT>", monitor.getName());
+    }
+    
+    /*----------------------------------------------------------------------------*/
+    public void testGetDynamicOnChildOfMonitor() throws Exception {
+        PerfMon.getMonitor("xyz").addAppender(bogusAppenderID, ".");
+        
+        PerfMon monitor = PerfMon.getMonitor("xyz.childA", true);
+        assertEquals("Should not have created child", "xyz", monitor.getName());
+        
+        // Now put an appender on the root where we are monitoring
+        // children...  In this case we should create and return a child
+        PerfMon.getMonitor("xyz").addAppender(bogusAppenderID, "./*");
+        
+        monitor = PerfMon.getMonitor("xyz.childA", true);
+        assertEquals("Child should have been created",
+        		"xyz.childA", monitor.getName());
+        
+        // Now remove the child based appender...  
+        PerfMon.getMonitor("xyz").addAppender(bogusAppenderID, ".");
+        
+        // We will still return any child monitor that a
+        monitor = PerfMon.getMonitor("xyz.childA", true);
+        assertEquals("xyz.childA already exists",
+        		"xyz.childA", monitor.getName());
+        
+        monitor = PerfMon.getMonitor("xyz.childB", true);
+        assertEquals("Child should not have been created", "xyz", monitor.getName());
+    }
+
+    /*----------------------------------------------------------------------------*/
+    public void testGetDynamicOnGRANDChildOfMonitor() throws Exception {
+        PerfMon.getMonitor("xyz").addAppender(bogusAppenderID, "./*");
+        
+        PerfMon monitor = PerfMon.getMonitor("xyz.childA.grandchild", true);
+        assertEquals("Should not have created child but NOT grandchild", "xyz.childA", monitor.getName());
+        
+        // Now put an appender on the root where we are monitoring
+        // children...  In this case we should create and return a child
+        PerfMon.getMonitor("xyz").addAppender(bogusAppenderID, "./**");
+        
+        monitor = PerfMon.getMonitor("xyz.childA.grandchild", true);
+        assertEquals("Grand Child should have been created",
+        		"xyz.childA.grandchild", monitor.getName());
+        
+        // Now remove the child based appender...  
+        PerfMon.getMonitor("xyz").addAppender(bogusAppenderID, "./*");
+        
+        // We will still return any child monitor that a
+        monitor = PerfMon.getMonitor("xyz.childA.grandchild", true);
+        assertEquals("xyz.childA.grandchild already exists",
+        		"xyz.childA.grandchild", monitor.getName());
+        
+        monitor = PerfMon.getMonitor("xyz.childB.grandchild", true);
+        assertEquals("Child should not have been created but NOT grandchild", "xyz.childB", monitor.getName());
+    }
+
+    
+    
+
+    private static void validateMonitorExistsAndCompletion(String key) {
+    	PerfMon mon = PerfMon.getMonitorNoCreate_TESTONLY(key);
+    	
+        assertNotNull(key + " expected to exist", mon);
+        assertEquals(key + " should have 1 completion", 1, mon.getTotalCompletions());
+    }
+    
+    
+    /*----------------------------------------------------------------------------*/
+    public void testLazyCreateDeepMonitor() throws Exception {
+        PerfMon.getMonitor("xyz").addAppender(bogusAppenderID, "./**");
+        
+        PerfMonTimer timer = PerfMonTimer.start("xyz.1.2.3.4.5.6.7.8", true);
+        PerfMonTimer.stop(timer);
+     
+        // Make sure we created all of the  child/grandchild/etc.. monitors.
+        validateMonitorExistsAndCompletion("xyz.1.2.3.4.5.6.7.8");
+        validateMonitorExistsAndCompletion("xyz.1.2.3.4.5.6.7");
+        validateMonitorExistsAndCompletion("xyz.1.2.3.4.5.6");
+        validateMonitorExistsAndCompletion("xyz.1.2.3.4.5");
+        validateMonitorExistsAndCompletion("xyz.1.2.3.4");
+        validateMonitorExistsAndCompletion("xyz.1.2.3");
+        validateMonitorExistsAndCompletion("xyz.1.2");
+        validateMonitorExistsAndCompletion("xyz.1");
+    }
+    
+    
     
 /*----------------------------------------------------------------------------*/
     public void testAbort() throws Exception {
@@ -1036,9 +1152,9 @@ public class PerfMonTest extends TestCase {
                 super(owner, timeStart);
             }
             
-            void stop(long duration, long durationSquared, long systemTime) {
+            void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared) {
                 BogusAppender.dataStopCount++;
-                super.stop(duration, durationSquared, systemTime);
+                super.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
             }
         }
     }
@@ -1213,9 +1329,9 @@ public class PerfMonTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-        newSuite.addTest(new PerfMonTest("testConfigureWillSkipClassNotFoundAppender"));
-//        newSuite.addTest(new PerfMonTest("testActiveTimersNoParentAllDescendents"));
-//        newSuite.addTest(new PerfMonTest("testActiveTimersParentAndAllDescendents"));
+//        newSuite.addTest(new PerfMonTest("testLazyCreateDeepMonitor"));
+//        newSuite.addTest(new PerfMonTest("testGetDynamicOnChildOfMonitor"));
+//        newSuite.addTest(new PerfMonTest("testGetDynamicOnGRANDChildOfMonitor"));
         
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

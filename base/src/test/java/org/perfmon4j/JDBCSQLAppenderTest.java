@@ -195,7 +195,7 @@ public class JDBCSQLAppenderTest extends SQLTest {
     	
     	IntervalData d = new IntervalData(PerfMon.getMonitor("a.b.c"), now);
     	d.start(0, now);
-    	d.stop(100, 10000, now);
+    	d.stop(100, 10000, now, 0, 0);
 		d.setTimeStop(now + 1000);
     	appender.outputData(d);
 		
@@ -212,7 +212,7 @@ public class JDBCSQLAppenderTest extends SQLTest {
     	
     	IntervalData d = new IntervalData(PerfMon.getMonitor("a.b.c"), now);
     	d.start(0, now);
-    	d.stop(100, 10000, now);
+    	d.stop(100, 10000, now, 0, 0);
 		d.setTimeStop(now + 1000);
     	appender.outputData(d);
 		
