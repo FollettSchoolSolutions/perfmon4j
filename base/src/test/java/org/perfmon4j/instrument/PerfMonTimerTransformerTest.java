@@ -21,7 +21,18 @@
 package org.perfmon4j.instrument;
 
 import java.io.File;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import junit.framework.TestCase;
@@ -31,6 +42,12 @@ import junit.textui.TestRunner;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.Appender;
+import org.perfmon4j.IntervalData;
+import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonConfiguration;
+import org.perfmon4j.PerfMonData;
+import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.MiscHelper;
 
@@ -285,7 +302,112 @@ System.out.println(output);
     	}
     }
 
-	public static class SystemGCDisablerTester implements Runnable {
+	public static class SQLStatementTester implements Runnable {
+		
+		public static final class BogusAppender extends Appender {
+			public BogusAppender(AppenderID id) {
+				super(id);
+			}
+			
+			@Override
+			public void outputData(PerfMonData data) {
+				IntervalData d = (IntervalData)data;
+				System.out.println("Monitor: " + d.getOwner().getName() + " Completions:" + d.getTotalCompletions());
+			}
+		}
+		
+	    final String DERBY_CREATE_1 = "CREATE TABLE Bogus(Name VARCHAR(200) NOT NULL)";
+	    
+		public void run() {
+			try {
+				Connection conn = null;
+				
+				Statement s = null;
+				
+				try {
+					Driver driver = (Driver)Class.forName("org.apache.derby.jdbc.EmbeddedDriver", true, PerfMon.getClassLoader()).newInstance();
+					conn = driver.connect("jdbc:derby:memory:derbyDB;create=true", new Properties());
+					s = conn.createStatement();
+					s.execute(DERBY_CREATE_1);
+
+					
+					PerfMonConfiguration config = new PerfMonConfiguration();
+					final String monitorName = "SQL.executeQuery";
+					final String appenderName = "bogus";
+					
+					config.defineMonitor(monitorName);
+					config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+					config.attachAppenderToMonitor(monitorName, appenderName, ".");
+					PerfMon.configure(config);
+
+//					PerfMonTimer timer = PerfMonTimer.start(monitorName);
+					s.executeQuery("SELECT * FROM BOGUS");
+//					PerfMonTimer.stop(timer);
+					
+
+					Thread.sleep(2000);
+					Appender.flushAllAppenders();
+				} finally {
+					if (conn != null) {
+						conn.close();
+					}
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+    public void XtestInstrumentSQLStatement() throws Exception {
+//    	new SQLStatementTester().run();
+    	
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL", "", perfmon4jJar);
+    	System.out.println(output);   	
+    	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
+    }
+
+	
+    
+	public static class MoveParameterAnnotationTest implements Runnable {
+		@Retention(RetentionPolicy.RUNTIME)
+		@Target(ElementType.PARAMETER)
+		public @interface BogusAnnotation {
+		}
+
+		public void doSomethingCool(@BogusAnnotation int a) {
+		}
+		
+		
+		public void run() {
+			try {
+				Method methods[] = MoveParameterAnnotationTest.class.getDeclaredMethods();
+				for (int i = 0; i < methods.length; i++) {
+					System.out.println("Found Method: " + methods[i].getName());
+				}
+				
+				Method method = MoveParameterAnnotationTest.class.getMethod("doSomethingCool", new Class<?>[]{int.class});
+
+				// Get the number of annotations on the first parameter....
+				int numParameterAnnotations  = method.getParameterAnnotations()[0].length;
+				
+				System.out.println("numParameterAnnotations: " + numParameterAnnotations);
+				if (numParameterAnnotations == 1) {
+					System.out.println("Parameter annotation FOUND");
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+    public void testMoveAnnotation() throws Exception {
+    	String output = LaunchRunnableInVM.run(MoveParameterAnnotationTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", perfmon4jJar);
+    	System.out.println(output);   	
+    	assertTrue("Annotation should have moved parameter annotation", output.contains("Parameter annotation FOUND"));
+    }
+	
+	
+    public static class SystemGCDisablerTester implements Runnable {
 		public void run() {
 			WeakReference<byte[]> x = new WeakReference<byte[]>(new byte[10240]);
 			System.gc();
@@ -335,16 +457,14 @@ System.out.println(output);
     
 /*----------------------------------------------------------------------------*/
     public static junit.framework.Test suite() {
-
-    	
     	String testType = System.getProperty("UNIT");
         TestSuite newSuite = new TestSuite();
 
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new PerfMonTimerTransformerTest("testDisableSystemGCWithBootstrapEnabled"));
-        newSuite.addTest(new PerfMonTimerTransformerTest("testDisableSystemGCWithBootstrapDisabled"));
+//		newSuite.addTest(new PerfMonTimerTransformerTest("testMoveAnnotation"));
+        newSuite.addTest(new PerfMonTimerTransformerTest("testInstrumentSQLStatement"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
