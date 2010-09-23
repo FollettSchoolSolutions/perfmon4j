@@ -14,6 +14,7 @@ public class InstrumentationMonitor {
 	private static long classInstFailures = 0;
 	private static long bootstrapClassesInst = 0;
 	private static long instrumentationMillis = 0;
+	private static long sqlClassesInstrumented = 0;
 	
 	/**
 	 * Indicates the number of classes that were not instrumented 
@@ -37,6 +38,20 @@ public class InstrumentationMonitor {
 	
 	public static void incClassesInst() {
 		classesInst++;
+	}
+	
+	@SnapShotCounter(preferredDisplay=Display.DELTA_PER_MIN)
+	public static long getNumSQLClassesInst() {
+		return sqlClassesInstrumented;
+	}
+	
+	@SnapShotGauge
+	public static long getTotalSQLClassesInst() {
+		return sqlClassesInstrumented;
+	}
+	
+	public static void incSQLClassesInst() {
+		sqlClassesInstrumented++;
 	}
 	
 	@SnapShotCounter(preferredDisplay=Display.DELTA_PER_MIN)

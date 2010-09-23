@@ -109,7 +109,7 @@ public class PerfMon {
     private long maxSQLDuration = 0;
     private long timeMaxSQLDurationSet = NOT_SET;
     
-    private long minSQLDuration = 0;
+    private long minSQLDuration = NOT_SET;
     private long timeMinSQLDurationSet = NOT_SET;
     
     private long totalSQLDuration = 0;
@@ -354,7 +354,6 @@ public class PerfMon {
                         }                    	
                     	/** We have SQL logging enabled... Monitor the SQLDurations. **/
                     }
-                    
                 	
                 	totalCompletions++;
                     
@@ -1140,4 +1139,32 @@ public class PerfMon {
     public static void setClassLoader(ClassLoader classLoader) {
         PerfMon.classLoader = classLoader;
     }
+
+	public long getMaxSQLDuration() {
+		return maxSQLDuration;
+	}
+
+	public long getTimeMaxSQLDurationSet() {
+		return timeMaxSQLDurationSet;
+	}
+
+    public long getMinSQLDuration() {
+        return Math.max(minSQLDuration, 0); //Mask NOT_SET
+    }
+    
+    long getMinSQLDuration_NO_FIXUP() {
+        return minSQLDuration;
+    }
+
+	public long getTimeMinSQLDurationSet() {
+		return timeMinSQLDurationSet;
+	}
+
+	public long getTotalSQLDuration() {
+		return totalSQLDuration;
+	}
+
+	public long getSumOfSQLSquares() {
+		return sumOfSQLSquares;
+	}
 }

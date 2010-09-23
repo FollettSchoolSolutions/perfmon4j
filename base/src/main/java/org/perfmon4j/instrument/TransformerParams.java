@@ -24,8 +24,12 @@ package org.perfmon4j.instrument;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javassist.CtClass;
 import javassist.NotFoundException;
@@ -69,7 +73,8 @@ class TransformerParams {
     private boolean debugEnabled = Boolean.getBoolean("PerfMon4j.debugEnabled");
     private boolean verboseEnabled = false;
     private boolean disableSystemGC = false;
-    private boolean extremeSQLMonitorEnabled = true;
+    private boolean extremeSQLMonitorEnabled = false;
+    private final List<String> extremeSQLPackages = new Vector<String>();
     
     
 	TransformerParams() {
@@ -100,6 +105,7 @@ class TransformerParams {
 		return result.toString();
 	}
 	
+	private static final Pattern sqlParams = Pattern.compile("SQL\\((.+?)\\)");
 	
     TransformerParams(String params) {
         boolean paramsAreLegal = true;
@@ -124,8 +130,24 @@ class TransformerParams {
                     annotateList.add(nextParam.parameter);
                 } else if (isParam('e', params)) {
                     nextParam = getNextParam(params);
+                    Matcher m = sqlParams.matcher(nextParam.parameter);
+                    
                     if ("SQL".equals(nextParam.parameter)) {
                     	extremeSQLMonitorEnabled = true;
+                    } else if (m.matches()) {
+                    	extremeSQLMonitorEnabled = true;
+                    	String p = m.group(1);
+                    	if ("JTDS".equals(p)) {
+                    		extremeSQLPackages.add("net.sourceforge.jtds");
+                    	} else if ("POSTGRESQL".equals(p)) {
+                    		extremeSQLPackages.add("org.postgresql");
+                    	} else if ("MYSQL".equals(p)) {
+                    		extremeSQLPackages.add("com.mysql.jdbc");
+                    	} else if ("DERBY".equals(p)) {
+                    		extremeSQLPackages.add("org.apache.derby");
+                    	} else {
+                    		extremeSQLPackages.add(m.group(1));
+                    	}
                     } else {
 	                     TransformOptions o = parseOptions(nextParam);
 	                     if (o == null) {
@@ -395,30 +417,6 @@ class TransformerParams {
     	"java.sql.ResultSet",
     	"java.sql.Statement",
     };
-	
-    
-    private final static String SQL_METHODS[] = {
-    	"addBatch",
-    	"close",
-    	"commit",
-    	"connect",
-    	"createStatement",
-    	"execute",
-    	"executeBatch",
-    	"executeQuery",
-    	"executeUpdate",
-    	"executeStatement",
-    	"prepareCall",
-    	"prepareStatement",
-    	"rollback"
-    };
-    
-
-    
-    
-    public boolean isMonitoredSQLMethod(String methodName) {
-    	return Arrays.binarySearch(SQL_METHODS, methodName) > 0;
-    }
     
     // Package level for testing...
 	boolean isExtremeSQLInterface(String className) {
@@ -476,7 +474,13 @@ class TransformerParams {
 	}
 
 	public boolean isPossibleJDBCDriver(String className) {
-		return className.startsWith("org.apache.derby") 
-			|| className.startsWith("net.sourceforge.jtds");
+		boolean found = extremeSQLPackages.isEmpty();
+		if (!found) {
+			Iterator<String> itr = extremeSQLPackages.iterator();
+			if (!found && itr.hasNext()) {
+				found = className.startsWith(itr.next());
+			}
+		}
+		return found;
 	}
 }

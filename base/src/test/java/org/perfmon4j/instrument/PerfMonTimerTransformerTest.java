@@ -21,7 +21,6 @@
 package org.perfmon4j.instrument;
 
 import java.io.File;
-import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -31,9 +30,9 @@ import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -48,6 +47,7 @@ import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.MiscHelper;
 
@@ -311,8 +311,12 @@ System.out.println(output);
 			
 			@Override
 			public void outputData(PerfMonData data) {
-				IntervalData d = (IntervalData)data;
-				System.out.println("Monitor: " + d.getOwner().getName() + " Completions:" + d.getTotalCompletions());
+				if (data instanceof IntervalData) {
+					IntervalData d = (IntervalData)data;
+					System.out.println("Monitor: " + d.getOwner().getName() + " Completions:" + d.getTotalCompletions());
+				} else {
+					System.out.println(data.toAppenderString());
+				}
 			}
 		}
 		
@@ -325,12 +329,6 @@ System.out.println(output);
 				Statement s = null;
 				
 				try {
-					Driver driver = (Driver)Class.forName("org.apache.derby.jdbc.EmbeddedDriver", true, PerfMon.getClassLoader()).newInstance();
-					conn = driver.connect("jdbc:derby:memory:derbyDB;create=true", new Properties());
-					s = conn.createStatement();
-					s.execute(DERBY_CREATE_1);
-
-					
 					PerfMonConfiguration config = new PerfMonConfiguration();
 					final String monitorName = "SQL.executeQuery";
 					final String appenderName = "bogus";
@@ -338,14 +336,29 @@ System.out.println(output);
 					config.defineMonitor(monitorName);
 					config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
 					config.attachAppenderToMonitor(monitorName, appenderName, ".");
+					
+					ThreadTraceConfig tcConfig = new ThreadTraceConfig();
+					tcConfig.addAppender(config.getAppenderForName(appenderName));
+					config.addThreadTraceConfig("MyManualTimer", tcConfig);
+					
 					PerfMon.configure(config);
 
-//					PerfMonTimer timer = PerfMonTimer.start(monitorName);
-					s.executeQuery("SELECT * FROM BOGUS");
-//					PerfMonTimer.stop(timer);
+					PerfMonTimer timer = null;
+					try {
+						timer = PerfMonTimer.start("MyManualTimer");
+						Driver driver = (Driver)Class.forName("org.apache.derby.jdbc.EmbeddedDriver", true, PerfMon.getClassLoader()).newInstance();
+						conn = driver.connect("jdbc:derby:memory:derbyDB;create=true", new Properties());
+						s = conn.createStatement();
+						s.execute(DERBY_CREATE_1);						
+						
+						s.executeQuery("SELECT * FROM BOGUS");
+						Thread.sleep(2000);
+					} finally {
+						PerfMonTimer.stop(timer);	
+					}
+					
 					
 
-					Thread.sleep(2000);
 					Appender.flushAllAppenders();
 				} finally {
 					if (conn != null) {
@@ -358,14 +371,32 @@ System.out.println(output);
 		}
 	}
 	
-    public void XtestInstrumentSQLStatement() throws Exception {
-//    	new SQLStatementTester().run();
-    	
-    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL", "", perfmon4jJar);
+    public void testInstrumentSQLStatement() throws Exception {
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL,-vTRUE", "", perfmon4jJar);
     	System.out.println(output);   	
     	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
     }
 
+    public void testThreadTraceWithSQLTime() throws Exception {
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL,-vTRUE", "", perfmon4jJar);
+    
+    	// Running with extreme SQL instrumentation enabled...
+    	// Looking for a line like:
+    	// +-14:37:29:653 (5436)(SQL:3211) MyManualTimer
+    	Pattern p = Pattern.compile("\\d{1,2}:\\d{2}:\\d{2}:\\d{3} \\(\\d{4}\\)\\(SQL:\\d{1,4}\\) MyManualTimer");
+    	Matcher m = p.matcher(output);
+    	assertTrue("Should have included SQL time specification", m.find());
+    	
+    	// Now run it again without extreme SQL logging... We 
+    	// do NOT expect the (SQL:dddd) identifier to be present.
+    	// Should expect something like: +-15:07:32:969 (4722) MyManualTimer
+    	output = LaunchRunnableInVM.run(SQLStatementTester.class, "-vTRUE", "", perfmon4jJar);
+//System.out.println(output);
+
+    	p = Pattern.compile("\\d{1,2}:\\d{2}:\\d{2}:\\d{3} \\(\\d{4}\\) MyManualTimer");
+    	m = p.matcher(output);
+    	assertTrue("Should NOT have included SQL time specification", m.find());
+    }
 	
     
 	public static class MoveParameterAnnotationTest implements Runnable {
@@ -376,7 +407,6 @@ System.out.println(output);
 
 		public void doSomethingCool(@BogusAnnotation int a) {
 		}
-		
 		
 		public void run() {
 			try {
@@ -463,8 +493,8 @@ System.out.println(output);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new PerfMonTimerTransformerTest("testMoveAnnotation"));
-        newSuite.addTest(new PerfMonTimerTransformerTest("testInstrumentSQLStatement"));
+//		newSuite.addTest(new PerfMonTimerTransformerTest("testThreadTraceWithSQLTime"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testInstrumentSQLStatement"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

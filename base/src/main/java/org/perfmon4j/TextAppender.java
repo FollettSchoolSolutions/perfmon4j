@@ -27,21 +27,47 @@ import org.perfmon4j.util.LoggerFactory;
 public class TextAppender extends Appender {
     private static final Logger logger;
     public static final long DEFAULT_INTERVAL_MILLIS = 5 * 60 * 1000;
+    private boolean includeSQL = SQLTime.isEnabled();
 
     static {
         logger = LoggerFactory.initLogger(TextAppender.class);
         logger.enableInfo();
     }
     
-/*----------------------------------------------------------------------------*/
+	public boolean isIncludeSQL() {
+			return includeSQL;
+	}
+
+	/**
+	 * Indicates if interval data should include the SQL attributes...
+	 * Note this is conditional on PerfMon4j being loaded with the
+	 * -eSQL instrumentation. 
+	 * @param includeSQL
+	 */
+	public void setIncludeSQL(boolean includeSQL) {
+		if (includeSQL && !SQLTime.isEnabled()) {
+			logger.logWarn("Unabled to include SQL information.  Perfmon4j agent must enable SQL/JDBC instrumentation.");
+			includeSQL = false;
+		}
+		this.includeSQL = includeSQL;
+	}
+
+	/*----------------------------------------------------------------------------*/
     public TextAppender(AppenderID id) {
         super(id);
     }
      
 /*----------------------------------------------------------------------------*/
     public void outputData(PerfMonData data) {
-        logger.logInfo(data.toAppenderString());
+    	if (data instanceof IntervalData) {
+            logger.logInfo(((IntervalData)data).toAppenderString(isIncludeSQL()));
+    	} else {
+            logger.logInfo(data.toAppenderString());
+    	}
     }
+    
+    
+    
 }
 
 

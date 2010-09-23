@@ -42,6 +42,10 @@
 								<value>${user.home}/.m2/repository/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</value>
 							</property>
 							<property>
+								<name>DERBY_EMBEDDED_DRIVER</name>
+								<value>${user.home}/.m2/repository/org/apache/derby/derby/10.5.3.0_1/derby-10.5.3.0_1.jar</value>
+							</property>
+							<property>
 								<name>maven.runtime.classpath</name>
 								<value>${maven.dependency.classpath}</value>
 							</property>
@@ -61,12 +65,6 @@
 			<groupId>org.apache.derby</groupId>
 			<artifactId>derby</artifactId>
 			<version>10.5.3.0_1</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<version>1.8.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

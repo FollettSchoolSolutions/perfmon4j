@@ -92,8 +92,18 @@ public class LaunchRunnableInVM {
     	
     	String cmdString = quoteIfNeeded(javaCmd);
     	
-    	String myClassPath = quoteIfNeeded(System.getProperty("java.class.path").replaceAll("\\\\", "/"));
-System.out.println("CLASSPATH=" + myClassPath); 
+    	String myClassPath = System.getProperty("java.class.path").replaceAll("\\\\", "/");
+    	String derbyDriver = System.getProperty("DERBY_EMBEDDED_DRIVER");
+    	if (derbyDriver != null) {
+    		File driver = new File(derbyDriver);
+    		if (!driver.exists()) {
+    			throw new RuntimeException("DERBY_EMBEDDED_DRIVER \"" + derbyDriver + "\" - NOT FOUND!");
+    		}
+    		myClassPath += System.getProperty("path.separator") + derbyDriver;
+    	}
+    	myClassPath = quoteIfNeeded(myClassPath);
+    	
+    	System.out.println("CLASSPATH=" + myClassPath); 
 		cmdString += " -classpath " + myClassPath;
     	
     	
@@ -106,6 +116,11 @@ System.out.println("CLASSPATH=" + myClassPath);
     	if (javaAssistProp == null) {
     		throw new RuntimeException("JAVASSIST_JAR system property must be set");
     	}
+    	
+    	
+    	
+    	
+    	
     	File javassistJar = new File(javaAssistProp);
     	final String pathSeparator = System.getProperty("path.separator");
     	

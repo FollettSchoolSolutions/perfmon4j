@@ -44,6 +44,8 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     private final int depth;
     private final long startTime;
     private long endTime = -1;
+    private final long sqlStartTime;
+    private long sqlEndTime = -1;
     
     ThreadTraceData(String name, long startTime) {
         this(name, null, startTime);
@@ -53,6 +55,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
         this.name = name;
         this.parent = parent;
         this.startTime = startTime;
+        this.sqlStartTime = SQLTime.getSQLTime();
         if (parent != null) {
             parent.children.add(this);
             depth = parent.depth + 1;
@@ -76,6 +79,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 
     void stop() {
         endTime = MiscHelper.currentTimeWithMilliResolution();
+        sqlEndTime = SQLTime.getSQLTime();
     }
     
     ThreadTraceData getParent() {
@@ -99,20 +103,24 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
         for (int i = 0; i < children.length; i++) {
             childAppenderString.append(children[i].buildAppenderStringBody(childIndent));
         }
+        String sqlTime = "";
+        if (SQLTime.isEnabled() && (sqlEndTime - sqlStartTime) > 0) {
+        	sqlTime = "(SQL:" + (sqlEndTime - sqlStartTime) + ")"; 
+        }
         String result = String.format(
-            "%s+-%s (%d) %s\r\n" +
+            "%s+-%s (%d)%s %s\r\n" +
             "%s" +
             "%s+-%s %s\r\n",
             indent,
             MiscHelper.formatTimeAsString(getStartTime()),
             getEndTime() - getStartTime(),
+            sqlTime,
             name,
             childAppenderString.toString(),
             indent,
             MiscHelper.formatTimeAsString(getEndTime()),
             name);
         return result;
-        
     }
         
 

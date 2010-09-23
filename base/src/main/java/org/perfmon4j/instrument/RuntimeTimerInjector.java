@@ -62,6 +62,7 @@ public class RuntimeTimerInjector {
     	private final String className;
     	private final boolean extremeTimer;
     	private List<String> annotationMessages = new ArrayList<String>();
+    	private boolean outputGenericSQLMessageForClass = true;
     	
     	public VerboseMessages(String className, boolean extremeTimer) {
     		this.className = className;
@@ -77,7 +78,14 @@ public class RuntimeTimerInjector {
     	}
 
     	public void addExtremeSQLMsg(String monitorName) {
-    		annotationMessages.add("** Adding extreme SQLmonitor: " + monitorName);
+    		if ("SQL".equals(monitorName)) {
+    			if (outputGenericSQLMessageForClass) {
+    				annotationMessages.add("** Adding extreme SQLmonitor(" + className + "): " + monitorName);
+    			}
+    			outputGenericSQLMessageForClass = false;
+    		} else {
+        		annotationMessages.add("** Adding extreme SQLmonitor: " + monitorName);
+    		}
     	}
 
 		public void addAnnotationMsg(String methodName, String timerKeyAnnotation) {
@@ -94,7 +102,6 @@ public class RuntimeTimerInjector {
 				verbose.logDebug(itr.next());
 			}
 		}
-
     }
  
     static Set<CtClass> getInterfaces(CtClass clazz) throws NotFoundException {
@@ -129,17 +136,20 @@ public class RuntimeTimerInjector {
                 transformOptions = params.getTransformOptions(clazz.getName());
                 extremeSQLClass = params.isPossibleJDBCDriver(clazz.getName()) && params.isExtremeSQLClass(clazz);
 				if (extremeSQLClass) {
-					String n = clazz.getName();
-					String interfaces = "";
+					if (logger.isInfoEnabled()) {
+						String n = clazz.getName();
+						String interfaces = "";
 					
-					CtClass intf[] = getInterfaces(clazz).toArray(new CtClass[]{});
-					for (int i = 0; i < intf.length; i++) {
-						if (i > 0) {
-							interfaces += ", ";
+						CtClass intf[] = getInterfaces(clazz).toArray(new CtClass[]{});
+						for (int i = 0; i < intf.length; i++) {
+							if (i > 0) {
+								interfaces += ", ";
+							}
+							interfaces += intf[i].getName();
 						}
-						interfaces += intf[i].getName();
+						InstrumentationMonitor.incSQLClassesInst();
+						logger.logInfo("PerfMon4j found SQL/JDBC class: (" + n + ") With interfaces: " + interfaces);
 					}
-					System.out.println(n + " interfaces: " + interfaces);
 				}
             }
             
@@ -201,10 +211,7 @@ public class RuntimeTimerInjector {
                         String extremeSQLKey = null;
                         if (extremeSQLClass) {
                         	extremeSQLKey = "SQL";  // Any method on a JDBC Class will be monitored...
-                        	if (params.isMonitoredSQLMethod(method.getName())) {
-                        		// Specific methods will be isolated based on method name.
-                        		extremeSQLKey += method.getName();
-                        	}
+                    		extremeSQLKey += "." + method.getName();
                         }
                         if ((timerKeyAnnotation != null) || (timerKeyExtreme != null) || (extremeSQLKey != null)) {
                             numTimers += timerKeyAnnotation != null ? 1 : 0;
@@ -264,9 +271,7 @@ public class RuntimeTimerInjector {
                         	if (t.extremeSQLKey != null) {
                         		verboseMessages.addExtremeSQLMsg(t.extremeSQLKey);
                         	}
-                        
                         }
-                            
                     }
                 }
                 if (verboseMessages != null) {

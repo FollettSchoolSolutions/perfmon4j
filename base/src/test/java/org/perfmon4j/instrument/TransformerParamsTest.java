@@ -557,7 +557,7 @@ public class TransformerParamsTest extends TestCase {
         
         
 /*----------------------------------------------------------------------------*/    
-        public void XtestValidateSQLExtreme() throws Exception {
+        public void testValidateSQLExtreme() throws Exception {
             TransformerParams params = new TransformerParams();
             assertFalse("SQL Extreme instrumentation should be off by default", params.isExtremeSQLMonitorEnabled());
             
@@ -573,15 +573,35 @@ public class TransformerParamsTest extends TestCase {
             assertTrue("java.sql.Statement", params.isExtremeSQLClass(StatementImpl.class));
             assertTrue("java.sql.Statement", params.isExtremeSQLClass(ClassPool.getDefault().get(StatementImpl.class.getName())));
             
-            
-            
             // Just test the rest at the class name interface...
             assertTrue("java.sql.PreparedStatement", params.isExtremeSQLInterface(java.sql.PreparedStatement.class.getName()));
             assertTrue("java.sql.CallableStatement", params.isExtremeSQLInterface(java.sql.CallableStatement.class.getName()));
             assertTrue("java.sql.Connection", params.isExtremeSQLInterface(java.sql.Connection.class.getName()));
         }
         
+
+        private void assertPossibleJTDSDriver(boolean jtdsEnabled, boolean postgresEnabled, 
+        	boolean mySQLEnabled, boolean derbyEnabled, boolean otherEnabled,
+        	TransformerParams params) {
+
+            assertEquals("expected JTDS enabled state", jtdsEnabled, params.isPossibleJDBCDriver("net.sourceforge.jtds.Driver"));
+            assertEquals("expected Postgres enabled state", postgresEnabled, params.isPossibleJDBCDriver("org.postgresql.Driver"));
+            assertEquals("expected mysql enabled state", mySQLEnabled, params.isPossibleJDBCDriver("com.mysql.jdbc.Driver"));
+            assertEquals("expected derby enabled state", derbyEnabled, params.isPossibleJDBCDriver("org.apache.derby.jdbc.EmbeddedDriver"));
+            assertEquals("expected other enabled state", otherEnabled, params.isPossibleJDBCDriver("org.perfmon4j.jdbc.Driver"));
+        }
         
+        
+        public void testIsPossibleJDBCDriverClass() {
+        	assertPossibleJTDSDriver(true, true, true, true, true, new TransformerParams());
+        	assertPossibleJTDSDriver(true, true, true, true, true, new TransformerParams("-eSQL"));
+        	assertPossibleJTDSDriver(true, false, false, false, false, new TransformerParams("-eSQL(JTDS)"));
+        	assertPossibleJTDSDriver(false, true, false, false, false, new TransformerParams("-eSQL(POSTGRESQL)"));
+        	assertPossibleJTDSDriver(false, false, true, false, false, new TransformerParams("-eSQL(MYSQL)"));
+        	assertPossibleJTDSDriver(false, false, false, true, false, new TransformerParams("-eSQL(DERBY)"));
+        	// Can specify a partial package name...
+        	assertPossibleJTDSDriver(false, false, false, false, true, new TransformerParams("-eSQL(org.perfmon4j.jdbc)"));
+        }
 
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
@@ -600,7 +620,7 @@ public class TransformerParamsTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new TransformerParamsTest("testJBossCompatibleJavaAgent"));
+//        newSuite.addTest(new TransformerParamsTest("testIsPossibleJDBCDriverClass"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

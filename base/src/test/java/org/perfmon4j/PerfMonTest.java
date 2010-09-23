@@ -37,9 +37,31 @@ import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
 
 
+
 public class PerfMonTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
+    public void testToAppenderStringWithSQLActive() throws Exception {
+    	PerfMon mon = PerfMon.getMonitor("DAVE");
+    	IntervalData id = new IntervalData(mon);
+    	
+    	assertTrue("Should include SQL time if SQLTime option was enabled", id.toAppenderString(true).contains("(SQL)Avg. Duration"));
+    	assertFalse("Should NOT include SQL time if SQLTime option was enabled", id.toAppenderString(false).contains("(SQL)Avg. Duration"));
+    
+    	// Any SQL monitor should not include the SQL time.  It would be identical to the default sqlTime anyway.
+    	mon = PerfMon.getMonitor("SQL");
+    	id = new IntervalData(mon);
+    	
+    	assertFalse("Should NOT include SQL time for SQL category, even if SQL is enabled", id.toAppenderString(true).contains("(SQL)Avg. Duration"));
+    	
+    	mon = PerfMon.getMonitor("SQL.executeQuery");
+    	id = new IntervalData(mon);
+    	
+    	assertFalse("Should NOT include SQL time for SQL child category, even if SQL is enabled", id.toAppenderString(true).contains("(SQL)Avg. Duration"));
+    }
+    
+    
+    
 /*----------------------------------------------------------------------------*/
     public PerfMonTest(String name) {
         super(name);
@@ -1270,8 +1292,8 @@ public class PerfMonTest extends TestCase {
             + " durationEnabledRun3=" + durationEnabledRun3 
             + " durationDisabled=" + durationDisabled);
     }
-  
-/*----------------------------------------------------------------------------*/
+
+    /*----------------------------------------------------------------------------*/
     private static class TestPerfMonThread extends Thread {
         final String monitorKey;
         private static CountDownLatch latch = new CountDownLatch(1);
@@ -1329,7 +1351,7 @@ public class PerfMonTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new PerfMonTest("testLazyCreateDeepMonitor"));
+//        newSuite.addTest(new PerfMonTest("testToAppenderStringWithSQLActive"));
 //        newSuite.addTest(new PerfMonTest("testGetDynamicOnChildOfMonitor"));
 //        newSuite.addTest(new PerfMonTest("testGetDynamicOnGRANDChildOfMonitor"));
         
