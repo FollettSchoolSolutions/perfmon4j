@@ -1051,7 +1051,6 @@ public class PerfMon {
         return timeMinDurationSet;
     }
 
-
     public long getSumOfSquares() {
         return sumOfSquares;
     }

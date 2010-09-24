@@ -28,7 +28,7 @@ import org.perfmon4j.util.ThresholdCalculator.ThresholdResult;
 
 public class IntervalData implements PerfMonData {
     private final PerfMon owner;
-    private final boolean isSQLMonitor;
+    private final boolean sqlMonitor;
     private final long timeStart;
     private long timeStop = PerfMon.NOT_SET;
     private final MedianCalculator medianCalculator;
@@ -179,7 +179,7 @@ public class IntervalData implements PerfMonData {
         ThresholdCalculator thresholdCalculator, long timeStop) {
         this.owner = owner;
         String ownerName = owner == null ? "" : owner.getName();
-        this.isSQLMonitor = "SQL".equals(ownerName) || ownerName.startsWith("SQL.");
+        this.sqlMonitor = "SQL".equals(ownerName) || ownerName.startsWith("SQL.");
         this.timeStart = timeStart;
         this.timeStop = timeStop;
         this.medianCalculator = medianCalculator;
@@ -227,7 +227,7 @@ public class IntervalData implements PerfMonData {
         ThresholdCalculator thresholdCalculator, long durationSum, long minDuration){
         this.owner = owner;
         String ownerName = owner == null ? "" : owner.getName();
-        this.isSQLMonitor = "SQL".equals(ownerName) || ownerName.startsWith("SQL.");
+        this.sqlMonitor = "SQL".equals(ownerName) || ownerName.startsWith("SQL.");
         this.timeStart = startTime;
         this.timeStop = endTime;
         this.medianCalculator = median;
@@ -292,6 +292,12 @@ public class IntervalData implements PerfMonData {
         return totalDuration;
     }
 
+    /*----------------------------------------------------------------------------*/    
+    public long getTotalSQLDuration() {
+        return totalSQLDuration;
+    }
+    
+    
 /*----------------------------------------------------------------------------*/    
     public int getTotalHits() {
         return totalHits;
@@ -311,11 +317,14 @@ public class IntervalData implements PerfMonData {
         totalHits++;
     }
     
+    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared) {
+    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, false);
+    }
     
 /*----------------------------------------------------------------------------*/    
-    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared) {
+    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, boolean forceSQLTime) {
         totalCompletions++;
-        if (SQLTime.isEnabled()) {
+        if (forceSQLTime || SQLTime.isEnabled()) {
             if (sqlDuration >= maxSQLDuration) {
                 maxSQLDuration = sqlDuration;
                 timeMaxSQLDurationSet = systemTime;
@@ -490,7 +499,7 @@ public class IntervalData implements PerfMonData {
             name = owner.getName();
         }
         String sqlDurationInfo = "";
-        if (includeSQLTime && !isSQLMonitor) {
+        if (includeSQLTime && !isSQLMonitor()) {
         	sqlDurationInfo = String.format(
 	                " (SQL)Avg. Duration. %.2f\r\n" +
 	                " (SQL)Std. Dev...... %.2f\r\n" +
@@ -540,7 +549,7 @@ public class IntervalData implements PerfMonData {
         );
         if (haveLifetimeStats) {
         	sqlDurationInfo = "";
-            if (includeSQLTime && !isSQLMonitor) {
+            if (includeSQLTime && !isSQLMonitor()) {
             	sqlDurationInfo = String.format(
     	                " (SQL)Avg. Duration. %.2f\r\n" +
     	                " (SQL)Std. Dev...... %.2f\r\n" +
@@ -623,6 +632,14 @@ public class IntervalData implements PerfMonData {
         return timeMinDurationSet;
     }
 
+    public long getTimeMaxSQLDurationSet() {
+        return timeMaxSQLDurationSet;
+    }
+
+    public long getTimeMinSQLDurationSet() {
+        return timeMinSQLDurationSet;
+    }    
+    
     public long getLifetimeStartTime() {
         return lifetimeStartTime;
     }
@@ -638,6 +655,11 @@ public class IntervalData implements PerfMonData {
     public long getSumOfSquares() {
         return this.sumOfSquares;
     }
+
+    public long getSumOfSQLSquares() {
+        return this.sumOfSQLSquares;
+    }
+    
     
     public double getLifetimeStdDeviation() {
         return MiscHelper.calcStdDeviation(lifetimeTotalCompletions, lifetimeTotalDuration, lifetimeSumOfSquares);
@@ -660,6 +682,10 @@ public class IntervalData implements PerfMonData {
             " timeStart=" + MiscHelper.formatDateTimeAsString(timeStart) +
             " timeStop=" + (timeStop == -1 ? "running" : MiscHelper.formatDateTimeAsString(timeStop)) +
             ")";
+    }
+    
+    public boolean isSQLMonitor() {
+    	return sqlMonitor;
     }
 }
     

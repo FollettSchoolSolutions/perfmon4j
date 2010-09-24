@@ -33,8 +33,6 @@ import java.util.Properties;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
-import org.perfmon4j.util.MedianCalculator;
-import org.perfmon4j.util.ThresholdCalculator;
 
 public class JDBCSQLAppender extends SQLAppender {
 	private static final Logger logger = LoggerFactory.initLogger(JDBCSQLAppender.class);
@@ -47,6 +45,10 @@ public class JDBCSQLAppender extends SQLAppender {
 
 	public JDBCSQLAppender(AppenderID id) {
 		super(id);
+	}
+	
+	JDBCSQLAppender(AppenderID id, boolean writeSQLAttributesIfPossible ) {
+		super(id, writeSQLAttributesIfPossible);
 	}
 	
     public void deInit() {

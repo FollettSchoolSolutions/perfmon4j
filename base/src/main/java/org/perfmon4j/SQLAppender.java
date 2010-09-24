@@ -21,6 +21,7 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -42,10 +43,19 @@ public abstract class SQLAppender extends Appender {
 	private String insertCategoryPS = null;
 	private String selectCategoryPS = null;
 	private String insertIntervalPS = null;
+	private String insertIntervalWithOptionalColsPS = null;
 	private String insertThresholdPS = null;
+	private String checkForOptionalSQLColsPS = null;
+	private Boolean tableHasOptionalCols = null;
+	private final boolean writeSQLAttributesIfPossible;
 	
 	public SQLAppender(AppenderID id) {
+		this(id, SQLTime.isEnabled());
+	}
+	
+	SQLAppender(AppenderID id, boolean writeSQLAttributesIfPossible ) {
 		super(id);
+		this.writeSQLAttributesIfPossible = writeSQLAttributesIfPossible;
 	}
 
 	protected abstract Connection getConnection() throws SQLException;
@@ -83,6 +93,14 @@ public abstract class SQLAppender extends Appender {
 		return insertCategoryPS;
 	}
 
+	public String getCheckForOptionalSQLColsPS() {
+		if (checkForOptionalSQLColsPS == null) {
+			checkForOptionalSQLColsPS = String.format(CHECK_FOR_OPTIONAL_SQL_MONITOR_COLS_PS, dbSchema == null ? "" : (dbSchema + "."));
+		}
+		return checkForOptionalSQLColsPS;
+	}
+
+	
 	public String getSelectCategoryPS() {
 		if (selectCategoryPS == null) {
 			selectCategoryPS = String.format(SELECT_CATEGORY_PS, dbSchema == null ? "" : (dbSchema + "."));
@@ -90,11 +108,22 @@ public abstract class SQLAppender extends Appender {
 		return selectCategoryPS;
 	}
 
-	public String getInsertIntervalPS() {
-		if (insertIntervalPS == null) {
-			insertIntervalPS = String.format(INSERT_INTERVAL_PS, dbSchema == null ? "" : (dbSchema + "."));
+	public String getInsertIntervalPS(boolean includeOptionalCols) {
+		String result = null;
+		
+		if (includeOptionalCols) {
+			if (insertIntervalWithOptionalColsPS == null) {
+				insertIntervalWithOptionalColsPS = String.format(INSERT_INTERVAL_WITH_OPTIONALS_PS, dbSchema == null ? "" : (dbSchema + "."));
+			}
+			result = insertIntervalWithOptionalColsPS;
+		} else {
+			if (insertIntervalPS == null) {
+				insertIntervalPS = String.format(INSERT_INTERVAL_PS, dbSchema == null ? "" : (dbSchema + "."));
+			}
+			result = insertIntervalPS;
 		}
-		return insertIntervalPS;
+		
+		return result;
 	}
 
 	public String getInsertThresholdPS() {
@@ -103,7 +132,6 @@ public abstract class SQLAppender extends Appender {
 		}
 		return insertThresholdPS;
 	}
-
 	private final static String INSERT_CATEGORY_PS = "INSERT INTO %sP4JCategory (CategoryName) VALUES(?)";
 	private final static String SELECT_CATEGORY_PS = "SELECT CategoryID FROM %sP4JCategory WHERE CategoryName=?";
 	private final static String INSERT_INTERVAL_PS = "INSERT INTO %sP4JIntervalData (CategoryID, StartTime, EndTime, " +
@@ -111,6 +139,21 @@ public abstract class SQLAppender extends Appender {
 		"MaxDurationSet, MinDuration, MinDurationSet, averageDuration, standardDeviation,  " +
 		"normalizedThroughputPerMinute, durationSum, durationSumOfSquares, medianDuration) VALUES(?, ?, ?, ?, ?, ?, ?, " +
 		"?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	
+	private final static String INSERT_INTERVAL_WITH_OPTIONALS_PS = "INSERT INTO %sP4JIntervalData (CategoryID, StartTime, EndTime, " +
+		"TotalHits, TotalCompletions, MaxActiveThreads, MaxActiveThreadsSet, MaxDuration, " +
+		"MaxDurationSet, MinDuration, MinDurationSet, averageDuration, standardDeviation,  " +
+		"normalizedThroughputPerMinute, durationSum, durationSumOfSquares, medianDuration, " +
+		"SQLMaxDuration, SQLMaxDurationSet, SQLMinDuration, SQLMinDurationSet, " +
+		"SQLAverageDuration, SQLStandardDeviation, SQLDurationSum, SQLDurationSumOfSquares) " +
+		"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, " +
+		"?, ?, ?, ?)";
+	
+	private final static String CHECK_FOR_OPTIONAL_SQL_MONITOR_COLS_PS = "SELECT " +
+		"SQLMaxDuration, SQLMaxDurationSet, SQLMinDuration, SQLMinDurationSet, " +
+		"SQLAverageDuration, SQLStandardDeviation, SQLDurationSum, SQLDurationSumOfSquares " +
+		"FROM %sP4JIntervalData";
+	
 	private final static String INSERT_THRESHOLD_PS = "INSERT INTO %sP4JIntervalThreshold (intervalID, ThresholdMillis, " +
 		"CompletionsOver, PercentOver) VALUES(?, ?, ?, ?)";
 
@@ -153,6 +196,22 @@ public abstract class SQLAppender extends Appender {
 		return time > 0 ? new Timestamp(time) : null;
 	}
 	
+	private boolean doesTableHaveOptionalCols(Connection conn) throws SQLException {
+		if (tableHasOptionalCols == null) {
+			PreparedStatement stmt = null;
+			try {
+				stmt = conn.prepareStatement(getCheckForOptionalSQLColsPS());
+				stmt.executeQuery();
+				tableHasOptionalCols = Boolean.TRUE;
+			} catch (SQLException sqlException) {
+				tableHasOptionalCols = Boolean.FALSE;
+			} finally {
+				JDBCHelper.closeNoThrow(stmt);
+			}
+		}
+		return tableHasOptionalCols.booleanValue();
+	}
+	
 	private void outputIntervalData(Connection conn, IntervalData data) throws SQLException {
 		if (data.getTimeStart() <= 0 || data.getTimeStop() <= 0) {
 			logger.logWarn("Skipping SQL insert for data timeStart and/or timeEnd missing");
@@ -186,6 +245,15 @@ public abstract class SQLAppender extends Appender {
 			long durationSum = data.getTotalDuration();
 			long durationSumOfSquares = data.getSumOfSquares();
 			Double medianDuration = null;
+
+			long maxSQLDuration = data.getMaxSQLDuration();
+			Timestamp maxSQLDurationSet = buildTimestampOrNull(data.getTimeMaxSQLDurationSet());
+			long minSQLDuration = data.getMinSQLDuration();
+			Timestamp minSQLDurationSet = buildTimestampOrNull(data.getTimeMinSQLDurationSet());
+			double averageSQLDuration = data.getAverageSQLDuration();
+			double sqlStdDeviation = data.getSQLStdDeviation();
+			long totalSQLDuration = data.getTotalSQLDuration();
+			long sumOfSQLSquares = data.getSumOfSQLSquares();
 			
 			MedianCalculator calc = data.getMedianCalculator();
 			MedianResult medianResult = null;
@@ -199,10 +267,16 @@ public abstract class SQLAppender extends Appender {
 				}
 				medianDuration = d;
 			}
+			
+			boolean includeOptionalCols = (
+					writeSQLAttributesIfPossible 
+					&& !data.isSQLMonitor()
+					&& doesTableHaveOptionalCols(conn));
+			
 			if (oracleConnection) {
-				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), new int[]{1});
+				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(includeOptionalCols), new int[]{1});
 			} else {
-				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), Statement.RETURN_GENERATED_KEYS);
+				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(includeOptionalCols), Statement.RETURN_GENERATED_KEYS);
 			}
 			insertIntervalStmt.setLong(1, categoryID);
 			insertIntervalStmt.setTimestamp(2, new Timestamp(startTime));
@@ -221,7 +295,16 @@ public abstract class SQLAppender extends Appender {
 			insertIntervalStmt.setLong(15, durationSum);
 			insertIntervalStmt.setLong(16, durationSumOfSquares);
 			insertIntervalStmt.setObject(17, medianDuration, Types.DOUBLE);
-		
+			if (includeOptionalCols) {
+				insertIntervalStmt.setLong(18, maxSQLDuration);
+				insertIntervalStmt.setObject(19, maxSQLDurationSet, Types.TIMESTAMP);
+				insertIntervalStmt.setLong(20, minSQLDuration);
+				insertIntervalStmt.setObject(21, minSQLDurationSet, Types.TIMESTAMP);
+				insertIntervalStmt.setDouble(22, averageSQLDuration);
+				insertIntervalStmt.setDouble(23, sqlStdDeviation);
+				insertIntervalStmt.setLong(24, totalSQLDuration);
+				insertIntervalStmt.setLong(25, sumOfSQLSquares);
+			}
 			insertIntervalStmt.execute();
 			generatedKeys = insertIntervalStmt.getGeneratedKeys();
 			generatedKeys.next();
@@ -275,7 +358,10 @@ public abstract class SQLAppender extends Appender {
 		// Clear out so they will be regenerated with the new schema
 		this.insertCategoryPS = null;
 		this.insertIntervalPS = null;
+		this.insertIntervalWithOptionalColsPS = null;
 		this.insertThresholdPS = null;
 		this.selectCategoryPS = null;
+		this.checkForOptionalSQLColsPS = null;
+		this.tableHasOptionalCols = null;
 	}
 }
