@@ -200,7 +200,6 @@ public class JDBCHelper {
 		return result;
 	}
 
-	
 	public static boolean isOracleConnection(Connection conn) throws SQLException {
 		boolean result = false;
 		

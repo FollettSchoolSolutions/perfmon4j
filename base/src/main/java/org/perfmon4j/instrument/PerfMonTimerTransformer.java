@@ -215,7 +215,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         SystemGCDisabler disabler = null;
         
         if (t.params.isExtremeSQLMonitorEnabled()) {
-        	SQLTime.enableSQLTime();
+        	SQLTime.setEnabled(true);
         	logger.logInfo("Perfmon4j SQL instrumentation enabled.");
         } else {
         	logger.logInfo("Perfmon4j SQL instrumentation disabled.  Add -eSQL to javaAgent parameters to enable.");

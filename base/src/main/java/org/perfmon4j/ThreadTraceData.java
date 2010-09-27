@@ -162,8 +162,8 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		ResultSet rs = null;
 		try {
 			final String sql = "INSERT INTO " + s + "P4JThreadTrace\r\n" +
-				"	(ParentRowID, CategoryID, StartTime, EndTime, Duration)\r\n" +
-				"	VALUES(?, ?, ?, ?, ?)";
+				"	(ParentRowID, CategoryID, StartTime, EndTime, Duration, SQLDuration)\r\n" +
+				"	VALUES(?, ?, ?, ?, ?, ?)";
 			
 			if (oracleConnection) {
 				stmtInsert = conn.prepareStatement(sql, new int[]{1});
@@ -175,6 +175,11 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 			stmtInsert.setTimestamp(3, new Timestamp(data.getStartTime()));
 			stmtInsert.setTimestamp(4, new Timestamp(data.getEndTime()));
 			stmtInsert.setLong(5, data.getEndTime() - data.getStartTime());
+			Long sqlTimeVal = null;
+			if (SQLTime.isEnabled()) {
+				sqlTimeVal = new Long(Math.max(0, sqlEndTime - sqlStartTime));
+			}
+			stmtInsert.setObject(6, sqlTimeVal, Types.INTEGER);
 
 			stmtInsert.execute();
 			rs = stmtInsert.getGeneratedKeys();

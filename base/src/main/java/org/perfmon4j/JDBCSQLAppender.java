@@ -47,10 +47,6 @@ public class JDBCSQLAppender extends SQLAppender {
 		super(id);
 	}
 	
-	JDBCSQLAppender(AppenderID id, boolean writeSQLAttributesIfPossible ) {
-		super(id, writeSQLAttributesIfPossible);
-	}
-	
     public void deInit() {
     	if (conn != null) {
     		logger.logDebug("Closing connection");

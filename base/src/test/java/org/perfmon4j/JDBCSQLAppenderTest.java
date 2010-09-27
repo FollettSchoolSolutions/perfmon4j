@@ -66,27 +66,6 @@ public class JDBCSQLAppenderTest extends SQLTest {
 		"StandardDeviation DECIMAL(18, 2) NOT NULL,\r\n" +
 		"NormalizedThroughputPerMinute DECIMAL(18, 2) NOT NULL," +
 		"DurationSum BIGINT NOT NULL," +
-		"DurationSumOfSquares BIGINT NOT NULL\r\n" +
-		")";
-
-    final String DERBY_CREATE_INTERVAL_DATA_WITH_SQL_MONITOR = "CREATE TABLE mydb.P4JIntervalData (\r\n" +
-		"IntervalID BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY," +
-		"CategoryID INT NOT NULL,\r\n" +
-		"StartTime TIMESTAMP NOT NULL,\r\n" +
-		"EndTime TIMESTAMP NOT NULL,\r\n" +
-		"TotalHits BIGINT NOT NULL,\r\n" +
-		"TotalCompletions BIGINT NOT NULL,\r\n" +
-		"MaxActiveThreads BIGINT NOT NULL,\r\n" +
-		"MaxActiveThreadsSet TIMESTAMP,\r\n" +
-		"MaxDuration int NOT NULL,\r\n" +
-		"MaxDurationSet TIMESTAMP,\r\n" +
-		"MinDuration int NOT NULL,\r\n" +
-		"MinDurationSet TIMESTAMP,\r\n" +
-		"AverageDuration DECIMAL(18, 2) NOT NULL,\r\n" +
-		"MedianDuration  DECIMAL(18, 2),\r\n " +
-		"StandardDeviation DECIMAL(18, 2) NOT NULL,\r\n" +
-		"NormalizedThroughputPerMinute DECIMAL(18, 2) NOT NULL," +
-		"DurationSum BIGINT NOT NULL," +
 		"DurationSumOfSquares BIGINT NOT NULL,\r\n" +
 
 		// All SQL Durations must allow NULL, not all monitors will contain SQL information...
@@ -122,7 +101,7 @@ public class JDBCSQLAppenderTest extends SQLTest {
         super(name);
     }
 
-    private void createTables(boolean includeSQLMonitorColumns) throws Exception {
+    private void createTables() throws Exception {
 		Connection conn = appender.getConnection();
 		Statement stmt = null;
 		try {
@@ -132,7 +111,7 @@ public class JDBCSQLAppenderTest extends SQLTest {
 			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_CATEGORY);
 			
 			stmt.execute(DERBY_CREATE_CATEGORY);
-			stmt.execute(includeSQLMonitorColumns ? DERBY_CREATE_INTERVAL_DATA_WITH_SQL_MONITOR : DERBY_CREATE_INTERVAL_DATA);
+			stmt.execute(DERBY_CREATE_INTERVAL_DATA);
 			stmt.execute(DERBY_CREATE_THRESHOLD);
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
@@ -154,13 +133,16 @@ public class JDBCSQLAppenderTest extends SQLTest {
 		}
     }
     
+    boolean originalSQLTimeEnabled;
     public void setUp() throws Exception {
     	super.setUp();
-    	createTables(false);
+    	createTables();
+    	originalSQLTimeEnabled = SQLTime.isEnabled();
     }
     
     
     public void tearDown() throws Exception {
+    	SQLTime.setEnabled(originalSQLTimeEnabled);
     	dropTables();
 		super.tearDown();
     }
@@ -258,10 +240,41 @@ public class JDBCSQLAppenderTest extends SQLTest {
 		assertEquals("Should have record with durationSumOfSquares", 1, JDBCHelper.getQueryCount(conn, count));
     }    
 
-    public void testWriteSQLMontiorColumns() throws Exception {
-    	dropTables();
-    	createTables(true);
+    public void testWriteSQLMontiorColumnsWithSQLTimeDisabled() throws Exception {
+    	SQLTime.setEnabled(false);
+    	long now = System.currentTimeMillis();
     	
+    	Connection conn = appender.getConnection();
+    	String count = "SELECT COUNT(*) " +
+    		"FROM mydb.P4JIntervalData t " +
+    		"WHERE t.SQLMaxDuration IS NULL " +
+    		"AND t.SQLMaxDurationSet IS NULL " +
+    		"AND t.SQLMinDuration IS NULL " +
+    		"AND t.SQLMinDurationSet IS NULL " +
+    		"AND t.SQLAverageDuration IS NULL  " +
+    		"AND t.SQLStandardDeviation IS NULL  " + 
+    		"AND t.SQLDurationSum IS NULL  " +
+    		"AND t.SQLDurationSumOfSquares IS NULL\r\n";
+    	
+    	IntervalData d = new IntervalData(PerfMon.getMonitor("a.b.c"), now);
+    	d.start(0, now);
+    	d.stop(555, 55555, now, 101, 101*101, true);
+    	
+    	d.start(0, now);
+    	d.stop(555, 55555, now, 202, 202*202, true);
+		
+    	d.start(0, now);
+    	d.stop(555, 55555, now, 303, 303*303, true);
+
+    	d.setTimeStop(now + 1000);
+    	appender.outputData(d);
+    	
+System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalData t"));
+		assertEquals("record count", 1, JDBCHelper.getQueryCount(conn, count));
+    }    
+    
+    public void testWriteSQLMontiorColumnsWithSQLTimeEnabled() throws Exception {
+    	SQLTime.setEnabled(true);
     	long now = System.currentTimeMillis();
     	
     	Connection conn = appender.getConnection();
@@ -287,35 +300,11 @@ public class JDBCSQLAppenderTest extends SQLTest {
     	d.stop(555, 55555, now, 303, 303*303, true);
 
     	d.setTimeStop(now + 1000);
-    	appenderWithSQLMonitoring.outputData(d);
+    	appender.outputData(d);
     	
 System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalData t"));
 		assertEquals("record count", 1, JDBCHelper.getQueryCount(conn, count));
     }    
-    
-
-    // Check with the perfmon4j 1.0.2 schema...
-    public void testWriteToLegacySchema() throws Exception {
-    	dropTables();
-    	createTables(false);
-    	
-    	long now = System.currentTimeMillis();
-    	
-    	Connection conn = appender.getConnection();
-    	String count = "SELECT COUNT(*) " +
-    		"FROM mydb.P4JIntervalData t ";
-    	
-    	IntervalData d = new IntervalData(PerfMon.getMonitor("a.b.c"), now);
-    	d.start(0, now);
-    	d.stop(555, 55555, now, 101, 101*101, true);
-    	d.setTimeStop(now + 1000);
-    	appenderWithSQLMonitoring.outputData(d);
-    	
-System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalData t"));
-		assertEquals("Make sure we added a row", 1, JDBCHelper.getQueryCount(conn, count));
-    }    
-   
-    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

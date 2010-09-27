@@ -7,7 +7,6 @@ import org.perfmon4j.Appender.AppenderID;
 public abstract class SQLTest extends TestCase {
 
 	protected JDBCSQLAppender appender = null;
-	protected JDBCSQLAppender appenderWithSQLMonitoring = null;
 
 	public SQLTest() {
 		super();
@@ -24,21 +23,11 @@ public abstract class SQLTest extends TestCase {
 		appender.setDbSchema("mydb");
 		appender.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver");
 		appender.setJdbcURL("jdbc:derby:memory:derbyDB;create=true");
-
-		appenderWithSQLMonitoring = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()), true);
-		appenderWithSQLMonitoring.setDbSchema("mydb");
-		appenderWithSQLMonitoring.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver");
-		appenderWithSQLMonitoring.setJdbcURL("jdbc:derby:memory:derbyDB;create=true");
 	}
 
 	protected void tearDown() throws Exception {
 		appender.deInit();
 		appender = null;
-
-		// This monitor simulates a VM with perfmon4j SQL monitoring enabled (i.e. -eSQL);
-		appenderWithSQLMonitoring.deInit();
-		appenderWithSQLMonitoring = null;
-		
 		super.tearDown();
 	}
 	

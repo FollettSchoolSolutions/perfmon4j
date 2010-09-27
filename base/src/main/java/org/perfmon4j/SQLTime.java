@@ -33,9 +33,12 @@ public class SQLTime {
 	/**
 	 * Called on startup of the Perfmon4j javaagent.  
 	 * - Monitoring requires run-time instrumentation of the JDBC driver instrumentation.
+	 * 
+	 *  THIS SHOULD only be called ONCE on VM STARTUP.
+	 * 
 	 */
-	public static void enableSQLTime() {
-		enabled = true;
+	public static void setEnabled(boolean newEnabled) {
+		enabled = newEnabled;
 	}
 	
 	private static ThreadLocal<SQLTime> sqlTimeForThread = new ThreadLocal<SQLTime>() {

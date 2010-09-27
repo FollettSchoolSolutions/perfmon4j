@@ -43,19 +43,10 @@ public abstract class SQLAppender extends Appender {
 	private String insertCategoryPS = null;
 	private String selectCategoryPS = null;
 	private String insertIntervalPS = null;
-	private String insertIntervalWithOptionalColsPS = null;
 	private String insertThresholdPS = null;
-	private String checkForOptionalSQLColsPS = null;
-	private Boolean tableHasOptionalCols = null;
-	private final boolean writeSQLAttributesIfPossible;
 	
 	public SQLAppender(AppenderID id) {
-		this(id, SQLTime.isEnabled());
-	}
-	
-	SQLAppender(AppenderID id, boolean writeSQLAttributesIfPossible ) {
 		super(id);
-		this.writeSQLAttributesIfPossible = writeSQLAttributesIfPossible;
 	}
 
 	protected abstract Connection getConnection() throws SQLException;
@@ -93,13 +84,6 @@ public abstract class SQLAppender extends Appender {
 		return insertCategoryPS;
 	}
 
-	public String getCheckForOptionalSQLColsPS() {
-		if (checkForOptionalSQLColsPS == null) {
-			checkForOptionalSQLColsPS = String.format(CHECK_FOR_OPTIONAL_SQL_MONITOR_COLS_PS, dbSchema == null ? "" : (dbSchema + "."));
-		}
-		return checkForOptionalSQLColsPS;
-	}
-
 	
 	public String getSelectCategoryPS() {
 		if (selectCategoryPS == null) {
@@ -109,21 +93,10 @@ public abstract class SQLAppender extends Appender {
 	}
 
 	public String getInsertIntervalPS(boolean includeOptionalCols) {
-		String result = null;
-		
-		if (includeOptionalCols) {
-			if (insertIntervalWithOptionalColsPS == null) {
-				insertIntervalWithOptionalColsPS = String.format(INSERT_INTERVAL_WITH_OPTIONALS_PS, dbSchema == null ? "" : (dbSchema + "."));
-			}
-			result = insertIntervalWithOptionalColsPS;
-		} else {
-			if (insertIntervalPS == null) {
-				insertIntervalPS = String.format(INSERT_INTERVAL_PS, dbSchema == null ? "" : (dbSchema + "."));
-			}
-			result = insertIntervalPS;
+		if (insertIntervalPS == null) {
+			insertIntervalPS = String.format(INSERT_INTERVAL_PS, dbSchema == null ? "" : (dbSchema + "."));
 		}
-		
-		return result;
+		return insertIntervalPS;
 	}
 
 	public String getInsertThresholdPS() {
@@ -134,13 +107,8 @@ public abstract class SQLAppender extends Appender {
 	}
 	private final static String INSERT_CATEGORY_PS = "INSERT INTO %sP4JCategory (CategoryName) VALUES(?)";
 	private final static String SELECT_CATEGORY_PS = "SELECT CategoryID FROM %sP4JCategory WHERE CategoryName=?";
-	private final static String INSERT_INTERVAL_PS = "INSERT INTO %sP4JIntervalData (CategoryID, StartTime, EndTime, " +
-		"TotalHits, TotalCompletions, MaxActiveThreads, MaxActiveThreadsSet, MaxDuration, " +
-		"MaxDurationSet, MinDuration, MinDurationSet, averageDuration, standardDeviation,  " +
-		"normalizedThroughputPerMinute, durationSum, durationSumOfSquares, medianDuration) VALUES(?, ?, ?, ?, ?, ?, ?, " +
-		"?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	
-	private final static String INSERT_INTERVAL_WITH_OPTIONALS_PS = "INSERT INTO %sP4JIntervalData (CategoryID, StartTime, EndTime, " +
+	private final static String INSERT_INTERVAL_PS = "INSERT INTO %sP4JIntervalData (CategoryID, StartTime, EndTime, " +
 		"TotalHits, TotalCompletions, MaxActiveThreads, MaxActiveThreadsSet, MaxDuration, " +
 		"MaxDurationSet, MinDuration, MinDurationSet, averageDuration, standardDeviation,  " +
 		"normalizedThroughputPerMinute, durationSum, durationSumOfSquares, medianDuration, " +
@@ -148,11 +116,6 @@ public abstract class SQLAppender extends Appender {
 		"SQLAverageDuration, SQLStandardDeviation, SQLDurationSum, SQLDurationSumOfSquares) " +
 		"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, " +
 		"?, ?, ?, ?)";
-	
-	private final static String CHECK_FOR_OPTIONAL_SQL_MONITOR_COLS_PS = "SELECT " +
-		"SQLMaxDuration, SQLMaxDurationSet, SQLMinDuration, SQLMinDurationSet, " +
-		"SQLAverageDuration, SQLStandardDeviation, SQLDurationSum, SQLDurationSumOfSquares " +
-		"FROM %sP4JIntervalData";
 	
 	private final static String INSERT_THRESHOLD_PS = "INSERT INTO %sP4JIntervalThreshold (intervalID, ThresholdMillis, " +
 		"CompletionsOver, PercentOver) VALUES(?, ?, ?, ?)";
@@ -194,22 +157,6 @@ public abstract class SQLAppender extends Appender {
 	
 	private Timestamp buildTimestampOrNull(long time) {
 		return time > 0 ? new Timestamp(time) : null;
-	}
-	
-	private boolean doesTableHaveOptionalCols(Connection conn) throws SQLException {
-		if (tableHasOptionalCols == null) {
-			PreparedStatement stmt = null;
-			try {
-				stmt = conn.prepareStatement(getCheckForOptionalSQLColsPS());
-				stmt.executeQuery();
-				tableHasOptionalCols = Boolean.TRUE;
-			} catch (SQLException sqlException) {
-				tableHasOptionalCols = Boolean.FALSE;
-			} finally {
-				JDBCHelper.closeNoThrow(stmt);
-			}
-		}
-		return tableHasOptionalCols.booleanValue();
 	}
 	
 	private void outputIntervalData(Connection conn, IntervalData data) throws SQLException {
@@ -269,9 +216,8 @@ public abstract class SQLAppender extends Appender {
 			}
 			
 			boolean includeOptionalCols = (
-					writeSQLAttributesIfPossible 
-					&& !data.isSQLMonitor()
-					&& doesTableHaveOptionalCols(conn));
+					SQLTime.isEnabled() 
+					&& !data.isSQLMonitor());
 			
 			if (oracleConnection) {
 				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(includeOptionalCols), new int[]{1});
@@ -304,6 +250,15 @@ public abstract class SQLAppender extends Appender {
 				insertIntervalStmt.setDouble(23, sqlStdDeviation);
 				insertIntervalStmt.setLong(24, totalSQLDuration);
 				insertIntervalStmt.setLong(25, sumOfSQLSquares);
+			} else {
+				insertIntervalStmt.setObject(18, null, Types.INTEGER);
+				insertIntervalStmt.setObject(19, null, Types.TIMESTAMP);
+				insertIntervalStmt.setObject(20, null, Types.INTEGER);
+				insertIntervalStmt.setObject(21, null, Types.TIMESTAMP);
+				insertIntervalStmt.setObject(22, null, Types.DOUBLE);
+				insertIntervalStmt.setObject(23, null, Types.DOUBLE);
+				insertIntervalStmt.setObject(24, null, Types.INTEGER);
+				insertIntervalStmt.setObject(25, null, Types.INTEGER);
 			}
 			insertIntervalStmt.execute();
 			generatedKeys = insertIntervalStmt.getGeneratedKeys();
@@ -358,10 +313,7 @@ public abstract class SQLAppender extends Appender {
 		// Clear out so they will be regenerated with the new schema
 		this.insertCategoryPS = null;
 		this.insertIntervalPS = null;
-		this.insertIntervalWithOptionalColsPS = null;
 		this.insertThresholdPS = null;
 		this.selectCategoryPS = null;
-		this.checkForOptionalSQLColsPS = null;
-		this.tableHasOptionalCols = null;
 	}
 }

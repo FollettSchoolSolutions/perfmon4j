@@ -22,6 +22,7 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.GregorianCalendar;
 
@@ -51,22 +52,22 @@ public class ThreadTraceDataTest extends SQLTest {
 		"CategoryName VARCHAR(450) NOT NULL\r\n" +
 	")";
 
+    // Full (1.1.0+) schema WITH JDBC/SQL time option.
     final String DERBY_CREATE_2 = "CREATE TABLE p4j.P4JThreadTrace(\r\n" +
-    	"	ThreadRowID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-    	"	ParentRowID INT,\r\n" +
-    	"	CategoryID INT NOT NULL,\r\n" +
-    	"	StartTime TIMESTAMP NOT NULL,\r\n" +
-    	"	EndTime TIMESTAMP NOT NULL,\r\n" +
-    	"	Duration INT NOT NULL)\r\n";
+	"	ThreadRowID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
+	"	ParentRowID INT,\r\n" +
+	"	CategoryID INT NOT NULL,\r\n" +
+	"	StartTime TIMESTAMP NOT NULL,\r\n" +
+	"	EndTime TIMESTAMP NOT NULL,\r\n" +
+	"	Duration INT NOT NULL,\r\n" +
+	"	SQLDuration INT)\r\n";
 
-	final String DERBY_DROP_1 = "DROP TABLE p4j.P4JCategory";
+    final String DERBY_DROP_1 = "DROP TABLE p4j.P4JCategory";
 	final String DERBY_DROP_2 = "DROP TABLE p4j.P4JThreadTrace";
 
 	private Connection conn;
 
-	protected void setUp() throws Exception {
-		super.setUp();
-		
+	private void createTables() throws SQLException {
 		conn = appender.getConnection();
 		Statement stmt = null;
 		try {
@@ -78,7 +79,7 @@ public class ThreadTraceDataTest extends SQLTest {
 		}
 	}
 
-	protected void tearDown() throws Exception {
+	private void dropTables() throws SQLException {
 		Statement stmt = null;
 		try {
 			stmt = conn.createStatement();
@@ -87,9 +88,21 @@ public class ThreadTraceDataTest extends SQLTest {
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 		}
+	}
+	
+	
+	boolean originalSQLEnabled = false;
+	protected void setUp() throws Exception {
+		super.setUp();
+		createTables();
+		originalSQLEnabled = SQLTime.isEnabled();
+	}
+
+	protected void tearDown() throws Exception {
+		SQLTime.setEnabled(originalSQLEnabled);
+		dropTables();
 		super.tearDown();
 	}
-    
     
 /*----------------------------------------------------------------------------*/
     public void testSimpleToAppenderString() throws Exception {
@@ -155,6 +168,47 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
 		assertEquals("Should have inserted main row", 1, parentCount);
 		assertEquals("Should have inserted child row", 1, childCount);
     }
+
+    
+    private void writeTraceData() throws SQLException {
+        ThreadTraceData data = new ThreadTraceData("com.perfmon4j.Test.test", MIDNIGHT + HOUR + MINUTE);
+        data.setEndTime(MIDNIGHT + HOUR + MINUTE + MINUTE);
+    
+        ThreadTraceData child = new ThreadTraceData("com.perfmon4j.MiscHelper.formatString", data, data.getStartTime() + SECOND);
+        child.setEndTime(data.getEndTime() - SECOND);
+        
+        data.writeToSQL(conn, "p4j");
+    }
+    
+    public void testNestedToSQLDisabled() throws Exception {
+    	SQLTime.setEnabled(false);
+    	writeTraceData();
+    	
+System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" + 
+				"	FROM p4j.P4JThreadTrace tt\r\n" +
+				"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n"));
+        
+		long rowCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
+			"	FROM p4j.P4JThreadTrace tt\r\n" +
+			"	WHERE tt.sqlDuration IS NULl\r\n");
+		assertEquals("sqlDuration should be NULL because SQL/JDBC monitoring is NOT enabled", 2, rowCount);
+    }
+
+    
+    
+    public void testNestedToSQLEnabled() throws Exception {
+    	SQLTime.setEnabled(true);
+    	writeTraceData();
+    	
+System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" + 
+				"	FROM p4j.P4JThreadTrace tt\r\n" +
+				"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n"));
+
+		long rowCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
+			"	FROM p4j.P4JThreadTrace tt\r\n" +
+			"	WHERE tt.sqlDuration = 0\r\n");
+		assertEquals("Should have inserted rows with sqlDuration", 2, rowCount);
+    }
     
     
 /*----------------------------------------------------------------------------*/    
@@ -176,7 +230,7 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new SnapShotManagerTest("testDefineMonitorWithAttributes"));
+//        newSuite.addTest(new ThreadTraceDataTest("testNestedToSQLFullTableWithSQLEnabled"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
