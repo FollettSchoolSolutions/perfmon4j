@@ -132,6 +132,16 @@ CREATE TABLE P4JIntervalData (
 	NormalizedThroughputPerMinute DECIMAL(18, 2) NOT NULL,
 	DurationSum NUMBER(18) NOT NULL,
 	DurationSumOfSquares NUMBER(18) NOT NULL,
+	/*  START NEW Columns added in Perfmon4j 1,1,0 */
+	SQLMaxDuration INT NULL,
+	SQLMaxDurationSet TIMESTAMP NULL,
+	SQLMinDuration INT NULL,
+	SQLMinDurationSet TIMESTAMP NULL,
+	SQLAverageDuration DECIMAL(18, 2) NULL,
+	SQLStandardDeviation DECIMAL(18, 2) NULL,
+	SQLDurationSum NUMBER(18) NULL,
+	SQLDurationSumOfSquares NUMBER(18) NULL,
+	/*  STOP NEW Columns added in Perfmon4j 1,1,0 */
 	CONSTRAINT P4JIntervalData_CategoryID_fk FOREIGN KEY (
 		CategoryID
 	) REFERENCES P4JCategory (
@@ -443,6 +453,9 @@ CREATE TABLE P4JThreadTrace(
 	StartTime TIMESTAMP NOT NULL,
 	EndTime TIMESTAMP NOT NULL,
 	Duration INT NOT NULL,
+	/*  START NEW Columns added in Perfmon4j 1,1,0 */
+	SQLDuration INT NULL,
+	/*  STOP NEW Columns added in Perfmon4j 1,1,0 */
 	CONSTRAINT P4JThreadTraceCategoryID_fk FOREIGN KEY (
 		CategoryID
 	) REFERENCES P4JCategory (
