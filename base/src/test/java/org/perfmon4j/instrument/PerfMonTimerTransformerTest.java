@@ -345,12 +345,11 @@ System.out.println(output);
 
 					PerfMonTimer timer = null;
 					try {
-						timer = PerfMonTimer.start("MyManualTimer");
 						Driver driver = (Driver)Class.forName("org.apache.derby.jdbc.EmbeddedDriver", true, PerfMon.getClassLoader()).newInstance();
 						conn = driver.connect("jdbc:derby:memory:derbyDB;create=true", new Properties());
 						s = conn.createStatement();
 						s.execute(DERBY_CREATE_1);						
-						
+						timer = PerfMonTimer.start("MyManualTimer");
 						s.executeQuery("SELECT * FROM BOGUS");
 						Thread.sleep(2000);
 					} finally {
@@ -372,28 +371,28 @@ System.out.println(output);
 	}
 	
     public void testInstrumentSQLStatement() throws Exception {
-    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL,-vTRUE", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL(DERBY)", "", perfmon4jJar);
     	System.out.println(output);   	
     	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
     }
 
     public void testThreadTraceWithSQLTime() throws Exception {
-    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL,-vTRUE", "", perfmon4jJar);
-    
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL(DERBY)", "", perfmon4jJar);
+//System.out.println(output);    
     	// Running with extreme SQL instrumentation enabled...
     	// Looking for a line like:
     	// +-14:37:29:653 (5436)(SQL:3211) MyManualTimer
-    	Pattern p = Pattern.compile("\\d{1,2}:\\d{2}:\\d{2}:\\d{3} \\(\\d{4}\\)\\(SQL:\\d{1,4}\\) MyManualTimer");
+    	Pattern p = Pattern.compile("\\d{1,2}:\\d{2}:\\d{2}:\\d{3} \\(\\d{4,8}\\)\\(SQL:\\d{1,8}\\) MyManualTimer");
     	Matcher m = p.matcher(output);
     	assertTrue("Should have included SQL time specification", m.find());
     	
     	// Now run it again without extreme SQL logging... We 
     	// do NOT expect the (SQL:dddd) identifier to be present.
     	// Should expect something like: +-15:07:32:969 (4722) MyManualTimer
-    	output = LaunchRunnableInVM.run(SQLStatementTester.class, "-vTRUE", "", perfmon4jJar);
+    	output = LaunchRunnableInVM.run(SQLStatementTester.class, "", "", perfmon4jJar);
 //System.out.println(output);
 
-    	p = Pattern.compile("\\d{1,2}:\\d{2}:\\d{2}:\\d{3} \\(\\d{4}\\) MyManualTimer");
+    	p = Pattern.compile("\\d{1,2}:\\d{2}:\\d{2}:\\d{3} \\(\\d{4,10}\\) MyManualTimer");
     	m = p.matcher(output);
     	assertTrue("Should NOT have included SQL time specification", m.find());
     }
@@ -488,6 +487,10 @@ System.out.println(output);
 /*----------------------------------------------------------------------------*/
     public static junit.framework.Test suite() {
     	String testType = System.getProperty("UNIT");
+    	if (testType == null) {
+    		System.setProperty("Perfmon4j.debugEnabled", "true");
+    		System.setProperty("JAVASSIST_JAR",  "C:\\Users\\ddeucher\\.m2\\repository\\javassist\\javassist\\3.10.0.GA\\javassist-3.10.0.GA.jar");
+    	}
         TestSuite newSuite = new TestSuite();
 
         // Here is where you can specify a list of specific tests to run.

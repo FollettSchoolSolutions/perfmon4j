@@ -92,7 +92,8 @@ public class LaunchRunnableInVM {
     	
     	String cmdString = quoteIfNeeded(javaCmd);
     	
-    	String myClassPath = System.getProperty("java.class.path").replaceAll("\\\\", "/");
+    	String myClassPath = System.getProperty("java.class.path").replaceAll(";/", ";");
+    	myClassPath = myClassPath.replaceAll("\\\\", "/");
     	String derbyDriver = System.getProperty("DERBY_EMBEDDED_DRIVER");
     	if (derbyDriver != null) {
     		File driver = new File(derbyDriver);
