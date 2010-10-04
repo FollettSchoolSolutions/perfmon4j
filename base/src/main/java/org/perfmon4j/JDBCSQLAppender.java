@@ -21,6 +21,7 @@
 package org.perfmon4j;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -42,6 +43,7 @@ public class JDBCSQLAppender extends SQLAppender {
 	private String jdbcURL = null;
 	private String userName = null;
 	private String password = null;
+	private WeakReference<Class<Driver>> cachedDriverClass = null;
 
 	public JDBCSQLAppender(AppenderID id) {
 		super(id);
@@ -64,17 +66,22 @@ public class JDBCSQLAppender extends SQLAppender {
     	if (conn == null) {
     		try {
     			if (driverClass != null) {
-    				ClassLoader loader = null;
-    				if (driverPath != null) {
-    					File driverFile = new File(driverPath);
-    					if (!driverFile.exists()) {
-    						throw new SQLException("JDBCDriver file not found in path: " + driverPath);
-    					}
-    					loader = new URLClassLoader(new URL[]{driverFile.toURL()}, Thread.currentThread().getContextClassLoader());
-    				} else {
-    					loader = PerfMon.getClassLoader();
+    				Class<Driver> classToUse = cachedDriverClass != null ? cachedDriverClass.get() : null;
+    				if (classToUse == null) {
+        				ClassLoader loader = null;
+        				if (driverPath != null) {
+        					File driverFile = new File(driverPath);
+        					if (!driverFile.exists()) {
+        						throw new SQLException("JDBCDriver file not found in path: " + driverPath);
+        					}
+        					loader = new URLClassLoader(new URL[]{driverFile.toURL()}, Thread.currentThread().getContextClassLoader());
+        				} else {
+        					loader = PerfMon.getClassLoader();
+        				}
+    					classToUse = (Class<Driver>)Class.forName(driverClass, true, loader);
+    					cachedDriverClass = new WeakReference<Class<Driver>>(classToUse);
     				}
-    				Driver driver = (Driver)Class.forName(driverClass, true, loader).newInstance();
+    				Driver driver = classToUse.newInstance();
     				Properties credentials = new Properties();
     				if (userName != null) {
     					credentials.setProperty("user", userName);
