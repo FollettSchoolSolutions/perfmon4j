@@ -26,6 +26,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -325,6 +327,7 @@ public class MiscHelper {
 		return result;
 	}
 
+
 	public static MBeanServer findMBeanServer(String domainName) {
 		MBeanServer result = null;
 		
@@ -337,6 +340,18 @@ public class MiscHelper {
 			}
 		}
 		
+		if (result == null && "jboss".equalsIgnoreCase(domainName)) {
+			//  We are in JBoss and we did not find the MBeanServer based on the domain
+			//  name...  Use reflections to call the MBeanServerLocator class.
+			try {
+				Class clazz = Class.forName("org.jboss.mx.util.MBeanServerLocator", true, PerfMon.getClassLoader());
+				Method m = clazz.getMethod("locateJBoss", new Class[]{});
+				result = (MBeanServer)m.invoke(null,new Object[]{});
+				logger.logDebug("Found JBoss MBean Server via org.jboss.mx.util.MBeanServerLocator.locateJBoss()");
+			} catch (Exception e) {
+				logger.logDebug("Unable to Find JBoss MBean Server via org.jboss.mx.util.MBeanServerLocator.locateJBoss()", e);
+			}
+		}
 		return result;
 	}
 	
