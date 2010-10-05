@@ -42,6 +42,7 @@ import javax.servlet.http.HttpSession;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.SQLTime;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.UserAgentSnapShotMonitor;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
@@ -111,6 +112,7 @@ public class PerfMonFilter implements Filter {
 /*----------------------------------------------------------------------------*/    
     protected void doFilterHttpRequest(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {    
         Long localStartTime = null;
+        Long localSQLStartTime = null;
     	if (abortTimerOnRedirect) {
             response = new ResponseWrapper(response);
         }
@@ -137,6 +139,9 @@ public class PerfMonFilter implements Filter {
 	        PerfMonTimer timer = startTimerForRequest(request);
 	        if (outputRequestAndDuration) {
 	        	localStartTime = new Long(MiscHelper.currentTimeWithMilliResolution());
+	        	if (SQLTime.isEnabled()) {
+	        		localSQLStartTime = new Long(SQLTime.getSQLTime());
+	        	}
 	        }
 	        try {
 	            chain.doFilter(request, response);
@@ -163,9 +168,14 @@ public class PerfMonFilter implements Filter {
 	            } else {
 	            	stopTimer(timer, request, response);
 	            	if (localStartTime != null) {
+	            		String sqlDurationStr = "";
+	            		if (localSQLStartTime != null) {
+	            			long sqlDuration = SQLTime.getSQLTime() - localSQLStartTime.longValue();
+	            			sqlDurationStr = "(SQL: " + sqlDuration + ")";
+	            		}
 	            		long duration = Math.max(MiscHelper.currentTimeWithMilliResolution() -
 	            			localStartTime.longValue(), 0);
-	            		logger.logInfo(duration + " " + buildRequestDescription(request));
+	            		logger.logInfo(duration + sqlDurationStr + " " + buildRequestDescription(request));
 	            	}
 	            }
 	        }
