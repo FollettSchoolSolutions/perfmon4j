@@ -580,27 +580,29 @@ public class TransformerParamsTest extends TestCase {
         }
         
 
-        private void assertPossibleJTDSDriver(boolean jtdsEnabled, boolean postgresEnabled, 
-        	boolean mySQLEnabled, boolean derbyEnabled, boolean otherEnabled,
+        private void assertPossibleJDBCDriver(boolean jtdsEnabled, boolean postgresEnabled, 
+        	boolean mySQLEnabled, boolean derbyEnabled, boolean oracleEnabled, boolean otherEnabled,
         	TransformerParams params) {
 
             assertEquals("expected JTDS enabled state", jtdsEnabled, params.isPossibleJDBCDriver("net.sourceforge.jtds.Driver"));
             assertEquals("expected Postgres enabled state", postgresEnabled, params.isPossibleJDBCDriver("org.postgresql.Driver"));
             assertEquals("expected mysql enabled state", mySQLEnabled, params.isPossibleJDBCDriver("com.mysql.jdbc.Driver"));
             assertEquals("expected derby enabled state", derbyEnabled, params.isPossibleJDBCDriver("org.apache.derby.jdbc.EmbeddedDriver"));
+            assertEquals("expected oracle enabled state", oracleEnabled, params.isPossibleJDBCDriver("oracle.jdbc.driver.OracleDriver"));
             assertEquals("expected other enabled state", otherEnabled, params.isPossibleJDBCDriver("org.perfmon4j.jdbc.Driver"));
         }
         
         
         public void testIsPossibleJDBCDriverClass() {
-        	assertPossibleJTDSDriver(true, true, true, true, true, new TransformerParams());
-        	assertPossibleJTDSDriver(true, true, true, true, true, new TransformerParams("-eSQL"));
-        	assertPossibleJTDSDriver(true, false, false, false, false, new TransformerParams("-eSQL(JTDS)"));
-        	assertPossibleJTDSDriver(false, true, false, false, false, new TransformerParams("-eSQL(POSTGRESQL)"));
-        	assertPossibleJTDSDriver(false, false, true, false, false, new TransformerParams("-eSQL(MYSQL)"));
-        	assertPossibleJTDSDriver(false, false, false, true, false, new TransformerParams("-eSQL(DERBY)"));
+        	assertPossibleJDBCDriver(true, true, true, true, true, true, new TransformerParams());
+        	assertPossibleJDBCDriver(true, true, true, true, true, true, new TransformerParams("-eSQL"));
+        	assertPossibleJDBCDriver(true, false, false, false, false, false, new TransformerParams("-eSQL(JTDS)"));
+        	assertPossibleJDBCDriver(false, true, false, false, false, false, new TransformerParams("-eSQL(POSTGRESQL)"));
+        	assertPossibleJDBCDriver(false, false, true, false, false, false, new TransformerParams("-eSQL(MYSQL)"));
+        	assertPossibleJDBCDriver(false, false, false, true, false, false, new TransformerParams("-eSQL(DERBY)"));
+        	assertPossibleJDBCDriver(false, false, false, false, true, false, new TransformerParams("-eSQL(ORACLE)"));
         	// Can specify a partial package name...
-        	assertPossibleJTDSDriver(false, false, false, false, true, new TransformerParams("-eSQL(org.perfmon4j.jdbc)"));
+        	assertPossibleJDBCDriver(false, false, false, false, false, true, new TransformerParams("-eSQL(org.perfmon4j.jdbc)"));
         }
 
 /*----------------------------------------------------------------------------*/    

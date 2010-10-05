@@ -145,6 +145,8 @@ class TransformerParams {
                     		extremeSQLPackages.add("com.mysql.jdbc");
                     	} else if ("DERBY".equals(p)) {
                     		extremeSQLPackages.add("org.apache.derby");
+                    	} else if ("ORACLE".equals(p)) {
+                    		extremeSQLPackages.add("oracle.jdbc");
                     	} else {
                     		extremeSQLPackages.add(m.group(1));
                     	}
