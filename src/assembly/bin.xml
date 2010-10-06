@@ -52,6 +52,10 @@
 			<destName>perfmon4j-tomcat55.jar</destName>
 		</file>
 		<file>
+			<source>${basedir}/tomcat7/target/perfmon4j-tomcat7-${project.version}.jar</source>
+			<destName>perfmon4j-tomcat7.jar</destName>
+		</file>
+		<file>
 			<source>${basedir}/sunjava6/target/perfmon4j-sunjava6-${project.version}.jar</source>
 			<destName>perfmon4j-sunjava6.jar</destName>
 		</file>
