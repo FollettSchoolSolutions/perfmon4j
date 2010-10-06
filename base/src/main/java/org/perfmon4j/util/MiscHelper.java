@@ -77,8 +77,13 @@ public class MiscHelper {
         }
         return result;
     }
-/*----------------------------------------------------------------------------*/
     static public long convertIntervalStringToMillis(String interval, long defaultValue) {
+    	return convertIntervalStringToMillis(interval, defaultValue, "");
+    }
+
+    
+    /*----------------------------------------------------------------------------*/
+    static public long convertIntervalStringToMillis(String interval, long defaultValue, String defaultUnit) {
         long result = defaultValue;
         
         if (interval != null) {
@@ -95,9 +100,7 @@ public class MiscHelper {
                     if (value == 0) {   // special case for 0; use default value
                         result = defaultValue;
                     } else {
-                        String measurementUnit =
-                            intervalComponents.length > 1 ? intervalComponents[1] : "";
-            
+                        String measurementUnit = intervalComponents.length > 1 ? intervalComponents[1] : defaultUnit;
                         result = value * getMultiplierForMeasurementUnit(measurementUnit);
                     }
         

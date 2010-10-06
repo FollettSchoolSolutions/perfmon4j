@@ -186,7 +186,7 @@ class XMLConfigurationParser extends DefaultHandler {
                         currentThreadTraceConfig.setMaxDepth(Integer.parseInt(maxDepth));
                     }
                     if (minDurationToCapture != null) {
-                        currentThreadTraceConfig.setMinDurationToCapture((int)MiscHelper.convertIntervalStringToMillis(minDurationToCapture, 0));
+                        currentThreadTraceConfig.setMinDurationToCapture((int)MiscHelper.convertIntervalStringToMillis(minDurationToCapture, 0, "millis"));
                     }
                     if (randomSamplingFactor != null) {
                         currentThreadTraceConfig.setRandomSamplingFactor(Integer.parseInt(randomSamplingFactor));

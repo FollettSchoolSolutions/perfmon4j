@@ -210,6 +210,24 @@ public class XMLConfigurationParserTest extends TestCase {
         assertEquals("randomSamplingFactor", 0, webRequestThreadTrace.getRandomSamplingFactor());
     }
 
+    public void testThreadTraceMinDurationToCaptureDefaultsToMillis() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig>" +
+            "   <appender name='base'" +
+            "       className='org.perfmon4j.TextAppender' " +
+            "       interval='15 min'>" +
+           "   </appender>" +
+            "   <threadTrace monitorName='WebRequest'" +
+            "		minDurationToCapture='5'>" +
+            "       <appender name='base'/>" +
+            "   </threadTrace>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertEquals("minDurationToCapture", 5, config.getThreadTraceConfigMap().get("WebRequest").getMinDurationToCapture());
+    }
+    
+    
     public void testParseThreadTraceConfigWithAllAttributes() throws Exception {
         final String XML =
             "<Perfmon4JConfig>" +
