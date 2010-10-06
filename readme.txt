@@ -40,6 +40,28 @@ Dave
 ****** Please Help ********************************************************************************************
 
 Changes
+*** Version 1.1.0.GA (released 2010-10-06) ***
+!! IMPORTANT !!:  If you previously created a perfmon4j database for logging you must upgrade the database with
+the associated update scripts:
+	- MSSQL-UpdateTables-1.0.2_to_1.1.0.sql
+	- MySQL-UpdateTables-1.0.2_to_1.1.0.sql
+	- Oracle-UpdateTables-1.0.2_to_1.1.0.sql
+	- PostgresSQL-UpdateTables-1.0.2_to_1.1.0.sql
+	
+- Feature Request: Now you can monitor JDBC/SQL request durations.  This option will enable you to 
+	monitor the percentage of time your method or process spends in java vs SQL.
+	See:  Perfmon4j-ConfigSamples.pdf - Example 14 – Evaluate SQL/JDBC Duration (Version 1.1.0+) a
+	configuration example.
+	
+- Feature Enhancement:  Reduced memory overhead associated with servlet request monitoring. This is particularly
+	important for web services that generate a large amount of distinct URL paths (i.e. restful services)
+	
+- New Perfmon4j now supports JBoss 6.x.  The Perfmon4j-JBossConfigGuide.pdf now includes instructions for installation 
+	into JBoss (4x, 5x and 6x).
+	
+- New Perfmon4j now supports for Apache Tomcat 7.x.  The Perfmon4j-Tomcat-ConfigGuide.pdf now includes instructions
+	for installation into Apache Tomcat (5.5x, 6.x, and 7.x).
+
 *** Version 1.0.2.GA (released 2010-06-10) ***
 - Feature Request: Added a powerfull new way to force ThreadTraceMonitoring on a specific thread (or a specific request).  
 	You can now force a thread trace based on one of the following: HTTPRequest parameter, HTTPSession parameter,
@@ -93,6 +115,5 @@ and setter specification can be included in extreme instrumentation.
 - Fixed minor defect: #2888552 - Failure loading snapshot monitor containing non-public annotated method.
 
 *** Version 1.00 RC 4 ***
-
 
 For more information see: http://www.perfmon4j.org
