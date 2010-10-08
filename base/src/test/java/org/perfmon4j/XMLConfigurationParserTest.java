@@ -28,6 +28,8 @@ import junit.textui.TestRunner;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.Appender.AppenderID;
+import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 
@@ -382,6 +384,21 @@ public class XMLConfigurationParserTest extends TestCase {
         assertEquals("Should have attributes", "value1", monitorIDs[0].getMonitorID().getAttributes().get("param1"));
         assertEquals("Number of appenders", 1, monitorIDs[0].getAppenders().length);
     }
+
+    /*----------------------------------------------------------------------------*/
+    public void testDefaultConfiguration() throws Exception {
+        final String INVALID_XML = "GARBAGE";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(INVALID_XML));
+ 
+        AppenderAndPattern p[] = config.getAppendersForMonitor(PerfMon.ROOT_MONITOR_NAME);
+        assertEquals(1, p.length);
+        assertEquals("Default appender should have 5 minute duration", 60 * 5 * 1000, p[0].getAppender().getIntervalMillis());
+        assertEquals("Default should be a TextAppender", TextAppender.class.getName(), p[0].getAppender().getClass().getName());
+        assertEquals("Should monitor all children of root appender by default", 
+        		PerfMon.APPENDER_PATTERN_CHILDREN_ONLY, p[0].getAppenderPattern());
+    }
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

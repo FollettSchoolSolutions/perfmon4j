@@ -55,8 +55,7 @@ class XMLConfigurationParser extends DefaultHandler {
         result.defineAppender(APPENDER_NAME, TextAppender.class.getName(),
             Appender.DEFAULT_INTERVAL_MILLIS + " ms");
         result.defineMonitor(PerfMon.ROOT_MONITOR_NAME);
-        result
-            .attachAppenderToMonitor(PerfMon.ROOT_MONITOR_NAME, APPENDER_NAME);
+        result.attachAppenderToMonitor(PerfMon.ROOT_MONITOR_NAME, APPENDER_NAME, PerfMon.APPENDER_PATTERN_CHILDREN_ONLY);
         return result;
     }
     
@@ -359,7 +358,6 @@ class XMLConfigurationParser extends DefaultHandler {
                     logger.logWarn("Unable to attach appender to monitor: " + snapShotMonitorName, ex);
                 }
             }
-            
             currentState = STATE_IN_ROOT;
         }
         
