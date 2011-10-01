@@ -15,11 +15,6 @@ Follett Software Company
 McHenry, IL 60050
 
 ****** Please Help ********************************************************************************************
-Perfmon4j is an internal tool in use and under active development at Follett Software Company. 
-We have found it extremly usefull for tracking down production based performance bottlenecks in 
-minutes/hours instead days/weeks.  Creating the open source releases is time consuming and will 
-only be continued if we have your feedback.
-
 * If you like Perfmon4j, please let us know.  
 
 * If you would like to try Perfmon4j but dont know where to start, let us know.
@@ -40,6 +35,28 @@ Dave
 ****** Please Help ********************************************************************************************
 
 Changes
+
+TODO!!!!! MUST MERGE CHANGES MADE FROM 1.1.0.GA to 1.1.1.GA
+
+*** Version 1.1.1.GA (released 2011-9-30) ***  
+	(SVN Release Branch: https://perfmon4j.svn.sourceforge.net/svnroot/perfmon4j/branches/BRANCH1.1.x)
+	(SVN Release Tag: https://perfmon4j.svn.sourceforge.net/svnroot/perfmon4j/tags/version1.1.1.GA)
+
+- Enhancement - XML Configuration has been made more forgiving.  Now if a monitor
+	is defined without an Appender attached, or with attached to an undefined appender,
+	it will by attached to a default text appender.
+
+- Change - By default the perfmon4j javaagent will no longer check each class loaded to determine if
+	it contans methods annotated with a perfmon4j timer annotation. You are now required to explicitly specify 
+	packages that contain timer annotations as a parameter to the java agent.  
+	Example: -javaagent:../lib/endorsed/perfmon4j.jar=-acom.follett.fsc
+	
+- Fix - Perfmon4j would only support sending it's log output to log4j when running within the JBoss
+	application server.  Now by default perfmon4j will switch to log4j when log4j is configured.
+
+- Fix - Now if you feed an invalid configuration XML file to perfmon4j the default
+	configuration will be limited to all base base level monitors only.
+	
 *** Version 1.1.0.GA (released 2010-10-06) ***
 !! IMPORTANT !!:  If you previously created a perfmon4j database for logging you must upgrade the database with
 the associated update scripts:
