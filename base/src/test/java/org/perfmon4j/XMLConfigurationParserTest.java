@@ -22,6 +22,9 @@
 package org.perfmon4j;
 
 import java.io.StringReader;
+import java.util.Set;
+import java.util.Map.Entry;
+
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -398,6 +401,126 @@ public class XMLConfigurationParserTest extends TestCase {
         assertEquals("Should monitor all children of root appender by default", 
         		PerfMon.APPENDER_PATTERN_CHILDREN_ONLY, p[0].getAppenderPattern());
     }
+
+    public void testDefaultAppenderCreatedWhenMissing_intervalMonitor() throws Exception {
+        final String XML_WITH_MISSING_APPENDER =
+            "<Perfmon4JConfig>" +
+            "   <monitor name='mon'>" +
+            "       <appender name='missing'/>" +
+            "   </monitor>" +
+            "</Perfmon4JConfig>";    
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_WITH_MISSING_APPENDER));
+ 
+        AppenderAndPattern p[] = config.getAppendersForMonitor("mon");
+        assertEquals(1, p.length);
+        
+        assertEquals("Default appender should have 1 minute duration", 60 * 1 * 1000, p[0].getAppender().getIntervalMillis());
+        assertEquals("Default should be a TextAppender", TextAppender.class.getName(), p[0].getAppender().getClass().getName());
+    }
+    
+    
+    /*----------------------------------------------------------------------------*/
+    public void testDefaultAppenderCreatedWhenMissing_snapShotMonitor() throws Exception {
+        final String XML_DEFAULT =
+            "<Perfmon4JConfig enabled='true'>" +
+            "   <snapShotMonitor name='SystemMemory' className='perfmon.SystemMemory'>" +
+            "       <appender name='missing'/>" +
+            "   </snapShotMonitor>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+        
+        PerfMonConfiguration.SnapShotMonitorConfig monitorIDs[] = config.getSnapShotMonitorArray();
+        assertEquals("Should have 1 appender", 1, monitorIDs[0].getAppenders().length);
+        
+        AppenderID appenderID = monitorIDs[0].getAppenders()[0];
+        assertEquals("Default appender should have 1 minute duration", 60 * 1 * 1000, appenderID.getIntervalMillis());
+        assertEquals("Default should be a TextAppender", TextAppender.class.getName(), appenderID.getClassName());
+    }    
+
+    
+    /**
+     * If an monitor is created with out defining any appenders, it will automatically 
+     * be added to the default appender
+     * @throws Exception
+     */
+    public void testDefaultAppenderCreated_intervalMonitor() throws Exception {
+        final String XML_WITH_MISSING_APPENDER =
+            "<Perfmon4JConfig>" +
+            "   <monitor name='mon'/>" +
+            "</Perfmon4JConfig>";    
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_WITH_MISSING_APPENDER));
+ 
+        AppenderAndPattern p[] = config.getAppendersForMonitor("mon");
+        assertEquals(1, p.length);
+        
+        assertEquals("Default appender should have 1 minute duration", 60 * 1 * 1000, p[0].getAppender().getIntervalMillis());
+        assertEquals("Default should be a TextAppender", TextAppender.class.getName(), p[0].getAppender().getClass().getName());
+        assertEquals("By default the appender will be applied to the parent monitor only!", 
+        		PerfMon.APPENDER_PATTERN_PARENT_ONLY, p[0].getAppenderPattern());
+    }
+    
+    
+    /*----------------------------------------------------------------------------*/
+    public void testDefaultAppenderCreated_snapShotMonitor() throws Exception {
+        final String XML_DEFAULT =
+            "<Perfmon4JConfig enabled='true'>" +
+            "   <snapShotMonitor name='SystemMemory' className='perfmon.SystemMemory'/>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+        
+        PerfMonConfiguration.SnapShotMonitorConfig monitorIDs[] = config.getSnapShotMonitorArray();
+        assertEquals("Should have 1 appender", 1, monitorIDs[0].getAppenders().length);
+        
+        AppenderID appenderID = monitorIDs[0].getAppenders()[0];
+        assertEquals("Default appender should have 1 minute duration", 60 * 1 * 1000, appenderID.getIntervalMillis());
+        assertEquals("Default should be a TextAppender", TextAppender.class.getName(), appenderID.getClassName());
+    }    
+    
+
+    /*----------------------------------------------------------------------------*/
+    public void testDefaultAppenderCreatedWhenMissing_threadTraceMonitor() throws Exception {
+        final String XML_DEFAULT =
+            "<Perfmon4JConfig>" +
+            "   <threadTrace monitorName='WebRequest'>" +
+            "       <appender name='missing'/>" +
+            "   </threadTrace>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+        
+        Set<Entry<String, ThreadTraceConfig>> entries = config.getThreadTraceConfigMap().entrySet();
+        assertEquals("Should have 1 threadTrace configuration", 1, entries.size());
+        
+        ThreadTraceConfig ttConfig = entries.iterator().next().getValue();
+        
+        assertEquals("Should have 1 appender", 1, ttConfig.getAppenders().length);
+        
+        AppenderID appenderID = ttConfig.getAppenders()[0];
+        assertEquals("Default should be a TextAppender", TextAppender.class.getName(), appenderID.getClassName());
+    }    
+
+    
+    /*----------------------------------------------------------------------------*/
+    public void testDefaultAppenderCreated_threadTraceMonitor() throws Exception {
+        final String XML_DEFAULT =
+            "<Perfmon4JConfig>" +
+            "   <threadTrace monitorName='WebRequest'/>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+        
+        Set<Entry<String, ThreadTraceConfig>> entries = config.getThreadTraceConfigMap().entrySet();
+        assertEquals("Should have 1 threadTrace configuration", 1, entries.size());
+        
+        ThreadTraceConfig ttConfig = entries.iterator().next().getValue();
+        
+        assertEquals("Should have 1 appender", 1, ttConfig.getAppenders().length);
+        
+        AppenderID appenderID = ttConfig.getAppenders()[0];
+        assertEquals("Default should be a TextAppender", TextAppender.class.getName(), appenderID.getClassName());
+    }    
     
     
 /*----------------------------------------------------------------------------*/    
@@ -417,8 +540,16 @@ public class XMLConfigurationParserTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new XMLConfigurationParserTest("testParseThreadTraceConfigWithAllAttributes"));
-
+        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_intervalMonitor"));
+        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_snapShotMonitor"));
+        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_intervalMonitor"));
+        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_snapShotMonitor"));
+        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_threadTraceMonitor"));
+        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_threadTraceMonitor"));
+        
+        
+//        
+        
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
         // we run the full suite of tests.

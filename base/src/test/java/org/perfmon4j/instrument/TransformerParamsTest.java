@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008,2009,2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -26,11 +26,11 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 
 import javassist.ClassPool;
+import javassist.CtClass;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.mockito.Mockito;
 import org.perfmon4j.PerfMon;
 
 import junit.framework.TestCase;
@@ -57,14 +57,14 @@ public class TransformerParamsTest extends TestCase {
 
 /*----------------------------------------------------------------------------*/
     /*
-     * Empty params denotes to annotate everything
+     * This is a change IN Version 1.1.1+ (Now the DEFAULT is NOT to 
+     * Instrument ANY classes by default!  You must specify classes
+     * with a "-a OR -e" parameter 
      */
     public void testValidateEmptyParamsAreValid() {
         TransformerParams params = new TransformerParams("");
-        assertEquals("String should annotate", TransformerParams.MODE_ANNOTATE, 
+        assertEquals("String should NOT annotate", TransformerParams.MODE_NONE, 
             params.getTransformMode(String.class));
-        assertEquals("String should annotate", TransformerParams.MODE_ANNOTATE, 
-                params.getTransformMode(String.class));
     }
     
 
@@ -203,6 +203,21 @@ public class TransformerParamsTest extends TestCase {
     }    
 
     /*----------------------------------------------------------------------------*/    
+    public void testClassInDefaultPackageNotInstrumented() throws Exception {
+    	ClassPool classPool = ClassPool.getDefault();
+    	CtClass cl = classPool.makeClass("$Bogus1");
+    	Class<?> clazz = cl.toClass();
+    	
+    	TransformerParams params = new TransformerParams("");
+    	
+    	// Should look for Perfmon4j Timer annotations in all classes when no args are passed.
+        assertEquals("Should not annotate class from the default package", 
+        		TransformerParams.MODE_NONE, 
+        		params.getTransformMode(clazz));
+    }    
+    
+    
+    /*----------------------------------------------------------------------------*/    
     public void testAllowsNBSP() {
         TransformerParams params = new TransformerParams("a=java.lang.String&nbsp;e=org.perfmon4j.instrument&nbsp;" +
         		"a=org.perfmon4j");
@@ -277,15 +292,14 @@ public class TransformerParamsTest extends TestCase {
     public void testValidateNoParams() {
         TransformerParams params = new TransformerParams();
         
-        assertEquals("Default params should enable annotations on all classes", TransformerParams.MODE_ANNOTATE, 
+        assertEquals("Default params should enable annotations on all classes", TransformerParams.MODE_NONE, 
             params.getTransformMode(String.class));
         
         params = new TransformerParams("");
         
-        assertEquals("Default params should enable annotations on all classes", TransformerParams.MODE_ANNOTATE, 
+        assertEquals("Default params should enable annotations on all classes", TransformerParams.MODE_NONE, 
             params.getTransformMode(String.class));
     }
-    
     
     
     /*----------------------------------------------------------------------------*/    
@@ -622,7 +636,7 @@ public class TransformerParamsTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new TransformerParamsTest("testIsPossibleJDBCDriverClass"));
+//        newSuite.addTest(new TransformerParamsTest("testClassInDefaultPackageNotInstrumented"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

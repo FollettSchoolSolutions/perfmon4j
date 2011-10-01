@@ -29,6 +29,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 
+import org.perfmon4j.Appender.AppenderID;
+import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -76,6 +78,9 @@ class XMLConfigurationParser extends DefaultHandler {
             logger.logError("IOException parsing configuration... Returning default configuration", ex);
             result = getDefaultConfiguration();
         }
+        
+        result.addDefaultAppendersToMonitors();
+        
         return result;
     }
     
@@ -119,6 +124,7 @@ class XMLConfigurationParser extends DefaultHandler {
     private String currentAttributeData = null;
   
     // Current ThreadTraceConfig
+    private String currentThreadTraceMonitorName = null;
     private ThreadTraceConfig currentThreadTraceConfig = null;
     private List<ThreadTraceConfig.Trigger> currentTriggers = null;
     
@@ -174,12 +180,12 @@ class XMLConfigurationParser extends DefaultHandler {
                 } else if (THREAD_TRACE_NAME.equalsIgnoreCase(name)  ){
                     currentThreadTraceConfig = new ThreadTraceConfig();
 
-                    String monitorNameAttr = atts.getValue("monitorName");
+                    currentThreadTraceMonitorName = atts.getValue("monitorName");
                     String maxDepth = atts.getValue("maxDepth");
                     String minDurationToCapture = atts.getValue("minDurationToCapture");
                     String randomSamplingFactor = atts.getValue("randomSamplingFactor");
                     
-                    validateArg(THREAD_TRACE_NAME,"monitorName", monitorNameAttr);
+                    validateArg(THREAD_TRACE_NAME,"monitorName", currentThreadTraceMonitorName);
                     
                     if (maxDepth != null) {
                         currentThreadTraceConfig.setMaxDepth(Integer.parseInt(maxDepth));
@@ -191,7 +197,7 @@ class XMLConfigurationParser extends DefaultHandler {
                         currentThreadTraceConfig.setRandomSamplingFactor(Integer.parseInt(randomSamplingFactor));
                     }
 
-                    config.addThreadTraceConfig(monitorNameAttr, currentThreadTraceConfig);
+                    config.addThreadTraceConfig(currentThreadTraceMonitorName, currentThreadTraceConfig);
                     currentState = STATE_IN_THREAD_TRACE;
                 } else {
                     throw new SAXException("Unexpected element: " + name);
@@ -249,7 +255,14 @@ class XMLConfigurationParser extends DefaultHandler {
                     String nameAttr = atts.getValue("name");
                     
                     validateArg(THREAD_TRACE_NAME + "." + APPENDER_NAME, "name", nameAttr);
-                    currentThreadTraceConfig.addAppender(config.getAppenderForName(nameAttr));
+                    AppenderID appenderID = config.getAppenderForName(nameAttr);
+                    if (appenderID == null) {
+                    	logger.logError("Appender: \"" + nameAttr + "\" not defined. Attaching ThreadTraceMonitor \"" 
+                    			+ currentThreadTraceMonitorName + "\" to the default text appender." );
+
+                    	appenderID = config.getOrCreateDefaultAppender();
+                    }
+                    currentThreadTraceConfig.addAppender(appenderID);
                 } else if (THREAD_TRACE_TRIGGERS_NAME.equalsIgnoreCase(name)) {
                 	currentState = STATE_IN_THREAD_TRACE_TRIGGERS;
                 	currentTriggers = new Vector<ThreadTraceConfig.Trigger>();
@@ -315,7 +328,7 @@ class XMLConfigurationParser extends DefaultHandler {
         }
     }
     
-    public void endElement(@SuppressWarnings("unused") String uri, String name, @SuppressWarnings("unused") String qName) {
+    public void endElement(@SuppressWarnings("unused") String uri, String name, @SuppressWarnings("unused") String qName) throws SAXException {
         if (ROOT_ELEMENT_NAME.equalsIgnoreCase(name)) {
             currentState = STATE_DONE;
         } 
@@ -332,6 +345,7 @@ class XMLConfigurationParser extends DefaultHandler {
 
         if (THREAD_TRACE_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_THREAD_TRACE) {
             currentThreadTraceConfig = null;
+            currentThreadTraceMonitorName = null;
             currentState = STATE_IN_ROOT;
         }
 

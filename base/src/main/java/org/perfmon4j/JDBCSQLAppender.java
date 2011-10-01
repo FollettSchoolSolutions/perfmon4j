@@ -43,7 +43,7 @@ public class JDBCSQLAppender extends SQLAppender {
 	private String jdbcURL = null;
 	private String userName = null;
 	private String password = null;
-	private WeakReference<Class<Driver>> cachedDriverClass = null;
+	private final static JDBCHelper.DriverCache driverCache = new JDBCHelper.DriverCache();
 
 	public JDBCSQLAppender(AppenderID id) {
 		super(id);
@@ -64,45 +64,8 @@ public class JDBCSQLAppender extends SQLAppender {
     
     public synchronized Connection getConnection() throws SQLException {
     	if (conn == null) {
-    		try {
-    			if (driverClass != null) {
-    				Class<Driver> classToUse = cachedDriverClass != null ? cachedDriverClass.get() : null;
-    				if (classToUse == null) {
-        				ClassLoader loader = null;
-        				if (driverPath != null) {
-        					File driverFile = new File(driverPath);
-        					if (!driverFile.exists()) {
-        						throw new SQLException("JDBCDriver file not found in path: " + driverPath);
-        					}
-        					loader = new URLClassLoader(new URL[]{driverFile.toURL()}, Thread.currentThread().getContextClassLoader());
-        				} else {
-        					loader = PerfMon.getClassLoader();
-        				}
-    					classToUse = (Class<Driver>)Class.forName(driverClass, true, loader);
-    					cachedDriverClass = new WeakReference<Class<Driver>>(classToUse);
-    				}
-    				Driver driver = classToUse.newInstance();
-    				Properties credentials = new Properties();
-    				if (userName != null) {
-    					credentials.setProperty("user", userName);
-    				}
-    				if (password != null) {
-    					credentials.setProperty("password", password);
-    				}
-    				conn = driver.connect(jdbcURL, credentials);
-    			} else {
-    				conn = DriverManager.getConnection(jdbcURL, userName, password);
-    			}
-    			logger.logDebug("Created SQL Connection");
-			} catch (ClassNotFoundException e) {
-				throw new SQLException("Unable to load driver class: " + driverClass + ": " + e.getMessage());
-			} catch (IllegalAccessException aec) {
-				throw new SQLException("Unable to access driver class: " + driverClass + ": " + aec.getMessage());
-			} catch (InstantiationException e) {
-				throw new SQLException("Unable to instantiate driver class: " + driverClass + ": " + e.getMessage());
-			} catch (MalformedURLException e) {
-				throw new SQLException("Malformed URL for driver path" + ": " + e.getMessage());
-			}
+    		conn = JDBCHelper.createJDBCConnection(driverCache, this.getDriverClass(), this.getDriverPath(), 
+    				this.getJdbcURL(), this.getUserName(), this.getPassword());
     	}
     	return conn;
     }

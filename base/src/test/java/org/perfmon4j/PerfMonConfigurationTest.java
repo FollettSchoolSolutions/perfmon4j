@@ -153,19 +153,6 @@ public class PerfMonConfigurationTest extends TestCase {
         assertEquals(BogusAppender.class.getName(), monitorConfig.getAppenders()[0].getClassName());
     }
     
-    /*----------------------------------------------------------------------------*/    
-    public void testUndefinedAppenderToSnapShotMonitor() throws Exception {
-        PerfMonConfiguration config = new PerfMonConfiguration();
-        
-        config.defineSnapShotMonitor("a", BogusSnapShotMonitor.class.getName());
-        try {
-        	config.attachAppenderToSnapShotMonitor("a", "bob");
-        	fail("Expected an invalid config exception");
-        } catch (InvalidConfigException ice) {
-        	// Expected....
-        }
-    }
-    
     
 /*----------------------------------------------------------------------------*/    
     public static class BogusSnapShotMonitor extends SnapShotMonitor {
@@ -217,7 +204,7 @@ public class PerfMonConfigurationTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new PerfMonConfigurationTest("testDefineSnapShotMonitorArray"));
+//        newSuite.addTest(new PerfMonConfigurationTest("testUndefinedAppenderToSnapShotMonitor"));
 //        newSuite.addTest(new PerfMonConfigurationTest("testDuplicateSnapShotNameNotAllowed"));
 //        newSuite.addTest(new PerfMonConfigurationTest("testAttachAppenderToSnapShotMonitor"));
 

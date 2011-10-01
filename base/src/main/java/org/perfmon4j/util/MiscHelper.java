@@ -401,9 +401,9 @@ public class MiscHelper {
 	}
 	
 	public static boolean isRunningInJBossAppServer() {
-		return System.getProperty("jboss.home.dir") != null;
+		return (System.getProperty("jboss.home.dir") != null)
+			|| (System.getProperty("jboss.server.type") != null);
 	}
-	
 	
 	private static void addFileToZipOutputStream(ZipOutputStream stream, File file, String path) throws IOException {
 		if (file.getName().startsWith(".")) {
@@ -483,7 +483,16 @@ public class MiscHelper {
 		}
 	}
 
-
+    public static double safeDivide(long numerator, long denominator ) {
+        double result = 0.0;
+        
+        if (denominator > 0) {
+            result = numerator / (double)denominator;
+        }
+        
+        return result;
+    }
+    
 	public static long calcDateOnlyFromMillis(long currentTimeMillis) {
 		Calendar cal = new GregorianCalendar();
 		cal.setTimeInMillis(currentTimeMillis);

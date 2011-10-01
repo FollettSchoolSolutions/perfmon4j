@@ -23,6 +23,7 @@ package org.perfmon4j;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.GregorianCalendar;
+import java.util.List;
 
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -33,6 +34,7 @@ import org.apache.log4j.Logger;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
+import org.perfmon4j.util.vo.ResponseInfo;
 
 /* todo: this test needs a LOT of work!!! */
 public class JDBCSQLAppenderTest extends SQLTest {
@@ -305,6 +307,26 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalDat
 System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalData t"));
 		assertEquals("record count", 1, JDBCHelper.getQueryCount(conn, count));
     }    
+
+    public void testJDBCHelperQueryResponseInfo() throws Exception {
+    	long now = System.currentTimeMillis();
+    	
+    	Connection conn = appender.getConnection();
+    	
+    	IntervalData d = new IntervalData(PerfMon.getMonitor("dave"), now);
+    	d.start(0, now);
+    	d.stop(100, 10000, now, 0, 0);
+		d.setTimeStop(now + 1000);
+    	appender.outputData(d);
+    	
+    	long monitorID = JDBCHelper.getQueryCount(conn, "SELECT CategoryID FROM mydb.P4JCategory WHERE categoryName='dave'");
+    	List<ResponseInfo> list = JDBCHelper.queryResponseInfo(conn, "mydb", monitorID);
+    	assertEquals(1, list.size());
+    	
+    	ResponseInfo element = list.get(0);
+    	assertEquals("dave", element.getMonitorName());
+    }    
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

@@ -4,7 +4,12 @@
   
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>${buildVersion}</version>
+	<!--  MAKE SURE YOU SYNC UP THE VERISON IN EACH 
+		CHILD POM!!!  AT LEAST UNTIL MAVEN
+		ADDS FUNCTIOANLITY THAT MAKES MORE SENSE!
+	-->
+		<version>1.2.0-SNAPSHOT</version>
+		<!-- <version>1.2.0.GA</version> -->
 	<packaging>pom</packaging>
 
 	<name>perfmon4j-project</name>
@@ -16,6 +21,7 @@
 		<module>tomcat55</module>
 		<module>tomcat7</module>
 		<module>sunjava6</module>
+		<module>reportconsole</module>
 	</modules>
 
 	<build>
@@ -44,30 +50,6 @@
 			</plugin>
 		</plugins>
 	</build>
-
-
-
-
-	<profiles>
-		<profile>
-			<id>snapshot</id>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<properties>
-				<buildVersion>1.2.0-SNAPSHOT</buildVersion>
-			</properties>
-		</profile>  
-		<profile>
-			<id>release</id>
-			<activation>
-				<activeByDefault>false</activeByDefault>
-			</activation>
-			<properties>
-				<buildVersion>1.2.0.GA</buildVersion>
-			</properties>
-		</profile>  
-	</profiles>
 
 	<properties>
 		<!--

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008,2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -65,7 +65,7 @@ public class LaunchRunnableInVM {
 		}
 	}
 
-	public static String loadClassAndPrintMethods(Class clazzToLoad, String jvmParams, File perfmonJar) throws Exception {
+	public static String loadClassAndPrintMethods(Class<?> clazzToLoad, String jvmParams, File perfmonJar) throws Exception {
 		return run(LoadClassAndPrintMethods.class, jvmParams, clazzToLoad.getName(), perfmonJar);
 	}
 	
@@ -82,7 +82,7 @@ public class LaunchRunnableInVM {
 	}
 	
 	
-	public static String run(Class clazz, String javaAgentParams, String args, File perfmonJar) throws Exception {
+	public static String run(Class<?> clazz, String javaAgentParams, String args, File perfmonJar) throws Exception {
 		StringBuffer output = new StringBuffer();
     	
     	final String javaCmd = System.getProperty("java.home") + "/bin/java";
@@ -94,6 +94,8 @@ public class LaunchRunnableInVM {
     	
     	String myClassPath = System.getProperty("java.class.path").replaceAll(";/", ";");
     	myClassPath = myClassPath.replaceAll("\\\\", "/");
+    	// The location of the Derby Embedded Driver Jar should be set as a maven-surefire-plugin
+    	// property in perfom4j/base/pom.xml
     	String derbyDriver = System.getProperty("DERBY_EMBEDDED_DRIVER");
     	if (derbyDriver != null) {
     		File driver = new File(derbyDriver);
@@ -102,6 +104,14 @@ public class LaunchRunnableInVM {
     		}
     		myClassPath += System.getProperty("path.separator") + derbyDriver;
     	}
+
+    	// The location of the LOG4J Jar should be set as a maven-surefire-plugin
+    	// property in perfom4j/base/pom.xml
+    	String log4jJar = System.getProperty("LOG4J_JAR");
+    	if (log4jJar != null) {
+    		myClassPath += System.getProperty("path.separator") + log4jJar;
+    	}
+    	
     	myClassPath = quoteIfNeeded(myClassPath);
     	
     	System.out.println("CLASSPATH=" + myClassPath); 
@@ -113,20 +123,17 @@ public class LaunchRunnableInVM {
     		cmdString += "=" + javaAgentParams;
     	}
 
+    	// The location of the JavaAssist Jar should be set as a maven-surefire-plugin
+    	// property in perfom4j/base/pom.xml
     	String javaAssistProp = System.getProperty("JAVASSIST_JAR");
     	if (javaAssistProp == null) {
     		throw new RuntimeException("JAVASSIST_JAR system property must be set");
     	}
     	
-    	
-    	
-    	
-    	
     	File javassistJar = new File(javaAssistProp);
     	final String pathSeparator = System.getProperty("path.separator");
-    	
-    	
-    	cmdString +=  " -DPerfMon4j.preferredLogger=stdout -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath() + pathSeparator + javassistJar.getParentFile().getCanonicalPath());
+
+		cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath() + pathSeparator + javassistJar.getParentFile().getCanonicalPath());
     	
     	cmdString +=  " " + LaunchRunnableInVM.class.getName();
     	cmdString +=  " " + runnableName;
@@ -148,7 +155,7 @@ public class LaunchRunnableInVM {
 		try {
 			String classToRun = args[0];
 			System.out.println("Running class: " + classToRun);
-			Class clazz = Class.forName(classToRun);
+			Class<?> clazz = Class.forName(classToRun);
 			System.out.println("Loaded Class: " + clazz.getName());
 			Runnable runnable = (Runnable)clazz.newInstance();
 			if (runnable instanceof ProcessArgs) {
@@ -176,7 +183,7 @@ public class LaunchRunnableInVM {
 
 		public void run() {
 			try {
-				Class clazz = PerfMon.getClassLoader().loadClass(classToLoad);
+				Class<?> clazz = PerfMon.getClassLoader().loadClass(classToLoad);
 				
 				System.out.println("Declared Fields For Class: " + classToLoad);
 				Field fields[] = clazz.getDeclaredFields();

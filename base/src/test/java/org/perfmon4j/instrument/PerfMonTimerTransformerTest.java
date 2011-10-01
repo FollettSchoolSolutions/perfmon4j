@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -40,7 +40,6 @@ import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.perfmon4j.Appender;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
@@ -49,11 +48,13 @@ import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.util.GlobalClassLoader;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
 
 public class PerfMonTimerTransformerTest extends TestCase {
-	private static Logger logger = Logger.getLogger(PerfMonTimerTransformerTest.class);
+	private static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
@@ -121,7 +122,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
     	if (javaAssistProp == null) {
     		String filePath = System.getProperty("user.home") + 
     			"/.m2/repository/javassist/javassist/3.11.0.GA/javassist-3.11.0.GA.jar";
-        	logger.warn("JAVASSSIST_JAR system property NOT set...  Trying default location: " + filePath);
+        	logger.logWarn("JAVASSSIST_JAR system property NOT set...  Trying default location: " + filePath);
         	System.setProperty("JAVASSIST_JAR", filePath);
     	}
     }
@@ -209,8 +210,8 @@ System.out.println(output);
 				System.out.println("Initial Num ClassLoaders: " + numLoaders);
 
 				BogusClassLoader loader = new BogusClassLoader();
-				WeakReference<Class>  clazzReference = 
-					new WeakReference(loader.loadClass("org.perfmon4j.instrument.TestClass"));
+				WeakReference<Class<?>>  clazzReference = 
+					new WeakReference<Class<?>>(loader.loadClass("org.perfmon4j.instrument.TestClass"));
 				
 				long afterLoaders = GlobalClassLoader.getClassLoader().getTotalClassLoaders();
 				System.out.println("Loaders added to the GlobalClassLoader: " + (afterLoaders - numLoaders));
@@ -355,9 +356,6 @@ System.out.println(output);
 					} finally {
 						PerfMonTimer.stop(timer);	
 					}
-					
-					
-
 					Appender.flushAllAppenders();
 				} finally {
 					if (conn != null) {
@@ -451,6 +449,7 @@ System.out.println(output);
 	
     public void testDisableSystemGCWithBootstrapEnabled() throws Exception {
     	String output = LaunchRunnableInVM.run(SystemGCDisablerTester.class, "-gtrue,-btrue", "", perfmon4jJar);
+System.out.println(output);
     	final String validateInstalled = "System.gc() appears disabled.";
 		assertTrue("SystemGC should have been disabled", output.contains(validateInstalled));
     	
@@ -469,15 +468,49 @@ System.out.println(output);
     	final String validateNOTInstalled = "System.gc() appears enabled.";
 		assertTrue("SystemGC should NOT have been disabled", output.contains(validateNOTInstalled));
     }
+
+    public static class Log4jRuntimeLoggerTest implements Runnable {
+    	static final Logger l = LoggerFactory.initLogger(Log4jRuntimeLoggerTest.class); 
+    	
+		public void run() {
+			l.logInfo("info - pre initialize");
+			
+			// Because perfmon4j.jar will be loaded via
+			// the endorsed folder, this class (because it is loaded with perfmon4j) will not be 
+			// able to access the log4j jars directly..  So we have to dynamically 
+			// load the log4j classes...
+			try {
+				Class<?> clazzBasicConfig = Class.forName("org.apache.log4j.BasicConfigurator",
+						true, PerfMon.getClassLoader());
+				Method configure = clazzBasicConfig.getMethod("configure", new Class[]{});
+				configure.invoke(null, new Object[]{});
+				l.logInfo("LOG4J Successfully configured");
+			} catch (Exception e) {
+				l.logError("Unable to configure LOG4J", e);
+			}
+			
+			l.logDebug("debug - post initialize");
+			l.logInfo("info - post initialize");
+		}
+    }
     
+    public void testPerfmon4jLoggerUsesLog4jWhenInitialized() throws Exception {
+    	String output = LaunchRunnableInVM.run(Log4jRuntimeLoggerTest.class, "", "", perfmon4jJar);
+    	System.out.println(output);
+    	
+    	assertTrue("Before LOG4J initialize, logging should be through STDOUT",
+    			output.contains("[STDOUT] info - pre initialize"));
+    	assertTrue("After LOG4J initialize, logging should be through LOG4J",
+    			output.contains("[main] INFO org.perfmon4j.instrument.PerfMonTimerTransformerTest$Log4jRuntimeLoggerTest  - info - post initialize"));
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
         System.setProperty("Perfmon4j.debugEnabled", "true");
-        System.setProperty("JAVASSIST_JAR",  "C:\\Users\\ddeucher\\.m2\\repository\\javassist\\javassist\\3.10.0.GA\\javassist-3.10.0.GA.jar");
-        
-        Logger.getLogger(PerfMonTimerTransformerTest.class.getPackage().getName()).setLevel(Level.INFO);
+		System.setProperty("JAVASSIST_JAR",  "G:\\projects\\perfmon4j\\.repository\\javassist\\javassist\\3.10.0.GA\\javassist-3.10.0.GA.jar");
+		
+        org.apache.log4j.Logger.getLogger(PerfMonTimerTransformerTest.class.getPackage().getName()).setLevel(Level.INFO);
         String[] testCaseName = {PerfMonTimerTransformerTest.class.getName()};
 
         TestRunner.main(testCaseName);
@@ -487,17 +520,17 @@ System.out.println(output);
 /*----------------------------------------------------------------------------*/
     public static junit.framework.Test suite() {
     	String testType = System.getProperty("UNIT");
-    	if (testType == null) {
-    		System.setProperty("Perfmon4j.debugEnabled", "true");
-    		System.setProperty("JAVASSIST_JAR",  "C:\\Users\\ddeucher\\.m2\\repository\\javassist\\javassist\\3.10.0.GA\\javassist-3.10.0.GA.jar");
-    	}
+//    	if (testType == null) {
+//    		System.setProperty("Perfmon4j.debugEnabled", "true");
+//    		System.setProperty("JAVASSIST_JAR",  "G:\\projects\\perfmon4j\\.repository\\javassist\\javassist\\3.10.0.GA\\javassist-3.10.0.GA.jar");
+//    	}
         TestSuite newSuite = new TestSuite();
 
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new PerfMonTimerTransformerTest("testThreadTraceWithSQLTime"));
-//        newSuite.addTest(new PerfMonTimerTransformerTest("testInstrumentSQLStatement"));
+//		newSuite.addTest(new PerfMonTimerTransformerTest("testInstrumentSQLStatement"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testPerfmon4jLoggerUsesLog4jWhenInitialized"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

@@ -35,9 +35,6 @@ Dave
 ****** Please Help ********************************************************************************************
 
 Changes
-
-TODO!!!!! MUST MERGE CHANGES MADE FROM 1.1.0.GA to 1.1.1.GA
-
 *** Version 1.1.1.GA (released 2011-9-30) ***  
 	(SVN Release Branch: https://perfmon4j.svn.sourceforge.net/svnroot/perfmon4j/branches/BRANCH1.1.x)
 	(SVN Release Tag: https://perfmon4j.svn.sourceforge.net/svnroot/perfmon4j/tags/version1.1.1.GA)
@@ -56,6 +53,7 @@ TODO!!!!! MUST MERGE CHANGES MADE FROM 1.1.0.GA to 1.1.1.GA
 
 - Fix - Now if you feed an invalid configuration XML file to perfmon4j the default
 	configuration will be limited to all base base level monitors only.
+	
 	
 *** Version 1.1.0.GA (released 2010-10-06) ***
 !! IMPORTANT !!:  If you previously created a perfmon4j database for logging you must upgrade the database with

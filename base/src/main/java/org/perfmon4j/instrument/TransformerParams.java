@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008,2009,2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -249,7 +249,7 @@ class TransformerParams {
 
     
     int getTransformMode(String className) {
-        int mode = MODE_ANNOTATE;
+        int mode = MODE_NONE;
         int includeMatchLength = 0;
         
         if ((annotateList.size() > 0) || (extremeList.size() > 0)) {

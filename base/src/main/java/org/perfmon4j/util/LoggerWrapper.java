@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -20,6 +20,8 @@
  */
 package org.perfmon4j.util;
 
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
+
 /**
  * Based on classloader issues the Log4j Logger class may not be loadable from
  * the default classloader of PerfMon. This wrapper will log to stdout/stderr
@@ -27,7 +29,6 @@ package org.perfmon4j.util;
  */
 class LoggerWrapper implements Logger {
 	private final String category;
-	private final boolean instrumentationCategory;
 
 	static private final String PREFERRED_LOGGER_LOG4J = "log4j";
 	static private final String PREFERRED_LOGGER_JAVA_LOGGING = "java";
@@ -42,8 +43,6 @@ class LoggerWrapper implements Logger {
 	static private final int AUTO_LOGGING = 4;
 
 	static private final int perferredLogging;
-
-	static private Class log4jLoggerClass = null;
 
 	static private String getApacheCommonsPreferredLogging() {
 		String result = null;
@@ -124,7 +123,11 @@ class LoggerWrapper implements Logger {
 
 	private Logger getDelegate(int mode) {
 		Logger result = null;
-		if (!instrumentationCategory) {
+		
+		// Very important!!!  If the logging operation is occurring
+		// while we are actively instrumenting objects, we don't 
+		// want any other classloading going on.
+		if (!PerfMonTimerTransformer.isThreadInInstrumentationPhase()) {
 			if (mode == LOG4J_LOGGING) {
 				result = log4jDelegate;
 				if (result == null) {
@@ -149,8 +152,6 @@ class LoggerWrapper implements Logger {
 
 	LoggerWrapper(String category) {
 		this.category = category;
-		instrumentationCategory = LoggerFactory
-				.isInstrumetationCategory(category);
 	}
 	
 	private void markDelegateSuspect() {
@@ -159,6 +160,7 @@ class LoggerWrapper implements Logger {
 	}
 
 	public void enableInfo() {
+		forceEnableDebug = false;
 		forceEnableInfo = true;
 		try {
 			Logger delgate = getDelegate();

@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
+import java.util.Map.Entry;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
@@ -40,7 +41,8 @@ import org.perfmon4j.util.MiscHelper;
 public class PerfMonConfiguration {
     private static final Logger logger = LoggerFactory.initLogger(PerfMonConfiguration.class);
     
-    public final static long DEFAULT_APPENDER_INTERVAL = 60 * 60 * 1000; 
+    public final static long DEFAULT_APPENDER_INTERVAL = 60 * 60 * 1000; // 
+    public final static long ONE_MINUTE_INTERVAL = 60 * 1000; // 
     
     private final Map<String, MonitorConfig> monitorMap = new HashMap();
     private final Map<String, Appender.AppenderID> appenderMap = new HashMap();
@@ -51,6 +53,9 @@ public class PerfMonConfiguration {
     // while processing the config.
     // The format will be: "<PerfMonElement>: <className>"
     private Set<String> classNotFoundInfo = new HashSet<String>();
+    
+    public static final String DEFAULT_APPENDER_NAME = "Perfmon4jDefaultAppender";
+    
     
     
 /*----------------------------------------------------------------------------*/
@@ -111,7 +116,10 @@ public class PerfMonConfiguration {
         }
         Appender.AppenderID appenderID = appenderMap.get(appenderName);
         if (appenderID == null) {
-            throw new InvalidConfigException("Appender: \"" + appenderName + "\" not defined.");
+        	logger.logError("Appender: \"" + appenderName + "\" not defined. Attaching monitor \"" 
+        			+ monitorName + "\" to the default text appender with a one minute polling interval." );
+        	// Get or create a default text appender...
+        	appenderID = getOrCreateDefaultAppender();
         }
         config.addAppender(appenderID, appenderPattern);
     }
@@ -125,9 +133,11 @@ public class PerfMonConfiguration {
         
         Appender.AppenderID appenderID = appenderMap.get(appenderName);
         if (appenderID == null) {
-            throw new InvalidConfigException("Appender not defined. appenderName=" + appenderName);
+        	logger.logError("Appender: \"" + appenderName + "\" not defined. Attaching SnapShotMonitor \"" 
+        			+ monitorName + "\" to the default text appender with a one minute polling interval" );
+        	// Get or create a default text appender...
+        	appenderID = getOrCreateDefaultAppender();
         }
-        
         config.addAppender(appenderID);
     }
     
@@ -277,5 +287,66 @@ public class PerfMonConfiguration {
     
     public Set<String> getClassNotFoundInfo() {
     	return classNotFoundInfo;
+    }
+
+    AppenderID getOrCreateDefaultAppender() {
+    	AppenderID appenderID = appenderMap.get(DEFAULT_APPENDER_NAME);
+		if (appenderID == null) {
+        	// Get or create a default text appender...
+        	if (appenderID == null) {
+        		appenderID = AppenderID.getAppenderID(TextAppender.class.getName(), ONE_MINUTE_INTERVAL);
+        		appenderMap.put(DEFAULT_APPENDER_NAME, appenderID);
+        	}
+		}
+        return appenderID;
+    }
+    
+    /**
+     * This method will find all monitors that are not currently attached
+     * to an appender, and attach them to the default appender.
+     */
+    public void addDefaultAppendersToMonitors() {
+    	// First look for interval monitors that are missing appenders...
+    	Iterator<Entry<String, MonitorConfig>> monitorConfigs = monitorMap.entrySet().iterator();
+    	while (monitorConfigs.hasNext()) {
+    		Entry<String, MonitorConfig> entry = monitorConfigs.next();
+    		String monitorName = entry.getKey();
+    		MonitorConfig config = entry.getValue();
+    		if (config.appenderSet.isEmpty()) {
+	        	logger.logInfo("No appenders defined for monitor \"" 
+	        			+  monitorName + "\" attaching to the default text appender" );
+	        	AppenderID appenderID = getOrCreateDefaultAppender();
+    			config.addAppender(appenderID, PerfMon.APPENDER_PATTERN_PARENT_ONLY);
+    		}
+    	}
+    	
+    	
+    	// Next look for snapshot monitors missing appenders
+    	Iterator<Entry<String, SnapShotMonitorConfig>> ssConfigs = snapShotMonitors.entrySet().iterator();
+    	while (ssConfigs.hasNext()) {
+    		Entry<String, SnapShotMonitorConfig> entry = ssConfigs.next();
+    		String monitorName = entry.getKey();
+    		SnapShotMonitorConfig config = entry.getValue();
+    		if (config.appenderSet.isEmpty()) {
+	        	logger.logInfo("No appenders defined for SnapShotMonitor \"" 
+	        			+  monitorName + "\" attaching to the default text appender with a 1 minute polling interval." );
+	        	AppenderID appenderID = getOrCreateDefaultAppender();
+    			config.addAppender(appenderID);
+    		}
+    	}
+
+    	// Finally look for ThreadTrace monitors missing appenders
+    	Iterator<Entry<String, ThreadTraceConfig>> ttConfigs = threadTraceConfigs.entrySet().iterator();
+    	while (ttConfigs.hasNext()) {
+    		Entry<String, ThreadTraceConfig> entry = ttConfigs.next();
+    		String monitorName = entry.getKey();
+    		ThreadTraceConfig config = entry.getValue();
+    		if (config.getAppenders().length == 0) {
+	        	logger.logInfo("No appenders defined for ThreadTraceMonitor \"" 
+	        			+  monitorName + "\" attaching to the default text appender." );
+	        	AppenderID appenderID = getOrCreateDefaultAppender();
+    			config.addAppender(appenderID);
+    		}
+    	}
     }
 }

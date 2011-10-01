@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008,2009, 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -60,6 +60,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         }
     };    
     
+    public static boolean isThreadInInstrumentationPhase() {
+    	return recursionPreventor.get().threadInScope;
+    }
+    
     private static class RecursionPreventor {
     	boolean threadInScope = false;
     }
@@ -93,6 +97,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	// YOU set recursionPreventor.get().threadInScope = true
         	// IF YOU DO, YOU ARE RISKING RECURSION!
         	try {
+        		InstrumentationMonitor.incCurrentInstThreads();
+
         		recursionPreventor.get().threadInScope = true;
         		
         		if (classBeingRedefined != null && !params.isBootStrapInstrumentationEnabled()) {
@@ -101,7 +107,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         			return result;
         		}
         		
-        		InstrumentationMonitor.incCurrentInstThreads();
                 if (loader != null) {
                     GlobalClassLoader.getClassLoader().addClassLoader(loader);
                 }
@@ -109,7 +114,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                startMillis = MiscHelper.currentTimeWithMilliResolution();
 	                logger.logDebug("Loading class: " + className);
 	                
-	                if (true || (params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE)  
+	                if ((params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE)  
 	                		|| params.isPossibleJDBCDriver(className.replace('/', '.')) ) {
 	                    ClassPool classPool = null;
 	                    if (loader == null) {
@@ -224,7 +229,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         inst.addTransformer(t);
         if (t.params.isDisableSystemGC()) {
     		if (inst.isRedefineClassesSupported()) {
-	        	disabler = new SystemGCDisabler();
+    			logger.logInfo("Perfmon4j is installing SystemGCDisabler agent");
+    			disabler = new SystemGCDisabler();
 	        	inst.addTransformer(disabler);
     		} else {
     			logger.logError("Perfmon4j can not disable java.lang.System.gc() JVM does not support redefining classes");
@@ -268,7 +274,9 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            logger.logDebug("Found preloaded class: " + clazz.getName());
 	            
 	            String resourceName = clazz.getName().replace('.', '/') + ".class";
-	            if (allowedClass(resourceName) && t.params.getTransformMode(clazz) != TransformerParams.MODE_NONE) {
+	            if (allowedClass(resourceName) 
+	            		&& ((t.params.getTransformMode(clazz) != TransformerParams.MODE_NONE)
+	            				|| (t.params.isDisableSystemGC() && resourceName.equals("java/lang/System.class")))) {
 	                logger.logInfo("Perfmon4j trying to instrument preloaded class: " + clazz.getName());
 	                try {
 	                    ClassLoader loader = clazz.getClassLoader();

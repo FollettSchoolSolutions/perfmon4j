@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008,2009,2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -34,7 +34,7 @@ public class LoggerFactory {
         return new LoggerWrapper(category);
     }
 
-    public static Logger initLogger(Class clazz) {
+    public static Logger initLogger(Class<?> clazz) {
         return new LoggerWrapper(clazz.getName());
     }
     
@@ -53,9 +53,10 @@ public class LoggerFactory {
 	 * the log4j classes while we are performing instrumentation)
 	 **/
 	public static boolean isInstrumetationCategory(String category) {
-		return category.startsWith("org.perfmon4j.instrument")
+		return (category.startsWith("org.perfmon4j.instrument")
 			|| category.startsWith("org.perfmon4j.PerfMon")
-			|| category.startsWith("org.perfmon4j.XMLConfigurator");
+			|| category.startsWith("org.perfmon4j.XMLConfigurator")) &&
+			!category.endsWith("Test");
 	}
 	
 	/**

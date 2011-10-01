@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008,2009,2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -22,35 +22,59 @@
 package org.perfmon4j.util;
 
 import java.lang.reflect.Method;
+import java.util.Enumeration;
+import java.util.Iterator;
+
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
 
 class Log4JLogger implements Logger {
-	final private static Class[] NO_PARAMS = new Class[] {};
-	final private static Class[] STRING_PARAMS = new Class[] { String.class };
-	final private static Class[] OBJECT_PARAMS = new Class[] { Object.class };
-	final private static Class[] OBJECT_THROWABLE_PARAMS = new Class[] {
+	final private static Class<?>[] NO_PARAMS = new Class[] {};
+	final private static Class<?>[] STRING_PARAMS = new Class[] { String.class };
+	final private static Class<?>[] OBJECT_PARAMS = new Class[] { Object.class };
+	final private static Class<?>[] OBJECT_THROWABLE_PARAMS = new Class[] {
 			Object.class, Throwable.class };
 
-	static private Class loggerClazz = null;
+	static private Class<?> loggerClazz = null;
 	static private Method errorMethod = null;
 	static private Method errorMethodWithThrow = null;
 	static private Method warnMethod = null;
 	static private Method warnMethodWithThrow = null;
 	static private Method infoMethod = null;
-	static private Method infoMethodWithThrow = null;
 	static private Method debugMethod = null;
 	static private Method debugMethodWithThrow = null;
 	static private Method debugEnabledMethod = null;
 	static private Method infoEnabledMethod = null;
 	static private Method setLevelMethod = null;
 	static private Method getLoggerMethod = null;
+	
+	
+	static private Method getAllAppenders = null;
 	static private Object levelInfo = null;
 	static private Object levelDebug = null;
 
+	static private Object rootLogger = null;
+	static boolean log4jInitialized = false;
+
 	static private long numClassLoadersOnLastCheck = -1;
 	static private long nextCheckForClassLoadTime = -1;
+	
 
 	final private Object loggerObject;
 
+	private static boolean isLog4JInitialized() {
+		// This make the assumption that once log4j is initialized,
+		// it will NOT become uninitialized.
+		try {
+			if (!log4jInitialized && (rootLogger != null)) {
+				Enumeration<?> allAppendersOnRoot = (Enumeration<?>)getAllAppenders.invoke(rootLogger, new Object[]{}); 
+				log4jInitialized = allAppendersOnRoot.hasMoreElements();
+			}
+		} catch (Exception ex) {
+			// Ignore exceptions...  Just assume it is not initialized.
+		}
+		return log4jInitialized;
+	}
+	
 	/**
 	 * @param category
 	 * @param forceEnable
@@ -59,8 +83,7 @@ class Log4JLogger implements Logger {
 	public static Log4JLogger getLogger(String category, boolean forceEnableInfo, boolean forceEnableDebug) {
 		Log4JLogger result = null;
 
-		if (loggerClazz == null
-				&& !LoggerFactory.isInstrumetationCategory(category)) {
+		if (loggerClazz == null) {
 			GlobalClassLoader loader = GlobalClassLoader.getClassLoader();
 			long totalClassLoaders = loader.getTotalClassLoaders();
 			final long lastCheck = numClassLoadersOnLastCheck;
@@ -71,18 +94,14 @@ class Log4JLogger implements Logger {
 					nextCheckForClassLoadTime = now
 							+ Logger.DYNAMIC_LOAD_RETRY_MILLIS;
 					try {
-						Class tmpLoggerClazz = Class.forName(
+						Class<?> tmpLoggerClazz = Class.forName(
 								"org.apache.log4j.Logger", true, loader);
-						Class levelClazz = Class.forName(
+						Class<?> levelClazz = Class.forName(
 								"org.apache.log4j.Level", true, loader);
 						
-						/**
-						 * Just check for a few more classes to make sure log4j is
-						 * in a state where it is operational
-						 */
-						Class.forName(
-								"org.jboss.logging.appender.FileAppender", true, loader);
-						
+
+						levelInfo = levelClazz.getField("INFO").get(null);
+						levelDebug = levelClazz.getField("DEBUG").get(null);
 						
 						getLoggerMethod = tmpLoggerClazz.getMethod("getLogger",
 								STRING_PARAMS);
@@ -96,8 +115,6 @@ class Log4JLogger implements Logger {
 								OBJECT_THROWABLE_PARAMS);
 						infoMethod = tmpLoggerClazz.getMethod("info",
 								OBJECT_PARAMS);
-						infoMethodWithThrow = tmpLoggerClazz.getMethod("info",
-								OBJECT_THROWABLE_PARAMS);
 						debugMethod = tmpLoggerClazz.getMethod("debug",
 								OBJECT_PARAMS);
 						debugMethodWithThrow = tmpLoggerClazz.getMethod(
@@ -108,18 +125,30 @@ class Log4JLogger implements Logger {
 								"isInfoEnabled", NO_PARAMS);
 						levelInfo = levelClazz.getField("INFO").get(null);
 						levelDebug = levelClazz.getField("DEBUG").get(null);
+						getAllAppenders = tmpLoggerClazz.getMethod("getAllAppenders", NO_PARAMS);
 						
 						setLevelMethod = tmpLoggerClazz.getMethod("setLevel",
 								new Class[] { levelClazz });
+						
+						if (MiscHelper.isRunningInJBossAppServer()) {
+							// Under JBoss we can't load the log4j root logger until
+							// the following class has been loaded....
+							Class.forName("org.jboss.logging.appender.FileAppender", true, loader);
+						}
+						
+						Method getRootLogger = tmpLoggerClazz.getMethod("getRootLogger", NO_PARAMS);
+						rootLogger = getRootLogger.invoke(null, new Object[]{});
+						
 						loggerClazz = tmpLoggerClazz;
 					} catch (Exception ex) {
+						// Ignore, just assume log4j has not been loaded...
 					} catch (Error er) {
+						// Ignore, just assume log4j has not been loaded...
 					}
 				}
 			}
 		}
-
-		if (loggerClazz != null) {
+		if (loggerClazz != null && isLog4JInitialized()) {
 			result = new Log4JLogger(category, forceEnableInfo, forceEnableDebug);
 		}
 		return result;
@@ -127,7 +156,7 @@ class Log4JLogger implements Logger {
 
 	private Log4JLogger(String category, boolean forceEnableInfo, boolean forceEnableDebug) {
 		try {
-			loggerObject = getLoggerMethod.invoke(null,
+			this.loggerObject = getLoggerMethod.invoke(null,
 					new Object[] { category });
 		} catch (Exception e) {
 			throw new RuntimeException("Error wrapping log4j", e);
@@ -141,7 +170,7 @@ class Log4JLogger implements Logger {
 	}
 
 	public void enableInfo() {
-		if (!isInfoEnabled()) {
+		if (!isInfoEnabled() || isDebugEnabled()) {
 			try {
 				setLevelMethod.invoke(loggerObject, new Object[] { levelInfo });
 			} catch (Exception ex) {
