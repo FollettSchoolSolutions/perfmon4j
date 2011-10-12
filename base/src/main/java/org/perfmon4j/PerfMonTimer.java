@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,13 +14,14 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
 package org.perfmon4j;
 
 import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
+import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -46,7 +47,7 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer start(PerfMon mon) {
-        if (!PerfMon.isConfigured()) {
+        if (!PerfMon.isConfigured() && !ExternalAppender.isActive()) {
             return NULL_TIMER;
         }
 
@@ -104,7 +105,7 @@ public class PerfMonTimer {
         PerfMonTimer result = NULL_TIMER;
         
         try {
-            if (PerfMon.isConfigured()) {
+            if (PerfMon.isConfigured() || ExternalAppender.isActive()) {
                 result = start(PerfMon.getMonitor(key, isDynamicKey));
             }
         } catch (ThreadDeath th) {

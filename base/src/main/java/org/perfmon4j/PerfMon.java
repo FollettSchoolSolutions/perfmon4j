@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008, 2009, 2010 Follett Software Company 
+ *	Copyright 2008,2009,2010,2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -21,6 +21,7 @@
 
 package org.perfmon4j;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,7 +48,11 @@ public class PerfMon {
 
     static boolean configured = false;
     
-    public static final int MAX_APPENDERS_PER_MONITOR = 10;
+    public static final int MAX_APPENDERS_PER_MONITOR = 
+    	Integer.getInteger(PerfMon.class.getName() + ".MAX_APPENDERS_PER_MONITOR", 10);
+    public static final int MAX_EXTERNAL_ELEMENTS_PER_MONITOR = 
+    	Integer.getInteger(PerfMon.class.getName() + ".MAX_EXTERNAL_ELEMENTS_PER_MONITOR", 10);
+    
     public static final String ROOT_MONITOR_NAME;
     private final String name;
 
@@ -68,7 +73,7 @@ public class PerfMon {
      * the appenders... All timerTasks should be fast...
      */
     private static final Timer priorityTimer = new Timer("PerfMon.priorityTimer", true);
-    private static final Timer utilityTimer = new Timer("PerfMon.utilityTimer", true);
+    public static final Timer utilityTimer = new Timer("PerfMon.utilityTimer", true);
     
     private static long nextMonitorID;
     private static final PerfMon rootMonitor;
@@ -90,13 +95,22 @@ public class PerfMon {
     private final PushAppenderDataTask dataArray[] = new PushAppenderDataTask[MAX_APPENDERS_PER_MONITOR];
     
     /**
+     * External elements are monitors that will be polled by external (outside of the JVM) monitoring
+     * tools.
+     */
+    private int	activeExternalElements = 0;
+    private final Object externalElementArrayLockToken = new Object();
+    private final IntervalData externalElementArray[] = new IntervalData[MAX_EXTERNAL_ELEMENTS_PER_MONITOR];
+    
+    
+    /**
      * Make sure to synchronize on the mapMonitorLockToken when you access
      * the mapMonitors Map...
      */
     private static Map<String, PerfMon> mapMonitors = new HashMap<String, PerfMon>();
     
     private static final Object mapMonitorLockToken = new Object();
-    private static final Set monitorsWithThreadTraceConfigAttached = Collections.synchronizedSet(new HashSet());
+    private static final Set<String> monitorsWithThreadTraceConfigAttached = Collections.synchronizedSet(new HashSet<String>());
     
     private final Long monitorID;
     private Long startTime = null;
@@ -132,11 +146,11 @@ public class PerfMon {
     private long timeMaxActiveThreadCountSet = NOT_SET;
     
     private PerfMonTimer cachedPerfMonTimer = null;
-    private Set childMonitors =  Collections.synchronizedSet(new HashSet());
+    private Set<PerfMon> childMonitors =  Collections.synchronizedSet(new HashSet<PerfMon>());
     private ThreadTraceConfig threadTraceConfig = null;
    
-    private static ThreadLocal activeMonitors = new ThreadLocal() {
-         protected synchronized Object initialValue() {
+    private static ThreadLocal<Map<Long, ReferenceCount>> activeMonitors = new ThreadLocal<Map<Long, ReferenceCount>>() {
+         protected synchronized Map<Long, ReferenceCount> initialValue() {
              return new HashMap<Long, ReferenceCount>();
          }
     };
@@ -222,7 +236,7 @@ public class PerfMon {
     
 /*----------------------------------------------------------------------------*/    
     private PerfMon[] getChildMonitors() {
-        return (PerfMon[])childMonitors.toArray(new PerfMon[]{});
+        return childMonitors.toArray(new PerfMon[]{});
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -307,6 +321,14 @@ public class PerfMon {
                         }
                     }
                 }
+                if (hasExternalElement()) {
+                    for (int i = 0; i < externalElementArray.length; i++) {
+                        IntervalData data = externalElementArray[i];
+                        if (data != null) {
+                            data.start(activeThreadCount, systemTime);
+                        }
+                    }
+                }
             }
         }
     }
@@ -332,31 +354,17 @@ public class PerfMon {
             synchronized (startStopLockToken) {
                 long eventStartTime = count.getStartTime();
                 activeThreadCount--;
-                if (isActive() && (startTime.longValue() <= eventStartTime) && !abort) {
+                
+                final boolean active = isActive() && (startTime.longValue() <= eventStartTime);
+                final boolean externalElement = hasExternalElement();
+                final boolean monitorEvent =
+                	(active || externalElement) && 
+                	!abort;
+                final boolean sqlTimeEnabled = monitorEvent && SQLTime.isEnabled();
+                	
+                if (monitorEvent) {
                 	long sqlDuration = 0;
                 	long sqlDurationSquared = 0;
-                	
-                	if (SQLTime.isEnabled()) {
-                    	/** We have SQL logging enabled... Monitor the SQLDurations. **/
-                    	sqlDuration = SQLTime.getSQLTime() - count.getSQLStartMillis();
-                    	sqlDurationSquared = (sqlDuration * sqlDuration);
-                    	
-                    	this.totalSQLDuration += sqlDuration;
-                    	this.sumOfSQLSquares += sqlDurationSquared;
-                    	
-                        if (sqlDuration >= this.maxSQLDuration) {
-                            this.timeMaxSQLDurationSet = systemTime;
-                            this.maxSQLDuration = sqlDuration;
-                        }
-                        if ((sqlDuration <= this.minSQLDuration) || (this.minSQLDuration == NOT_SET)) {
-                            this.minSQLDuration = sqlDuration;
-                            this.timeMinSQLDurationSet = systemTime;
-                        }                    	
-                    	/** We have SQL logging enabled... Monitor the SQLDurations. **/
-                    }
-                	
-                	totalCompletions++;
-                    
                     long duration = systemTime - eventStartTime;
                     if (duration < 0) {
                     	/**
@@ -371,21 +379,57 @@ public class PerfMon {
                     	duration = 0;
                     }
                     long durationSquared = (duration * duration);
-                    
-                    totalDuration += duration;
-                    sumOfSquares += durationSquared;
-                    if (duration >= maxDuration) {
-                        timeMaxDurationSet = systemTime;
-                        maxDuration = duration;
+                	if (sqlTimeEnabled) {
+                    	/** We have SQL logging enabled... Monitor the SQLDurations. **/
+                    	sqlDuration = SQLTime.getSQLTime() - count.getSQLStartMillis();
+                    	if (sqlDuration < 0) {
+                    		sqlDuration = 0;
+                    	}
+                    	sqlDurationSquared = (sqlDuration * sqlDuration);
                     }
-                    if ((duration <= minDuration) || (minDuration == NOT_SET)) {
-                        minDuration = duration;
-                        timeMinDurationSet = systemTime;
-                    }
-                    for (int i = 0; i < dataArray.length; i++) {
-                        PushAppenderDataTask data = dataArray[i];
-                        if (data != null) {
-                            data.perfMonData.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+
+                	if (externalElement) {
+                        for (int i = 0; i < externalElementArray.length; i++) {
+                            IntervalData data = externalElementArray[i];
+                            if (data != null) {
+                                data.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+                            }
+                        }
+                	}
+                	
+                    if (active) {
+                    	if (sqlTimeEnabled) {
+                        	this.totalSQLDuration += sqlDuration;
+                        	this.sumOfSQLSquares += sqlDurationSquared;
+                        	
+                            if (sqlDuration >= this.maxSQLDuration) {
+                                this.timeMaxSQLDurationSet = systemTime;
+                                this.maxSQLDuration = sqlDuration;
+                            }
+                            if ((sqlDuration <= this.minSQLDuration) || (this.minSQLDuration == NOT_SET)) {
+                                this.minSQLDuration = sqlDuration;
+                                this.timeMinSQLDurationSet = systemTime;
+                            }                    	
+                        	/** We have SQL logging enabled... Monitor the SQLDurations. **/
+                        }
+                    	
+                    	totalCompletions++;
+                        
+                        totalDuration += duration;
+                        sumOfSquares += durationSquared;
+                        if (duration >= maxDuration) {
+                            timeMaxDurationSet = systemTime;
+                            maxDuration = duration;
+                        }
+                        if ((duration <= minDuration) || (minDuration == NOT_SET)) {
+                            minDuration = duration;
+                            timeMinDurationSet = systemTime;
+                        }
+                        for (int i = 0; i < dataArray.length; i++) {
+                            PushAppenderDataTask data = dataArray[i];
+                            if (data != null) {
+                                data.perfMonData.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+                            }
                         }
                     }
                 }
@@ -409,9 +453,8 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-    @SuppressWarnings("unchecked")
 	private ReferenceCount getThreadLocalReferenceCount() {
-        Map<Long, ReferenceCount> map = (Map<Long, ReferenceCount>)activeMonitors.get();
+        Map<Long, ReferenceCount> map = activeMonitors.get();
         // No need to synchronize here since this is a thread local object...
         ReferenceCount count = map.get(monitorID);
         if (count == null) {
@@ -436,7 +479,7 @@ public class PerfMon {
         String[] result = new String[]{};
         if (monitor != null && !monitor.equals("")) {
             monitor = removeTrailingPeriods(monitor);
-            Vector x = new Vector();
+            List<String> x = new ArrayList<String>();
             int offset = 0;
             while (true) {
                 offset = monitor.indexOf('.', offset);
@@ -448,7 +491,7 @@ public class PerfMon {
                 }
             }
             x.add(monitor);
-            result = (String[])x.toArray(result);
+            result = x.toArray(result);
         }
         return result;
     }
@@ -727,6 +770,79 @@ public class PerfMon {
         }
         return result;
     }
+
+    
+    /**
+     * 
+     * @param data
+     * @return true - if there was an open position to add the data element.
+     * 		   false - if there the element could not be added. 
+     */
+    public boolean addExternalElement(IntervalData data) {
+    	boolean added = false;
+    	
+    	synchronized (externalElementArrayLockToken) {
+    		for (int i = 0; i < externalElementArray.length && !added; i++) {
+    			if (externalElementArray[i] == null) {
+    				externalElementArray[i] = data;
+    				added = true;
+    				activeExternalElements++;
+    			}
+			}
+    		if (added) {
+    			clearCachedPerfMonTimer();
+    		}
+    	}
+    	
+    	
+    	return added;
+    }
+    
+    
+    /**
+     * 
+     * @param data
+     * @return true - if the external element was found in the array and removed
+     * 			false - if the element could not be found.
+     */
+    public boolean removeExternalElement(IntervalData data) {
+    	boolean removed = false;
+    	
+    	synchronized (externalElementArrayLockToken) {
+    		for (int i = 0; i < externalElementArray.length && !removed; i++) {
+    			if (externalElementArray[i] == data) {
+    				externalElementArray[i] = null;
+    				removed = true;
+    				activeExternalElements--;
+    			}
+			}
+    		if (removed) {
+    			clearCachedPerfMonTimer();
+    		}
+    	}
+    	return removed;
+    }
+
+    public IntervalData replaceExternalElement(IntervalData current, IntervalData replacement) {
+    	IntervalData result = null;
+    	
+    	synchronized (externalElementArrayLockToken) {
+    		for (int i = 0; i < externalElementArray.length && result == null; i++) {
+    			if (externalElementArray[i] == current) {
+    				externalElementArray[i] = replacement;
+    				result = replacement;
+    			}
+			}
+    	}
+    	return result;
+    }
+    
+    
+    // Returns true if this monitor has one or more externally manaaged interval data
+    // elements
+    boolean hasExternalElement() {
+    	return activeExternalElements > 0;
+    }
     
 /*----------------------------------------------------------------------------*/    
     private class PushAppenderDataTask extends FailSafeTimerTask {
@@ -812,7 +928,7 @@ public class PerfMon {
         if (cachedPerfMonTimer == null) {
             if (isRootMonitor()) {
                 cachedPerfMonTimer = PerfMonTimer.getNullTimer();
-            } else if (isActive() || threadTraceConfig != null) {
+            } else if (isActive() || hasExternalElement() ||  threadTraceConfig != null) {
                 cachedPerfMonTimer = new PerfMonTimer(this, parent.getPerfMonTimer());
             } else {
                 cachedPerfMonTimer = parent.getPerfMonTimer();
@@ -1089,7 +1205,7 @@ public class PerfMon {
     }
     
     static String[] getMonitorNamesWithThreadTraceConfigAttached() {
-        return (String [])monitorsWithThreadTraceConfigAttached.toArray(new String[]{});
+        return monitorsWithThreadTraceConfigAttached.toArray(new String[]{});
     }
 
     

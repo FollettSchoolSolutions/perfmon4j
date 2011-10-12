@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008, 2009, 2010 Follett Software Company 
+ *	Copyright 2008, 2009, 2010, 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -1351,7 +1351,7 @@ public class PerfMonTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new PerfMonTest("testToAppenderStringWithSQLActive"));
+//        newSuite.addTest(new PerfMonTest("testMonitorResetsWhenMadeInactive"));
 //        newSuite.addTest(new PerfMonTest("testGetDynamicOnChildOfMonitor"));
 //        newSuite.addTest(new PerfMonTest("testGetDynamicOnGRANDChildOfMonitor"));
         

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -148,14 +148,9 @@ public class IntervalData implements PerfMonData {
         }
     }
     
-    private static long getPreciseMillis() {
-        return System.nanoTime()/1000000;
-    }
-    
-    
 /*----------------------------------------------------------------------------*/    
-    protected IntervalData(PerfMon owner) {
-        this(owner, getPreciseMillis());
+    public IntervalData(PerfMon owner) {
+        this(owner, MiscHelper.currentTimeWithMilliResolution());
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -373,7 +368,7 @@ public class IntervalData implements PerfMonData {
     }
     
 /*----------------------------------------------------------------------------*/    
-    void setTimeStop(long timeStop) {
+    public void setTimeStop(long timeStop) {
         this.timeStop = timeStop;
     }
     
