@@ -50,11 +50,14 @@ public class ExternalAppender {
 	
 	public static String connect(int timeoutSeconds) {
 		MonitorMap map = new MonitorMap();
-		return sessionManager.addSession(map, timeoutSeconds * 1000);
+		String result = sessionManager.addSession(map, timeoutSeconds * 1000);
+		logger.logInfo("Connected external appender - sessionID: " + result);
+		return result;
 	}
 	
 	public static void disconnect(String sessionID) {
 		sessionManager.disposeSession(sessionID);
+		logger.logInfo("Disconnected external appender - sessionID: " + sessionID);
 	}
 	
 	public static void subscribe(String sessionID, String monitorKey) throws SessionNotFoundException {
@@ -63,6 +66,7 @@ public class ExternalAppender {
 			throw new SessionNotFoundException(sessionID);
 		}
 		map.subscribe(monitorKey);
+		logger.logInfo("External appender (sessionID:" + sessionID + ") subscribed to monitor: " + monitorKey);
 	}
 
 	public static PerfMonData takeSnapShot(String sessionID, String monitorKey) throws SessionNotFoundException, MonitorNotFoundException {
@@ -70,7 +74,11 @@ public class ExternalAppender {
 		if (map == null) {
 			throw new SessionNotFoundException(sessionID);
 		}
-		return map.takeSnapShot(monitorKey);
+		PerfMonData result = map.takeSnapShot(monitorKey);
+		if (logger.isDebugEnabled()) {
+			logger.logDebug("External appender (sessionID:" + sessionID + ") took snapshot of monitor: " + monitorKey);
+		}
+		return result;
 	}
 	
 	public static void unSubscribe(String sessionID, String monitorKey) {
@@ -78,6 +86,7 @@ public class ExternalAppender {
 		if (map != null) {
 			map.unSubscribe(monitorKey);	
 		}
+		logger.logInfo("External appender (sessionID:" + sessionID + ") unsubscribed from monitor: " + monitorKey);
 	}
 	
 	public String[] getMonitors() {

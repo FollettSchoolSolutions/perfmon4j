@@ -320,12 +320,12 @@ public class PerfMon {
                             data.perfMonData.start(activeThreadCount, systemTime);
                         }
                     }
-                }
-                if (hasExternalElement()) {
-                    for (int i = 0; i < externalElementArray.length; i++) {
-                        IntervalData data = externalElementArray[i];
-                        if (data != null) {
-                            data.start(activeThreadCount, systemTime);
+                    if (hasExternalElement()) {
+                        for (int i = 0; i < externalElementArray.length; i++) {
+                            IntervalData data = externalElementArray[i];
+                            if (data != null) {
+                                data.start(activeThreadCount, systemTime);
+                            }
                         }
                     }
                 }
@@ -387,16 +387,6 @@ public class PerfMon {
                     	}
                     	sqlDurationSquared = (sqlDuration * sqlDuration);
                     }
-
-                	if (externalElement) {
-                        for (int i = 0; i < externalElementArray.length; i++) {
-                            IntervalData data = externalElementArray[i];
-                            if (data != null) {
-                                data.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
-                            }
-                        }
-                	}
-                	
                     if (active) {
                     	if (sqlTimeEnabled) {
                         	this.totalSQLDuration += sqlDuration;
@@ -431,6 +421,14 @@ public class PerfMon {
                                 data.perfMonData.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
                             }
                         }
+                    	if (externalElement) {
+                            for (int i = 0; i < externalElementArray.length; i++) {
+                                IntervalData data = externalElementArray[i];
+                                if (data != null) {
+                                    data.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+                                }
+                            }
+                    	}
                     }
                 }
             } // synchronized...
@@ -570,12 +568,12 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-    long getTotalDuration() {
+    public long getTotalDuration() {
         return totalDuration;
     }
     
 /*----------------------------------------------------------------------------*/    
-    int getMaxActiveThreadCount() {
+    public int getMaxActiveThreadCount() {
         return maxActiveThreadCount;
     }
     
@@ -592,6 +590,18 @@ public class PerfMon {
         int count = 0;
         for (int i = 0; i < dataArray.length; i++) {
             if (dataArray[i] != null) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    
+    /*----------------------------------------------------------------------------*/    
+    private int getNumExternalAppenderTasks() {
+        int count = 0;
+        for (int i = 0; i < externalElementArray.length; i++) {
+            if (externalElementArray[i] != null) {
                 count++;
             }
         }
@@ -661,9 +671,8 @@ public class PerfMon {
                         }
                     }
                     if (index > -1) {
-                        if (!isActive()) {
-                            makeActive();
-                        }                        
+                        makeActive();
+                        
                         FailSafeTimerTask task = new PushAppenderDataTask(this, appender, index);
                         if (logger.isDebugEnabled()) {
                             logger.logDebug("Scheduling task: " + task);
@@ -741,9 +750,8 @@ public class PerfMon {
                         if (task != null && task.appender.equals(appender)) {
                             dataArray[i] = null;
                             if (!isRootMonitor()) {
-                                if (getNumPerfMonTasks() == 0) {
-                                    makeInactive();
-                                }
+                                makeInactiveIfNoAppenders();
+                                
                                 if (logger.isDebugEnabled()) {
                                     logger.logDebug("Canceling appender task: " + task);
                                 }
@@ -790,6 +798,9 @@ public class PerfMon {
     			}
 			}
     		if (added) {
+    			if (!isActive()) {
+    				makeActive();	
+    			}
     			clearCachedPerfMonTimer();
     		}
     	}
@@ -816,7 +827,9 @@ public class PerfMon {
     				activeExternalElements--;
     			}
 			}
+    		
     		if (removed) {
+    			makeInactiveIfNoAppenders();
     			clearCachedPerfMonTimer();
     		}
     	}
@@ -1125,26 +1138,30 @@ public class PerfMon {
         return startTime != null;
     }
     
-    private void makeInactive() {
+    private void makeInactiveIfNoAppenders() {
         synchronized (startStopLockToken) {
-            startTime = null;
-            totalHits = 0;
-            totalCompletions = 0;
-            maxDuration = 0;
-            minDuration = NOT_SET;
-            totalDuration = 0;
-            sumOfSquares = 0;
-            maxActiveThreadCount = 0;
-            maxThroughputPerMinute = null;
+        	if ((getNumPerfMonTasks() + getNumExternalAppenderTasks()) < 1) {
+	            startTime = null;
+	            totalHits = 0;
+	            totalCompletions = 0;
+	            maxDuration = 0;
+	            minDuration = NOT_SET;
+	            totalDuration = 0;
+	            sumOfSquares = 0;
+	            maxActiveThreadCount = 0;
+	            maxThroughputPerMinute = null;
+        	}
         }
     }
     
     private void makeActive() {
         synchronized (startStopLockToken) {
-            if (logger.isDebugEnabled()) {
-                logger.logDebug("Activating monitor " + this);
-            }
-            startTime = new Long(MiscHelper.currentTimeWithMilliResolution());
+        	if (!isActive()) {
+	            if (logger.isDebugEnabled()) {
+	                logger.logDebug("Activating monitor " + this);
+	            }
+	            startTime = new Long(MiscHelper.currentTimeWithMilliResolution());
+        	}
         }
     }
     
