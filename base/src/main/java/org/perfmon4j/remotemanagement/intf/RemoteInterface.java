@@ -20,19 +20,20 @@
 
 package org.perfmon4j.remotemanagement.intf;
 
+import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.util.List;
-import java.util.Map;
 
-public interface RemoteInterface {
+public interface RemoteInterface extends Serializable {
     public static final String serviceName = "P4JServiceName";
     public static final String P4J_LISTENER_PORT = "PERFMON4J_LISTENER_PORT";
     
-    public String connect() throws RemoteException;
-    public String connect(int keepMonitorsAliveSeconds) throws RemoteException;
-    
-    public List<MonitorDefinition> getMonitors(String connectionID) throws RemoteException;
-    public void subscribe(String connectionID, List<MonitorDefinition> monitors) throws RemoteException;
-    public Map<MonitorDefinition, MonitorDataTransport> getData(String connectionID) throws RemoteException;
+	public String connect(int majorAPIVersion) throws RemoteException;
+	public String connect(int majorAPIVersion, int keepMonitorsAliveSeconds) throws RemoteException;
+
     public void disconnect(String connectionID) throws RemoteException;
+	
+    public List<MonitorInstance> getMonitors(String connectionID) throws RemoteException;
+    public void subscribe(String connectionID, List<String> monitorKeys) throws RemoteException;
+    public List<MonitorInstance> getData(String connectionID) throws RemoteException;
 }

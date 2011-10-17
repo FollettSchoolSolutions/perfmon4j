@@ -22,6 +22,7 @@
 package org.perfmon4j.util;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -405,7 +406,7 @@ public class MiscHelper {
 			|| (System.getProperty("jboss.server.type") != null);
 	}
 	
-	private static void addFileToZipOutputStream(ZipOutputStream stream, File file, String path) throws IOException {
+	private static void addFileToZipOutputStream(ZipOutputStream stream, File file, String path, FileFilter filter) throws IOException {
 		if (file.getName().startsWith(".")) {
 			logger.logDebug("Skipping hidden file/directory: " + file.getName());
 			return;
@@ -416,9 +417,9 @@ public class MiscHelper {
 		}
 		path += file.getName();
 		if (file.isDirectory()) {
-			File files[] = file.listFiles();
+			File files[] = file.listFiles(filter);
 			for (File f: files) {
-				addFileToZipOutputStream(stream, f, path);
+				addFileToZipOutputStream(stream, f, path, filter);
 			}
 		} else {
 			ZipEntry entry = new ZipEntry(path);
@@ -440,8 +441,11 @@ public class MiscHelper {
 			}
 		}
 	}
-	
 	public static void createJarFile(String fileName, Properties manifest, File filesToJar[]) throws IOException {
+		createJarFile(fileName, manifest, filesToJar, null);
+	}
+	
+	public static void createJarFile(String fileName, Properties manifest, File filesToJar[], FileFilter filter) throws IOException {
 		ZipOutputStream outStream = null;
 		try {
 			outStream = new ZipOutputStream(new FileOutputStream(fileName));
@@ -462,16 +466,16 @@ public class MiscHelper {
 			
 			for (File f : filesToJar) {
 				if (f.isDirectory()) {
-					File filesFromDirectory[] = f.listFiles(); 
+					File filesFromDirectory[] = f.listFiles(filter); 
 					for (File f2 : filesFromDirectory) {
 						if (!f.getName().startsWith(".")) {
-							addFileToZipOutputStream(outStream, f2, "");
+							addFileToZipOutputStream(outStream, f2, "", filter);
 						} else {
 							logger.logDebug("Skipping hidden file/directory: " + f.getName());
 						}
 					}
 				} else {
-					addFileToZipOutputStream(outStream, f, "");
+					addFileToZipOutputStream(outStream, f, "", filter);
 				}
 			}
 			

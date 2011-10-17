@@ -43,6 +43,10 @@ package org.perfmon4j.remotemanagement.intf;
  *
  */
 public final class ManagementVersion {
+	// TRY NEVER TO CHANGE THIS NUMBER...  IF YOU DO THE CLIENT WILL
+	// RECIEVE A LOW LEVEL RMI EXCEPTION WHEN TRYING TO OBTAIN THE
+	// REMOTE INTERFACE.
+	public static final int RMI_VERSION = 1;
 	
 	public static final int MAJOR_VERSION = 1;
 	public static final int MINOR_VERSION = 0;

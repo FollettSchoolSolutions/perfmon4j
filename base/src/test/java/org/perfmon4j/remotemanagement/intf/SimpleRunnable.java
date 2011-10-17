@@ -18,39 +18,26 @@
  * 	McHenry, IL 60050
  * 
 */
-
 package org.perfmon4j.remotemanagement.intf;
+/**
+ * IMPORTANT!!
+ * DO NOT Import any classes other than production classes
+ * from the package org.perfmon4j.remotemanagement.intf
+ * 
+ * These test classes are intended to simulate an external management application.
+ * 
+ * @author ddeucher
+ *
+ */
 
-import java.io.Serializable;
-import java.util.Iterator;
 
-@SuppressWarnings("serial")
-abstract public class MonitorDefinition implements Serializable {
-	public static enum Type {
-		INTERVAL,
-		SNAPSHOT;
-	}
-	
-	final private String name;
-	final private MonitorDefinition.Type type;
 
-	protected MonitorDefinition(String name, MonitorDefinition.Type type) {
-		this.name = name;
-		this.type = type;
-	}
+public class SimpleRunnable {
 
-	public String getName() {
-		return name;
-	}
-
-	public MonitorDefinition.Type getType() {
-		return type;
-	}
-	
-	public abstract Iterator<FieldDefinition> getFieldItr();
-	
-	@Override
-	public String toString() {
-		return this.getClass().getSimpleName() + "(name:" + name + ", type:" + type + ")";
+	public static class Test1 implements Runnable {
+		
+		public void run() {
+			System.out.println("I am here");
+		}
 	}
 }

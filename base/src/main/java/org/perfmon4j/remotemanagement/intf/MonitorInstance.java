@@ -16,41 +16,38 @@
  * 	Follett Software Company
  * 	1391 Corporate Drive
  * 	McHenry, IL 60050
- * 
 */
 
 package org.perfmon4j.remotemanagement.intf;
 
 import java.io.Serializable;
-import java.util.Iterator;
 
-@SuppressWarnings("serial")
-abstract public class MonitorDefinition implements Serializable {
-	public static enum Type {
-		INTERVAL,
-		SNAPSHOT;
+public class MonitorInstance implements Serializable {
+	private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
+	
+	private final String key;
+	private final MonitorDefinition definition;
+	private final MonitorDataTransport data;
+	
+	MonitorInstance(String key, MonitorDefinition definition) {
+		this(key, definition, null);
 	}
 	
-	final private String name;
-	final private MonitorDefinition.Type type;
-
-	protected MonitorDefinition(String name, MonitorDefinition.Type type) {
-		this.name = name;
-		this.type = type;
+	MonitorInstance(String key, MonitorDefinition definition, MonitorDataTransport data) {
+		this.key = key;
+		this.definition = definition;
+		this.data = data;
 	}
 
-	public String getName() {
-		return name;
+	public String getKey() {
+		return key;
 	}
 
-	public MonitorDefinition.Type getType() {
-		return type;
+	public MonitorDefinition getDefinition() {
+		return definition;
 	}
-	
-	public abstract Iterator<FieldDefinition> getFieldItr();
-	
-	@Override
-	public String toString() {
-		return this.getClass().getSimpleName() + "(name:" + name + ", type:" + type + ")";
+
+	public MonitorDataTransport getData() {
+		return data;
 	}
 }

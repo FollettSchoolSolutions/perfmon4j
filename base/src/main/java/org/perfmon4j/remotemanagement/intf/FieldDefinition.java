@@ -22,35 +22,46 @@
 package org.perfmon4j.remotemanagement.intf;
 
 import java.io.Serializable;
-import java.util.Iterator;
 
-@SuppressWarnings("serial")
-abstract public class MonitorDefinition implements Serializable {
+public class FieldDefinition implements Serializable {
+	private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
+	
 	public static enum Type {
-		INTERVAL,
-		SNAPSHOT;
+		INTEGER,
+		LONG,
+		DOUBLE,
+		TIMESTAMP
 	}
 	
-	final private String name;
-	final private MonitorDefinition.Type type;
-
-	protected MonitorDefinition(String name, MonitorDefinition.Type type) {
-		this.name = name;
+	private final MonitorDefinition monitorDefinition;
+	private final String fieldName;
+	private final FieldDefinition.Type type;
+	
+	FieldDefinition(MonitorDefinition monitorDefinition,
+			String fieldName, FieldDefinition.Type type) {
+		this.monitorDefinition = monitorDefinition;
+		this.fieldName = fieldName;
 		this.type = type;
 	}
 
-	public String getName() {
-		return name;
+	public MonitorDefinition getMonitorDefinition() {
+		return monitorDefinition;
 	}
 
-	public MonitorDefinition.Type getType() {
+	public String getFieldName() {
+		return fieldName;
+	}
+
+	public FieldDefinition.Type getType() {
 		return type;
 	}
 	
-	public abstract Iterator<FieldDefinition> getFieldItr();
-	
 	@Override
 	public String toString() {
-		return this.getClass().getSimpleName() + "(name:" + name + ", type:" + type + ")";
+		return this.getClass().getSimpleName() + 
+			"(monitorDefinition:" + monitorDefinition.getName() +
+			", fieldName:" + fieldName +
+			", type:" + type +
+			")";
 	}
 }
