@@ -40,4 +40,20 @@ public class SimpleRunnable {
 			System.out.println("I am here");
 		}
 	}
+
+	public static class TestSimpleConnect implements Runnable {
+		public void run() {
+			RemoteInterface r = null;
+			try {
+				r = RemoteManagement.getRemoteInterface(8571);
+				String sessionID = r.connect(ManagementVersion.MAJOR_VERSION);
+				System.out.println("Retrieved sessionID: " + sessionID);
+				r.disconnect(sessionID);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+
 }

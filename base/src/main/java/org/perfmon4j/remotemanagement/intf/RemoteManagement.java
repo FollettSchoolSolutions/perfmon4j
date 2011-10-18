@@ -16,25 +16,30 @@
  * 	Follett Software Company
  * 	1391 Corporate Drive
  * 	McHenry, IL 60050
+ * 
 */
 
 package org.perfmon4j.remotemanagement.intf;
 
-import java.io.Serializable;
-import java.rmi.Remote;
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.util.List;
 
-public interface RemoteInterface extends Remote, Serializable {
-    public static final String serviceName = "P4JServiceName";
-    public static final String P4J_LISTENER_PORT = "PERFMON4J_LISTENER_PORT";
-    
-	public String connect(int majorAPIVersion) throws RemoteException;
-	public String connect(int majorAPIVersion, int keepMonitorsAliveSeconds) throws RemoteException;
-
-    public void disconnect(String connectionID) throws RemoteException;
+public class RemoteManagement {
 	
-    public List<MonitorInstance> getMonitors(String connectionID) throws RemoteException;
-    public void subscribe(String connectionID, List<String> monitorKeys) throws RemoteException;
-    public List<MonitorInstance> getData(String connectionID) throws RemoteException;
+	private RemoteManagement() {
+	}
+
+	public static RemoteInterface getRemoteInterface(int port) throws RemoteException {
+		try {
+			return (RemoteInterface)Naming.lookup("rmi://localhost:" + port + "/" +  RemoteInterface.serviceName);
+		} catch (MalformedURLException e) {
+			throw new RemoteException("Bad URL", e);
+		} catch (RemoteException e) {
+			throw e;
+		} catch (NotBoundException e) {
+			throw new RemoteException("NotBound", e);
+		}
+	}
 }

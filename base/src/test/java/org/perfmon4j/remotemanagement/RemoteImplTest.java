@@ -78,6 +78,18 @@ public class RemoteImplTest extends TestCase {
         		new File[]{classesFolder, testClassesFolder}, new MyFilter());
         
         System.out.println("perfmon4j jar file: " + perfmon4jManagementInterface.getCanonicalPath());
+        
+        RemoteImpl.registerRMIListener(8571);
+    }
+    
+    /*----------------------------------------------------------------------------*/
+    public void tearDown() throws Exception {
+    	RemoteImpl.unregisterRMIListener();
+    	
+    	File folder = perfmon4jManagementInterface.getParentFile();
+        perfmon4jManagementInterface.delete();
+        folder.delete();
+    	super.tearDown();
     }
     
     
@@ -97,19 +109,13 @@ public class RemoteImplTest extends TestCase {
     }
     
 
-/*----------------------------------------------------------------------------*/
-    public void tearDown() throws Exception {
-    	File folder = perfmon4jManagementInterface.getParentFile();
-        perfmon4jManagementInterface.delete();
-        folder.delete();
-    	super.tearDown();
-    }
     
-    
-    public void testLaunch() throws Exception {
-    	String result = ThinRunnableInVM.run(SimpleRunnable.Test1.class, "", perfmon4jManagementInterface);
-System.err.println(result);    	
+    public void testConnect() throws Exception {
+    	String result = ThinRunnableInVM.run(SimpleRunnable.TestSimpleConnect.class, "", perfmon4jManagementInterface);
+System.out.println(result);
+    	assertTrue("Session should have been established", result.contains("Retrieved sessionID:"));
     }
+
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
