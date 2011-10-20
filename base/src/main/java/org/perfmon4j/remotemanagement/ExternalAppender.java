@@ -38,14 +38,16 @@ public class ExternalAppender {
 	private static final Logger logger = LoggerFactory.initLogger(ExternalAppender.class);
 	
 	public static final String INTERVAL_PREFIX = "INTERVAL:";
-	public static final int DEFAULT_TIMEOUT_SECCONDS = 60 * 5;  // 5 minutes
+	public static final int DEFAULT_TIMEOUT_SECONDS = 60 * 5;  // 5 minutes
 	private static final SessionManager<MonitorMap> sessionManager = new SessionManager<MonitorMap>();
+	private static boolean enabled = false;
+	
 	
 	private ExternalAppender() {
 	}
 	
 	public static String connect() {
-		return connect(DEFAULT_TIMEOUT_SECCONDS);
+		return connect(DEFAULT_TIMEOUT_SECONDS);
 	}
 	
 	public static String connect(int timeoutSeconds) {
@@ -53,6 +55,12 @@ public class ExternalAppender {
 		String result = sessionManager.addSession(map, timeoutSeconds * 1000);
 		logger.logInfo("Connected external appender - sessionID: " + result);
 		return result;
+	}
+	
+	public static void validateSession(String sessionID) throws SessionNotFoundException {
+		if (sessionManager.getSession(sessionID) == null) {
+			throw new SessionNotFoundException(sessionID);
+		}
 	}
 	
 	public static void disconnect(String sessionID) {
@@ -109,7 +117,15 @@ public class ExternalAppender {
 	}
 	
 	public static boolean isActive() {
-		return sessionManager.getSessionCount() > 0;
+		return enabled || sessionManager.getSessionCount() > 0;
+	}
+
+	public static boolean isEnabled() {
+		return enabled;
+	}
+	
+	public static void setEnabled(boolean onOff) {
+		enabled = onOff;
 	}
 	
 	private static final class MonitorMap implements SessionManager.SessionData {

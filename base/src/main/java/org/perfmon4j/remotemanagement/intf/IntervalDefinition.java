@@ -29,40 +29,41 @@ public class IntervalDefinition extends MonitorDefinition {
 
 	private final List<FieldDefinition> fields = new ArrayList<FieldDefinition>();
 	
-	protected IntervalDefinition() {
-		super("Interval", MonitorDefinition.Type.INTERVAL);
+	public IntervalDefinition() {
+		super("Interval", MonitorDefinition.INTERVAL_TYPE);
 	
-		fields.add(new FieldDefinition(this, "MaxActiveThreadCount", FieldDefinition.Type.INTEGER));
-		fields.add(new FieldDefinition(this, "MaxDuration", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "MaxSQLDuration", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "MinDuration", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "MinSQLDuration", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "TotalDuration", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "TotalSQLDuration", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "AverageDuration", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "AverageSQLDuration", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "SumOfSquares", FieldDefinition.Type.LONG));
-		fields.add(new FieldDefinition(this, "SumOfSQLSquares", FieldDefinition.Type.LONG));
+		fields.add(new FieldDefinition(this.getType(), "MaxActiveThreadCount", FieldDefinition.INTEGER_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "MaxDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "MaxSQLDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "MinDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "MinSQLDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TotalDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TotalSQLDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "AverageDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "AverageSQLDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "SumOfSquares", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "SumOfSQLSquares", FieldDefinition.LONG_TYPE));
 
-		fields.add(new FieldDefinition(this, "TotalCompletions", FieldDefinition.Type.INTEGER));
-		fields.add(new FieldDefinition(this, "TotalHits", FieldDefinition.Type.INTEGER));
+		fields.add(new FieldDefinition(this.getType(), "TotalCompletions", FieldDefinition.INTEGER_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TotalHits", FieldDefinition.INTEGER_TYPE));
 
-		fields.add(new FieldDefinition(this, "TimeStart", FieldDefinition.Type.TIMESTAMP));
-		fields.add(new FieldDefinition(this, "TimeStop", FieldDefinition.Type.TIMESTAMP));
-		fields.add(new FieldDefinition(this, "TimeMaxActiveThreadCountSet", FieldDefinition.Type.TIMESTAMP));
-		fields.add(new FieldDefinition(this, "TimeMaxDurationSet", FieldDefinition.Type.TIMESTAMP));
-		fields.add(new FieldDefinition(this, "TimeMinDurationSet", FieldDefinition.Type.TIMESTAMP));
-		fields.add(new FieldDefinition(this, "TimeMaxSQLDurationSet", FieldDefinition.Type.TIMESTAMP));
-		fields.add(new FieldDefinition(this, "TimeMinSQLDurationSet", FieldDefinition.Type.TIMESTAMP));
+		fields.add(new FieldDefinition(this.getType(), "TimeStart", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TimeStop", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TimeMaxActiveThreadCountSet", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TimeMaxDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TimeMinDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TimeMaxSQLDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "TimeMinSQLDurationSet", FieldDefinition.TIMESTAMP_TYPE));
 		
-		fields.add(new FieldDefinition(this, "ThroughputPerMinute", FieldDefinition.Type.DOUBLE));
-		fields.add(new FieldDefinition(this, "StdDeviation", FieldDefinition.Type.DOUBLE));
+		fields.add(new FieldDefinition(this.getType(), "ThroughputPerMinute", FieldDefinition.DOUBLE_TYPE));
+		fields.add(new FieldDefinition(this.getType(), "StdDeviation", FieldDefinition.DOUBLE_TYPE));
 	}
 
 	@Override
 	public Iterator<FieldDefinition> getFieldItr() {
 		return fields.iterator();
 	}
+	
 	
 	/**
     public long getLifetimeStartTime()

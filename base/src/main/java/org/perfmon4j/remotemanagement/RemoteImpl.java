@@ -25,11 +25,19 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import org.perfmon4j.PerfMon;
+import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
+import org.perfmon4j.remotemanagement.intf.IntervalDefinition;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
+import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
 import org.perfmon4j.remotemanagement.intf.MonitorInstance;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
+import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
+import org.perfmon4j.remotemanagement.intf.MonitorDefinition.Type;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -40,6 +48,8 @@ public class RemoteImpl implements RemoteInterface {
 	private static Registry registry = null;
 	private static Integer registeredPort = null;
 	private static final RemoteImpl singleton = new RemoteImpl();
+	
+	private final IntervalDefinition intervalDefinition = new IntervalDefinition();
 	
 	private RemoteImpl() {
 	}
@@ -89,33 +99,55 @@ public class RemoteImpl implements RemoteInterface {
 		}
 	}
 	
-	public String connect(int majorAPIVersion) throws RemoteException {
-		return ExternalAppender.connect();
+	public String connect(String clientVersion) throws RemoteException, IncompatibleClientVersionException {
+		return connect(clientVersion, ExternalAppender.DEFAULT_TIMEOUT_SECONDS);
 	}
 
-	public String connect(int majorAPIVersion, int keepMonitorsAliveSeconds) throws RemoteException {
+	public String connect(String clientVersion, int keepMonitorsAliveSeconds) throws RemoteException, IncompatibleClientVersionException {
+		int clientMajorVersion = ManagementVersion.extractMajorVersion(clientVersion);
+		if (clientMajorVersion != ManagementVersion.MAJOR_VERSION) {
+			throw new IncompatibleClientVersionException(clientVersion, ManagementVersion.VERSION);
+		}
 		return ExternalAppender.connect(keepMonitorsAliveSeconds);
 	}
 
-	public void disconnect(String connectionID) throws RemoteException {
-		ExternalAppender.disconnect(connectionID);
+	public void disconnect(String sessionID) throws RemoteException {
+		ExternalAppender.disconnect(sessionID);
 	}
 
-	public List<MonitorInstance> getData(String connectionID)
-			throws RemoteException {
-		// TODO Auto-generated method stub
+	public List<MonitorInstance> getData(String sessionID ) throws SessionNotFoundException, RemoteException {
 		return null;
 	}
 
-	public List<MonitorInstance> getMonitors(String connectionID)
-			throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
+	public List<MonitorInstance> getMonitors(String sessionID)
+			throws RemoteException, SessionNotFoundException {
+		List<MonitorInstance> result = new ArrayList<MonitorInstance>();
+		
+		ExternalAppender.validateSession(sessionID);
+		
+		Iterator<String> intervalMonitors = PerfMon.getMonitorNames().iterator();
+		while (intervalMonitors.hasNext()) {
+			String key = ExternalAppender.buildIntervalMonitorKey(intervalMonitors.next());
+			result.add(new MonitorInstance(key, intervalDefinition.getType())); 
+		}
+		return result;	
 	}
 
-	public void subscribe(String connectionID, List<String> monitorKeys)
+	public void subscribe(String sessionID, List<String> monitorKeys)
 			throws RemoteException {
 		// TODO Auto-generated method stub
+	}
+
+	public MonitorDefinition getMonitorDefinition(String sessionID,
+			MonitorDefinition.Type monitorType) throws SessionNotFoundException, RemoteException {
+
+		ExternalAppender.validateSession(sessionID);
+		
+		if (monitorType.equals(MonitorDefinition.INTERVAL_TYPE)) {
+			return intervalDefinition;
+		} else {
+			return null;
+		}
 	}
 	
 }

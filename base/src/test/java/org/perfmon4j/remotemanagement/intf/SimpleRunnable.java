@@ -19,6 +19,10 @@
  * 
 */
 package org.perfmon4j.remotemanagement.intf;
+
+
+import java.util.Iterator;
+
 /**
  * IMPORTANT!!
  * DO NOT Import any classes other than production classes
@@ -43,17 +47,56 @@ public class SimpleRunnable {
 
 	public static class TestSimpleConnect implements Runnable {
 		public void run() {
+			RemoteManagementWrapper r = null;
+			try {
+				r = RemoteManagementWrapper.open("localhost", 8571);
+				System.out.println("Retrieved sessionID: " + r.getSessionID());
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				RemoteManagementWrapper.closeNoThrow(r);
+			}
+		}
+	}
+
+	public static class TestMajorVersionMismatch implements Runnable {
+		public void run() {
 			RemoteInterface r = null;
 			try {
-				r = RemoteManagement.getRemoteInterface(8571);
-				String sessionID = r.connect(ManagementVersion.MAJOR_VERSION);
-				System.out.println("Retrieved sessionID: " + sessionID);
-				r.disconnect(sessionID);
+				r = RemoteManagementWrapper.getRemoteInterface("localhost", 8571);
+				try {
+					r.connect("1" + ManagementVersion.VERSION);
+				} catch (IncompatibleClientVersionException re) {
+					System.out.println("IncompatibleClientVersionException thrown");
+					re.printStackTrace();
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 	}
 
-
+	public static class TestGetMonitors implements Runnable {
+		public void run() {
+			RemoteManagementWrapper r = null;
+			try {
+				r = RemoteManagementWrapper.open("localhost", 8571);
+				Iterator<MonitorInstance> itr =  r.getMonitors().iterator();
+				while (itr.hasNext()) {
+					MonitorInstance inst = itr.next();
+					System.out.println("Monitor: " +  inst.getKey());
+					MonitorDefinition def = r.getMonitorDefinition(inst.getMonitorType());
+					
+					Iterator<FieldDefinition> itrDef = def.getFieldItr();
+					while (itrDef.hasNext()) {
+						System.out.println("FieldDefinition: " +  itrDef.next());
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				RemoteManagementWrapper.closeNoThrow(r);
+			}
+		}
+	}
 }

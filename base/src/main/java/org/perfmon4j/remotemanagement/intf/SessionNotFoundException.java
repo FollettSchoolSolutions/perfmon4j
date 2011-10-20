@@ -22,7 +22,11 @@
 package org.perfmon4j.remotemanagement.intf;
 
 public class SessionNotFoundException extends Exception {
-	private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
+	/**
+	 * Because this exception is thrown, by methods contained in the remote interface
+	 * it should be considered part of the RMI Version...
+	 */
+	private static final long serialVersionUID = ManagementVersion.RMI_VERSION;
 
 	public SessionNotFoundException(String sessionID) {
 		super("Session not found: " + sessionID);

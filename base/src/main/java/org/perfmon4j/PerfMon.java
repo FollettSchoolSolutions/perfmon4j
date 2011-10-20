@@ -202,6 +202,17 @@ public class PerfMon {
         return result;
     }
     
+
+    /*----------------------------------------------------------------------------*/    
+    public static List<String> getMonitorNames() {
+        List<String> result = new ArrayList<String>(getNumMonitors());
+        
+        synchronized (mapMonitorLockToken) {
+        	result.addAll(mapMonitors.keySet());
+        }
+        
+        return result;
+    }
     
 /*----------------------------------------------------------------------------*/    
     private static boolean isAppenderInUseByAnyMonitor(Appender appender) {

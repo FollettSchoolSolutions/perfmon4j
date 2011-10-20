@@ -21,25 +21,14 @@
 
 package org.perfmon4j.remotemanagement.intf;
 
-import java.net.MalformedURLException;
-import java.rmi.Naming;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
+public class IncompatibleClientVersionException extends Exception {
+	/**
+	 * Because this exception is thrown, by methods contained in the remote interface
+	 * it should be considered part of the RMI Version...
+	 */
+	private static final long serialVersionUID = ManagementVersion.RMI_VERSION;
 
-public class RemoteManagement {
-	
-	private RemoteManagement() {
-	}
-
-	public static RemoteInterface getRemoteInterface(int port) throws RemoteException {
-		try {
-			return (RemoteInterface)Naming.lookup("rmi://localhost:" + port + "/" +  RemoteInterface.serviceName);
-		} catch (MalformedURLException e) {
-			throw new RemoteException("Bad URL", e);
-		} catch (RemoteException e) {
-			throw e;
-		} catch (NotBoundException e) {
-			throw new RemoteException("NotBound", e);
-		}
+	public IncompatibleClientVersionException(String clientVersion, String serverVersion) {
+		super("Client version: " + clientVersion + " is not compatible with " + serverVersion);
 	}
 }

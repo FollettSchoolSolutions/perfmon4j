@@ -24,12 +24,10 @@ package org.perfmon4j.remotemanagement.intf;
 import java.io.Serializable;
 import java.util.Iterator;
 
-@SuppressWarnings("serial")
+
+@SuppressWarnings("serial") // serialVersionUID will be set in concrete derived classes...
 abstract public class MonitorDefinition implements Serializable {
-	public static enum Type {
-		INTERVAL,
-		SNAPSHOT;
-	}
+	public static final Type INTERVAL_TYPE = new Type("INTERVAL");
 	
 	final private String name;
 	final private MonitorDefinition.Type type;
@@ -53,4 +51,49 @@ abstract public class MonitorDefinition implements Serializable {
 	public String toString() {
 		return this.getClass().getSimpleName() + "(name:" + name + ", type:" + type + ")";
 	}
+
+	public static final class Type implements Serializable {
+		private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
+		
+		final private String desc;
+		
+		private Type(String desc) {
+			this.desc = desc;
+		}
+
+		public String getDesc() {
+			return desc;
+		}
+		
+		@Override
+		public String toString() {
+			return desc;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((desc == null) ? 0 : desc.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Type other = (Type) obj;
+			if (desc == null) {
+				if (other.desc != null)
+					return false;
+			} else if (!desc.equals(other.desc))
+				return false;
+			return true;
+		}
+	}
+	
 }

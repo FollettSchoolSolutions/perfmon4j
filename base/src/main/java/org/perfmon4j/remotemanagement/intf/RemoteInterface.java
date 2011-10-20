@@ -29,12 +29,13 @@ public interface RemoteInterface extends Remote, Serializable {
     public static final String serviceName = "P4JServiceName";
     public static final String P4J_LISTENER_PORT = "PERFMON4J_LISTENER_PORT";
     
-	public String connect(int majorAPIVersion) throws RemoteException;
-	public String connect(int majorAPIVersion, int keepMonitorsAliveSeconds) throws RemoteException;
+	public String connect(String clientVersion) throws IncompatibleClientVersionException, RemoteException;
+	public String connect(String clientVersion, int keepMonitorsAliveSeconds) throws IncompatibleClientVersionException, RemoteException;
 
-    public void disconnect(String connectionID) throws RemoteException;
+    public void disconnect(String sessionID) throws RemoteException;
 	
-    public List<MonitorInstance> getMonitors(String connectionID) throws RemoteException;
-    public void subscribe(String connectionID, List<String> monitorKeys) throws RemoteException;
-    public List<MonitorInstance> getData(String connectionID) throws RemoteException;
+    public List<MonitorInstance> getMonitors(String sessionID) throws SessionNotFoundException, RemoteException;
+    public void subscribe(String sessionID, List<String> monitorKeys) throws SessionNotFoundException, RemoteException;
+    public List<MonitorInstance> getData(String sessionID) throws SessionNotFoundException, RemoteException;
+    public MonitorDefinition getMonitorDefinition(String sessionID, MonitorDefinition.Type monitorType) throws SessionNotFoundException, RemoteException;
 }

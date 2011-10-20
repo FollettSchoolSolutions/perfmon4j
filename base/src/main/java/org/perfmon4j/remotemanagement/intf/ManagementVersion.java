@@ -20,6 +20,9 @@
 */
 package org.perfmon4j.remotemanagement.intf;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * It is important that all classes in this this package 
  * (org.perfmon4j.remotemanagement.intf) remain stable accross
@@ -58,5 +61,19 @@ public final class ManagementVersion {
 	}
 	
 	private ManagementVersion() {
+	}
+	
+	final private static Pattern EXTRACT_MAJOR_VERSION =
+		Pattern.compile("(\\d+)\\..*");
+	
+	static public int extractMajorVersion(String version) {
+		int result = -1;
+		if (version != null) {
+			Matcher m =	EXTRACT_MAJOR_VERSION.matcher(version);
+			if (m.matches()) {
+				result = Integer.parseInt(m.group(1));
+			}
+		}
+		return result;
 	}
 }

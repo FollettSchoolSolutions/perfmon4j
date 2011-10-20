@@ -30,6 +30,9 @@ import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
+import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.SimpleRunnable;
 import org.perfmon4j.remotemanagement.intf.ThinRunnableInVM;
 import org.perfmon4j.util.Logger;
@@ -102,21 +105,56 @@ public class RemoteImplTest extends TestCase {
 				String p = pathname.getAbsolutePath();
 				p = p.replaceAll("\\\\", "/");
 				result = p.contains("classes/org/perfmon4j/remotemanagement/intf")
-					|| p.contains("test-classes/org/perfmon4j/remotemanagement/intf");
+					|| p.contains("test-classes/org/perfmon4j/remotemanagement/intf/SimpleRunnable");
 			}
 			return result;
 		}
     }
     
 
+    public void testSystemPortIsSetAsSystemProperty() {
+    	assertEquals("8571", System.getProperty(RemoteInterface.P4J_LISTENER_PORT));
+    	assertNotNull(RemoteImpl.getRegisteredPort());
+    	assertEquals(8571, RemoteImpl.getRegisteredPort().intValue());
+    	
+    	RemoteImpl.unregisterRMIListener();
+    	
+    	assertNull(RemoteImpl.getRegisteredPort());
+    	assertNull(System.getProperty(RemoteInterface.P4J_LISTENER_PORT));
+    }
+    
     
     public void testConnect() throws Exception {
     	String result = ThinRunnableInVM.run(SimpleRunnable.TestSimpleConnect.class, "", perfmon4jManagementInterface);
-System.out.println(result);
+//System.out.println(result);
     	assertTrue("Session should have been established", result.contains("Retrieved sessionID:"));
     }
 
     
+    public void testMajorVersionMismatch() throws Exception {
+    	String result = ThinRunnableInVM.run(SimpleRunnable.TestMajorVersionMismatch.class, "", perfmon4jManagementInterface);
+//System.out.println(result);
+		assertTrue("Should have caught incompatible version exception", 
+				result.contains("IncompatibleClientVersionException thrown"));
+    }
+    
+    public void testGetMonitorsIncludesIntervalMonitors() throws Exception {
+    	ExternalAppender.setEnabled(true);
+    	
+    	PerfMonTimer t = PerfMonTimer.start("testGetMonitorsIncludesIntervalMonitors");
+    	PerfMonTimer.stop(t);
+    	PerfMon.deInit();	
+    	
+    	String result = ThinRunnableInVM.run(SimpleRunnable.TestGetMonitors.class, "", perfmon4jManagementInterface);
+    	ExternalAppender.setEnabled(true);
+
+    	System.out.println(result);
+		assertTrue("Should contain the interval monitor", 
+				result.contains("Monitor: INTERVAL:testGetMonitorsIncludesIntervalMonitors"));
+		assertTrue("Validate we retrieved the monitor Definition", 
+				result.contains("FieldDefinition(monitorDefinition:INTERVAL, fieldName:MaxActiveThreadCount, fieldType:INTEGER)"));
+    }
+
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
@@ -141,8 +179,7 @@ System.out.println(result);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new PerfMonTimerTransformerTest("testInstrumentSQLStatement"));
-//        newSuite.addTest(new PerfMonTimerTransformerTest("testPerfmon4jLoggerUsesLog4jWhenInitialized"));
+//		newSuite.addTest(new RemoteImplTest("testGetMonitorsIncludesIntervalMonitors"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

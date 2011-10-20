@@ -26,16 +26,16 @@ public class MonitorInstance implements Serializable {
 	private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
 	
 	private final String key;
-	private final MonitorDefinition definition;
+	private final MonitorDefinition.Type monitorType;
 	private final MonitorDataTransport data;
 	
-	MonitorInstance(String key, MonitorDefinition definition) {
-		this(key, definition, null);
+	public MonitorInstance(String key, MonitorDefinition.Type monitorType) {
+		this(key, monitorType, null);
 	}
 	
-	MonitorInstance(String key, MonitorDefinition definition, MonitorDataTransport data) {
+	public MonitorInstance(String key, MonitorDefinition.Type monitorType, MonitorDataTransport data) {
 		this.key = key;
-		this.definition = definition;
+		this.monitorType = monitorType;
 		this.data = data;
 	}
 
@@ -43,8 +43,8 @@ public class MonitorInstance implements Serializable {
 		return key;
 	}
 
-	public MonitorDefinition getDefinition() {
-		return definition;
+	public MonitorDefinition.Type getMonitorType() {
+		return monitorType;
 	}
 
 	public MonitorDataTransport getData() {
