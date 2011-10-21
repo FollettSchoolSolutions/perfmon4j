@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -31,10 +31,10 @@ public class BeanHelper {
     private BeanHelper() {
     }
  
-    final private static Map<Class, Class> primitiveToJavaMap;
+    final private static Map<Class<?>, Class<?>> primitiveToJavaMap;
     
     static {
-        primitiveToJavaMap = Collections.synchronizedMap(new HashMap());
+        primitiveToJavaMap = Collections.synchronizedMap(new HashMap<Class<?>, Class<?>>());
         
         primitiveToJavaMap.put(int.class, Integer.class);
         primitiveToJavaMap.put(long.class, Long.class);
@@ -46,12 +46,11 @@ public class BeanHelper {
         primitiveToJavaMap.put(boolean.class, Boolean.class);
     }
     
-
-    public static void setValue(Object to, String attributeName, String value) throws UnableToSetAttributeException {
+    public static void setValue(Object to, String attributeName, Object value) throws UnableToSetAttributeException {
         final String setterName = "set" + attributeName;
   
         try {
-            Class clazz = to.getClass();
+            Class<?> clazz = to.getClass();
             Method methods[] = clazz.getMethods();
             Method method = null;
                 
@@ -63,18 +62,22 @@ public class BeanHelper {
                }
             }
             
-            Class clazzParam = method.getParameterTypes()[0];
-            Class mappedClazz = primitiveToJavaMap.get(clazzParam);
+            Class<?> clazzParam = method.getParameterTypes()[0];
+            Class<?> mappedClazz = primitiveToJavaMap.get(clazzParam);
             if (mappedClazz != null) {
                 clazzParam = mappedClazz;
             }
-            if (clazzParam.equals(String.class)) {
-                method.invoke(to, new Object[]{value});
-            } else if (clazzParam.equals(Character.class)) {
-                method.invoke(to, new Character(value.charAt(0)));
-            } else {
-                Constructor constructor = clazzParam.getConstructor(new Class[]{String.class});
-                method.invoke(to, new Object[]{constructor.newInstance(new Object[]{value})});
+            if (clazzParam.isAssignableFrom(value.getClass())) {
+            	method.invoke(to, new Object[]{value});
+            } else if (value.getClass().equals(String.class)){
+	            if (clazzParam.equals(String.class)) {
+	                method.invoke(to, new Object[]{value});
+	            } else if (clazzParam.equals(Character.class)) {
+	                method.invoke(to, new Character(((String)value).charAt(0)));
+	            } else {
+	                Constructor<?> constructor = clazzParam.getConstructor(new Class[]{String.class});
+	                method.invoke(to, new Object[]{constructor.newInstance(new Object[]{value})});
+	            }
             }
         } catch (Exception ex) {
             throw new UnableToSetAttributeException(attributeName, value, ex);
@@ -84,9 +87,46 @@ public class BeanHelper {
     public static class UnableToSetAttributeException extends Exception {
 		private static final long serialVersionUID = 1L;
 
-		UnableToSetAttributeException(String attributeName, String value, Exception rootException) {
+		UnableToSetAttributeException(String attributeName, Object value, Exception rootException) {
             super("Unable to set attribute: \"" + attributeName + "\" to value: \"" + value + "\"", 
                 rootException);
         }
+    }
+    
+    public static class UnableToGetAttributeException extends Exception {
+		private static final long serialVersionUID = 1L;
+
+		UnableToGetAttributeException(String attributeName, Exception rootException) {
+            super("Unable to Get attribute: \"" + attributeName + "\"", 
+                rootException);
+        }
+    }    
+    
+    public static Object getValue(Object to, String attributeName) throws UnableToGetAttributeException {
+    	Object result = null;
+    	
+    	final String getterName = "get" + attributeName;
+    	final String isserName = "is" + attributeName;
+        
+        try {
+            Class<?> clazz = to.getClass();
+            Method methods[] = clazz.getMethods();
+            Method method = null;
+                
+            for (int i = 0; i < methods.length && method == null; i++) {
+               Method t = methods[i];
+               if ((isserName.equalsIgnoreCase(t.getName()) ||
+            		getterName.equalsIgnoreCase(t.getName())) 
+                   && t.getParameterTypes().length == 0
+                   && !t.getReturnType().equals(void.class)) {
+                   method = t;
+               }
+            }
+            result = method.invoke(to, new Object[]{});
+        } catch (Exception ex) {
+            throw new UnableToGetAttributeException(attributeName, ex);
+        }
+        
+        return result;
     }
 }

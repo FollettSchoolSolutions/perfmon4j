@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008, 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -48,14 +48,23 @@ public class BeanHelperTest extends TestCase {
         super.tearDown();
     }
     
+    private static void validateRoundTrip(TestObject to, String attributeName, Object value) throws Exception {
+    	BeanHelper.setValue(to, attributeName, value);
+    	Object fromRoundTrip = BeanHelper.getValue(to, attributeName);
+    	
+    	assertEquals("object passed round trip", value, fromRoundTrip);
+    }
+    
+    
 /*----------------------------------------------------------------------------*/    
     public void testSetString() throws Exception {
         TestObject to = new TestObject();
         
         BeanHelper.setValue(to, "value", "bogus");
         assertEquals("to.value", "bogus", to.value);
-    }
 
+        validateRoundTrip(to, "value", "bogus");
+    }
     
 /*----------------------------------------------------------------------------*/
     public void testSetInteger() throws Exception {
@@ -63,6 +72,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "integerValue", "100");
         assertEquals("to.integerValue", new Integer(100), to.integerValue);
+
+        validateRoundTrip(to, "integerValue", Integer.valueOf(100));
     }
 
 /*----------------------------------------------------------------------------*/
@@ -71,6 +82,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "intValue", "100");
         assertEquals(100, to.intValue);
+
+        validateRoundTrip(to, "intValue", Integer.valueOf(100));
     }
     
 /*----------------------------------------------------------------------------*/
@@ -79,6 +92,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "longValue", "100");
         assertEquals(100, to.longValue);
+
+        validateRoundTrip(to, "longValue", Long.valueOf(100));
     }
 
 
@@ -88,6 +103,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "floatValue", "100.1");
         assertEquals(new Float(100.1), new Float(to.floatValue));
+
+        validateRoundTrip(to, "floatValue", new Float(100.1));
     }
     
 /*----------------------------------------------------------------------------*/
@@ -96,6 +113,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "doubleValue", "100.1");
         assertEquals(new Double(100.1), new Double(to.doubleValue));
+
+        validateRoundTrip(to, "doubleValue", Double.valueOf(100));
     }
 
 /*----------------------------------------------------------------------------*/
@@ -104,6 +123,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "charValue", "A");
         assertEquals('A', to.charValue);
+
+        validateRoundTrip(to, "charValue", Character.valueOf('A'));
     }
     
 /*----------------------------------------------------------------------------*/
@@ -112,6 +133,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "shortValue", "100");
         assertEquals(100, to.shortValue);
+        
+        validateRoundTrip(to, "shortValue", Short.valueOf((short)10));
     }
 
 /*----------------------------------------------------------------------------*/
@@ -120,6 +143,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "byteValue", "8");
         assertEquals(8, to.byteValue);
+        
+        validateRoundTrip(to, "byteValue", Byte.valueOf((byte)3));
     }
 
 /*----------------------------------------------------------------------------*/
@@ -128,6 +153,8 @@ public class BeanHelperTest extends TestCase {
         
         BeanHelper.setValue(to, "booleanValue", "true");
         assertTrue(to.booleanValue);
+        
+        validateRoundTrip(to, "booleanValue", Boolean.valueOf(true));
     }
     
 /*----------------------------------------------------------------------------*/
@@ -184,6 +211,48 @@ public class BeanHelperTest extends TestCase {
         public void setByteValue(byte byteValue) {
             this.byteValue = byteValue;
         }
+
+		public String getValue() {
+			return value;
+		}
+
+		public Integer getIntegerValue() {
+			return integerValue;
+		}
+
+		public int getIntValue() {
+			return intValue;
+		}
+
+		public long getLongValue() {
+			return longValue;
+		}
+
+		public float getFloatValue() {
+			return floatValue;
+		}
+
+		public double getDoubleValue() {
+			return doubleValue;
+		}
+
+		public char getCharValue() {
+			return charValue;
+		}
+
+		public short getShortValue() {
+			return shortValue;
+		}
+
+		public byte getByteValue() {
+			return byteValue;
+		}
+
+		public boolean isBooleanValue() {
+			return booleanValue;
+		}
+        
+        
     }
     
 /*----------------------------------------------------------------------------*/    

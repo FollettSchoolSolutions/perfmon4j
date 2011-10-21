@@ -38,7 +38,7 @@ class SessionManager<T extends SessionManager.SessionData> {
 	static final int NO_TIMEOUT = -1;
 	static private final int DEFAULT_REAPER_MILLIS = 
 		Integer.getInteger(SessionManager.class.getName() + ".DEFAULT_REAPER_MILLIS",
-				10 * 60 * 1000); // Ten minutes by default.
+				10 * 60 * 1000).intValue(); // Ten minutes by default.
 
 	private final Object mapLockToken = new Object();
 	private final Map<String, SessionWrapper> map = new HashMap<String, SessionWrapper>();

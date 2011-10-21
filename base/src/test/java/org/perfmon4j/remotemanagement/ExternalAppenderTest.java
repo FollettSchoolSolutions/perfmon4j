@@ -103,9 +103,26 @@ public class ExternalAppenderTest extends TestCase {
         assertEquals(i.getMaxActiveThreadCount(), i.getLifetimeMaxThreadCount());
         assertEquals(i.getAverageDuration(), i.getLifetimeAverageDuration());
         assertEquals(i.getMinDuration(), i.getLifetimeMinDuration());
-        assertEquals(i.getStdDeviation(), i.getLifetimeStdDeviation());
+        assertEquals(new Double(i.getStdDeviation()), new Double(i.getLifetimeStdDeviation()));
     }
 
+    
+    /*----------------------------------------------------------------------------*/    
+    public void testGetSubscribedMonitors() throws Exception {
+        final String MONITOR = "aa.b.c";
+        String monitorKey = ExternalAppender.buildIntervalMonitorKey(MONITOR);
+        
+		assertEquals("None subscribed should return empty array", 0,
+				ExternalAppender.getSubscribedMonitors(sessionID).length);
+
+		ExternalAppender.subscribe(sessionID, monitorKey);
+		
+		String[] v = ExternalAppender.getSubscribedMonitors(sessionID);
+		assertEquals("One subscribed should return value", 
+				1, v.length);
+		assertEquals("Should match monitor key", 
+				monitorKey, v[0]);
+    }
     
     /*----------------------------------------------------------------------------*/    
     public void testMonitorResetsWhenMadeInactive() throws Exception {
@@ -155,6 +172,9 @@ public class ExternalAppenderTest extends TestCase {
         assertEquals("totalDuration", 0, mon.getTotalDuration());
         assertEquals("maxActiveThreadCount", 0, mon.getMaxActiveThreadCount());
     }
+    
+   
+    
     
     
 /*----------------------------------------------------------------------------*/    

@@ -22,6 +22,9 @@ package org.perfmon4j.remotemanagement;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 
 import junit.framework.TestCase;
@@ -32,6 +35,8 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.remotemanagement.intf.ManagementVersion;
+import org.perfmon4j.remotemanagement.intf.MonitorInstance;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.SimpleRunnable;
 import org.perfmon4j.remotemanagement.intf.ThinRunnableInVM;
@@ -155,6 +160,63 @@ public class RemoteImplTest extends TestCase {
 				result.contains("FieldDefinition(monitorDefinition:INTERVAL, fieldName:MaxActiveThreadCount, fieldType:INTEGER)"));
     }
 
+    
+    public static boolean containsMonitorKey(List<MonitorInstance> monitors, String key) {
+    	boolean found = false;
+    	
+    	Iterator<MonitorInstance> itr = monitors.iterator();
+    	while (itr.hasNext() && !found) {
+    		found = key.endsWith(itr.next().getKey());
+    	}
+    	
+    	return found;
+    }
+    
+    
+    public void testSubscribeToIntervalMonitor() throws Exception {
+    	ExternalAppender.setEnabled(true);
+    	
+    	String keyX = ExternalAppender.buildIntervalMonitorKey("x");
+    	String keyY = ExternalAppender.buildIntervalMonitorKey("y");
+    	String keyZ = ExternalAppender.buildIntervalMonitorKey("z");
+
+    	RemoteImpl i = RemoteImpl.singleton;
+    	
+    	String sessionID = i.connect(ManagementVersion.VERSION);
+    	try {
+    		List<String> monitorKeys = new ArrayList<String>(); 
+
+    		List<MonitorInstance> monitors = i.getData(sessionID);
+    		assertEquals("By default should not be subscribed to anything", 0, monitors.size());
+    		
+    		monitorKeys.add(keyX);
+    		i.subscribe(sessionID, monitorKeys.toArray((new String[]{})));
+    		
+    		monitors = i.getData(sessionID);
+    		assertEquals("Should now be subscribed", 1, monitors.size());
+   
+    		// Add 2 more monitors...
+    		monitorKeys.add(keyY);
+    		monitorKeys.add(keyZ);
+    		i.subscribe(sessionID, monitorKeys.toArray((new String[]{})));
+    		
+    		monitors = i.getData(sessionID);
+    		assertEquals("Should now be subscribed", 3, monitors.size());
+    		
+    		// Remove first two monitors...
+    		monitorKeys.remove(keyX);
+    		monitorKeys.remove(keyY);
+    		i.subscribe(sessionID, monitorKeys.toArray((new String[]{})));
+    		
+    		monitors = i.getData(sessionID);
+    		assertEquals("Should now be subscribed", 1, monitors.size());
+    		assertTrue("Should have monitor Z", monitorKeys.contains(keyZ));
+    	} finally {
+    		i.disconnect(sessionID);
+    	}
+    }
+    
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
@@ -179,7 +241,7 @@ public class RemoteImplTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new RemoteImplTest("testGetMonitorsIncludesIntervalMonitors"));
+//		newSuite.addTest(new RemoteImplTest("testSubscribeToIntervalMonitor"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

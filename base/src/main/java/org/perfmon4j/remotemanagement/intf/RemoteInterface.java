@@ -35,7 +35,7 @@ public interface RemoteInterface extends Remote, Serializable {
     public void disconnect(String sessionID) throws RemoteException;
 	
     public List<MonitorInstance> getMonitors(String sessionID) throws SessionNotFoundException, RemoteException;
-    public void subscribe(String sessionID, List<String> monitorKeys) throws SessionNotFoundException, RemoteException;
+    public void subscribe(String sessionID, String[] monitorKeys) throws SessionNotFoundException, RemoteException;
     public List<MonitorInstance> getData(String sessionID) throws SessionNotFoundException, RemoteException;
     public MonitorDefinition getMonitorDefinition(String sessionID, MonitorDefinition.Type monitorType) throws SessionNotFoundException, RemoteException;
 }

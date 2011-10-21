@@ -74,7 +74,7 @@ public class RemoteManagementWrapper implements Closeable {
 		return remoteInterface.getMonitors(sessionID);
 	}
 
-	public void subscribe(String sessionID, List<String> monitorKeys)
+	public void subscribe(String sessionID, String[] monitorKeys)
 		throws SessionNotFoundException, RemoteException {
 		remoteInterface.subscribe(sessionID, monitorKeys);
 	}

@@ -26,15 +26,18 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonData;
 import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
 import org.perfmon4j.remotemanagement.intf.IntervalDefinition;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
 import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
 import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 import org.perfmon4j.remotemanagement.intf.MonitorDefinition.Type;
@@ -47,7 +50,7 @@ public class RemoteImpl implements RemoteInterface {
 	private static final long serialVersionUID = ManagementVersion.RMI_VERSION;
 	private static Registry registry = null;
 	private static Integer registeredPort = null;
-	private static final RemoteImpl singleton = new RemoteImpl();
+	static final RemoteImpl singleton = new RemoteImpl();
 	
 	private final IntervalDefinition intervalDefinition = new IntervalDefinition();
 	
@@ -116,7 +119,21 @@ public class RemoteImpl implements RemoteInterface {
 	}
 
 	public List<MonitorInstance> getData(String sessionID ) throws SessionNotFoundException, RemoteException {
-		return null;
+		List<MonitorInstance> result = new ArrayList<MonitorInstance>();
+		
+		String[] keys = ExternalAppender.getSubscribedMonitors(sessionID);
+		for (int i = 0; i < keys.length; i++) {
+			String key = keys[i];
+			
+			try {
+				PerfMonData d = ExternalAppender.takeSnapShot(sessionID, key);
+				result.add(new MonitorInstance(key, IntervalDefinition.INTERVAL_TYPE));
+			} catch (MonitorNotFoundException mnf) {
+				logger.logWarn("Monitor \"" + key + "\" not found for sessionID: " + sessionID, mnf);
+			}
+		}
+		
+		return result;
 	}
 
 	public List<MonitorInstance> getMonitors(String sessionID)
@@ -133,9 +150,31 @@ public class RemoteImpl implements RemoteInterface {
 		return result;	
 	}
 
-	public void subscribe(String sessionID, List<String> monitorKeys)
-			throws RemoteException {
-		// TODO Auto-generated method stub
+	public void subscribe(String sessionID, String[] monitorKeys)
+			throws RemoteException, SessionNotFoundException {
+		
+		List<String> newSubscribed = Arrays.asList(monitorKeys);
+		List<String> alreadySubscrivedList = new ArrayList<String>(newSubscribed.size());
+		
+		String[] subscribed = ExternalAppender.getSubscribedMonitors(sessionID);
+		for (int i = 0; i < subscribed.length; i++) {
+			String key = subscribed[i];
+			if (newSubscribed.contains(subscribed[i])) {
+				// Already subscribed...  Dont need to add again.
+				alreadySubscrivedList.add(key);
+			} else {
+				// No longer subscribed...  Unsubscribe.
+				ExternalAppender.unSubscribe(sessionID, key);
+			}
+		}
+		
+		Iterator<String> itr = newSubscribed.iterator();
+		while (itr.hasNext()) {
+			String key = itr.next();
+			if (!alreadySubscrivedList.contains(key)) {
+				ExternalAppender.subscribe(sessionID, key);
+			}
+		}
 	}
 
 	public MonitorDefinition getMonitorDefinition(String sessionID,

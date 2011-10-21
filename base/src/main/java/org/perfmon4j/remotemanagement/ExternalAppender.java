@@ -77,6 +77,15 @@ public class ExternalAppender {
 		logger.logInfo("External appender (sessionID:" + sessionID + ") subscribed to monitor: " + monitorKey);
 	}
 
+	public static String[] getSubscribedMonitors(String sessionID) throws SessionNotFoundException {
+		MonitorMap map = sessionManager.getSession(sessionID);
+		if (map == null) {
+			throw new SessionNotFoundException(sessionID);
+		}
+		return map.map.keySet().toArray(new String[]{});
+	}
+	
+	
 	public static PerfMonData takeSnapShot(String sessionID, String monitorKey) throws SessionNotFoundException, MonitorNotFoundException {
 		MonitorMap map = sessionManager.getSession(sessionID);
 		if (map == null) {
@@ -180,9 +189,9 @@ public class ExternalAppender {
 		}
 
 		public void destroy() {
-			Iterator<String> itr = map.keySet().iterator();
-			while (itr.hasNext()) {
-				unSubscribe(itr.next());
+			String keys[] = map.keySet().toArray(new String[]{});
+			for (int i = 0; i < keys.length; i++) {
+				unSubscribe(keys[i]);
 			}
 		}
 	}
