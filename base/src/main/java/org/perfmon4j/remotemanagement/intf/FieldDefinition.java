@@ -18,7 +18,6 @@
  * 	McHenry, IL 60050
  * 
 */
-
 package org.perfmon4j.remotemanagement.intf;
 
 import java.io.Serializable;
@@ -36,7 +35,7 @@ public class FieldDefinition implements Serializable {
 	private final String fieldName;
 	private final FieldDefinition.Type fieldType;
 	
-	FieldDefinition(MonitorDefinition.Type monitorType,
+	public FieldDefinition(MonitorDefinition.Type monitorType,
 			String fieldName, FieldDefinition.Type fieldType) {
 		this.monitorType = monitorType;
 		this.fieldName = fieldName;
@@ -58,14 +57,54 @@ public class FieldDefinition implements Serializable {
 	@Override
 	public String toString() {
 		return this.getClass().getSimpleName() + 
-			"(monitorDefinition:" + monitorType +
+			"(monitorType:" + monitorType +
 			", fieldName:" + fieldName +
 			", fieldType:" + fieldType +
 			")";
 	}
+	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((fieldName == null) ? 0 : fieldName.hashCode());
+		result = prime * result
+				+ ((fieldType == null) ? 0 : fieldType.hashCode());
+		result = prime * result
+				+ ((monitorType == null) ? 0 : monitorType.hashCode());
+		return result;
+	}
 
-	
-	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		FieldDefinition other = (FieldDefinition) obj;
+		if (fieldName == null) {
+			if (other.fieldName != null)
+				return false;
+		} else if (!fieldName.equals(other.fieldName))
+			return false;
+		if (fieldType == null) {
+			if (other.fieldType != null)
+				return false;
+		} else if (!fieldType.equals(other.fieldType))
+			return false;
+		if (monitorType == null) {
+			if (other.monitorType != null)
+				return false;
+		} else if (!monitorType.equals(other.monitorType))
+			return false;
+		return true;
+	}
+
+
+
 	public static final class Type implements Serializable {
 		private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
 		

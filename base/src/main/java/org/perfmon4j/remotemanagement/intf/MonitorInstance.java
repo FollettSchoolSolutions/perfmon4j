@@ -27,13 +27,13 @@ public class MonitorInstance implements Serializable {
 	
 	private final String key;
 	private final MonitorDefinition.Type monitorType;
-	private final MonitorDataTransport data;
+	private final SerializedData data;
 	
 	public MonitorInstance(String key, MonitorDefinition.Type monitorType) {
 		this(key, monitorType, null);
 	}
 	
-	public MonitorInstance(String key, MonitorDefinition.Type monitorType, MonitorDataTransport data) {
+	public MonitorInstance(String key, MonitorDefinition.Type monitorType, SerializedData data) {
 		this.key = key;
 		this.monitorType = monitorType;
 		this.data = data;
@@ -47,7 +47,7 @@ public class MonitorInstance implements Serializable {
 		return monitorType;
 	}
 
-	public MonitorDataTransport getData() {
+	public SerializedData getData() {
 		return data;
 	}
 }

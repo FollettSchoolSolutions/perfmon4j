@@ -30,6 +30,7 @@ import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -57,28 +58,28 @@ public class ExternalAppenderTest extends TestCase {
     }
     
     public void testBuildIntervalMonitorKey() throws Exception {
-		String monitorKey = ExternalAppender.buildIntervalMonitorKey("com.follett.fsc");
+		String monitorKey = MonitorDefinition.buildIntervalMonitorKey("com.follett.fsc");
         assertEquals("Need to ensure we can determine monitor type", 
         		"INTERVAL:com.follett.fsc", monitorKey);
     }	
     
     public void testGetIntervalMonitor() throws Exception {
-		String monitorKey = ExternalAppender.buildIntervalMonitorKey("com.follett.fsc");
+		String monitorKey = MonitorDefinition.buildIntervalMonitorKey("com.follett.fsc");
 		
-		assertEquals("com.follett.fsc", ExternalAppender.getIntervalMonitorName(monitorKey));
+		assertEquals("com.follett.fsc", MonitorDefinition.getIntervalMonitorName(monitorKey));
 		assertNull("If string does not start with INTERVAL_PREFIX return null", 
-				ExternalAppender.getIntervalMonitorName("xyz"));
+				MonitorDefinition.getIntervalMonitorName("xyz"));
 		assertNull("null should return null", 
-				ExternalAppender.getIntervalMonitorName(null));
+				MonitorDefinition.getIntervalMonitorName(null));
 		assertNull("Prefix alone should return null", 
-				ExternalAppender.getIntervalMonitorName(ExternalAppender.INTERVAL_PREFIX));
+				MonitorDefinition.getIntervalMonitorName(MonitorDefinition.INTERVAL_TYPE.getDesc() + ":"));
     }	
     
     /*----------------------------------------------------------------------------*/    
     public void testExternalMonitor() throws Exception {
         final String MONITOR = "aa.b.c";
         
-		String monitorKey = ExternalAppender.buildIntervalMonitorKey(MONITOR);
+		String monitorKey = MonitorDefinition.buildIntervalMonitorKey(MONITOR);
 		ExternalAppender.subscribe(sessionID, monitorKey);
 		
         for (int i = 0; i < 10; i++) {
@@ -110,7 +111,7 @@ public class ExternalAppenderTest extends TestCase {
     /*----------------------------------------------------------------------------*/    
     public void testGetSubscribedMonitors() throws Exception {
         final String MONITOR = "aa.b.c";
-        String monitorKey = ExternalAppender.buildIntervalMonitorKey(MONITOR);
+        String monitorKey = MonitorDefinition.buildIntervalMonitorKey(MONITOR);
         
 		assertEquals("None subscribed should return empty array", 0,
 				ExternalAppender.getSubscribedMonitors(sessionID).length);
@@ -128,7 +129,7 @@ public class ExternalAppenderTest extends TestCase {
     public void testMonitorResetsWhenMadeInactive() throws Exception {
         final String MON_NAME = "aaa.b.ccc";
         PerfMon mon = PerfMon.getMonitor(MON_NAME);
-        String monitorKey = ExternalAppender.buildIntervalMonitorKey(MON_NAME);
+        String monitorKey = MonitorDefinition.buildIntervalMonitorKey(MON_NAME);
         
         assertFalse("Monitor is not active", mon.isActive());
         

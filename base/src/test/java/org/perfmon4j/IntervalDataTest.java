@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -24,6 +24,10 @@ package org.perfmon4j;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
+
+import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
+import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+import org.perfmon4j.remotemanagement.intf.SerializedData;
 
 public class IntervalDataTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -59,6 +63,28 @@ public class IntervalDataTest extends TestCase {
     }
    
     
+     public void testGetMonitorInstance() throws Exception {
+         final long NOW = System.currentTimeMillis();
+         final long FIVE_MINUTES = (5 * 60 * 1000);
+         final long FIVE_MINUTES_AGO = NOW - FIVE_MINUTES;
+         
+    	 IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), FIVE_MINUTES_AGO, null, null, NOW);
+
+         MonitorInstance i = data.getMonitorInstance();
+         MonitorDefinition definition = null;
+    	 
+    	 assertEquals("Should be appender type", MonitorDefinition.INTERVAL_TYPE, i.getMonitorType());
+         assertEquals("Monitor key",  MonitorDefinition.buildIntervalMonitorKey("a.b.c"), i.getKey());
+         
+         SerializedData d = i.getData();
+         assertNotNull("Should have data", d);
+         
+         
+         
+       
+         
+         
+     }
 
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

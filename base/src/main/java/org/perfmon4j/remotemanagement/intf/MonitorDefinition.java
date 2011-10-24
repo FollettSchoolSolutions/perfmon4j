@@ -23,18 +23,21 @@ package org.perfmon4j.remotemanagement.intf;
 
 import java.io.Serializable;
 import java.util.Iterator;
+import java.util.List;
 
-
-@SuppressWarnings("serial") // serialVersionUID will be set in concrete derived classes...
-abstract public class MonitorDefinition implements Serializable {
+public class MonitorDefinition implements Serializable {
+	private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;	
+	
 	public static final Type INTERVAL_TYPE = new Type("INTERVAL");
 	
 	final private String name;
 	final private MonitorDefinition.Type type;
+	final List<FieldDefinition> fields;
 
-	protected MonitorDefinition(String name, MonitorDefinition.Type type) {
+	public MonitorDefinition(String name, MonitorDefinition.Type type, List<FieldDefinition> fields) {
 		this.name = name;
 		this.type = type;
+		this.fields = fields;
 	}
 
 	public String getName() {
@@ -45,13 +48,31 @@ abstract public class MonitorDefinition implements Serializable {
 		return type;
 	}
 	
-	public abstract Iterator<FieldDefinition> getFieldItr();
+	public Iterator<FieldDefinition> getFieldItr() {
+		return fields.iterator();
+	}
 	
 	@Override
 	public String toString() {
 		return this.getClass().getSimpleName() + "(name:" + name + ", type:" + type + ")";
 	}
 
+	public static String buildIntervalMonitorKey(String intervalMonitor) {
+		return INTERVAL_TYPE.desc + ":" + intervalMonitor;
+	}
+	
+	public static String getIntervalMonitorName(String monitorKey) {
+		final String prefix = INTERVAL_TYPE.desc + ":";
+		String result = null;
+		
+		if (monitorKey != null && 
+				monitorKey.startsWith(prefix)
+				&& monitorKey.length() > prefix.length()) {
+			result = monitorKey.substring(prefix.length());
+		}
+		return result;
+	}	
+	
 	public static final class Type implements Serializable {
 		private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
 		

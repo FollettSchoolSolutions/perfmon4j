@@ -20,6 +20,8 @@
 */
 package org.perfmon4j;
 
+import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+
 public abstract class SnapShotData implements PerfMonData {
     private String name;
     
@@ -29,5 +31,9 @@ public abstract class SnapShotData implements PerfMonData {
     
     public String getName() {
         return name;
+    }
+    
+    public MonitorInstance getMonitorInstance() {
+    	return null;
     }
 }

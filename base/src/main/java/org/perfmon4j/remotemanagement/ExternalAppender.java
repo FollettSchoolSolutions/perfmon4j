@@ -28,6 +28,8 @@ import java.util.Map;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
+import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
+import org.perfmon4j.remotemanagement.intf.MonitorInstance;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 import org.perfmon4j.util.Logger;
@@ -37,7 +39,6 @@ import org.perfmon4j.util.MiscHelper;
 public class ExternalAppender {
 	private static final Logger logger = LoggerFactory.initLogger(ExternalAppender.class);
 	
-	public static final String INTERVAL_PREFIX = "INTERVAL:";
 	public static final int DEFAULT_TIMEOUT_SECONDS = 60 * 5;  // 5 minutes
 	private static final SessionManager<MonitorMap> sessionManager = new SessionManager<MonitorMap>();
 	private static boolean enabled = false;
@@ -109,21 +110,6 @@ public class ExternalAppender {
 	public String[] getMonitors() {
 		return new String[]{};
 	}
-
-	public static String buildIntervalMonitorKey(String intervalMonitor) {
-		return INTERVAL_PREFIX + intervalMonitor;
-	}
-	
-	public static String getIntervalMonitorName(String monitorKey) {
-		String result = null;
-		
-		if (monitorKey != null && 
-				monitorKey.startsWith(INTERVAL_PREFIX)
-				&& monitorKey.length() > INTERVAL_PREFIX.length()) {
-			result = monitorKey.substring(INTERVAL_PREFIX.length());
-		}
-		return result;
-	}
 	
 	public static boolean isActive() {
 		return enabled || sessionManager.getSessionCount() > 0;
@@ -144,7 +130,7 @@ public class ExternalAppender {
 			if (map.get(monitorKey) != null) {
 				return;  // Already subscribed... Nothing to do.
 			}
-			String im = getIntervalMonitorName(monitorKey);
+			String im = MonitorDefinition.getIntervalMonitorName(monitorKey);
 			if (im != null) {
 				PerfMon mon = PerfMon.getMonitor(im);
 				IntervalData d = new IntervalData(mon);
@@ -157,7 +143,7 @@ public class ExternalAppender {
 		}
 		
 		public void unSubscribe(String monitorKey) {
-			String im = getIntervalMonitorName(monitorKey);
+			String im = MonitorDefinition.getIntervalMonitorName(monitorKey);
 			
 			if (im != null) {
 				IntervalData data = (IntervalData)map.remove(monitorKey);
@@ -170,7 +156,7 @@ public class ExternalAppender {
 
 		public PerfMonData takeSnapShot(String monitorKey) throws MonitorNotFoundException {
 			PerfMonData result = null;
-			String im = getIntervalMonitorName(monitorKey);
+			String im = MonitorDefinition.getIntervalMonitorName(monitorKey);
 			
 			if (im != null) {
 				IntervalData data = (IntervalData)map.get(monitorKey);

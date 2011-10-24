@@ -20,6 +20,9 @@
 */
 package org.perfmon4j;
 
+import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
+import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+import org.perfmon4j.remotemanagement.intf.SerializedData;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
@@ -682,5 +685,16 @@ public class IntervalData implements PerfMonData {
     public boolean isSQLMonitor() {
     	return sqlMonitor;
     }
+
+	public MonitorInstance getMonitorInstance() {
+		MonitorInstance result = null;
+		if (owner != null) {
+			final String monitorKey = MonitorDefinition.buildIntervalMonitorKey(owner.getName());
+			
+			result = new MonitorInstance(monitorKey, MonitorDefinition.INTERVAL_TYPE, new SerializedData(null));
+		}
+		return result;
+	}
 }
     
+

@@ -32,15 +32,14 @@ import java.util.List;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
+import org.perfmon4j.remotemanagement.intf.FieldDefinition;
 import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
-import org.perfmon4j.remotemanagement.intf.IntervalDefinition;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
 import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
 import org.perfmon4j.remotemanagement.intf.MonitorInstance;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
-import org.perfmon4j.remotemanagement.intf.MonitorDefinition.Type;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -50,11 +49,14 @@ public class RemoteImpl implements RemoteInterface {
 	private static final long serialVersionUID = ManagementVersion.RMI_VERSION;
 	private static Registry registry = null;
 	private static Integer registeredPort = null;
+	
 	static final RemoteImpl singleton = new RemoteImpl();
 	
-	private final IntervalDefinition intervalDefinition = new IntervalDefinition();
+	private final MonitorDefinition intervalDefinition = buildIntervalDefinition();
+	
 	
 	private RemoteImpl() {
+		
 	}
 
 	public static Integer getRegisteredPort() {
@@ -127,7 +129,7 @@ public class RemoteImpl implements RemoteInterface {
 			
 			try {
 				PerfMonData d = ExternalAppender.takeSnapShot(sessionID, key);
-				result.add(new MonitorInstance(key, IntervalDefinition.INTERVAL_TYPE));
+				result.add(new MonitorInstance(key, MonitorDefinition.INTERVAL_TYPE));
 			} catch (MonitorNotFoundException mnf) {
 				logger.logWarn("Monitor \"" + key + "\" not found for sessionID: " + sessionID, mnf);
 			}
@@ -144,7 +146,7 @@ public class RemoteImpl implements RemoteInterface {
 		
 		Iterator<String> intervalMonitors = PerfMon.getMonitorNames().iterator();
 		while (intervalMonitors.hasNext()) {
-			String key = ExternalAppender.buildIntervalMonitorKey(intervalMonitors.next());
+			String key = MonitorDefinition.buildIntervalMonitorKey(intervalMonitors.next());
 			result.add(new MonitorInstance(key, intervalDefinition.getType())); 
 		}
 		return result;	
@@ -154,14 +156,14 @@ public class RemoteImpl implements RemoteInterface {
 			throws RemoteException, SessionNotFoundException {
 		
 		List<String> newSubscribed = Arrays.asList(monitorKeys);
-		List<String> alreadySubscrivedList = new ArrayList<String>(newSubscribed.size());
+		List<String> alreadySubscribedList = new ArrayList<String>(newSubscribed.size());
 		
 		String[] subscribed = ExternalAppender.getSubscribedMonitors(sessionID);
 		for (int i = 0; i < subscribed.length; i++) {
 			String key = subscribed[i];
 			if (newSubscribed.contains(subscribed[i])) {
 				// Already subscribed...  Dont need to add again.
-				alreadySubscrivedList.add(key);
+				alreadySubscribedList.add(key);
 			} else {
 				// No longer subscribed...  Unsubscribe.
 				ExternalAppender.unSubscribe(sessionID, key);
@@ -171,7 +173,7 @@ public class RemoteImpl implements RemoteInterface {
 		Iterator<String> itr = newSubscribed.iterator();
 		while (itr.hasNext()) {
 			String key = itr.next();
-			if (!alreadySubscrivedList.contains(key)) {
+			if (!alreadySubscribedList.contains(key)) {
 				ExternalAppender.subscribe(sessionID, key);
 			}
 		}
@@ -187,6 +189,39 @@ public class RemoteImpl implements RemoteInterface {
 		} else {
 			return null;
 		}
+	}
+	
+	private static MonitorDefinition buildIntervalDefinition() {
+		final List<FieldDefinition> fields = new ArrayList<FieldDefinition>();
+		final MonitorDefinition.Type type = MonitorDefinition.INTERVAL_TYPE;
+	
+		fields.add(new FieldDefinition(type, "MaxActiveThreadCount", FieldDefinition.INTEGER_TYPE));
+		fields.add(new FieldDefinition(type, "MaxDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "MaxSQLDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "MinDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "MinSQLDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "TotalDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "TotalSQLDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "AverageDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "AverageSQLDuration", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "SumOfSquares", FieldDefinition.LONG_TYPE));
+		fields.add(new FieldDefinition(type, "SumOfSQLSquares", FieldDefinition.LONG_TYPE));
+
+		fields.add(new FieldDefinition(type, "TotalCompletions", FieldDefinition.INTEGER_TYPE));
+		fields.add(new FieldDefinition(type, "TotalHits", FieldDefinition.INTEGER_TYPE));
+
+		fields.add(new FieldDefinition(type, "TimeStart", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(type, "TimeStop", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(type, "TimeMaxActiveThreadCountSet", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(type, "TimeMaxDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(type, "TimeMinDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(type, "TimeMaxSQLDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+		fields.add(new FieldDefinition(type, "TimeMinSQLDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+		
+		fields.add(new FieldDefinition(type, "ThroughputPerMinute", FieldDefinition.DOUBLE_TYPE));
+		fields.add(new FieldDefinition(type, "StdDeviation", FieldDefinition.DOUBLE_TYPE));
+
+		return new MonitorDefinition("INTERVAL", type, fields);	
 	}
 	
 }

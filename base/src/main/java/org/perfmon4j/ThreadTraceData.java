@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008, 2009, 2010 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.perfmon4j.remotemanagement.intf.MonitorInstance;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MiscHelper;
 
@@ -217,5 +218,9 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		} finally {
 			conn.setAutoCommit(originalAutoCommit);
 		}
+	}
+
+	public MonitorInstance getMonitorInstance() {
+		return null;
 	}
 }

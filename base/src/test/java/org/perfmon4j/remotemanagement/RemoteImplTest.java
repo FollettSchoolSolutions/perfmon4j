@@ -36,6 +36,7 @@ import org.apache.log4j.Level;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
+import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
 import org.perfmon4j.remotemanagement.intf.MonitorInstance;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.SimpleRunnable;
@@ -157,7 +158,7 @@ public class RemoteImplTest extends TestCase {
 		assertTrue("Should contain the interval monitor", 
 				result.contains("Monitor: INTERVAL:testGetMonitorsIncludesIntervalMonitors"));
 		assertTrue("Validate we retrieved the monitor Definition", 
-				result.contains("FieldDefinition(monitorDefinition:INTERVAL, fieldName:MaxActiveThreadCount, fieldType:INTEGER)"));
+				result.contains("FieldDefinition(monitorType:INTERVAL, fieldName:MaxActiveThreadCount, fieldType:INTEGER)"));
     }
 
     
@@ -176,9 +177,9 @@ public class RemoteImplTest extends TestCase {
     public void testSubscribeToIntervalMonitor() throws Exception {
     	ExternalAppender.setEnabled(true);
     	
-    	String keyX = ExternalAppender.buildIntervalMonitorKey("x");
-    	String keyY = ExternalAppender.buildIntervalMonitorKey("y");
-    	String keyZ = ExternalAppender.buildIntervalMonitorKey("z");
+    	String keyX = MonitorDefinition.buildIntervalMonitorKey("x");
+    	String keyY = MonitorDefinition.buildIntervalMonitorKey("y");
+    	String keyZ = MonitorDefinition.buildIntervalMonitorKey("z");
 
     	RemoteImpl i = RemoteImpl.singleton;
     	
@@ -241,7 +242,7 @@ public class RemoteImplTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new RemoteImplTest("testSubscribeToIntervalMonitor"));
+		newSuite.addTest(new RemoteImplTest("testGetMonitorsIncludesIntervalMonitors"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

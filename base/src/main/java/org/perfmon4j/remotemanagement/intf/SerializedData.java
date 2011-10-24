@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008-2011 Follett Software Company 
+ *	Copyright 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -18,12 +18,21 @@
  * 	McHenry, IL 60050
  * 
 */
+package org.perfmon4j.remotemanagement.intf;
 
-package org.perfmon4j;
+import java.io.Serializable;
+import java.util.Map;
 
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
-
-public interface PerfMonData {
-    public String toAppenderString();
-    public MonitorInstance getMonitorInstance();
+public class SerializedData implements Serializable {
+	private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
+	
+	private final Map<FieldDefinition, Object> map; 
+	
+	public SerializedData(Map<FieldDefinition, Object> map) {
+		this.map = map;
+	}
+	
+	public Object getElement(FieldDefinition key) {
+		return map == null ? null : map.get(key);
+	}
 }

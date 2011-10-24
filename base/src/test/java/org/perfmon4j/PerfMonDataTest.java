@@ -57,10 +57,8 @@ public class PerfMonDataTest extends TestCase {
         
         System.err.println(data.toString());
     }
-   
-    
-
-/*----------------------------------------------------------------------------*/    
+ 
+/*---------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         String[] testCaseName = {PerfMonDataTest.class.getName()};
 
