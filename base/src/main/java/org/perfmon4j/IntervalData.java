@@ -20,16 +20,27 @@
 */
 package org.perfmon4j;
 
-import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
-import org.perfmon4j.remotemanagement.intf.SerializedData;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.util.BeanHelper;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
+import org.perfmon4j.util.BeanHelper.UnableToGetAttributeException;
 import org.perfmon4j.util.ThresholdCalculator.ThresholdResult;
 
 
 public class IntervalData implements PerfMonData {
+	private static final Logger logger = LoggerFactory.initLogger(IntervalData.class);
+	
     private final PerfMon owner;
     private final boolean sqlMonitor;
     private final long timeStart;
@@ -686,15 +697,63 @@ public class IntervalData implements PerfMonData {
     	return sqlMonitor;
     }
 
-	public MonitorInstance getMonitorInstance() {
-		MonitorInstance result = null;
-		if (owner != null) {
-			final String monitorKey = MonitorDefinition.buildIntervalMonitorKey(owner.getName());
-			
-			result = new MonitorInstance(monitorKey, MonitorDefinition.INTERVAL_TYPE, new SerializedData(null));
+    public Map<FieldKey, Object> getFieldData(FieldKey[] fields) {
+    	Map<FieldKey, Object> result = new HashMap<FieldKey, Object>();
+
+    	for (int i = 0; i < fields.length; i++) {
+    		FieldKey field = fields[i];
+    		
+    		try {
+				Object o = BeanHelper.getValue(this, field.getFieldName());
+				result.put(field, o);
+			} catch (UnableToGetAttributeException e) {
+				logger.logWarn("Unable to get attribute", e);
+			}
 		}
-		return result;
-	}
+    	return result;
+    }
+
+    public static MonitorKeyWithFields getFields(String monitorName) {
+    	Set<FieldKey> fields = new HashSet<FieldKey>();
+
+    	MonitorKey monitorKey = new MonitorKey(MonitorKey.INTERVAL_TYPE, monitorName);
+    	
+    	fields.add(new FieldKey(monitorKey, "AverageDuration", FieldKey.LONG_TYPE));
+    	fields.add(new FieldKey(monitorKey, "ThroughputPerMinute", FieldKey.DOUBLE_TYPE));
+    	fields.add(new FieldKey(monitorKey, "MaxActiveThreadCount", FieldKey.INTEGER_TYPE));
+    	fields.add(new FieldKey(monitorKey, "MaxDuration", FieldKey.LONG_TYPE));
+    	fields.add(new FieldKey(monitorKey, "MinDuration", FieldKey.LONG_TYPE));
+
+    	fields.add(new FieldKey(monitorKey, "TotalCompletions", FieldKey.INTEGER_TYPE));
+    	fields.add(new FieldKey(monitorKey, "TotalHits", FieldKey.INTEGER_TYPE));
+    	fields.add(new FieldKey(monitorKey, "StdDeviation", FieldKey.DOUBLE_TYPE));
+    	
+    	fields.add(new FieldKey(monitorKey, "MaxSQLDuration", FieldKey.LONG_TYPE));
+    	fields.add(new FieldKey(monitorKey, "MinSQLDuration", FieldKey.LONG_TYPE));
+    	fields.add(new FieldKey(monitorKey, "AverageSQLDuration", FieldKey.LONG_TYPE));
+
+    	fields.add(new FieldKey(monitorKey, "TimeStart", FieldKey.TIMESTAMP_TYPE));
+    	fields.add(new FieldKey(monitorKey, "TimeStop", FieldKey.TIMESTAMP_TYPE));
+
+		
+//		fields.add(new FieldDefinition("TotalDuration", FieldDefinition.LONG_TYPE));
+//		fields.add(new FieldDefinition("TotalSQLDuration", FieldDefinition.LONG_TYPE));
+//		fields.add(new FieldDefinition("SumOfSquares", FieldDefinition.LONG_TYPE));
+//		fields.add(new FieldDefinition("SumOfSQLSquares", FieldDefinition.LONG_TYPE));
+
+
+//		fields.add(new FieldDefinition("TimeStart", FieldDefinition.TIMESTAMP_TYPE));
+//		fields.add(new FieldDefinition("TimeStop", FieldDefinition.TIMESTAMP_TYPE));
+//		fields.add(new FieldDefinition("TimeMaxActiveThreadCountSet", FieldDefinition.TIMESTAMP_TYPE));
+//		fields.add(new FieldDefinition("TimeMaxDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+//		fields.add(new FieldDefinition("TimeMinDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+//		fields.add(new FieldDefinition("TimeMaxSQLDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+//		fields.add(new FieldDefinition("TimeMinSQLDurationSet", FieldDefinition.TIMESTAMP_TYPE));
+		
+
+    	return new MonitorKeyWithFields(monitorKey,
+    			fields);
+    }
 }
     
 

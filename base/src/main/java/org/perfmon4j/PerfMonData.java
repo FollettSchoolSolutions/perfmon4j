@@ -21,9 +21,12 @@
 
 package org.perfmon4j;
 
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+import java.util.Map;
+
+import org.perfmon4j.remotemanagement.intf.FieldKey;
 
 public interface PerfMonData {
     public String toAppenderString();
-    public MonitorInstance getMonitorInstance();
+    
+    public Map<FieldKey, Object> getFieldData(FieldKey[] fields);
 }

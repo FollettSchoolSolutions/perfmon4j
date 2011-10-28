@@ -23,7 +23,7 @@ package org.perfmon4j.remotemanagement.intf;
 import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.List;
+import java.util.Map;
 
 public interface RemoteInterface extends Remote, Serializable {
     public static final String serviceName = "P4JServiceName";
@@ -34,8 +34,8 @@ public interface RemoteInterface extends Remote, Serializable {
 
     public void disconnect(String sessionID) throws RemoteException;
 	
-    public List<MonitorInstance> getMonitors(String sessionID) throws SessionNotFoundException, RemoteException;
-    public void subscribe(String sessionID, String[] monitorKeys) throws SessionNotFoundException, RemoteException;
-    public List<MonitorInstance> getData(String sessionID) throws SessionNotFoundException, RemoteException;
-    public MonitorDefinition getMonitorDefinition(String sessionID, MonitorDefinition.Type monitorType) throws SessionNotFoundException, RemoteException;
+    public String[] getMonitors(String sessionID) throws SessionNotFoundException, RemoteException;
+    public String[] getFieldsForMonitor(String sessionID, String monitorKey) throws SessionNotFoundException, RemoteException;
+    public void subscribe(String sessionID, String[] fieldKeys) throws SessionNotFoundException, RemoteException;
+    public Map<String, Object> getData(String sessionID) throws SessionNotFoundException, RemoteException;
 }

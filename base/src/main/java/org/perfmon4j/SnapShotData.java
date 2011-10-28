@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,13 +14,16 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
 package org.perfmon4j;
 
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.perfmon4j.remotemanagement.intf.FieldKey;
 
 public abstract class SnapShotData implements PerfMonData {
     private String name;
@@ -33,7 +36,10 @@ public abstract class SnapShotData implements PerfMonData {
         return name;
     }
     
-    public MonitorInstance getMonitorInstance() {
-    	return null;
+    public Map<FieldKey, Object> getFieldData(FieldKey[] fields) {
+    	Map<FieldKey, Object> result = new HashMap<FieldKey, Object>();
+
+    	
+    	return result;
     }
 }

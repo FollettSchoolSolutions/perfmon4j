@@ -21,6 +21,9 @@
 
 package org.perfmon4j.remotemanagement;
 
+import java.util.ArrayList;
+import java.util.Map;
+
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -28,9 +31,8 @@ import junit.textui.TestRunner;
 import org.apache.log4j.BasicConfigurator;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
-import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTimer;
-import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -46,41 +48,24 @@ public class ExternalAppenderTest extends TestCase {
         super(name);
     }
 
-/*----------------------------------------------------------------------------*/    
+    /*----------------------------------------------------------------------------*/    
     public void setUp() throws Exception {
         super.setUp();
         sessionID = ExternalAppender.connect();
     }
     
+    /*----------------------------------------------------------------------------*/    
     public void tearDown() throws Exception {
     	ExternalAppender.disconnect(sessionID);
     	sessionID = null;
     }
     
-    public void testBuildIntervalMonitorKey() throws Exception {
-		String monitorKey = MonitorDefinition.buildIntervalMonitorKey("com.follett.fsc");
-        assertEquals("Need to ensure we can determine monitor type", 
-        		"INTERVAL:com.follett.fsc", monitorKey);
-    }	
-    
-    public void testGetIntervalMonitor() throws Exception {
-		String monitorKey = MonitorDefinition.buildIntervalMonitorKey("com.follett.fsc");
-		
-		assertEquals("com.follett.fsc", MonitorDefinition.getIntervalMonitorName(monitorKey));
-		assertNull("If string does not start with INTERVAL_PREFIX return null", 
-				MonitorDefinition.getIntervalMonitorName("xyz"));
-		assertNull("null should return null", 
-				MonitorDefinition.getIntervalMonitorName(null));
-		assertNull("Prefix alone should return null", 
-				MonitorDefinition.getIntervalMonitorName(MonitorDefinition.INTERVAL_TYPE.getDesc() + ":"));
-    }	
-    
     /*----------------------------------------------------------------------------*/    
     public void testExternalMonitor() throws Exception {
         final String MONITOR = "aa.b.c";
-        
-		String monitorKey = MonitorDefinition.buildIntervalMonitorKey(MONITOR);
-		ExternalAppender.subscribe(sessionID, monitorKey);
+
+        MonitorKeyWithFields m = IntervalData.getFields(MONITOR);
+        ExternalAppender.subscribe(sessionID, m);
 		
         for (int i = 0; i < 10; i++) {
         	PerfMonTimer t = null;
@@ -91,45 +76,52 @@ public class ExternalAppenderTest extends TestCase {
         		PerfMonTimer.stop(t);
         	}
         }
-        PerfMonData d = (PerfMonData)ExternalAppender.takeSnapShot(sessionID, monitorKey);
+     
+        Map<FieldKey, Object> d = ExternalAppender.takeSnapShot(sessionID, m);
         assertNotNull("takeSnapShot should not return null", d);
-        assertTrue("Should be  interval data", d instanceof IntervalData);
-
-        IntervalData i = (IntervalData)d;
-        assertEquals("Total completions", 10, i.getTotalCompletions());
+    
+        FieldKey totalCompletions = FieldKey.getFieldByName(m.getFields(), "TotalCompletions");
+        FieldKey timeStop = FieldKey.getFieldByName(m.getFields(), "TimeStop");
         
-        assertTrue("Should have a stop time", i.getTimeStop() != PerfMon.NOT_SET);
-        
-        // Check the lifetime stats....
-        assertEquals(i.getMaxActiveThreadCount(), i.getLifetimeMaxThreadCount());
-        assertEquals(i.getAverageDuration(), i.getLifetimeAverageDuration());
-        assertEquals(i.getMinDuration(), i.getLifetimeMinDuration());
-        assertEquals(new Double(i.getStdDeviation()), new Double(i.getLifetimeStdDeviation()));
+        assertEquals("Total completions", 10, ((Integer)d.get(totalCompletions)).intValue());
+        assertTrue("Should have a stop time", ((Long)d.get(timeStop)).longValue() != PerfMon.NOT_SET);
     }
 
     
     /*----------------------------------------------------------------------------*/    
     public void testGetSubscribedMonitors() throws Exception {
         final String MONITOR = "aa.b.c";
-        String monitorKey = MonitorDefinition.buildIntervalMonitorKey(MONITOR);
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MONITOR);
         
 		assertEquals("None subscribed should return empty array", 0,
 				ExternalAppender.getSubscribedMonitors(sessionID).length);
 
 		ExternalAppender.subscribe(sessionID, monitorKey);
 		
-		String[] v = ExternalAppender.getSubscribedMonitors(sessionID);
+		MonitorKeyWithFields[] v = ExternalAppender.getSubscribedMonitors(sessionID);
 		assertEquals("One subscribed should return value", 
 				1, v.length);
 		assertEquals("Should match monitor key", 
 				monitorKey, v[0]);
+		
+		// Build a monitorkey with fields that does not exactly match on the fields...
+		// It should still respect the unsubscribe event.
+		MonitorKeyWithFields missingFields =
+			new MonitorKeyWithFields(monitorKey.getMonitorKeyOnly(),
+			new ArrayList<FieldKey>());
+		
+		ExternalAppender.unSubscribe(sessionID, missingFields);
+		v = ExternalAppender.getSubscribedMonitors(sessionID);
+		
+		assertEquals("Should have unsubscribed", 0, v.length);
     }
     
     /*----------------------------------------------------------------------------*/    
     public void testMonitorResetsWhenMadeInactive() throws Exception {
         final String MON_NAME = "aaa.b.ccc";
+        
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MON_NAME);
         PerfMon mon = PerfMon.getMonitor(MON_NAME);
-        String monitorKey = MonitorDefinition.buildIntervalMonitorKey(MON_NAME);
         
         assertFalse("Monitor is not active", mon.isActive());
         
@@ -174,14 +166,11 @@ public class ExternalAppenderTest extends TestCase {
         assertEquals("maxActiveThreadCount", 0, mon.getMaxActiveThreadCount());
     }
     
-   
-    
-    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
-//        Logger.getRootLogger().setLevel(Level.INFO);
+        LoggerFactory.setDefaultDebugEnbled(true);
         String[] testCaseName = {ExternalAppenderTest.class.getName()};
 
         TestRunner.main(testCaseName);
@@ -195,7 +184,7 @@ public class ExternalAppenderTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new ExternalAppenderTest("testMonitorResetsWhenMadeInactive"));
+//        newSuite.addTest(new ExternalAppenderTest("testGetSubscribedMonitors"));
         
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

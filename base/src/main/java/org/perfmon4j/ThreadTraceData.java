@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MiscHelper;
 
@@ -220,7 +220,10 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		}
 	}
 
-	public MonitorInstance getMonitorInstance() {
-		return null;
-	}
+    public Map<FieldKey, Object> getFieldData(FieldKey[] fields) {
+    	Map<FieldKey, Object> result = new HashMap<FieldKey, Object>();
+
+    	
+    	return result;
+    }
 }

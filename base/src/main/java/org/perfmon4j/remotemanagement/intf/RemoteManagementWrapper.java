@@ -27,7 +27,11 @@ import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class RemoteManagementWrapper implements Closeable {
 	private final RemoteInterface remoteInterface;
@@ -63,31 +67,62 @@ public class RemoteManagementWrapper implements Closeable {
 	public void close() throws IOException {
 		remoteInterface.disconnect(sessionID);
 	}
-
-	public List<MonitorInstance> getData()
-			throws SessionNotFoundException, RemoteException {
-		return remoteInterface.getData(sessionID);
-	}
-
-	public List<MonitorInstance> getMonitors()
-			throws SessionNotFoundException, RemoteException {
-		return remoteInterface.getMonitors(sessionID);
-	}
-
-	public void subscribe(String sessionID, String[] monitorKeys)
-		throws SessionNotFoundException, RemoteException {
-		remoteInterface.subscribe(sessionID, monitorKeys);
-	}
-	
-	public MonitorDefinition getMonitorDefinition(MonitorDefinition.Type monitorType) 
-		throws SessionNotFoundException, RemoteException {
-		return remoteInterface.getMonitorDefinition(sessionID, monitorType);
-	}
 	
 	public String getSessionID() {
 		return sessionID;
 	}
-
+	
+    public MonitorKey[] getMonitors() throws SessionNotFoundException, RemoteException {
+    	String values[] = remoteInterface.getMonitors(sessionID);
+    	List<MonitorKey> result = new ArrayList<MonitorKey>(values.length);
+    	
+    	for (int i = 0; i < values.length; i++) {
+			MonitorKey key = MonitorKey.parseNoThrow(values[i]);
+			if (key != null) {
+				result.add(key);
+			}
+		}
+    	return result.toArray(new MonitorKey[]{});
+    }
+    
+    
+    public FieldKey[] getFieldsForMonitor(MonitorKey monitorKey) throws SessionNotFoundException, RemoteException {
+    	String values[] = remoteInterface.getFieldsForMonitor(sessionID, monitorKey.toString());
+    	List<FieldKey> result = new ArrayList<FieldKey>(values.length);
+    	
+    	for (int i = 0; i < values.length; i++) {
+			FieldKey key = FieldKey.parseNoThrow(values[i]);
+			if (key != null) {
+				result.add(key);
+			}
+		}
+    	return result.toArray(new FieldKey[]{});
+    }
+    
+    public void subscribe(FieldKey[] fieldKeys) throws SessionNotFoundException, RemoteException {
+    	String[] fields = new String[fieldKeys.length];
+    	for (int i = 0; i < fieldKeys.length; i++) {
+    		fields[i] = fieldKeys[i].toString();
+		}
+    	
+    	remoteInterface.subscribe(sessionID, fields);
+    }
+    
+    
+    public Map<FieldKey, Object> getData() throws SessionNotFoundException, RemoteException {
+    	Map<FieldKey, Object> result = new HashMap<FieldKey, Object>();
+    	
+    	Iterator<Map.Entry<String, Object>> itr = remoteInterface.getData(sessionID).entrySet().iterator();
+    	while (itr.hasNext()) {
+    		Map.Entry<String, Object> v = itr.next();
+    		FieldKey key = FieldKey.parseNoThrow(v.getKey());
+    		if (key != null) {
+    			result.put(key, v.getValue());
+    		}
+    	}
+    	return result;
+    }
+	
 	/**
 	 * Package levelfor testing
 	 * @param host
@@ -106,5 +141,4 @@ public class RemoteManagementWrapper implements Closeable {
 			throw new RemoteException("NotBound", e);
 		}
 	}
-
 }

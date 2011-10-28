@@ -26,7 +26,6 @@ import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
-import org.perfmon4j.remotemanagement.SessionManager;
 
 public class SessionManagerTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -110,6 +109,17 @@ public class SessionManagerTest extends TestCase {
     	
 		public void destroy() {
 			destroyCount++;
+		}
+
+		public Object getSessionValue(String key) {
+			return null;
+		}
+
+		public void putSessionValue(String key, Object value) {
+		}
+
+		public Object removeSessionValue(String key) {
+			return null;
 		}
     }
     

@@ -22,14 +22,13 @@
 package org.perfmon4j.remotemanagement;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
-import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 import org.perfmon4j.util.Logger;
@@ -59,7 +58,8 @@ public class ExternalAppender {
 	}
 	
 	public static void validateSession(String sessionID) throws SessionNotFoundException {
-		if (sessionManager.getSession(sessionID) == null) {
+		SessionManager.SessionData result = sessionManager.getSession(sessionID);
+		if (result == null) {
 			throw new SessionNotFoundException(sessionID);
 		}
 	}
@@ -68,8 +68,9 @@ public class ExternalAppender {
 		sessionManager.disposeSession(sessionID);
 		logger.logInfo("Disconnected external appender - sessionID: " + sessionID);
 	}
+
 	
-	public static void subscribe(String sessionID, String monitorKey) throws SessionNotFoundException {
+	public static void subscribe(String sessionID, MonitorKeyWithFields monitorKey) throws SessionNotFoundException {
 		MonitorMap map = sessionManager.getSession(sessionID);
 		if (map == null) {
 			throw new SessionNotFoundException(sessionID);
@@ -78,28 +79,29 @@ public class ExternalAppender {
 		logger.logInfo("External appender (sessionID:" + sessionID + ") subscribed to monitor: " + monitorKey);
 	}
 
-	public static String[] getSubscribedMonitors(String sessionID) throws SessionNotFoundException {
+	public static MonitorKeyWithFields[] getSubscribedMonitors(String sessionID) throws SessionNotFoundException {
 		MonitorMap map = sessionManager.getSession(sessionID);
 		if (map == null) {
 			throw new SessionNotFoundException(sessionID);
 		}
-		return map.map.keySet().toArray(new String[]{});
+		return map.fieldProperties.values().toArray(new MonitorKeyWithFields[]{});
 	}
 	
 	
-	public static PerfMonData takeSnapShot(String sessionID, String monitorKey) throws SessionNotFoundException, MonitorNotFoundException {
+	public static Map<FieldKey, Object> takeSnapShot(String sessionID, MonitorKeyWithFields monitorKey) throws SessionNotFoundException, MonitorNotFoundException {
 		MonitorMap map = sessionManager.getSession(sessionID);
 		if (map == null) {
 			throw new SessionNotFoundException(sessionID);
 		}
-		PerfMonData result = map.takeSnapShot(monitorKey);
+		Map<FieldKey, Object> result = map.takeSnapShot(monitorKey);
 		if (logger.isDebugEnabled()) {
-			logger.logDebug("External appender (sessionID:" + sessionID + ") took snapshot of monitor: " + monitorKey);
+			logger.logDebug("External appender (sessionID:" + sessionID + ") took snapshot of monitor: " + monitorKey + "\r\n" 
+						+ FieldKey.buildDebugString(result));
 		}
 		return result;
 	}
 	
-	public static void unSubscribe(String sessionID, String monitorKey) {
+	public static void unSubscribe(String sessionID, MonitorKeyWithFields monitorKey) {
 		MonitorMap map = sessionManager.getSession(sessionID);
 		if (map != null) {
 			map.unSubscribe(monitorKey);	
@@ -124,15 +126,23 @@ public class ExternalAppender {
 	}
 	
 	private static final class MonitorMap implements SessionManager.SessionData {
-		private final Map<String, PerfMonData> map = new HashMap<String, PerfMonData>();
+		private final Map<MonitorKey, PerfMonData> map = new HashMap<MonitorKey, PerfMonData>();
+		private final Map<String, Object> sessionProperties = new HashMap<String, Object>();
+		private final Map<MonitorKey, MonitorKeyWithFields> fieldProperties = new HashMap<MonitorKey, MonitorKeyWithFields>();
 		
-		void subscribe(String monitorKey) {
+		private void subscribe(MonitorKeyWithFields monitorKeyWithFields) {
+			MonitorKey monitorKey = monitorKeyWithFields.getMonitorKeyOnly();
+			// Always store the fields we are monitoring...
+			// Even if we are not "subscribing" to a new data element
+			// we might be adding/removing fields.
+			fieldProperties.put(monitorKey, monitorKeyWithFields);
+				
 			if (map.get(monitorKey) != null) {
 				return;  // Already subscribed... Nothing to do.
 			}
-			String im = MonitorDefinition.getIntervalMonitorName(monitorKey);
-			if (im != null) {
-				PerfMon mon = PerfMon.getMonitor(im);
+			
+			if (monitorKey.getType().equals(MonitorKey.INTERVAL_TYPE)) {
+				PerfMon mon = PerfMon.getMonitor(monitorKey.getName());
 				IntervalData d = new IntervalData(mon);
 				mon.addExternalElement(d);
 				
@@ -142,40 +152,43 @@ public class ExternalAppender {
 			}
 		}
 		
-		public void unSubscribe(String monitorKey) {
-			String im = MonitorDefinition.getIntervalMonitorName(monitorKey);
-			
-			if (im != null) {
+		private void unSubscribe(MonitorKeyWithFields monitorKeyWithFields) {
+			MonitorKey monitorKey = monitorKeyWithFields.getMonitorKeyOnly();
+			if (MonitorKey.INTERVAL_TYPE.equals(monitorKey.getType())) {
 				IntervalData data = (IntervalData)map.remove(monitorKey);
 				if (data != null) { 
-					PerfMon mon = PerfMon.getMonitor(im);
+					PerfMon mon = PerfMon.getMonitor(monitorKey.getName());
 					mon.removeExternalElement(data);
 				}
+				fieldProperties.remove(monitorKey);
 			}
 		}
 
-		public PerfMonData takeSnapShot(String monitorKey) throws MonitorNotFoundException {
-			PerfMonData result = null;
-			String im = MonitorDefinition.getIntervalMonitorName(monitorKey);
+		private Map<FieldKey, Object> takeSnapShot(MonitorKeyWithFields monitorKeyWithFields) throws MonitorNotFoundException {
+			Map<FieldKey, Object> result = null;
+			MonitorKey monitorKey = monitorKeyWithFields.getMonitorKeyOnly();
 			
-			if (im != null) {
+			PerfMonData r = null;
+			
+			if (MonitorKey.INTERVAL_TYPE.equals(monitorKey.getType())) {
 				IntervalData data = (IntervalData)map.get(monitorKey);
 				if (data == null) {
-					throw new MonitorNotFoundException(monitorKey);
+					throw new MonitorNotFoundException(monitorKey.toString());
 				}
-				PerfMon mon = PerfMon.getMonitor(im);
-				result = data;
+				PerfMon mon = PerfMon.getMonitor(monitorKey.getName());
+				r = data;
 				data = mon.replaceExternalElement((IntervalData)data, new IntervalData(mon));
 				map.put(monitorKey, data);
-				((IntervalData)result).setTimeStop(MiscHelper.currentTimeWithMilliResolution());
+				((IntervalData)r).setTimeStop(MiscHelper.currentTimeWithMilliResolution());
+				result = r.getFieldData(monitorKeyWithFields.getFields());
 			} else {
-				logger.logError("Unable to subscribe to monitor: " + monitorKey);
+				logger.logError("Unable to take shapshot of monitor: " + monitorKey);
 			}
 			return result;
 		}
 
 		public void destroy() {
-			String keys[] = map.keySet().toArray(new String[]{});
+			MonitorKeyWithFields keys[] = fieldProperties.values().toArray(new MonitorKeyWithFields[]{});
 			for (int i = 0; i < keys.length; i++) {
 				unSubscribe(keys[i]);
 			}

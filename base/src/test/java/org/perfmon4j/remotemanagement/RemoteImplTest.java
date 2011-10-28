@@ -23,9 +23,10 @@ package org.perfmon4j.remotemanagement;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -36,8 +37,6 @@ import org.apache.log4j.Level;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
-import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.SimpleRunnable;
 import org.perfmon4j.remotemanagement.intf.ThinRunnableInVM;
@@ -156,67 +155,105 @@ public class RemoteImplTest extends TestCase {
 
     	System.out.println(result);
 		assertTrue("Should contain the interval monitor", 
-				result.contains("Monitor: INTERVAL:testGetMonitorsIncludesIntervalMonitors"));
-		assertTrue("Validate we retrieved the monitor Definition", 
-				result.contains("FieldDefinition(monitorType:INTERVAL, fieldName:MaxActiveThreadCount, fieldType:INTEGER)"));
+				result.contains("Monitor: INTERVAL(name=testGetMonitorsIncludesIntervalMonitors)"));
+		
+		assertTrue("Validate we retrieved the interval fields", 
+				result.contains("FieldDefinition: INTERVAL(name=testGetMonitorsIncludesIntervalMonitors):FIELD(name=AverageDuration;type=LONG)"));
     }
 
-    
-    public static boolean containsMonitorKey(List<MonitorInstance> monitors, String key) {
-    	boolean found = false;
-    	
-    	Iterator<MonitorInstance> itr = monitors.iterator();
-    	while (itr.hasNext() && !found) {
-    		found = key.endsWith(itr.next().getKey());
-    	}
-    	
-    	return found;
-    }
-    
     
     public void testSubscribeToIntervalMonitor() throws Exception {
     	ExternalAppender.setEnabled(true);
     	
-    	String keyX = MonitorDefinition.buildIntervalMonitorKey("x");
-    	String keyY = MonitorDefinition.buildIntervalMonitorKey("y");
-    	String keyZ = MonitorDefinition.buildIntervalMonitorKey("z");
+    	String keyX = "INTERVAL(name=x):FIELD(name=AverageDuration;type=LONG)";
+    	String keyY = "INTERVAL(name=y):FIELD(name=AverageDuration;type=LONG)";
+    	String keyZ = "INTERVAL(name=z):FIELD(name=AverageDuration;type=LONG)";
 
-    	RemoteImpl i = RemoteImpl.singleton;
+    	RemoteImpl i = RemoteImpl.getSingleton();
     	
     	String sessionID = i.connect(ManagementVersion.VERSION);
     	try {
-    		List<String> monitorKeys = new ArrayList<String>(); 
+    		List<String> fieldKeys = new ArrayList<String>(); 
 
-    		List<MonitorInstance> monitors = i.getData(sessionID);
-    		assertEquals("By default should not be subscribed to anything", 0, monitors.size());
+    		Map<String,Object> data = i.getData(sessionID);
+    		assertEquals("By default should not be subscribed to anything", 0, data.size());
     		
-    		monitorKeys.add(keyX);
-    		i.subscribe(sessionID, monitorKeys.toArray((new String[]{})));
+    		fieldKeys.add(keyX);
+    		i.subscribe(sessionID, fieldKeys.toArray((new String[]{})));
     		
-    		monitors = i.getData(sessionID);
-    		assertEquals("Should now be subscribed", 1, monitors.size());
+    		data = i.getData(sessionID);
+    		assertEquals("Should now be subscribed", 1, data.size());
    
     		// Add 2 more monitors...
-    		monitorKeys.add(keyY);
-    		monitorKeys.add(keyZ);
-    		i.subscribe(sessionID, monitorKeys.toArray((new String[]{})));
+    		fieldKeys.add(keyY);
+    		fieldKeys.add(keyZ);
     		
-    		monitors = i.getData(sessionID);
-    		assertEquals("Should now be subscribed", 3, monitors.size());
+    		i.subscribe(sessionID, fieldKeys.toArray((new String[]{})));
+    		
+    		data = i.getData(sessionID);
+    		assertEquals("Should now be subscribed", 3, data.size());
     		
     		// Remove first two monitors...
-    		monitorKeys.remove(keyX);
-    		monitorKeys.remove(keyY);
-    		i.subscribe(sessionID, monitorKeys.toArray((new String[]{})));
+    		fieldKeys.remove(keyX);
+    		fieldKeys.remove(keyY);
+    		i.subscribe(sessionID, fieldKeys.toArray((new String[]{})));
     		
-    		monitors = i.getData(sessionID);
-    		assertEquals("Should now be subscribed", 1, monitors.size());
-    		assertTrue("Should have monitor Z", monitorKeys.contains(keyZ));
+    		data = i.getData(sessionID);
+    		assertEquals("Should now be subscribed", 1, data.size());
+    		assertTrue("Should have monitor Z", data.keySet().contains(keyZ));
     	} finally {
     		i.disconnect(sessionID);
     	}
     }
     
+    
+    public static final class FakeLoad implements Runnable {
+    	private final Random random = new Random();
+    	private final int durationMillis;
+    	private final String monitorName;
+    	private long start;
+    	
+    	FakeLoad(String monitorName, int durationMillis) {
+    		this.monitorName = monitorName;
+    		this.durationMillis = durationMillis;
+    	}
+    	
+		public void run() {
+			start = System.currentTimeMillis();
+    		while (start + durationMillis > System.currentTimeMillis()) {
+    			try {
+					Thread.sleep(random.nextInt(50));
+				} catch (InterruptedException e) {
+				}
+				PerfMonTimer t = PerfMonTimer.start(monitorName);
+    			try {
+    				int secondsActive = Math.max((int)((System.currentTimeMillis() - start)/1000), 1);
+					Thread.sleep(random.nextInt(10*secondsActive));
+				} catch (InterruptedException e) {
+				} finally {
+					PerfMonTimer.stop(t);
+				}
+    		}
+		}
+    }
+
+    // This is NOT really a test... More like a demo!
+    public void XtestFullLifecycle() throws Exception {
+    	ExternalAppender.setEnabled(true);
+    	
+    	for (int x = 0; x < 15; x++) {
+    		new Thread(new FakeLoad("a.b." + x, 15000)).start();
+    	}
+    	String result = ThinRunnableInVM.run(SimpleRunnable.TestFullRemoteMonitorLifecycle.class, "", perfmon4jManagementInterface);
+    	ExternalAppender.setEnabled(true);
+
+    	
+    	System.out.println(result);
+//		assertTrue("Should contain the interval monitor", 
+//				result.contains("Monitor: INTERVAL:testGetMonitorsIncludesIntervalMonitors"));
+//		assertTrue("Validate we retrieved the monitor Definition", 
+//				result.contains("FieldDefinition(monitorType:INTERVAL, fieldName:MaxActiveThreadCount, fieldType:INTEGER)"));
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
@@ -242,7 +279,7 @@ public class RemoteImplTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-		newSuite.addTest(new RemoteImplTest("testGetMonitorsIncludesIntervalMonitors"));
+//		newSuite.addTest(new RemoteImplTest("testFullLifecycle"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

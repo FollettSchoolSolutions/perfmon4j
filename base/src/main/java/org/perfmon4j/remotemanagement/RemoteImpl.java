@@ -27,19 +27,21 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
-import org.perfmon4j.PerfMonData;
-import org.perfmon4j.remotemanagement.intf.FieldDefinition;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
-import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
+import org.perfmon4j.remotemanagement.intf.UnableToParseKeyException;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -50,13 +52,13 @@ public class RemoteImpl implements RemoteInterface {
 	private static Registry registry = null;
 	private static Integer registeredPort = null;
 	
-	static final RemoteImpl singleton = new RemoteImpl();
-	
-	private final MonitorDefinition intervalDefinition = buildIntervalDefinition();
-	
+	static final private RemoteImpl singleton = new RemoteImpl();
 	
 	private RemoteImpl() {
-		
+	}
+
+	public static RemoteImpl getSingleton() {
+		return singleton;
 	}
 
 	public static Integer getRegisteredPort() {
@@ -120,108 +122,85 @@ public class RemoteImpl implements RemoteInterface {
 		ExternalAppender.disconnect(sessionID);
 	}
 
-	public List<MonitorInstance> getData(String sessionID ) throws SessionNotFoundException, RemoteException {
-		List<MonitorInstance> result = new ArrayList<MonitorInstance>();
-		
-		String[] keys = ExternalAppender.getSubscribedMonitors(sessionID);
-		for (int i = 0; i < keys.length; i++) {
-			String key = keys[i];
-			
-			try {
-				PerfMonData d = ExternalAppender.takeSnapShot(sessionID, key);
-				result.add(new MonitorInstance(key, MonitorDefinition.INTERVAL_TYPE));
-			} catch (MonitorNotFoundException mnf) {
-				logger.logWarn("Monitor \"" + key + "\" not found for sessionID: " + sessionID, mnf);
-			}
+	private void copyToResultMap(Map<FieldKey, Object> from, Map<String, Object> to) {
+		Iterator<Map.Entry<FieldKey, Object>> itr = from.entrySet().iterator();
+		while (itr.hasNext()) {
+			Map.Entry<FieldKey, Object> entry = itr.next();
+			to.put(entry.getKey().toString(), entry.getValue());
 		}
+	}
+
+	public Map<String, Object> getData(String sessionID) throws SessionNotFoundException, RemoteException {
+		Map<String, Object> result = new HashMap<String, Object>();
+		MonitorKeyWithFields monitors[] = ExternalAppender.getSubscribedMonitors(sessionID);
 		
+		for (int i = 0; i < monitors.length; i++) {
+			Map<FieldKey, Object> from;
+			try {
+				from = ExternalAppender.takeSnapShot(sessionID, monitors[i]);
+				copyToResultMap(from, result);
+			} catch (MonitorNotFoundException e) {
+				logger.logWarn("Monitor not found", e);
+			}			
+		}
 		return result;
 	}
 
-	public List<MonitorInstance> getMonitors(String sessionID)
-			throws RemoteException, SessionNotFoundException {
-		List<MonitorInstance> result = new ArrayList<MonitorInstance>();
-		
+	public String[] getFieldsForMonitor(String sessionID, String monitorKey)
+			throws SessionNotFoundException, RemoteException {
 		ExternalAppender.validateSession(sessionID);
 		
-		Iterator<String> intervalMonitors = PerfMon.getMonitorNames().iterator();
-		while (intervalMonitors.hasNext()) {
-			String key = MonitorDefinition.buildIntervalMonitorKey(intervalMonitors.next());
-			result.add(new MonitorInstance(key, intervalDefinition.getType())); 
+		String[] result = new String[]{};
+		try {
+			MonitorKey key = MonitorKey.parse(monitorKey);
+			if (MonitorKey.INTERVAL_TYPE.equals(key.getType())) {
+				FieldKey fields[] = IntervalData.getFields(key.getName()).getFields();
+				result = FieldKey.toStringArray(fields);
+			}
+		} catch (UnableToParseKeyException e) {
+			logger.logWarn("Unable to parse monitor key: " + monitorKey);
 		}
-		return result;	
+
+		return result;
 	}
 
-	public void subscribe(String sessionID, String[] monitorKeys)
-			throws RemoteException, SessionNotFoundException {
+	public String[] getMonitors(String sessionID) throws SessionNotFoundException, RemoteException {
+		List<String> result = new ArrayList<String>();
+		ExternalAppender.validateSession(sessionID);
+
+		Iterator<String> intervalMonitors = PerfMon.getMonitorNames().iterator();
+		while (intervalMonitors.hasNext()) {
+			MonitorKey key = new MonitorKey(MonitorKey.INTERVAL_TYPE, intervalMonitors.next());
+			result.add(key.toString());
+		}
 		
-		List<String> newSubscribed = Arrays.asList(monitorKeys);
-		List<String> alreadySubscribedList = new ArrayList<String>(newSubscribed.size());
+		return result.toArray(new String[]{});	
+	}
+
+	public void subscribe(String sessionID, String[] fieldKeys) throws SessionNotFoundException, RemoteException {
+		MonitorKeyWithFields[] monitorKey = MonitorKeyWithFields.groupFields(FieldKey.toFieldKeyArrayNoThrow(fieldKeys));
 		
-		String[] subscribed = ExternalAppender.getSubscribedMonitors(sessionID);
+		List<MonitorKeyWithFields> alreadySubscribed = new ArrayList<MonitorKeyWithFields>(monitorKey.length);
+		List<MonitorKeyWithFields> newSubscribed = Arrays.asList(monitorKey);
+		MonitorKeyWithFields[] subscribed = ExternalAppender.getSubscribedMonitors(sessionID);
+		
 		for (int i = 0; i < subscribed.length; i++) {
-			String key = subscribed[i];
+			MonitorKeyWithFields key = subscribed[i];
 			if (newSubscribed.contains(subscribed[i])) {
 				// Already subscribed...  Dont need to add again.
-				alreadySubscribedList.add(key);
+				alreadySubscribed.add(key);
 			} else {
 				// No longer subscribed...  Unsubscribe.
 				ExternalAppender.unSubscribe(sessionID, key);
 			}
 		}
-		
-		Iterator<String> itr = newSubscribed.iterator();
+	
+		Iterator<MonitorKeyWithFields> itr = newSubscribed.iterator();
 		while (itr.hasNext()) {
-			String key = itr.next();
-			if (!alreadySubscribedList.contains(key)) {
+			MonitorKeyWithFields key = itr.next();
+			if (!alreadySubscribed.contains(key)) {
 				ExternalAppender.subscribe(sessionID, key);
 			}
 		}
 	}
-
-	public MonitorDefinition getMonitorDefinition(String sessionID,
-			MonitorDefinition.Type monitorType) throws SessionNotFoundException, RemoteException {
-
-		ExternalAppender.validateSession(sessionID);
-		
-		if (monitorType.equals(MonitorDefinition.INTERVAL_TYPE)) {
-			return intervalDefinition;
-		} else {
-			return null;
-		}
-	}
-	
-	private static MonitorDefinition buildIntervalDefinition() {
-		final List<FieldDefinition> fields = new ArrayList<FieldDefinition>();
-		final MonitorDefinition.Type type = MonitorDefinition.INTERVAL_TYPE;
-	
-		fields.add(new FieldDefinition(type, "MaxActiveThreadCount", FieldDefinition.INTEGER_TYPE));
-		fields.add(new FieldDefinition(type, "MaxDuration", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "MaxSQLDuration", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "MinDuration", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "MinSQLDuration", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "TotalDuration", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "TotalSQLDuration", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "AverageDuration", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "AverageSQLDuration", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "SumOfSquares", FieldDefinition.LONG_TYPE));
-		fields.add(new FieldDefinition(type, "SumOfSQLSquares", FieldDefinition.LONG_TYPE));
-
-		fields.add(new FieldDefinition(type, "TotalCompletions", FieldDefinition.INTEGER_TYPE));
-		fields.add(new FieldDefinition(type, "TotalHits", FieldDefinition.INTEGER_TYPE));
-
-		fields.add(new FieldDefinition(type, "TimeStart", FieldDefinition.TIMESTAMP_TYPE));
-		fields.add(new FieldDefinition(type, "TimeStop", FieldDefinition.TIMESTAMP_TYPE));
-		fields.add(new FieldDefinition(type, "TimeMaxActiveThreadCountSet", FieldDefinition.TIMESTAMP_TYPE));
-		fields.add(new FieldDefinition(type, "TimeMaxDurationSet", FieldDefinition.TIMESTAMP_TYPE));
-		fields.add(new FieldDefinition(type, "TimeMinDurationSet", FieldDefinition.TIMESTAMP_TYPE));
-		fields.add(new FieldDefinition(type, "TimeMaxSQLDurationSet", FieldDefinition.TIMESTAMP_TYPE));
-		fields.add(new FieldDefinition(type, "TimeMinSQLDurationSet", FieldDefinition.TIMESTAMP_TYPE));
-		
-		fields.add(new FieldDefinition(type, "ThroughputPerMinute", FieldDefinition.DOUBLE_TYPE));
-		fields.add(new FieldDefinition(type, "StdDeviation", FieldDefinition.DOUBLE_TYPE));
-
-		return new MonitorDefinition("INTERVAL", type, fields);	
-	}
-	
 }

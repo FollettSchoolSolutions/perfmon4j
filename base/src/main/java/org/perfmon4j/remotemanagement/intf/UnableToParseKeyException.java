@@ -18,21 +18,13 @@
  * 	McHenry, IL 60050
  * 
 */
+
 package org.perfmon4j.remotemanagement.intf;
 
-import java.io.Serializable;
-import java.util.Map;
-
-public class SerializedData implements Serializable {
+public class UnableToParseKeyException extends Exception {
 	private static final long serialVersionUID = ManagementVersion.MAJOR_VERSION;
-	
-	private final Map<FieldDefinition, Object> map; 
-	
-	public SerializedData(Map<FieldDefinition, Object> map) {
-		this.map = map;
-	}
-	
-	public Object getElement(FieldDefinition key) {
-		return map == null ? null : map.get(key);
+
+	public UnableToParseKeyException(String monitorKey) {
+		super("Unable to parse key: " + monitorKey);
 	}
 }

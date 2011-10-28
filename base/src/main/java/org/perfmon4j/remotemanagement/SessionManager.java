@@ -127,7 +127,7 @@ class SessionManager<T extends SessionManager.SessionData> {
 		}
 	}
 	
-	static interface SessionData {
+	static public interface SessionData {
 		void destroy();
 	}
 	

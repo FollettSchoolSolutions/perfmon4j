@@ -21,13 +21,14 @@
 
 package org.perfmon4j;
 
+import java.util.Map;
+import java.util.Set;
+
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-import org.perfmon4j.remotemanagement.intf.MonitorDefinition;
-import org.perfmon4j.remotemanagement.intf.MonitorInstance;
-import org.perfmon4j.remotemanagement.intf.SerializedData;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
 
 public class IntervalDataTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -62,28 +63,37 @@ public class IntervalDataTest extends TestCase {
         System.err.println(data.toString());
     }
    
-    
-     public void testGetMonitorInstance() throws Exception {
+     public void testGetFields() throws Exception {
+         final long NOW = System.currentTimeMillis();
+         final long FIVE_MINUTES = (5 * 60 * 1000);
+         final long FIVE_MINUTES_AGO = NOW - FIVE_MINUTES;
+         
+    	 FieldKey[] fields = IntervalData.getFields("a.b.c").getFields();
+    	 assertTrue("Should have at least 1 field...", fields.length > 0);
+
+    	 Set<FieldKey> set = FieldKey.toSet(fields);
+    	 
+    	 FieldKey fieldAverage = FieldKey.parse("INTERVAL(name=a.b.c):FIELD(name=AverageDuration;type=LONG)");
+    	 assertTrue("Should have average duration field", set.contains(fieldAverage));
+     }
+
+     
+     public void testGetFieldData() throws Exception {
          final long NOW = System.currentTimeMillis();
          final long FIVE_MINUTES = (5 * 60 * 1000);
          final long FIVE_MINUTES_AGO = NOW - FIVE_MINUTES;
          
     	 IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), FIVE_MINUTES_AGO, null, null, NOW);
-
-         MonitorInstance i = data.getMonitorInstance();
-         MonitorDefinition definition = null;
+    	 data.setTotalHits(5);
     	 
-    	 assertEquals("Should be appender type", MonitorDefinition.INTERVAL_TYPE, i.getMonitorType());
-         assertEquals("Monitor key",  MonitorDefinition.buildIntervalMonitorKey("a.b.c"), i.getKey());
-         
-         SerializedData d = i.getData();
-         assertNotNull("Should have data", d);
-         
-         
-         
-       
-         
-         
+    	 FieldKey[] fields = IntervalData.getFields("a.b.c").getFields();
+    	 Map<FieldKey, Object> d = data.getFieldData(fields);
+    	 
+    	 FieldKey fieldTotalHits = FieldKey.parse("INTERVAL(name=a.b.c):FIELD(name=TotalHits;type=INTEGER)");
+    	 Integer totalHits = (Integer)d.get(fieldTotalHits);
+    	 
+    	 assertNotNull("average", totalHits);
+    	 assertEquals("totalHits", 5, totalHits.longValue());
      }
 
 /*----------------------------------------------------------------------------*/    
@@ -101,7 +111,7 @@ public class IntervalDataTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new PerfMonDataTest("testToString"));
+//        newSuite.addTest(new IntervalDataTest("testGetFieldData"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
