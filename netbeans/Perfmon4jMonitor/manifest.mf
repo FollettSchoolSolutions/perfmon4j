@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+OpenIDE-Module: org.perfmon4j.visualvm
+OpenIDE-Module-Install: org/perfmon4j/visualvm/Installer.class
+OpenIDE-Module-Layer: org/perfmon4j/visualvm/layer.xml
+OpenIDE-Module-Localizing-Bundle: org/perfmon4j/visualvm/Bundle.properties
+OpenIDE-Module-Requires: org.openide.windows.WindowManager
+OpenIDE-Module-Specification-Version: 1.0
+
