@@ -21,8 +21,14 @@
 
 package org.perfmon4j.visualvm.chart;
 
+import com.sun.tools.visualvm.core.options.GlobalPreferences;
 import com.sun.tools.visualvm.core.scheduler.Quantum;
 import com.sun.tools.visualvm.core.scheduler.ScheduledTask;
+import com.sun.tools.visualvm.core.scheduler.Scheduler;
+import com.sun.tools.visualvm.core.scheduler.SchedulerTask;
+import java.util.prefs.PreferenceChangeEvent;
+import java.util.prefs.PreferenceChangeListener;
+
 import java.awt.Color;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -30,41 +36,56 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 
-public class FieldManager {
+public class FieldManager implements PreferenceChangeListener {
 
-    private final int pollingSeconds;
     private final Object wrapperToken = new Object();
     private final RemoteManagementWrapper wrapper;
+    private final GlobalPreferences preferences;
     private Object mapToken = new Object();
     private final Map<FieldKey, FieldElement> mapElements = new HashMap<FieldKey, FieldElement>();
     private final List<FieldHandler> fieldHandlers = new ArrayList<FieldHandler>();
-    private ThreadRunner runner = null;
 
-    public FieldManager(RemoteManagementWrapper wrapper, int pollingSeconds) {
-        this.pollingSeconds = pollingSeconds;
+    /**
+     * Note... It would be tempting to use the Scheduler provided by the
+     * visual vm package...  However as of 11/3/11 that would end up
+     * throwing null pointer exceptions when the polling interval is
+     * adjusted at runtime.
+     */
+    private final Timer timer = new Timer();
+    private TimerTask task = null;
+    
+
+    public FieldManager(RemoteManagementWrapper wrapper) {
         this.wrapper = wrapper;
+        
+        preferences = GlobalPreferences.sharedInstance();
+        preferences.watchMonitoredDataPoll(this);
     }
 
     public boolean isStarted() {
-        return runner != null;
+        return task != null;
     }
 
     public void start() {
         if (isStarted()) {
             stop();
         }
-        runner = new ThreadRunner();
-        runner.start();
+        int duration = preferences.getMonitoredDataPoll() * 1000;
+        task = new FieldTask();
+        timer.schedule(task, duration, duration);
     }
 
     public void stop() {
         if (isStarted()) {
-            runner.setStopFlag();
-            runner = null;
+            task.cancel();
+            task = null;
         }
     }
 
@@ -126,6 +147,14 @@ public class FieldManager {
         fieldHandlers.remove(handler);
     }
 
+    @Override
+    public void preferenceChange(PreferenceChangeEvent evt) {
+        if (isStarted()) {
+            // Restart to pick up the polling interval change.
+            start();
+        };
+    }
+
     public static interface FieldHandler {
 
         public void handleData(Map<FieldKey, Object> data);
@@ -136,41 +165,24 @@ public class FieldManager {
     }
 
     
-    private class ThreadRunner extends Thread {
-
-        private boolean running = true;
-
-        ThreadRunner() {
-            this.setDaemon(true);
-        }
-
-        public void setStopFlag() {
-            running = false;
-        }
-
+    private class FieldTask extends TimerTask {
+        
         @Override
         public void run() {
-            while (running) {
-                try {
-                    FieldHandler[] handlers = fieldHandlers.toArray(new FieldHandler[fieldHandlers.size()]);
-                    if (handlers.length > 0) {
-                        synchronized (wrapperToken) {
-                            Map<FieldKey, Object> data = wrapper.getData();
-                            if (data.size() > 0) {
-                                for (int i = 0; i < handlers.length; i++) {
-                                    handlers[i].handleData(data);
-                                }
+            try {
+                FieldHandler[] handlers = fieldHandlers.toArray(new FieldHandler[fieldHandlers.size()]);
+                if (handlers.length > 0) {
+                    synchronized (wrapperToken) {
+                        Map<FieldKey, Object> data = wrapper.getData();
+                        if (data.size() > 0) {
+                            for (int i = 0; i < handlers.length; i++) {
+                                handlers[i].handleData(data);
                             }
                         }
                     }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
                 }
-                try {
-                    Thread.sleep(pollingSeconds * 1000);
-                } catch (InterruptedException e) {
-                    // ignore
-                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         }
     }

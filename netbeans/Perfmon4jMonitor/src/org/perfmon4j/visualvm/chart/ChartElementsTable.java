@@ -431,48 +431,4 @@ public class ChartElementsTable extends JPanel implements
 
         return fieldKey;
     }
-
-    /**
-     * Entry point for the sample application.
-     * 
-     * @param args
-     *            ignored.
-     */
-    public static void main(String[] args) throws Exception {
-        RemoteManagementWrapper wrapper = RemoteManagementWrapper.open(
-                "localhost", 5959);
-        FieldManager manager = new FieldManager(wrapper, 1);
-        manager.start();
-
-        JFrame frame = new JFrame("Memory Usage Demo");
-
-        ChartElementsTable panel = new ChartElementsTable(manager);
-        manager.addDataHandler(panel);
-
-        frame.getContentPane().add(panel, BorderLayout.CENTER);
-        frame.setBounds(200, 120, 600, 280);
-        frame.setVisible(true);
-        frame.addWindowListener(new WindowAdapter() {
-
-            public void windowClosing(WindowEvent e) {
-                System.exit(0);
-            }
-        });
-
-        FieldKey fieldThroughputKey = getFieldByName(wrapper,
-                "org.apache.catalina.connector.Request", "ThroughputPerMinute");
-        manager.addOrUpdateField(new FieldElement(
-                fieldThroughputKey, .01f, Color.RED));
-
-        manager.addOrUpdateField(new FieldElement(fieldThroughputKey,
-                .01f, Color.black));
-
-        FieldKey fieldAverage = getFieldByName(wrapper,
-                "org.apache.catalina.connector.Request", "AverageDuration");
-        manager.addOrUpdateField(new FieldElement(fieldAverage, 1f,
-                Color.RED));
-
-        // manager.removeField(fieldThroughputKey);
-
-    }
-}
+ }

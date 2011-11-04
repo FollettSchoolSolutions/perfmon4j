@@ -57,7 +57,7 @@ public class Perfmon4jMonitorView extends DataSourceView {
     public Perfmon4jMonitorView(Application app) {
         super(app, "Perfmon4j", new ImageIcon(Utilities.loadImage(IMAGE_PATH, true)).getImage(), 60, false);
         wrapper = Perfmon4jModel.getModelForApp(app).getRemoteWrapper();
-        fieldManager = new FieldManager(wrapper, 1);
+        fieldManager = new FieldManager(wrapper);
     }
 
     private JFrame getParentFrame() {
@@ -73,14 +73,12 @@ public class Perfmon4jMonitorView extends DataSourceView {
         return result;
     } 
  
-    
-    
     @Override
     protected DataViewComponent createComponent() {
         JPanel generalDataArea = new JPanel(new BorderLayout());
         generalDataArea.setBorder(BorderFactory.createEmptyBorder(14, 8, 14, 8));
         
-        JButton addMonitorsButton = new JButton("Add Monitors");
+        JButton addMonitorsButton = new JButton("Add Monitors...");
         addMonitorsButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -98,7 +96,7 @@ public class Perfmon4jMonitorView extends DataSourceView {
             }
         });
         generalDataArea.add(addMonitorsButton, BorderLayout.LINE_END);
-        int secondsToDisplay = 60*5;
+        int secondsToDisplay = 180; // 3 Minutes
         
         chart = new DynamicTimeSeriesChart(secondsToDisplay);
         fieldManager.addDataHandler(chart);
