@@ -25,11 +25,13 @@ import com.sun.tools.visualvm.application.Application;
 import com.sun.tools.visualvm.core.ui.DataSourceView;
 import com.sun.tools.visualvm.core.ui.components.DataViewComponent;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import org.openide.util.Exceptions;
 import org.openide.util.Utilities;
@@ -47,20 +49,32 @@ public class Perfmon4jMonitorView extends DataSourceView {
     private DataViewComponent dvc;
     //Reusing an image from the sources:
     private static final String IMAGE_PATH = "com/sun/tools/visualvm/coredump/resources/coredump.png"; // NOI18N
-    private final Application app;
     private final RemoteManagementWrapper wrapper;
     private final FieldManager fieldManager;
     private DynamicTimeSeriesChart chart;
     private ChartElementsTable table;
     
-    
     public Perfmon4jMonitorView(Application app) {
         super(app, "Perfmon4j", new ImageIcon(Utilities.loadImage(IMAGE_PATH, true)).getImage(), 60, false);
-        this.app = app;
         wrapper = Perfmon4jModel.getModelForApp(app).getRemoteWrapper();
         fieldManager = new FieldManager(wrapper, 1);
     }
 
+    private JFrame getParentFrame() {
+        JFrame result = null;
+        Component c = dvc.getParent();
+        while (c != null && result == null) {
+            if (c instanceof JFrame) {
+                result = (JFrame)c;
+            } else {
+                c = c.getParent();
+            }
+        }
+        return result;
+    } 
+ 
+    
+    
     @Override
     protected DataViewComponent createComponent() {
         JPanel generalDataArea = new JPanel(new BorderLayout());
@@ -71,7 +85,7 @@ public class Perfmon4jMonitorView extends DataSourceView {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    FieldElement result = AEDMonitor.showModel(wrapper);
+                    FieldElement result = AEDMonitor.showModel(getParentFrame(), wrapper);
                     if (result != null) {
                         fieldManager.addOrUpdateField(result);
                         

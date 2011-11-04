@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.swing.AbstractListModel;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
@@ -56,7 +58,7 @@ public class AEDMonitor extends javax.swing.JDialog {
 
     /** Creates new form AEDMonitor */
     public AEDMonitor(java.awt.Frame parent, boolean modal, RemoteManagementWrapper wrapper) throws SessionNotFoundException, RemoteException {
-        super(parent, modal);
+        super(parent, "Add Monitor", modal);
         this.wrapper = wrapper;
         initComponents();
         monitorModel = new MonitorModel();
@@ -66,7 +68,6 @@ public class AEDMonitor extends javax.swing.JDialog {
     }
 
     private static class FieldWrapper {
-
         final FieldKey field;
 
         FieldWrapper(FieldKey field) {
@@ -153,12 +154,13 @@ public class AEDMonitor extends javax.swing.JDialog {
 //        }
     }
 
-    public static FieldElement showModel(RemoteManagementWrapper wrapper) throws Exception {
+    public static FieldElement showModel(JFrame parent, RemoteManagementWrapper wrapper) throws Exception {
         FieldElement result = null;
-        AEDMonitor dialog = new AEDMonitor(new javax.swing.JFrame(), true, wrapper);
+        AEDMonitor dialog = new AEDMonitor(parent, true, wrapper);
 
         dialog.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         dialog.pack();
+        dialog.setLocationRelativeTo(parent);
         dialog.setVisible(true);
         if (dialog.selectedField != null) {
             // String label, FieldKey fieldKey, float factor, Color colo

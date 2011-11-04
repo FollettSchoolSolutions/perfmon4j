@@ -74,6 +74,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
     private final Map<FieldKey, ElementWrapper> fieldsMap = new HashMap<FieldKey, ElementWrapper>();
     private static int nextLabel = 0;
     
+    @Override
     public void addOrUpdateElement(FieldElement element) {
         if (element.isNumeric()) {
             synchronized (elementLock) {
@@ -165,8 +166,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
 
         XYPlot plot = new XYPlot(dataset, dateAxis, numberAxis, renderer);
  
-        JFreeChart chart = new JFreeChart("", new Font(
-                "SansSerif", Font.BOLD, 14), plot, false);
+        JFreeChart chart = new JFreeChart(null, null, plot, false);
     
 //        JFreeChart chart = new JFreeChart(plot);
         chart.setBackgroundPaint(Color.white);

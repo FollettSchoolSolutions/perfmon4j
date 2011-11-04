@@ -21,6 +21,8 @@
 
 package org.perfmon4j.visualvm.chart;
 
+import com.sun.tools.visualvm.core.scheduler.Quantum;
+import com.sun.tools.visualvm.core.scheduler.ScheduledTask;
 import java.awt.Color;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -133,6 +135,7 @@ public class FieldManager {
         public void removeElement(FieldElement element);
     }
 
+    
     private class ThreadRunner extends Thread {
 
         private boolean running = true;

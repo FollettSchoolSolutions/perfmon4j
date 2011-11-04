@@ -17,25 +17,27 @@
  * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
-*/
-
+ */
 package org.perfmon4j.visualvm;
 
 import com.sun.tools.visualvm.application.Application;
+import com.sun.tools.visualvm.application.jvm.Jvm;
+import com.sun.tools.visualvm.application.jvm.JvmFactory;
 import com.sun.tools.visualvm.core.model.Model;
 import com.sun.tools.visualvm.tools.attach.AttachModel;
 import com.sun.tools.visualvm.tools.attach.AttachModelFactory;
+import com.sun.tools.visualvm.tools.sa.SaModel;
+import com.sun.tools.visualvm.tools.sa.SaModelFactory;
 import java.util.Map;
+import java.util.Properties;
 import java.util.WeakHashMap;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 
 public class Perfmon4jModel extends Model {
+
     private final RemoteManagementWrapper remoteWrapper;
-    
-    static private final Map<Application, Perfmon4jModel> modelMap 
-        = new WeakHashMap<Application, Perfmon4jModel>();
-    
+    static private final Map<Application, Perfmon4jModel> modelMap = new WeakHashMap<Application, Perfmon4jModel>();
 
     @SuppressWarnings("CallToThreadDumpStack")
     public static Perfmon4jModel getModelForApp(Application app) {
@@ -45,42 +47,89 @@ public class Perfmon4jModel extends Model {
                 model = new Perfmon4jModel(app);
                 modelMap.put(app, model);
             } catch (InstException ex) {
-                // Really no reason to throw an exception here...
-                // In most cases this is just not a Perfmon4j enabled 
-                // app.
-                ex.printStackTrace();
-            }
-        } 
-        return model;
-    }
-    
-    
-    private Perfmon4jModel(Application app) throws InstException {
-        AttachModel attachModel = AttachModelFactory.getAttachFor(app);
-        int port = 5959;
-        
-        if (attachModel == null) {
-            // Forced to try default port....
-            System.err.println("Unable to use attach model for app: "  + app.getPid() 
-                    + " Trying default port: " + 5959);
-        }  else {
-            /**
-             * TODO:  Use an optional connection to the JMX Monitor to check for
-             * perfmon4j..   Based on my reading of the attach model, it looks like
-             * access could be limited to systems that are on the same virtual machine.
-             */ 
-            String listenerPort = attachModel.getSystemProperties().getProperty(RemoteInterface.P4J_LISTENER_PORT);
-            if (listenerPort == null) {
-                throw new InstException("Perfmon4j Not Installed In App: " + app.getPid());
-            }
-            try {
-                port = Integer.parseInt(listenerPort);
-            } catch (NumberFormatException nfe) {
-                throw new InstException("Not a valid port number");
+                System.out.println("Could not find Perfmon4j installed in app: " + app.getPid());
             }
         }
+        return model;
+    }
+
+    private Properties getSystemProperiesOfApp(Application app) {
+        Properties result = null;
+
+        if (result == null) {
+            // Try via Jvm
+            try {
+                Jvm model = JvmFactory.getJVMFor(app);
+                if (model != null) {
+                    result = model.getSystemProperties();
+                }
+            } catch (java.lang.UnsupportedOperationException ex) {
+                // Nothing todo
+            }
+        }
+
+        if (result == null) {
+            // Try getting via an attach model
+            try {
+                AttachModel model = AttachModelFactory.getAttachFor(app);
+                if (model != null) {
+                    result = model.getSystemProperties();
+                }
+            } catch (java.lang.UnsupportedOperationException ex) {
+                // Nothing todo
+            }
+        }
+
+        if (result == null) {
+            // Try getting via Serviceability Agent (Only available for apps 
+            // on Linux or Solaris.
+            try {
+               SaModel model = SaModelFactory.getSAAgentFor(app);
+                if (model != null) {
+                    result = model.getSystemProperties();
+                }
+            } catch (java.lang.UnsupportedOperationException ex) {
+                // Nothing todo
+            }
+
+        }
+        
+        if (result == null) {
+            // Try via a JmxModel...
+//            JmxModel jmxModel = JmxModelFactory.getJmxModelFor(app);
+//            if (jmxModel != null) {
+//                result = jmxModel.getSystemProperties();
+//            }
+        }
+
+        return result;
+    }
+
+    private Perfmon4jModel(Application app) throws InstException {
+        int port = 0;
+        Properties props = getSystemProperiesOfApp(app);
+        if (props == null) {
+            throw new InstException("Unable to retrive properties for app: " + app.getPid());
+        } 
+        
+        String listenerPort = props.getProperty(RemoteInterface.P4J_LISTENER_PORT);
+        if (listenerPort == null) {
+            throw new InstException("Perfmon4j Not Installed In App: " + app.getPid());
+        }
+        
         try {
-            remoteWrapper = RemoteManagementWrapper.open("localhost", port);
+            port = Integer.parseInt(listenerPort);
+        } catch (NumberFormatException nfe) {
+            throw new InstException("Application does not include Perfmon4j agent");
+        }
+        
+        String host = "localhost";
+        if (!app.isLocalApplication()) {
+            host = app.getHost().getHostName();
+        }
+        
+        try {
+            remoteWrapper = RemoteManagementWrapper.open(host, port);
         } catch (Exception ex) {
             throw new InstException("Could not look it up", ex);
         }
@@ -89,11 +138,13 @@ public class Perfmon4jModel extends Model {
     public RemoteManagementWrapper getRemoteWrapper() {
         return remoteWrapper;
     }
-    
+
     private static class InstException extends Exception {
+
         public InstException(String message) {
             super(message);
         }
+
         public InstException(String message, Throwable th) {
             super(message, th);
         }
