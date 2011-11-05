@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
-import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.FailSafeTimerTask;
@@ -49,9 +48,9 @@ public class PerfMon {
     static boolean configured = false;
     
     public static final int MAX_APPENDERS_PER_MONITOR = 
-    	Integer.getInteger(PerfMon.class.getName() + ".MAX_APPENDERS_PER_MONITOR", 10);
+    	Integer.getInteger(PerfMon.class.getName() + ".MAX_APPENDERS_PER_MONITOR", 10).intValue();
     public static final int MAX_EXTERNAL_ELEMENTS_PER_MONITOR = 
-    	Integer.getInteger(PerfMon.class.getName() + ".MAX_EXTERNAL_ELEMENTS_PER_MONITOR", 10);
+    	Integer.getInteger(PerfMon.class.getName() + ".MAX_EXTERNAL_ELEMENTS_PER_MONITOR", 10).intValue();
     
     public static final String ROOT_MONITOR_NAME;
     private final String name;
@@ -87,7 +86,7 @@ public class PerfMon {
     }
     
     
-    private final List<Appender> appenderList = Collections.synchronizedList(new Vector<Appender>());
+    private final List<Appender> appenderList = Collections.synchronizedList(new ArrayList<Appender>());
     private final Map<Appender, String> appenderPatternMap = Collections.synchronizedMap(new HashMap<Appender, String>());
     private final Set<Appender> appendersAssociatedWithChildren = Collections.synchronizedSet(new HashSet<Appender>());
     
@@ -147,8 +146,9 @@ public class PerfMon {
     
     private PerfMonTimer cachedPerfMonTimer = null;
     private Set<PerfMon> childMonitors =  Collections.synchronizedSet(new HashSet<PerfMon>());
-    private ThreadTraceConfig threadTraceConfig = null;
-   
+    private ThreadTraceConfig internalThreadTraceConfig = null;
+    private final ExternalThreadTraceConfig.Queue externalThreadTraceQueue = new ExternalThreadTraceConfig.Queue();
+    
     private static ThreadLocal<Map<Long, ReferenceCount>> activeMonitors = new ThreadLocal<Map<Long, ReferenceCount>>() {
          protected synchronized Map<Long, ReferenceCount> initialValue() {
              return new HashMap<Long, ReferenceCount>();
@@ -311,11 +311,22 @@ public class PerfMon {
     void start(long systemTime) {
         ReferenceCount count = getThreadLocalReferenceCount();
         if (count.inc(systemTime) == 1) {
-            ThreadTraceConfig config = threadTraceConfig;
-            if (config != null && config.shouldTrace()) {
-                count.hasThreadTraceMonitor = true;
-                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getThreadTracesOnStack();
-                tOnStack.start(getName(), config.getMaxDepth(), config.getMinDurationToCapture(), systemTime);
+        	ExternalThreadTraceConfig externalConfig = null;
+        	if (externalThreadTraceQueue.hasPendingElements()) {
+        		externalConfig = externalThreadTraceQueue.assignToThread();
+        	}
+        	if (externalConfig != null) {
+        		count.hasExternalThreadTrace = true;
+                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+                tOnStack.start(getName(), externalConfig.getMaxDepth(), externalConfig.getMinDurationToCapture(), systemTime);
+                tOnStack.setExternalConfig(externalConfig);
+        	}
+        	
+            ThreadTraceConfig internalConfig = internalThreadTraceConfig;
+            if (internalConfig != null && internalConfig.shouldTrace()) {
+                count.hasInternalThreadTrace = true;
+                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+                tOnStack.start(getName(), internalConfig.getMaxDepth(), internalConfig.getMinDurationToCapture(), systemTime);
             }
             synchronized (startStopLockToken) {
                 activeThreadCount++;
@@ -348,12 +359,24 @@ public class PerfMon {
     void stop(long systemTime, boolean abort) {
         ReferenceCount count = getThreadLocalReferenceCount();
         if (count.dec() == 0) {
-            if (count.hasThreadTraceMonitor) {
-                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getThreadTracesOnStack();
+            if (count.hasExternalThreadTrace) {
+                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
                 ThreadTraceData data = tOnStack.stop(getName());
-                count.hasThreadTraceMonitor = false;
-                if (data != null && threadTraceConfig != null) {
-                    AppenderID appenders[] = threadTraceConfig.getAppenders();
+                ExternalThreadTraceConfig externalConfig = tOnStack.popExternalConfig();
+                if (data != null && externalConfig != null) {
+                	externalConfig.outputData(data);
+                	if (!externalThreadTraceQueue.hasPendingElements()) {
+                		this.clearCachedPerfMonTimer();
+                	}
+                }
+                count.hasExternalThreadTrace = false;
+            }
+            if (count.hasInternalThreadTrace) {
+                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+                ThreadTraceData data = tOnStack.stop(getName());
+                count.hasInternalThreadTrace = false;
+                if (data != null && internalThreadTraceConfig != null) {
+                    AppenderID appenders[] = internalThreadTraceConfig.getAppenders();
                     for (int i = 0; i < appenders.length; i++) {
                         Appender appender = Appender.getAppender(appenders[i]);
                         if (appender != null) {
@@ -515,7 +538,8 @@ public class PerfMon {
         private int refCount = 0;
         private long startTime;
         private long sqlStartMillis = 0;
-        boolean hasThreadTraceMonitor = false;
+        boolean hasInternalThreadTrace = false;
+        boolean hasExternalThreadTrace = false;
         
         /**
          * @return The updated (incremented value of refCount)
@@ -952,7 +976,8 @@ public class PerfMon {
         if (cachedPerfMonTimer == null) {
             if (isRootMonitor()) {
                 cachedPerfMonTimer = PerfMonTimer.getNullTimer();
-            } else if (isActive() || hasExternalElement() ||  threadTraceConfig != null) {
+            } else if (isActive() || hasExternalElement() ||  internalThreadTraceConfig != null
+            	|| externalThreadTraceQueue.hasPendingElements()) {
                 cachedPerfMonTimer = new PerfMonTimer(this, parent.getPerfMonTimer());
             } else {
                 cachedPerfMonTimer = parent.getPerfMonTimer();
@@ -1093,7 +1118,7 @@ public class PerfMon {
 					}
 				}
             }
-            PerfMon.getMonitor(current.getKey()).setThreadTraceConfig(traceConfig);
+            PerfMon.getMonitor(current.getKey()).setInternalThreadTraceConfig(traceConfig);
         }
         requestBasedTriggerCount = numHttpRequestTriggers;
         sessionBasedTriggerCount = numHttpSessionTriggers;
@@ -1104,7 +1129,7 @@ public class PerfMon {
         for (int i = 0; i < threadTraceMonitors.length; i++) {
             String monitorName = threadTraceMonitors[i];
             if (!threadTraceMap.containsKey(monitorName)) {
-                PerfMon.getMonitor(monitorName).setThreadTraceConfig(null);
+                PerfMon.getMonitor(monitorName).setInternalThreadTraceConfig(null);
             }
         }
     }
@@ -1131,7 +1156,7 @@ public class PerfMon {
         PerfMonConfiguration.AppenderAndPattern[] appenders) throws InvalidConfigException {
         
         List<PerfMonConfiguration.AppenderAndPattern> result = 
-            new Vector<PerfMonConfiguration.AppenderAndPattern>();
+            new ArrayList<PerfMonConfiguration.AppenderAndPattern>();
         
         for (int i = 0; i < appenders.length; i++) {
             PerfMonConfiguration.AppenderAndPattern appender = appenders[i];
@@ -1204,8 +1229,18 @@ public class PerfMon {
             " name=" + getName() +
             " parent=" + parent + ")";
     }
+
+    public void scheduleExternalThreadTrace(ExternalThreadTraceConfig config) {
+        externalThreadTraceQueue.schedule(config);
+        clearCachedPerfMonTimer();
+    }
     
-    public void setThreadTraceConfig(ThreadTraceConfig config) throws InvalidConfigException {
+    public void unScheduleExternalThreadTrace(ExternalThreadTraceConfig config) {
+        externalThreadTraceQueue.unSchedule(config);
+        clearCachedPerfMonTimer();
+    }
+    
+    public void setInternalThreadTraceConfig(ThreadTraceConfig config) throws InvalidConfigException {
         clearCachedPerfMonTimer();
         boolean removeAppender = true;
         if (config != null) {
@@ -1229,18 +1264,17 @@ public class PerfMon {
         if (removeAppender) {
             monitorsWithThreadTraceConfigAttached.remove(this.getName());
         }
-        this.threadTraceConfig = config;
+        this.internalThreadTraceConfig = config;
     }
     
     static String[] getMonitorNamesWithThreadTraceConfigAttached() {
         return monitorsWithThreadTraceConfigAttached.toArray(new String[]{});
     }
-
     
-    public ThreadTraceConfig getThreadTraceConfig() {
-        return threadTraceConfig;
+    public ThreadTraceConfig getInternalThreadTraceConfig() {
+        return internalThreadTraceConfig;
     }
-    
+
     public String toHTMLString() {
         String result = "<STRONG>" + "PerfMon(" + monitorID + "-" + 
              name + ")</STRONG><CR>\r\n";

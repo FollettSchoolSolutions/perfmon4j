@@ -69,6 +69,25 @@ public class MonitorKeyTest extends TestCase {
     	compare = MonitorKey.parseNoThrow(key.toString() + "asdfasf");
     	assertTrue("Any trailing characters should be ignored", compare.equals(key));
     }
+    
+    public void testGenerateThreadTraceKey() {
+    	// First verify you can not convert a snapshot key into a threadtrace key
+    	MonitorKey key = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, "org.perfmon4j", "http-80");
+    	assertNull("Cant generate threadshot key from a snapshot monitor",
+    			MonitorKey.buildThreadTraceKeyFromInterval(key));
+    	
+    	// Verify you can change a interval type into a threadtrace key.
+    	key = new MonitorKey(MonitorKey.INTERVAL_TYPE, "org.perfmon4j");
+    	MonitorKey threadTraceKey = MonitorKey.buildThreadTraceKeyFromInterval(key);
+    	assertNotNull(threadTraceKey);
+    	assertEquals("org.perfmon4j", threadTraceKey.getName());
+    	assertEquals(MonitorKey.THREADTRACE_TYPE, threadTraceKey.getType());
+
+    	// Verify if you pass in a thread trace key we simply return the same key back.
+    	key = new MonitorKey(MonitorKey.THREADTRACE_TYPE, "org.perfmon4j");
+    	assertTrue("Should simply return same object", key == MonitorKey.buildThreadTraceKeyFromInterval(key));
+    }
+    
         
     
 /*----------------------------------------------------------------------------*/    

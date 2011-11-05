@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009,2011 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -45,9 +45,10 @@ class TransformerParams {
     static final int MODE_EXTREME = 2;
     static final int MODE_BOTH = 3;
     
-    List<String> annotateList = new ArrayList();
-    List<ExtremeListElement> extremeList = new ArrayList();
-    List<String> ignoreList = new ArrayList();
+    List<String> annotateList = new ArrayList<String>();
+    List<ExtremeListElement> extremeList = new ArrayList<ExtremeListElement>();
+    List<String> ignoreList = new ArrayList<String>();
+	
     
  
     /**
@@ -75,6 +76,8 @@ class TransformerParams {
     private boolean disableSystemGC = false;
     private boolean extremeSQLMonitorEnabled = false;
     private final List<String> extremeSQLPackages = new Vector<String>();
+	private boolean remoteManagementEnabled = false;
+	private int remoteManagementPort = -1;
     
     
 	TransformerParams() {
@@ -175,6 +178,10 @@ class TransformerParams {
                 } else if (isParam('g', params)) {
                 	nextParam = getNextParam(params);
                     disableSystemGC = Boolean.parseBoolean(nextParam.parameter);
+                } else if (isParam('p', params)) {
+                	nextParam = getNextParam(params);
+                	remoteManagementEnabled = true;
+                    remoteManagementPort = Integer.parseInt(nextParam.parameter);
                 } else if (isParam('r', params)) {
                 	nextParam = getNextParam(params);
                 	String val = nextParam.parameter;
@@ -285,7 +292,7 @@ class TransformerParams {
         return mode;
     }
     
-    private MatchElement getMatchElement(List list, String className) {
+    private MatchElement getMatchElement(List<?> list, String className) {
         MatchElement matchElement = new MatchElement(0, null);
         int listSize = list.size();
         
@@ -304,7 +311,7 @@ class TransformerParams {
         return matchElement;
     }
     
-    int getTransformMode(Class clazz) {
+    int getTransformMode(Class<?> clazz) {
         return getTransformMode(clazz.getName());
     }
 
@@ -324,7 +331,7 @@ class TransformerParams {
 		return debugEnabled;
 	}
 	
-	public TransformOptions getTransformOptions(Class clazz) {
+	public TransformOptions getTransformOptions(Class<?> clazz) {
 		return getTransformOptions(clazz.getName());
 	}
 	
@@ -437,10 +444,10 @@ class TransformerParams {
     	return result;
     }
 	
-    private static Set<Class> getInterfaces(Class clazz) {
-    	Set<Class> result = new HashSet<Class>();
+    private static Set<Class<?>> getInterfaces(Class<?> clazz) {
+    	Set<Class<?>> result = new HashSet<Class<?>>();
     	
-    	Class interfaces[] = clazz.getInterfaces();
+    	Class<?> interfaces[] = clazz.getInterfaces();
     	for (int i = 0; i < interfaces.length; i++) {
     		result.add(interfaces[i]);
     		result.addAll(getInterfaces(interfaces[i]));
@@ -464,7 +471,7 @@ class TransformerParams {
 		return result;
 	}
 	
-	public boolean isExtremeSQLClass(Class clazz) {
+	public boolean isExtremeSQLClass(Class<?> clazz) {
 		boolean result = false;
 		if (extremeSQLMonitorEnabled && isPossibleJDBCDriver(clazz.getName())) {
 			Class<?> interfaces[] = getInterfaces(clazz).toArray(new Class[]{});
@@ -484,5 +491,13 @@ class TransformerParams {
 			}
 		}
 		return found;
+	}
+
+	public boolean isRemoteManagementEnabled() {
+		return remoteManagementEnabled;
+	}
+
+	public int getRemoteManagementPort() {
+		return remoteManagementPort;
 	}
 }

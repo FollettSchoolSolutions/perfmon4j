@@ -37,5 +37,11 @@ public interface RemoteInterface extends Remote, Serializable {
     public String[] getMonitors(String sessionID) throws SessionNotFoundException, RemoteException;
     public String[] getFieldsForMonitor(String sessionID, String monitorKey) throws SessionNotFoundException, RemoteException;
     public void subscribe(String sessionID, String[] fieldKeys) throws SessionNotFoundException, RemoteException;
+    
+    public void scheduleThreadTrace(String sessionID, String fieldKeys) throws SessionNotFoundException, 
+    	RemoteException, InvalidMonitorTypeException;
+    public void unScheduleThreadTrace(String sessionID, String fieldKeys) throws SessionNotFoundException, 
+    	RemoteException, InvalidMonitorTypeException;
+
     public Map<String, Object> getData(String sessionID) throws SessionNotFoundException, RemoteException;
 }

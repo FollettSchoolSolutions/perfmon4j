@@ -74,7 +74,7 @@ public class ThreadTraceMonitorTest extends TestCase {
         config.setTriggers(new ThreadTraceConfig.Trigger[]{trigger});
         
         PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
-        mon.setThreadTraceConfig(config);
+        mon.setInternalThreadTraceConfig(config);
         try {
         	// First try where the thread name DOES not
         	// contain matching thread name... It should not 
@@ -105,7 +105,7 @@ public class ThreadTraceMonitorTest extends TestCase {
         config.setTriggers(new ThreadTraceConfig.Trigger[]{trigger});
         
         PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
-        mon.setThreadTraceConfig(config);
+        mon.setInternalThreadTraceConfig(config);
 
     	// First try where the thread name DOES not
     	// contain matching thread property... It should not 
@@ -136,7 +136,7 @@ public class ThreadTraceMonitorTest extends TestCase {
         config.setRandomSamplingFactor(10);  // Random sample at an approximate rate of 1 out of 10...
         
         PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
-        mon.setThreadTraceConfig(config);
+        mon.setInternalThreadTraceConfig(config);
         
         for (int x = 0; x < 500; x++) {
             PerfMonTimer timer = null;
@@ -168,7 +168,7 @@ System.out.println("outputCount: " + outputCount);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
-        mon.setThreadTraceConfig(config);
+        mon.setInternalThreadTraceConfig(config);
         
         PerfMonTimer timer = null;
         try {
@@ -204,7 +204,7 @@ System.out.println("outputCount: " + outputCount);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
-        mon.setThreadTraceConfig(config);
+        mon.setInternalThreadTraceConfig(config);
 
         long startTime = 0;
         long endTime = 0;
@@ -233,7 +233,7 @@ System.out.println("outputCount: " + outputCount);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
-        mon.setThreadTraceConfig(config);
+        mon.setInternalThreadTraceConfig(config);
         
         long startTime = 0;
         long endTime = 0;
@@ -285,7 +285,7 @@ System.out.println("outputCount: " + outputCount);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
-        mon.setThreadTraceConfig(config);
+        mon.setInternalThreadTraceConfig(config);
         
         PerfMonTimer timer = null;
         try {
@@ -309,7 +309,7 @@ System.out.println("outputCount: " + outputCount);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
-        traceMonitor.setThreadTraceConfig(config);
+        traceMonitor.setInternalThreadTraceConfig(config);
         
         long startTimeOuterMethod = 0;
         long startTimeInnerMethod = 0;
@@ -374,7 +374,7 @@ System.out.println("outputCount: " + outputCount);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
-        traceMonitor.setThreadTraceConfig(config);
+        traceMonitor.setInternalThreadTraceConfig(config);
         
         PerfMonTimer traceTimer = null;
         PerfMonTimer outerTimer = null;
@@ -409,7 +409,7 @@ System.out.println("outputCount: " + outputCount);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
-        traceMonitor.setThreadTraceConfig(config);
+        traceMonitor.setInternalThreadTraceConfig(config);
         
         // This timer will start outside of the thread Trace...
         // However it will be stopped inside the thread trace,
@@ -465,7 +465,7 @@ System.out.println(trace.toAppenderString());
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
-        traceMonitor.setThreadTraceConfig(config);
+        traceMonitor.setInternalThreadTraceConfig(config);
         
         PerfMonTimer traceTimer = null;
         PerfMonTimer traceTimerNested1 = null;
@@ -499,7 +499,7 @@ System.out.println(trace.toAppenderString());
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
-        traceMonitor.setThreadTraceConfig(config);
+        traceMonitor.setInternalThreadTraceConfig(config);
         
         PerfMonTimer traceTimer = null;
         try {
@@ -538,7 +538,7 @@ System.out.println(trace.toAppenderString());
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
-        traceMonitor.setThreadTraceConfig(config);
+        traceMonitor.setInternalThreadTraceConfig(config);
         
         for (int x = 0; x < 10; x++) {
             new Thread(new ThreadTraceRunnable(MONITOR_KEY)).start();

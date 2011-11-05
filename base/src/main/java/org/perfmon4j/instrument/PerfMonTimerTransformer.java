@@ -27,8 +27,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.rmi.RemoteException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +40,7 @@ import javassist.LoaderClassPath;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
 import org.perfmon4j.XMLConfigurator;
+import org.perfmon4j.remotemanagement.RemoteImpl;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -54,7 +55,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         params = new TransformerParams(paramsString);
     }
     
-    private static ThreadLocal<RecursionPreventor> recursionPreventor = new ThreadLocal() {
+    private static ThreadLocal<RecursionPreventor> recursionPreventor = new ThreadLocal<RecursionPreventor>() {
         protected synchronized RecursionPreventor initialValue() {
             return new RecursionPreventor();
         }
@@ -243,7 +244,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	logger.logInfo("Perfmon4j bootstrap implementation disabled.  Add -btrue to javaAgent parameters to enable.");
         	if (disabler != null) {
         		try {
-	        		Class clazz = System.class;       		
+	        		Class<?> clazz = System.class;       		
 	                ClassLoader loader = clazz.getClassLoader();
 	                if (loader == null) {
 	                    loader = ClassLoader.getSystemClassLoader();
@@ -267,10 +268,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         		}
         	}
         } else {
-	        Class loadedClasses[] = inst.getAllLoadedClasses();
+	        Class<?> loadedClasses[] = inst.getAllLoadedClasses();
 	        List<ClassDefinition> redefineList = new ArrayList<ClassDefinition>(loadedClasses.length);
 	        for (int i = 0; i < loadedClasses.length; i++) {
-	            Class clazz = loadedClasses[i];
+	            Class<?> clazz = loadedClasses[i];
 	            logger.logDebug("Found preloaded class: " + clazz.getName());
 	            
 	            String resourceName = clazz.getName().replace('.', '/') + ".class";
@@ -357,6 +358,15 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         		}
         	}
             XMLConfigurator.configure(new File(xmlFileToConfig), reloadConfigSeconds);
+        }
+        
+        if (t.params.isRemoteManagementEnabled()) {
+        	int port = t.params.getRemoteManagementPort();
+        	try {
+        		RemoteImpl.registerRMIListener(port);
+			} catch (RemoteException e) {
+				logger.logError("Error starting management listener on port: " + port, e);
+			}
         }
     }
     

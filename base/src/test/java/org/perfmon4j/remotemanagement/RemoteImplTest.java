@@ -36,7 +36,9 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.SimpleRunnable;
 import org.perfmon4j.remotemanagement.intf.ThinRunnableInVM;
@@ -161,6 +163,58 @@ public class RemoteImplTest extends TestCase {
 				result.contains("FieldDefinition: INTERVAL(name=testGetMonitorsIncludesIntervalMonitors):FIELD(name=AverageDuration;type=LONG)"));
     }
 
+    public void testGetFieldsForThreadTraceMonitor() throws Exception {
+    	MonitorKey threadTraceKey = new MonitorKey(MonitorKey.THREADTRACE_TYPE, "org.apache");
+    	
+    	RemoteImpl i = RemoteImpl.getSingleton();
+    	String sessionID = i.connect(ManagementVersion.VERSION);
+    	try {
+    		String fields[] = i.getFieldsForMonitor(sessionID, threadTraceKey.toString());
+    		assertNotNull(fields);
+    		assertEquals("fields.length", 1, fields.length);
+    		
+    		FieldKey expectedKey = new FieldKey(threadTraceKey, "stack", FieldKey.STRING_TYPE); 
+    		assertEquals("expected field key", fields[0], expectedKey.toString());
+    	} finally {
+    		i.disconnect(sessionID);
+    	}
+    }
+    
+    public void testScheduleThreadTrace() throws Exception {
+		FieldKey key = new FieldKey(new MonitorKey(MonitorKey.THREADTRACE_TYPE, "my.monitor"), "stack", FieldKey.STRING_TYPE); 
+    	RemoteImpl i = RemoteImpl.getSingleton();
+    	String sessionID = i.connect(ManagementVersion.VERSION);
+    	try {
+    		i.scheduleThreadTrace(sessionID, key.toString());
+    		
+    		i.getData(sessionID);
+    		Map<String, Object> map = i.getData(sessionID);
+    		
+    		// Should get a pending notification for our thread trace...
+    		String traceData = (String)map.get(key.toString());
+System.err.println(traceData);    		
+    		
+    		assertNotNull("traceData", traceData);
+    		assertEquals(FieldKey.THREAD_TRACE_PENDING, traceData);
+    		PerfMonTimer timer = PerfMonTimer.start("my.monitor");
+    			PerfMonTimer.stop(PerfMonTimer.start("internal"));
+    		PerfMonTimer.stop(timer);
+    		
+    		// Should get a pending notification for our thread trace...
+    		map = i.getData(sessionID);
+    		traceData = (String)map.get(key.toString());
+System.err.println(traceData);    		
+    		assertFalse("Should have thread trace data", traceData.equals(FieldKey.THREAD_TRACE_PENDING));
+    		
+    		map = i.getData(sessionID);
+    		traceData = (String)map.get(key.toString());
+    		assertNull("Trace is now done", traceData);
+    	} finally {
+    		i.disconnect(sessionID);
+    	}
+    }
+
+    
     
     public void testSubscribeToIntervalMonitor() throws Exception {
     	ExternalAppender.setEnabled(true);
@@ -279,7 +333,7 @@ public class RemoteImplTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new RemoteImplTest("testFullLifecycle"));
+//		newSuite.addTest(new RemoteImplTest("testScheduleThreadTrace"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

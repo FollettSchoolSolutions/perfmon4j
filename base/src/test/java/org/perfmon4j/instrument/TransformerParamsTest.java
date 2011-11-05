@@ -27,15 +27,14 @@ import java.sql.SQLWarning;
 
 import javassist.ClassPool;
 import javassist.CtClass;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
-
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
 
 public class TransformerParamsTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -266,6 +265,17 @@ public class TransformerParamsTest extends TestCase {
         
         params = new TransformerParams("-r-1");
         assertEquals("0 is used to indicate no reloading at all", 0, params.getReloadConfigSeconds());
+    }    
+    
+
+    public void testValidateRemoteManagementPort() {
+        TransformerParams params = new TransformerParams("");
+        assertFalse(params.isRemoteManagementEnabled());
+        assertEquals(-1, params.getRemoteManagementPort());
+
+    	params = new TransformerParams("-p5945");
+        assertTrue(params.isRemoteManagementEnabled());
+        assertEquals(5945, params.getRemoteManagementPort());
     }    
     
     

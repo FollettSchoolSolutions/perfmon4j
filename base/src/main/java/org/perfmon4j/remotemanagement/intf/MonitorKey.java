@@ -24,7 +24,7 @@ package org.perfmon4j.remotemanagement.intf;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class MonitorKey {
+public class MonitorKey implements Comparable<MonitorKey> {
 	public static final String INTERVAL_TYPE = "INTERVAL";
 	public static final String SNAPSHOT_TYPE = "SNAPSHOT";
 	public static final String THREADTRACE_TYPE = "THREADTRACE";
@@ -62,7 +62,6 @@ public class MonitorKey {
 	 * Returns the MonitorKey parsed out of the string
 	 * or null if it could not be parsed.
 	 */
-	@Deprecated
 	public static MonitorKey parseNoThrow(String value) {
 		MonitorKey result = null; 
 		
@@ -83,6 +82,23 @@ public class MonitorKey {
 		if (result == null) {
 			throw new UnableToParseKeyException(value);
 		}
+		return result;
+	}
+
+	/**
+	 * Returns null if the intervalKey parameter is NOT a interval or threadtrace type.
+	 * @param intervalKey
+	 * @return
+	 */
+	public static MonitorKey buildThreadTraceKeyFromInterval(MonitorKey intervalKey) {
+		MonitorKey result = null;
+		
+		if (intervalKey.getType().equals(MonitorKey.INTERVAL_TYPE)) {
+			result = new MonitorKey(MonitorKey.THREADTRACE_TYPE, intervalKey.getName(), intervalKey.getInstance());
+		} else if (intervalKey.getType().equals(MonitorKey.THREADTRACE_TYPE)) {
+			result = intervalKey;
+		}
+		
 		return result;
 	}
 	
@@ -135,5 +151,9 @@ public class MonitorKey {
 		} else if (!type.equals(other.type))
 			return false;
 		return true;
+	}
+
+	public int compareTo(MonitorKey o) {
+		return this.toString().compareTo(o.toString());
 	}
 }

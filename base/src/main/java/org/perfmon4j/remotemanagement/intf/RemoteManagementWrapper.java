@@ -122,6 +122,17 @@ public class RemoteManagementWrapper implements Closeable {
     	}
     	return result;
     }
+    public void scheduleThreadTrace(FieldKey fieldKey) throws SessionNotFoundException, 
+    	RemoteException, InvalidMonitorTypeException {
+    	
+    	remoteInterface.scheduleThreadTrace(sessionID, fieldKey.toString());
+    }
+    
+    public void unScheduleThreadTrace(String sessionID, FieldKey fieldKey) throws SessionNotFoundException, 
+		RemoteException, InvalidMonitorTypeException {
+    	
+    	remoteInterface.unScheduleThreadTrace(sessionID, fieldKey.toString());
+    }
 	
 	/**
 	 * Package levelfor testing

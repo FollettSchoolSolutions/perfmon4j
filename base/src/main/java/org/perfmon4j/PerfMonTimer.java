@@ -52,19 +52,25 @@ public class PerfMonTimer {
         }
 
         PerfMonTimer result = mon.getPerfMonTimer();
-        ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getThreadTracesOnStack();
+        ThreadTraceMonitor.ThreadTracesOnStack tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+        ThreadTraceMonitor.ThreadTracesOnStack tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
         
     	final boolean haveActiveTimer = (NULL_TIMER != result);  // It is OK to do an object compare here.
-    	final boolean haveActiveThreadTrace = tOnStack.isActive();
+    	final boolean haveActiveInternalThreadTrace = tInternalOnStack.isActive();
+    	final boolean haveActiveExternalThreadTrace = tExternalOnStack.isActive();
         
-        if (haveActiveTimer  || haveActiveThreadTrace) {
+        if (haveActiveTimer  || haveActiveInternalThreadTrace || haveActiveExternalThreadTrace) {
 	        String monitorName = "";
-	        UniqueThreadTraceTimerKey wrapperKey = null;
+	        UniqueThreadTraceTimerKey wrapperInternalKey = null;
+	        UniqueThreadTraceTimerKey wrapperExternalKey = null;
 	        try {
 	        	long startTime = MiscHelper.currentTimeWithMilliResolution(); 
 	            monitorName = mon.getName();
-	            if (haveActiveThreadTrace) {
-	            	wrapperKey = tOnStack.enterCheckpoint(monitorName, startTime);
+	            if (haveActiveInternalThreadTrace) {
+	            	wrapperInternalKey = tInternalOnStack.enterCheckpoint(monitorName, startTime);
+	            }
+	            if (haveActiveExternalThreadTrace) {
+	            	wrapperExternalKey = tExternalOnStack.enterCheckpoint(monitorName, startTime);
 	            }
 	            if (haveActiveTimer) {
 	            	result.start(startTime);
@@ -76,10 +82,10 @@ public class PerfMonTimer {
 	            result = NULL_TIMER;
 	        }
 	        
-	        if (wrapperKey != null) {
+	        if (wrapperInternalKey != null || wrapperExternalKey != null) {
 	            // To keep track of the checkpoints for thread tracing we 
 	            // must be able to identify the timer passed to PerfMonTimer.stop()
-	            result = new TimerWrapperWithThreadTraceKey(result, wrapperKey);
+	            result = new TimerWrapperWithThreadTraceKey(result, wrapperInternalKey, wrapperExternalKey);
 	        }
         }
         
@@ -129,10 +135,15 @@ public class PerfMonTimer {
     private static void stop(PerfMonTimer timer, boolean abort) {
         try {
             if (timer != NULL_TIMER && timer != null) {
-                UniqueThreadTraceTimerKey key = timer.getUniqueTimerKey();
-                if (key != null) {
-                	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getThreadTracesOnStack();
-                    tOnStack.exitCheckpoint(key);
+                UniqueThreadTraceTimerKey keyInternal = timer.getUniqueInternalTimerKey();
+                if (keyInternal != null) {
+                	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+                    tOnStack.exitCheckpoint(keyInternal);
+                }
+                UniqueThreadTraceTimerKey keyExternal = timer.getUniqueExternalTimerKey();
+                if (keyExternal != null) {
+                	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+                    tOnStack.exitCheckpoint(keyExternal);
                 }
                 timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort);
             }
@@ -166,7 +177,15 @@ public class PerfMonTimer {
      * Used for the ThreadTraceTimers...
      * @return
      */
-    protected UniqueThreadTraceTimerKey getUniqueTimerKey() {
+    protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
+        return null;
+    }
+
+    /**
+     * Used for the ThreadTraceTimers...
+     * @return
+     */
+    protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
         return null;
     }
     
@@ -175,16 +194,22 @@ public class PerfMonTimer {
      * a thread trace.
      */
     private static class TimerWrapperWithThreadTraceKey extends PerfMonTimer {
-        final private UniqueThreadTraceTimerKey uniqueThreadTraceTimerKey;
+        final private UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey;
+        final private UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey;
         
         private TimerWrapperWithThreadTraceKey(PerfMonTimer timer, 
-            UniqueThreadTraceTimerKey uniqueThreadTraceTimerKey) {
+            UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey,
+            UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey) {
             super(timer.perfMon, timer.next); 
-            this.uniqueThreadTraceTimerKey = uniqueThreadTraceTimerKey;
+            this.uniqueInternalThreadTraceTimerKey = uniqueInternalThreadTraceTimerKey;
+            this.uniqueExternalThreadTraceTimerKey = uniqueExternalThreadTraceTimerKey;
         }
 
-        protected UniqueThreadTraceTimerKey getUniqueTimerKey() {
-            return uniqueThreadTraceTimerKey;
+        protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
+            return uniqueInternalThreadTraceTimerKey;
+        }
+        protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
+            return uniqueExternalThreadTraceTimerKey;
         }
     }
 }

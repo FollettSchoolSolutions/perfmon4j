@@ -893,13 +893,13 @@ public class PerfMonTest extends TestCase {
         PerfMon.configure(config);
         
         PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
-        assertTrue("Monitor should have threadTraceConfig", traceConfig == mon.getThreadTraceConfig());
+        assertTrue("Monitor should have threadTraceConfig", traceConfig == mon.getInternalThreadTraceConfig());
         
         config = new PerfMonConfiguration();
         PerfMon.configure(config);
         
         mon = PerfMon.getMonitor(MONITOR_KEY);
-        assertNull("threadTraceConfig should have been removed", mon.getThreadTraceConfig());
+        assertNull("threadTraceConfig should have been removed", mon.getInternalThreadTraceConfig());
     }
 
 

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008, 2009, 2010 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.TimerTask;
 
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.FailSafeTimerTask;
@@ -124,21 +123,21 @@ public abstract class Appender {
                 result = appenderSingletonMap.get(id);
                 
                 if (result == null) {
-                    Class clazz = null;
+                    Class<?> clazz = null;
                     if (PerfMon.getClassLoader() == null){
                         clazz = Thread.currentThread().getContextClassLoader().loadClass(id.getClassName());
                     } else {
                         clazz = PerfMon.getClassLoader().loadClass(id.getClassName());
                     }
-                    Constructor constructor = clazz.getConstructor(new Class[] {AppenderID.class});
+                    Constructor<?> constructor = clazz.getConstructor(new Class<?>[] {AppenderID.class});
                     result = (Appender)constructor.newInstance(new Object[]{id});
                     
                     // Map any attributes into the appender...
-                    Map attributes = id.getAttributes();
+                    Properties attributes = id.getAttributes();
                     if (attributes != null) {
-                        Iterator<Map.Entry> itr = attributes.entrySet().iterator();
+                        Iterator<Map.Entry<Object, Object>> itr = attributes.entrySet().iterator();
                         while (itr.hasNext()) {
-                            Map.Entry entry = itr.next();
+                            Map.Entry<Object, Object> entry = itr.next();
                             try {
                                 BeanHelper.setValue(result, (String)entry.getKey(), (String)entry.getValue());
                             } catch (BeanHelper.UnableToSetAttributeException ex) {

@@ -24,10 +24,12 @@ package org.perfmon4j.remotemanagement;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.perfmon4j.ExternalThreadTraceConfig;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
@@ -70,6 +72,34 @@ public class ExternalAppender {
 	}
 
 	
+	public static void scheduleThreadTrace(String sessionID, FieldKey threadTraceKey) 
+		throws SessionNotFoundException, InvalidMonitorTypeException {
+		MonitorMap map = sessionManager.getSession(sessionID);
+		if (map == null) {
+			throw new SessionNotFoundException(sessionID);
+		}
+		if (!MonitorKey.THREADTRACE_TYPE.equals(threadTraceKey.getMonitorKey().getType())) {
+			throw new InvalidMonitorTypeException(threadTraceKey.getMonitorKey().getType(),
+				"scheduleThreadTrace");
+		}
+		map.scheduleThreadTrace(threadTraceKey);
+		logger.logInfo("External appender (sessionID:" + sessionID + ") schedule thread trace on field: " + threadTraceKey);
+	}
+	
+	public static void unScheduleThreadTrace(String sessionID, FieldKey threadTraceKey) throws SessionNotFoundException
+		, InvalidMonitorTypeException {
+		MonitorMap map = sessionManager.getSession(sessionID);
+		if (map == null) {
+			throw new SessionNotFoundException(sessionID);
+		}
+		if (!MonitorKey.THREADTRACE_TYPE.equals(threadTraceKey.getMonitorKey().getType())) {
+			throw new InvalidMonitorTypeException(threadTraceKey.getMonitorKey().getType(),
+				"scheduleThreadTrace");
+		}
+		map.unScheduleThreadTrace(threadTraceKey);
+		logger.logInfo("External appender (sessionID:" + sessionID + ") unschedule thread trace on field: " + threadTraceKey);
+	}
+	
 	public static void subscribe(String sessionID, MonitorKeyWithFields monitorKey) throws SessionNotFoundException {
 		MonitorMap map = sessionManager.getSession(sessionID);
 		if (map == null) {
@@ -87,6 +117,14 @@ public class ExternalAppender {
 		return map.fieldProperties.values().toArray(new MonitorKeyWithFields[]{});
 	}
 	
+
+	public static Map<FieldKey, Object> getThreadTraceData(String sessionID) throws SessionNotFoundException {
+		MonitorMap map = sessionManager.getSession(sessionID);
+		if (map == null) {
+			throw new SessionNotFoundException(sessionID);
+		}
+		return map.getThreadTraceData();
+	}
 	
 	public static Map<FieldKey, Object> takeSnapShot(String sessionID, MonitorKeyWithFields monitorKey) throws SessionNotFoundException, MonitorNotFoundException {
 		MonitorMap map = sessionManager.getSession(sessionID);
@@ -124,12 +162,47 @@ public class ExternalAppender {
 	public static void setEnabled(boolean onOff) {
 		enabled = onOff;
 	}
-	
+
 	private static final class MonitorMap implements SessionManager.SessionData {
 		private final Map<MonitorKey, PerfMonData> map = new HashMap<MonitorKey, PerfMonData>();
-		private final Map<String, Object> sessionProperties = new HashMap<String, Object>();
 		private final Map<MonitorKey, MonitorKeyWithFields> fieldProperties = new HashMap<MonitorKey, MonitorKeyWithFields>();
+		private final Map<FieldKey, ExternalThreadTraceConfig> scheduledThreadTraces = new HashMap<FieldKey, ExternalThreadTraceConfig>();
 		
+		private void scheduleThreadTrace(FieldKey threadTraceKey) {
+			PerfMon monitor = PerfMon.getMonitor(threadTraceKey.getMonitorKey().getName());
+			ExternalThreadTraceConfig config = new ExternalThreadTraceConfig();
+			scheduledThreadTraces.put(threadTraceKey, config);
+			monitor.scheduleExternalThreadTrace(config);
+		}
+		
+		public Map<FieldKey, Object> getThreadTraceData() {
+			Map<FieldKey, Object> result = null;
+			if (scheduledThreadTraces.size() > 0) {
+				result = new HashMap<FieldKey, Object>();
+				FieldKey[] fields = scheduledThreadTraces.keySet().toArray(new FieldKey[scheduledThreadTraces.size()]);
+				for (FieldKey fieldKey : fields) {
+					ExternalThreadTraceConfig config = scheduledThreadTraces.get(fieldKey);
+					if (config != null) {
+						if (config.hasData()) {
+							result.put(fieldKey, config.getData().toAppenderString());
+							scheduledThreadTraces.remove(fieldKey);
+						} else {
+							result.put(fieldKey, FieldKey.THREAD_TRACE_PENDING);
+						}
+					}
+				}
+			}
+			return result;
+		}
+
+		private void unScheduleThreadTrace(FieldKey threadTraceKey) {
+			ExternalThreadTraceConfig config = scheduledThreadTraces.remove(threadTraceKey);
+			if (config != null) {
+				PerfMon monitor = PerfMon.getMonitor(threadTraceKey.getMonitorKey().getName());
+				monitor.unScheduleExternalThreadTrace(config);
+			}
+		}
+
 		private void subscribe(MonitorKeyWithFields monitorKeyWithFields) {
 			MonitorKey monitorKey = monitorKeyWithFields.getMonitorKeyOnly();
 			// Always store the fields we are monitoring...

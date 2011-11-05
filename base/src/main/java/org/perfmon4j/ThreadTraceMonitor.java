@@ -34,7 +34,13 @@ class ThreadTraceMonitor {
     // Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(ThreadTraceMonitor.class);    
     
-    private static ThreadLocal<ThreadTracesOnStack> monitorsOnThread = new ThreadLocal() {
+    private static ThreadLocal<ThreadTracesOnStack> internalMonitorsOnThread = new ThreadLocal<ThreadTracesOnStack>() {
+         protected synchronized ThreadTracesOnStack initialValue() {
+             return new ThreadTracesOnStack();
+         }
+     };
+
+     private static ThreadLocal<ThreadTracesOnStack> externalMonitorsOnThread = new ThreadLocal<ThreadTracesOnStack>() {
          protected synchronized ThreadTracesOnStack initialValue() {
              return new ThreadTracesOnStack();
          }
@@ -43,8 +49,12 @@ class ThreadTraceMonitor {
     private ThreadTraceMonitor() {
     }
 
-    static ThreadTracesOnStack getThreadTracesOnStack() {
-    	return monitorsOnThread.get();
+    static ThreadTracesOnStack getInternalThreadTracesOnStack() {
+    	return internalMonitorsOnThread.get();
+    }
+
+    static ThreadTracesOnStack getExternalThreadTracesOnStack() {
+    	return externalMonitorsOnThread.get();
     }
     
     private static class PointerToHead {
@@ -83,6 +93,7 @@ class ThreadTraceMonitor {
      */
     static class ThreadTracesOnStack {
         private Map<String, PointerToHead> threadDataMap = new HashMap<String, PointerToHead>();
+        private ExternalThreadTraceConfig externalConfig = null;
         boolean active = false;
         
         
@@ -193,6 +204,16 @@ class ThreadTraceMonitor {
 	        	}
         	}
         }
+
+		public ExternalThreadTraceConfig popExternalConfig() {
+			ExternalThreadTraceConfig result = externalConfig;
+			externalConfig = null;
+			return result;
+		}
+
+		public void setExternalConfig(ExternalThreadTraceConfig externalConfig) {
+			this.externalConfig = externalConfig;
+		}
     }
     
     static class UniqueThreadTraceTimerKey {

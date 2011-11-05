@@ -167,4 +167,45 @@ public class SimpleRunnable {
 			}
 		}
 	}
+	
+	public static void main(String args[]) {
+		RemoteManagementWrapper r = null;
+		try {
+			r = RemoteManagementWrapper.open("localhost", 5959);
+			
+			MonitorKey[] activeMonitors = r.getMonitors();
+			MonitorKey monitorToWatch = null; 
+			
+			
+			for (int i = 0; i < activeMonitors.length; i++) {
+				MonitorKey monitor = activeMonitors[i];
+				
+				if (monitor.getName().equals("org.apache.catalina.connector.Request")) {
+					monitorToWatch = monitor;
+				}
+				
+				System.out.println("Found monitor: " + monitor);
+			}
+
+			if (monitorToWatch != null) {
+				FieldKey[] fields = r.getFieldsForMonitor(monitorToWatch);
+				r.subscribe(fields);
+				
+				for(int i = 0; i < 60; i++) {
+					Thread.sleep(1000);
+					System.out.println("Taking snapshot....");
+				
+					Map<FieldKey, Object> snapShot =  r.getData();
+					System.out.println(FieldKey.buildDebugString(snapShot));
+				}
+			}
+			r.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			RemoteManagementWrapper.closeNoThrow(r);
+		}
+		
+	}
+	
 }

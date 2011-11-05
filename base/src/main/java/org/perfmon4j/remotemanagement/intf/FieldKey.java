@@ -29,13 +29,16 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class FieldKey {
+public class FieldKey implements Comparable<FieldKey>{
 	final public static String INTEGER_TYPE = "INTEGER";
 	final public static String LONG_TYPE = "LONG";
 	final public static String DOUBLE_TYPE = "DOUBLE";
 	final public static String TIMESTAMP_TYPE = "TIMESTAMP";
 	final public static String STRING_TYPE = "STRING";
 	private static final Pattern pattern = Pattern.compile(".+?:FIELD\\(name=([^;]+);type=([^\\)]+)\\)");
+	
+	// Returned when session is subscribed to a ThreadTrace, and the data is not available.
+	final public static String THREAD_TRACE_PENDING = "ThreadTracePending";
 	
 	public final MonitorKey monitorKey;
 	public final String fieldName;
@@ -68,7 +71,6 @@ public class FieldKey {
 	 * @param key
 	 * @return
 	 */
-	@Deprecated
 	public static FieldKey parseNoThrow(String key) {
 		FieldKey result = null;
 		
@@ -170,7 +172,7 @@ public class FieldKey {
 		}
 		return result;
 	}
-
+	
 	public static FieldKey[] toFieldKeyArrayNoThrow(String[] fields) {
 		Set<FieldKey> result = new HashSet<FieldKey>(fields.length);
 		
@@ -182,5 +184,8 @@ public class FieldKey {
 		}
 		return result.toArray(new FieldKey[result.size()]);
 	}
-	
+
+	public int compareTo(FieldKey o) {
+		return fieldName.compareTo(o.fieldName);
+	}
 }

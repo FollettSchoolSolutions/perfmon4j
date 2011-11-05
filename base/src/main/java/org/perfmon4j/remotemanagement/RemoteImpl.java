@@ -36,6 +36,7 @@ import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
+import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
@@ -134,8 +135,8 @@ public class RemoteImpl implements RemoteInterface {
 		Map<String, Object> result = new HashMap<String, Object>();
 		MonitorKeyWithFields monitors[] = ExternalAppender.getSubscribedMonitors(sessionID);
 		
+		Map<FieldKey, Object> from;
 		for (int i = 0; i < monitors.length; i++) {
-			Map<FieldKey, Object> from;
 			try {
 				from = ExternalAppender.takeSnapShot(sessionID, monitors[i]);
 				copyToResultMap(from, result);
@@ -143,6 +144,12 @@ public class RemoteImpl implements RemoteInterface {
 				logger.logWarn("Monitor not found", e);
 			}			
 		}
+		
+		from = ExternalAppender.getThreadTraceData(sessionID);
+		if (from != null) {
+			copyToResultMap(from, result);
+		}
+		
 		return result;
 	}
 
@@ -155,6 +162,9 @@ public class RemoteImpl implements RemoteInterface {
 			MonitorKey key = MonitorKey.parse(monitorKey);
 			if (MonitorKey.INTERVAL_TYPE.equals(key.getType())) {
 				FieldKey fields[] = IntervalData.getFields(key.getName()).getFields();
+				result = FieldKey.toStringArray(fields);
+			} else if (MonitorKey.THREADTRACE_TYPE.equals(key.getType())) {
+				FieldKey fields[] = new FieldKey[]{new FieldKey(key, "stack", FieldKey.STRING_TYPE)}; 
 				result = FieldKey.toStringArray(fields);
 			}
 		} catch (UnableToParseKeyException e) {
@@ -201,6 +211,26 @@ public class RemoteImpl implements RemoteInterface {
 			if (!alreadySubscribed.contains(key)) {
 				ExternalAppender.subscribe(sessionID, key);
 			}
+		}
+	}
+
+	public void scheduleThreadTrace(String sessionID, String fieldKey)
+			throws SessionNotFoundException, RemoteException, InvalidMonitorTypeException {
+		try {
+			FieldKey key = FieldKey.parse(fieldKey);
+			ExternalAppender.scheduleThreadTrace(sessionID, key);
+		} catch (UnableToParseKeyException e) {
+			throw new RemoteException("Unable to parse key: " + fieldKey);
+		}
+	}
+
+	public void unScheduleThreadTrace(String sessionID, String fieldKey)
+			throws SessionNotFoundException, RemoteException, InvalidMonitorTypeException {
+		try {
+			FieldKey key = FieldKey.parse(fieldKey);
+			ExternalAppender.unScheduleThreadTrace(sessionID, key);
+		} catch (UnableToParseKeyException e) {
+			throw new RemoteException("Unable to parse key: " + fieldKey);
 		}
 	}
 }
