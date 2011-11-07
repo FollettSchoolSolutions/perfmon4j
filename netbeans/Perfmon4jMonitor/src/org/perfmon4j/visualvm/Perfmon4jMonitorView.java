@@ -40,6 +40,8 @@ import org.perfmon4j.visualvm.chart.ChartElementsTable;
 import org.perfmon4j.visualvm.chart.DynamicTimeSeriesChart;
 import org.perfmon4j.visualvm.chart.FieldElement;
 import org.perfmon4j.visualvm.chart.FieldManager;
+import org.perfmon4j.visualvm.chart.ThreadTraceList;
+import org.perfmon4j.visualvm.chart.ThreadTraceTable;
 
 /**
  *
@@ -53,6 +55,7 @@ public class Perfmon4jMonitorView extends DataSourceView {
     private final FieldManager fieldManager;
     private DynamicTimeSeriesChart chart;
     private ChartElementsTable table;
+    private ThreadTraceTable threadTraceTable;
     
     public Perfmon4jMonitorView(Application app) {
         super(app, "Perfmon4j", new ImageIcon(Utilities.loadImage(IMAGE_PATH, true)).getImage(), 60, false);
@@ -60,9 +63,8 @@ public class Perfmon4jMonitorView extends DataSourceView {
         fieldManager = new FieldManager(wrapper);
     }
 
-    private JFrame getParentFrame() {
+    public static JFrame getParentFrame(Component c) {
         JFrame result = null;
-        Component c = dvc.getParent();
         while (c != null && result == null) {
             if (c instanceof JFrame) {
                 result = (JFrame)c;
@@ -83,11 +85,10 @@ public class Perfmon4jMonitorView extends DataSourceView {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    FieldElement result = AEDMonitor.showModel(getParentFrame(), wrapper);
+                    FieldElement result = AEDMonitor.showModel(Perfmon4jMonitorView.getParentFrame(dvc.getParent()), wrapper);
                     if (result != null) {
                         fieldManager.addOrUpdateField(result);
-                        
-//                        JOptionPane.showMessageDialog(null, "Selected field: " + result.getFieldKey());
+//                      JOptionPane.showMessageDialog(null, "Selected field: " + result.getFieldKey());
                     }
                     
                 } catch (Exception ex) {
@@ -101,41 +102,42 @@ public class Perfmon4jMonitorView extends DataSourceView {
         chart = new DynamicTimeSeriesChart(secondsToDisplay);
         fieldManager.addDataHandler(chart);
         
-        table = new ChartElementsTable(fieldManager);
+        table = new ChartElementsTable(fieldManager, secondsToDisplay);
         fieldManager.addDataHandler(table);
         
-        JPanel panelStatusMessages = new JPanel();
+        threadTraceTable = new ThreadTraceTable(fieldManager.getThreadTraceList());
         
         final String CHART_VIEW = "Chart";
-        final String STATUS_MESSAGES_VIEW = "Status Messages";
+        final String THREAD_TRACE_VIEW = "Thread Trace View";
         final String DETAILS_VIEW = "Details";
-        
 
         //Master view:
         DataViewComponent.MasterView masterView = new DataViewComponent.MasterView
-                ("Perfmon4j Overview", null, generalDataArea);
-
+                ("Perfmon4j Overview", "This is the master view description", generalDataArea);
+        
         //Configuration of master view:
         DataViewComponent.MasterViewConfiguration masterConfiguration = 
                 new DataViewComponent.MasterViewConfiguration(false);
-
+        
         //Add the master view and configuration view to the component:
         dvc = new DataViewComponent(masterView, masterConfiguration);
-
+      
         //Add configuration details to the component, which are the show/hide checkboxes at the top:
         dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
                 CHART_VIEW, true), DataViewComponent.TOP_LEFT);
-//        dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
-//                STATUS_MESSAGES_VIEW, true), DataViewComponent.TOP_RIGHT);
         dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
-                DETAILS_VIEW, true), DataViewComponent.BOTTOM_RIGHT);
+                THREAD_TRACE_VIEW, true), DataViewComponent.BOTTOM_RIGHT);
+        dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
+                DETAILS_VIEW, true), DataViewComponent.BOTTOM_LEFT);
 
         //Add detail views to the component:
         dvc.addDetailsView(new DataViewComponent.DetailsView(
                 CHART_VIEW, null, 10, chart, null), DataViewComponent.TOP_LEFT);
         
-//        dvc.addDetailsView(new DataViewComponent.DetailsView(
-//                STATUS_MESSAGES_VIEW, null, 10, panelStatusMessages, null), DataViewComponent.TOP_RIGHT);
+        DataViewComponent.DetailsView d = new DataViewComponent.DetailsView(
+                THREAD_TRACE_VIEW, null, 10, threadTraceTable, null);
+        dvc.addDetailsView(d, DataViewComponent.TOP_RIGHT);
+        
         
         dvc.addDetailsView(new DataViewComponent.DetailsView(
                 DETAILS_VIEW, null, 10, table, null), DataViewComponent.BOTTOM_RIGHT);

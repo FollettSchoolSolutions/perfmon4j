@@ -17,15 +17,10 @@
  * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
-*/
-
+ */
 package org.perfmon4j.visualvm.chart;
 
 import com.sun.tools.visualvm.core.options.GlobalPreferences;
-import com.sun.tools.visualvm.core.scheduler.Quantum;
-import com.sun.tools.visualvm.core.scheduler.ScheduledTask;
-import com.sun.tools.visualvm.core.scheduler.Scheduler;
-import com.sun.tools.visualvm.core.scheduler.SchedulerTask;
 import java.util.prefs.PreferenceChangeEvent;
 import java.util.prefs.PreferenceChangeListener;
 
@@ -38,8 +33,9 @@ import java.util.Map;
 
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 
@@ -51,7 +47,7 @@ public class FieldManager implements PreferenceChangeListener {
     private Object mapToken = new Object();
     private final Map<FieldKey, FieldElement> mapElements = new HashMap<FieldKey, FieldElement>();
     private final List<FieldHandler> fieldHandlers = new ArrayList<FieldHandler>();
-
+    private final ThreadTraceList threadTraceList = new ThreadTraceList();
     /**
      * Note... It would be tempting to use the Scheduler provided by the
      * visual vm package...  However as of 11/3/11 that would end up
@@ -60,11 +56,11 @@ public class FieldManager implements PreferenceChangeListener {
      */
     private final Timer timer = new Timer();
     private TimerTask task = null;
-    
 
     public FieldManager(RemoteManagementWrapper wrapper) {
         this.wrapper = wrapper;
-        
+        this.addDataHandler(threadTraceList);
+
         preferences = GlobalPreferences.sharedInstance();
         preferences.watchMonitoredDataPoll(this);
     }
@@ -139,6 +135,31 @@ public class FieldManager implements PreferenceChangeListener {
         }
     }
 
+    public void scheduleThreadTrace(FieldKey sourceFieldKey) {
+        MonitorKey sourceKey = sourceFieldKey.getMonitorKey();
+        FieldKey threadTraceKey = new FieldKey(new MonitorKey(MonitorKey.THREADTRACE_TYPE, sourceKey.getName()), "stack", FieldKey.STRING_TYPE);
+
+        if (!threadTraceList.hasPendingRequest(threadTraceKey)) {
+            try {
+                wrapper.scheduleThreadTrace(threadTraceKey);
+                threadTraceList.add(threadTraceKey);
+            } catch (RemoteException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (SessionNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (InvalidMonitorTypeException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public ThreadTraceList getThreadTraceList() {
+        return threadTraceList;
+    }
+
     public void addDataHandler(FieldHandler handler) {
         fieldHandlers.add(handler);
     }
@@ -164,9 +185,8 @@ public class FieldManager implements PreferenceChangeListener {
         public void removeElement(FieldElement element);
     }
 
-    
     private class FieldTask extends TimerTask {
-        
+
         @Override
         public void run() {
             try {

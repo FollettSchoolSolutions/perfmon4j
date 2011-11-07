@@ -17,8 +17,7 @@
  * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
-*/
-
+ */
 package org.perfmon4j.visualvm.chart;
 
 import java.awt.BorderLayout;
@@ -37,9 +36,12 @@ import javax.swing.AbstractCellEditor;
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ScrollPaneConstants;
@@ -58,53 +60,68 @@ public class ChartElementsTable extends JPanel implements
         FieldManager.FieldHandler {
 
     private static final long serialVersionUID = 1L;
+    private final int secondsToDisplay;
     private final Object elementLock = new Object();
     private final TableModel tableModel;
     private final TableColumnModel columnModel;
     private final FieldManager manager;
     private final JTable table;
-    
-    private static class DataElement {
 
-        Number[] last5 = new Number[5];
-        int currentOffset = 0;
+    private static class NumberElement {
+        private final long time;
+        private final Number number;
+        
+        NumberElement(long now, Number number) {
+            this.time = now;
+            this.number = number;
+        }
+    }
+    
+    
+    private class DataElement {
+        private final Object samplesLockToken = new Object();
+        List<NumberElement> samples = new ArrayList<NumberElement>();
+        
         Number maxValue = null;
         Number minValue = null;
         Number lastValue = null;
+        Number avgValue = null;
 
-        synchronized void setLastValue(Number lastValue) {
-            this.lastValue = lastValue;
-            if (minValue == null || minValue.doubleValue() > lastValue.doubleValue()) {
-                minValue = lastValue;
-            }
-            if (maxValue == null || maxValue.doubleValue() < lastValue.doubleValue()) {
-                maxValue = lastValue;
-            }
-            last5[currentOffset++] = lastValue;
-            if (currentOffset >= last5.length) {
-                currentOffset = 0;
-            }
-        }
-
-        synchronized Number getAverage() {
-            double total = 0.0d;
-            int numValues = 0;
-            for (int i = 0; i < last5.length; i++) {
-                Number x = last5[i];
-                if (x != null) {
-                    numValues++;
-                    total += x.doubleValue();
+        void setLastValue(Number lastValue) {
+            double tmpMaxValue = Double.MIN_VALUE;
+            double tmpMinValue = Double.MAX_VALUE;
+            int count = 0;
+            double total = 0.0;
+            long now = System.currentTimeMillis();
+            long miniteAgo = now - (secondsToDisplay * 1000);
+            
+            synchronized(samplesLockToken) {
+                samples.add(new NumberElement(now,lastValue));
+                for(int i = samples.size() - 1; i >= 0; i--) {
+                    NumberElement current = samples.get(i);
+                    double currentValue = current.number.doubleValue();
+                    if (current.time < miniteAgo) {
+                        samples.remove(i);
+                    } else {
+                        count++;
+                        total += currentValue;
+                        if (currentValue > tmpMaxValue) {
+                            tmpMaxValue = currentValue;
+                        }
+                        if (currentValue < tmpMinValue) {
+                            tmpMinValue = currentValue;
+                        }
+                    }
                 }
             }
-            if (numValues > 0) {
-                return Double.valueOf(total / numValues);
-            } else {
-                return Double.valueOf(0.0d);
-            }
+            this.lastValue = lastValue;
+            this.minValue = new Double(tmpMinValue);
+            this.maxValue = new Double(tmpMaxValue);
+            this.avgValue = new Double(total/(double)count);
         }
     }
 
-    private static class ElementWrapper {
+    private class ElementWrapper {
 
         private FieldElement element;
         private DataElement data;
@@ -191,14 +208,14 @@ public class ChartElementsTable extends JPanel implements
         return value;
     }
     private static final String[] HEADER_VALUE = new String[]{
-        "",             // 0
+        "Action", // 0
         "Monitor Name", // 1 
-        "Field Name",   // 2
-        "Last Value",   // 3
-        "Avg(last 5)",  // 4
-        "Max Value",    // 5
-        "Min Value",    // 6
-        "Factor",       // 7
+        "Field Name", // 2
+        "Last Value", // 3
+        "Average", // 4
+        "Max Value", // 5
+        "Min Value", // 6
+        "Factor", // 7
         "Visible"};     // 8
 
     private class TableModel extends AbstractTableModel {
@@ -249,17 +266,14 @@ public class ChartElementsTable extends JPanel implements
                 switch (columnIndex) {
                     case 0:
                         return w.element.getColor();
-
                     case 1:
                         return w.element.getFieldKey().getMonitorKey().getName();
-
                     case 2:
                         return w.element.getFieldKey().getFieldName();
-
                     case 3:
                         return roundIfNeeded(w.data.lastValue);
                     case 4:
-                        return roundIfNeeded(w.data.getAverage());
+                        return roundIfNeeded(w.data.avgValue);
                     case 5:
                         return roundIfNeeded(w.data.maxValue);
                     case 6:
@@ -304,7 +318,6 @@ public class ChartElementsTable extends JPanel implements
     }
 
     public class ColorRenderer extends DefaultTableCellRenderer {
-
         private static final long serialVersionUID = 1L;
 
         public Component getTableCellRendererComponent(JTable table,
@@ -320,25 +333,57 @@ public class ChartElementsTable extends JPanel implements
         }
     }
 
-    private class DeleteButtonActionListener implements ActionListener {
+    private class RowActionListener implements ActionListener {
         final int row;
 
-        DeleteButtonActionListener(int row) {
+        RowActionListener(int row) {
             this.row = row;
         }
 
         public void actionPerformed(ActionEvent e) {
-            final FieldKey fieldToDelete = backingData.get(row).element.getFieldKey();
+            JPopupMenu menu = new JPopupMenu();
+            JMenuItem removeItem = new JMenuItem("Remove");
+            removeItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    final FieldKey fieldToDelete = backingData.get(row).element.getFieldKey();
 
-            String message = "Are you sure you want to delete Monitor: \""
-                    + fieldToDelete.getMonitorKey().getName() + "\" Field: \""
-                    + fieldToDelete.getFieldName() + "\"?";
+                    String message = "Are you sure you want to delete Monitor: \""
+                            + fieldToDelete.getMonitorKey().getName() + "\" Field: \""
+                            + fieldToDelete.getFieldName() + "\"?";
 
-            if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
-                    JOptionPane.YES_NO_OPTION)
-                    == JOptionPane.YES_OPTION) {
-                manager.removeField(backingData.get(row).element.getFieldKey());
-            }
+                    if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
+                            JOptionPane.YES_NO_OPTION)
+                            == JOptionPane.YES_OPTION) {
+                        manager.removeField(backingData.get(row).element.getFieldKey());
+                    }
+                }
+            });
+            menu.add(removeItem);
+            
+            JMenuItem scheduleThreadTrace = new JMenuItem("Schedule Thread Trace...");
+            scheduleThreadTrace.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    final FieldKey fieldTrace = backingData.get(row).element.getFieldKey();
+
+//                    String message = "Schedule thread trace for monitor: \""
+//                            + fieldTrace.getMonitorKey().getName() + "\" Field: \""
+//                            + fieldTrace.getFieldName() + "\"?";
+//
+//                    if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Schedule ",
+//                            JOptionPane.YES_NO_OPTION)
+//                            == JOptionPane.YES_OPTION) {
+//                        manager.removeField(backingData.get(row).element.getFieldKey());
+//                    }
+                    manager.scheduleThreadTrace(fieldTrace);
+                    
+                }
+            });
+            menu.add(scheduleThreadTrace);
+ 
+            JComponent c = (JComponent) e.getSource();
+            menu.show(c, c.getX() + (c.getWidth()/2), c.getY());
             table.editingStopped(new ChangeEvent(this));
         }
     }
@@ -349,8 +394,8 @@ public class ChartElementsTable extends JPanel implements
                 Object value, boolean isSelected, int row, int column) {
 
             JButton result = new JButton();
-            result.addActionListener(new DeleteButtonActionListener(row));
-            result.setBackground((Color)value);
+            result.addActionListener(new RowActionListener(row));
+            result.setBackground((Color) value);
             result.setForeground(Color.white);
 
             return result;
@@ -362,11 +407,11 @@ public class ChartElementsTable extends JPanel implements
         }
     }
 
-    public ChartElementsTable(FieldManager manager) {
+    public ChartElementsTable(FieldManager manager, int secondsToDisplay) {
         super(new BorderLayout());
         tableModel = new TableModel();
         this.manager = manager;
-        
+        this.secondsToDisplay = secondsToDisplay;
 
         table = new JTable(tableModel);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -400,7 +445,7 @@ public class ChartElementsTable extends JPanel implements
 
         TableColumn colorColumn = table.getColumnModel().getColumn(0);
         colorColumn.setCellEditor(new ButtonCellEditor());
-        
+
         JScrollPane scroller = new JScrollPane(table,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -431,4 +476,4 @@ public class ChartElementsTable extends JPanel implements
 
         return fieldKey;
     }
- }
+}
