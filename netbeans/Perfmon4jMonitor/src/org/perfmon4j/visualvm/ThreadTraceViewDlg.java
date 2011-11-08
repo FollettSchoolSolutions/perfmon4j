@@ -1,13 +1,24 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/*
- * ThreadTraceView.java
+ *	Copyright 2011 Follett Software Company 
  *
- * Created on Nov 7, 2011, 9:50:26 AM
- */
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ * 	Follett Software Company
+ * 	1391 Corporate Drive
+ * 	McHenry, IL 60050
+ * 
+*/
+
 package org.perfmon4j.visualvm;
 
 import java.text.SimpleDateFormat;
@@ -22,7 +33,7 @@ public class ThreadTraceViewDlg extends javax.swing.JDialog {
 
     /** Creates new form ThreadTraceView */
     public ThreadTraceViewDlg(java.awt.Frame parent, ThreadTraceList.ThreadTraceElement element) {
-        super(parent, true);
+        super(parent, "Thread Trace View", true);
         initComponents();
         
         SimpleDateFormat f = new SimpleDateFormat("MM/dd HH:mm:ss");
@@ -62,6 +73,7 @@ public class ThreadTraceViewDlg extends javax.swing.JDialog {
 
         jLabel2.setText(org.openide.util.NbBundle.getMessage(ThreadTraceViewDlg.class, "ThreadTraceViewDlg.jLabel2.text")); // NOI18N
 
+        monitorField.setEditable(false);
         monitorField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceViewDlg.class, "ThreadTraceViewDlg.monitorField.text")); // NOI18N
 
         threadTraceText.setColumns(20);
@@ -91,7 +103,7 @@ public class ThreadTraceViewDlg extends javax.swing.JDialog {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel2)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(monitorField, javax.swing.GroupLayout.PREFERRED_SIZE, 322, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(monitorField, javax.swing.GroupLayout.DEFAULT_SIZE, 336, Short.MAX_VALUE))
                     .addComponent(closeButton, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addContainerGap())
         );

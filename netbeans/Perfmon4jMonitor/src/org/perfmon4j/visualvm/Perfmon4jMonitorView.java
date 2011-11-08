@@ -88,7 +88,6 @@ public class Perfmon4jMonitorView extends DataSourceView {
                     FieldElement result = AEDMonitor.showModel(Perfmon4jMonitorView.getParentFrame(dvc.getParent()), wrapper);
                     if (result != null) {
                         fieldManager.addOrUpdateField(result);
-//                      JOptionPane.showMessageDialog(null, "Selected field: " + result.getFieldKey());
                     }
                     
                 } catch (Exception ex) {
@@ -105,7 +104,7 @@ public class Perfmon4jMonitorView extends DataSourceView {
         table = new ChartElementsTable(fieldManager, secondsToDisplay);
         fieldManager.addDataHandler(table);
         
-        threadTraceTable = new ThreadTraceTable(fieldManager.getThreadTraceList());
+        threadTraceTable = new ThreadTraceTable(fieldManager);
         
         final String CHART_VIEW = "Chart";
         final String THREAD_TRACE_VIEW = "Thread Trace View";
@@ -126,19 +125,15 @@ public class Perfmon4jMonitorView extends DataSourceView {
         dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
                 CHART_VIEW, true), DataViewComponent.TOP_LEFT);
         dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
-                THREAD_TRACE_VIEW, true), DataViewComponent.BOTTOM_RIGHT);
+                THREAD_TRACE_VIEW, true), DataViewComponent.TOP_RIGHT);
         dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
                 DETAILS_VIEW, true), DataViewComponent.BOTTOM_LEFT);
 
         //Add detail views to the component:
         dvc.addDetailsView(new DataViewComponent.DetailsView(
                 CHART_VIEW, null, 10, chart, null), DataViewComponent.TOP_LEFT);
-        
-        DataViewComponent.DetailsView d = new DataViewComponent.DetailsView(
-                THREAD_TRACE_VIEW, null, 10, threadTraceTable, null);
-        dvc.addDetailsView(d, DataViewComponent.TOP_RIGHT);
-        
-        
+        dvc.addDetailsView(new DataViewComponent.DetailsView(
+                THREAD_TRACE_VIEW, null, 10, threadTraceTable, null), DataViewComponent.TOP_RIGHT);
         dvc.addDetailsView(new DataViewComponent.DetailsView(
                 DETAILS_VIEW, null, 10, table, null), DataViewComponent.BOTTOM_RIGHT);
 

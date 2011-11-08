@@ -49,12 +49,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
-import org.perfmon4j.remotemanagement.intf.MonitorKey;
-import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 
 public class ChartElementsTable extends JPanel implements
         FieldManager.FieldHandler {
@@ -365,7 +362,7 @@ public class ChartElementsTable extends JPanel implements
             scheduleThreadTrace.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    final FieldKey fieldTrace = backingData.get(row).element.getFieldKey();
+                    final FieldElement element = backingData.get(row).element;
 
 //                    String message = "Schedule thread trace for monitor: \""
 //                            + fieldTrace.getMonitorKey().getName() + "\" Field: \""
@@ -376,7 +373,7 @@ public class ChartElementsTable extends JPanel implements
 //                            == JOptionPane.YES_OPTION) {
 //                        manager.removeField(backingData.get(row).element.getFieldKey());
 //                    }
-                    manager.scheduleThreadTrace(fieldTrace);
+                    manager.scheduleThreadTrace(element);
                     
                 }
             });
@@ -451,29 +448,5 @@ public class ChartElementsTable extends JPanel implements
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         this.add(scroller);
-    }
-
-    private static FieldKey getFieldByName(RemoteManagementWrapper wrapper,
-            String monitorName, String fieldName) throws Exception {
-        MonitorKey monitorKey = null;
-        FieldKey fieldKey = null;
-        MonitorKey[] monitors = wrapper.getMonitors();
-
-        for (int i = 0; i < monitors.length && monitorKey == null; i++) {
-            if (monitors[i].getName().equals(monitorName)) {
-                monitorKey = monitors[i];
-            }
-        }
-
-        if (monitorKey != null) {
-            FieldKey fields[] = wrapper.getFieldsForMonitor(monitorKey);
-            for (int i = 0; i < fields.length && fieldKey == null; i++) {
-                if (fields[i].getFieldName().equals(fieldName)) {
-                    fieldKey = fields[i];
-                }
-            }
-        }
-
-        return fieldKey;
     }
 }

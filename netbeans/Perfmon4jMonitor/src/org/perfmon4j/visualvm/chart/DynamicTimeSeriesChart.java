@@ -176,27 +176,4 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         
         add(chartPanel);
     }
-
-    private static FieldKey getFieldByName(RemoteManagementWrapper wrapper, String monitorName, String fieldName) throws Exception {
-        MonitorKey monitorKey = null;
-        FieldKey fieldKey = null;
-        MonitorKey[] monitors = wrapper.getMonitors();
-
-        for (int i = 0; i < monitors.length && monitorKey == null; i++) {
-            if (monitors[i].getName().equals(monitorName)) {
-                monitorKey = monitors[i];
-            }
-        }
-
-        if (monitorKey != null) {
-            FieldKey fields[] = wrapper.getFieldsForMonitor(monitorKey);
-            for (int i = 0; i < fields.length && fieldKey == null; i++) {
-                if (fields[i].getFieldName().equals(fieldName)) {
-                    fieldKey = fields[i];
-                }
-            }
-        }
-
-        return fieldKey;
-    }
 }

@@ -21,6 +21,7 @@
 
 package org.perfmon4j.visualvm.chart;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -31,7 +32,6 @@ import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 
 public class ThreadTraceList implements FieldManager.FieldHandler {
-
     private final Object lockToken = new Object();
     private final List<ThreadTraceElement> elements = new ArrayList<ThreadTraceElement>();
     private final List<ThreadTraceListListener> listeners = new ArrayList<ThreadTraceListListener>();
@@ -66,10 +66,9 @@ public class ThreadTraceList implements FieldManager.FieldHandler {
         }
     }
 
-    public void add(FieldKey fieldKey) {
-        int row;
+    public void add(FieldKey fieldKey, Color color) {
         synchronized (lockToken) {
-            elements.add(0, new ThreadTraceElement(fieldKey));
+            elements.add(0, new ThreadTraceElement(fieldKey, color));
         }
         Iterator<ThreadTraceListListener> itr = listeners.iterator();
         while (itr.hasNext()) {
@@ -152,10 +151,12 @@ public class ThreadTraceList implements FieldManager.FieldHandler {
         private final Date submitted;
         private final FieldKey fieldKey;
         private String result = null;
+        private final Color color;
 
-        public ThreadTraceElement(FieldKey fieldKey) {
+        public ThreadTraceElement(FieldKey fieldKey, Color color) {
             this.submitted = new Date();
             this.fieldKey = fieldKey;
+            this.color = color;
         }
 
         public boolean isPending() {
@@ -172,6 +173,10 @@ public class ThreadTraceList implements FieldManager.FieldHandler {
 
         public FieldKey getFieldKey() {
             return fieldKey;
+        }
+        
+        public Color getColor() {
+            return color;
         }
 
         private void setResult(String result) {

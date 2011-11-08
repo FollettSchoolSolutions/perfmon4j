@@ -34,7 +34,7 @@
                   <Group type="102" alignment="0" attributes="0">
                       <Component id="jLabel2" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
-                      <Component id="monitorField" min="-2" pref="322" max="-2" attributes="0"/>
+                      <Component id="monitorField" pref="336" max="32767" attributes="0"/>
                   </Group>
                   <Component id="closeButton" alignment="1" min="-2" max="-2" attributes="0"/>
               </Group>
@@ -92,6 +92,7 @@
     </Component>
     <Component class="javax.swing.JTextField" name="monitorField">
       <Properties>
+        <Property name="editable" type="boolean" value="false"/>
         <Property name="text" type="java.lang.String" editor="org.netbeans.modules.i18n.form.FormI18nStringEditor">
           <ResourceString bundle="org/perfmon4j/visualvm/Bundle.properties" key="ThreadTraceViewDlg.monitorField.text" replaceFormat="org.openide.util.NbBundle.getMessage({sourceFileName}.class, &quot;{key}&quot;)"/>
         </Property>

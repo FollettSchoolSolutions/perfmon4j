@@ -135,14 +135,14 @@ public class FieldManager implements PreferenceChangeListener {
         }
     }
 
-    public void scheduleThreadTrace(FieldKey sourceFieldKey) {
-        MonitorKey sourceKey = sourceFieldKey.getMonitorKey();
+    public void scheduleThreadTrace(FieldElement element) {
+        MonitorKey sourceKey = element.getFieldKey().getMonitorKey();
         FieldKey threadTraceKey = new FieldKey(new MonitorKey(MonitorKey.THREADTRACE_TYPE, sourceKey.getName()), "stack", FieldKey.STRING_TYPE);
 
         if (!threadTraceList.hasPendingRequest(threadTraceKey)) {
             try {
                 wrapper.scheduleThreadTrace(threadTraceKey);
-                threadTraceList.add(threadTraceKey);
+                threadTraceList.add(threadTraceKey, element.getColor());
             } catch (RemoteException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -156,6 +156,26 @@ public class FieldManager implements PreferenceChangeListener {
         }
     }
 
+    public void unScheduleThreadTrace(FieldKey sourceFieldKey) {
+        MonitorKey sourceKey = sourceFieldKey.getMonitorKey();
+        FieldKey threadTraceKey = new FieldKey(new MonitorKey(MonitorKey.THREADTRACE_TYPE, sourceKey.getName()), "stack", FieldKey.STRING_TYPE);
+
+        if (threadTraceList.hasPendingRequest(threadTraceKey)) {
+            try {
+                wrapper.unScheduleThreadTrace(threadTraceKey);
+            } catch (RemoteException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (SessionNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (InvalidMonitorTypeException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+    
     public ThreadTraceList getThreadTraceList() {
         return threadTraceList;
     }

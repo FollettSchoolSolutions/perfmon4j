@@ -31,10 +31,12 @@ import java.util.Date;
 
 import javax.swing.AbstractCellEditor;
 import javax.swing.JButton;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.event.ChangeEvent;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
@@ -51,20 +53,12 @@ public class ThreadTraceTable extends JPanel implements
     private static final long serialVersionUID = 1L;
     private final TableModel tableModel;
     private final JTable table;
-//	private final TableColumnModel columnModel;
+    private final FieldManager manager;
     private final ThreadTraceList list;
     private static final String[] HEADER_VALUE = new String[]{"Time Submitted",
         "Monitor Name", "View", "Cancel",};
 
     private class TableModel extends AbstractTableModel {
-//		@Override
-//	    public Class<?> getColumnClass(int column) {
-//			if (column == 0) {
-//				return Color.class;
-//			} else {
-//				return super.getColumnClass(column);
-//			}
-//	    }
 
         @Override
         public String getColumnName(int columnIndex) {
@@ -73,7 +67,6 @@ public class ThreadTraceTable extends JPanel implements
 
         @Override
         public int getColumnCount() {
-            // TODO Auto-generated method stub
             return HEADER_VALUE.length;
         }
 
@@ -106,17 +99,16 @@ public class ThreadTraceTable extends JPanel implements
         }
     }
 
+
     public class ButtonCellEditor extends AbstractCellEditor implements TableCellEditor, TableCellRenderer {
 
         @Override
-        public Component getTableCellEditorComponent(JTable table,
-                Object value, boolean isSelected, int row, int column) {
+        public Component getTableCellEditorComponent(JTable t,
+                Object value, boolean isSelected, int r, int column) {
 
             JButton result = new JButton();
-//			result.addActionListener(new RowActionListener(row));
-//			result.setBackground((Color)value);
+            final int row = r;
             final ThreadTraceList.ThreadTraceElement element = list.get(row);
-            
             
             if (list.get(row).isPending()) {
                 if (column == 2) {
@@ -125,19 +117,38 @@ public class ThreadTraceTable extends JPanel implements
                 } else {
                     result.setText("Cancel");
                     result.setEnabled(true);
-                    result.setBackground(Color.red);
+//                    result.setBackground(Color.red);
+                    result.addActionListener(new ActionListener() {
+                        final ThreadTraceList.ThreadTraceElement myElement = element;
+                        final int myRow = row;
+                        
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            table.editingStopped(new ChangeEvent(this));
+                        String message = "Are you sure you want to cancel thread trace for Monitor: \""
+                            + myElement.getFieldKey().getMonitorKey().getName() + "\"?";
+
+                            if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
+                                    JOptionPane.YES_NO_OPTION)
+                                    == JOptionPane.YES_OPTION) {
+                                manager.unScheduleThreadTrace(myElement.getFieldKey());
+                                list.delete(row);
+                            }
+                        }
+                    });
                 }
 //				result.setBackground(Color.gray);
             } else {
                 if (column == 2) {
                     result.setText("View");
                     result.setEnabled(true);
-                    result.setBackground(Color.green);
+                    result.setBackground(element.getColor());
                     result.addActionListener(new ActionListener() {
                         final ThreadTraceList.ThreadTraceElement myElement = element;
                         
                         @Override
                         public void actionPerformed(ActionEvent e) {
+                            table.editingStopped(new ChangeEvent(this));
                             ThreadTraceViewDlg.showModel(Perfmon4jMonitorView.getParentFrame((Component)e.getSource()), myElement);
                         }
                     });
@@ -146,6 +157,23 @@ public class ThreadTraceTable extends JPanel implements
                 } else {
                     result.setText("Delete");
                     result.setEnabled(true);
+                    result.addActionListener(new ActionListener() {
+                        final ThreadTraceList.ThreadTraceElement myElement = element;
+                        final int myRow = row;
+                        
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            table.editingStopped(new ChangeEvent(this));
+                        String message = "Are you sure you want to delete thread trace for Monitor: \""
+                            + myElement.getFieldKey().getMonitorKey().getName() + "\"?";
+
+                            if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
+                                    JOptionPane.YES_NO_OPTION)
+                                    == JOptionPane.YES_OPTION) {
+                                list.delete(row);
+                            }
+                        }
+                    });
                 }
 
             }
@@ -168,15 +196,15 @@ public class ThreadTraceTable extends JPanel implements
         }
     }
 
-    public ThreadTraceTable(ThreadTraceList list) {
+    public ThreadTraceTable(FieldManager manager) {
         super(new BorderLayout());
-        this.list = list;
+        this.manager = manager;
+        this.list = manager.getThreadTraceList();
         list.addDataHandler(this);
 
         tableModel = new TableModel();
         table = new JTable(tableModel);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-
 
         TableCellRenderer tableCellRenderer = new DefaultTableCellRenderer() {
 
@@ -221,7 +249,6 @@ public class ThreadTraceTable extends JPanel implements
     @Override
     public void rowDeleted(int row) {
         tableModel.fireTableRowsDeleted(row, row);
-        // TODO Auto-generated method stub
     }
 
     @Override
