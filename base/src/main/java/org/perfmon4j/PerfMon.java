@@ -52,6 +52,14 @@ public class PerfMon {
     public static final int MAX_EXTERNAL_ELEMENTS_PER_MONITOR = 
     	Integer.getInteger(PerfMon.class.getName() + ".MAX_EXTERNAL_ELEMENTS_PER_MONITOR", 10).intValue();
     
+    public static final int MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS = 
+    	Integer.getInteger(PerfMon.class.getName() + ".MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS", 100000).intValue();
+    
+    // Value used to limit the max size of allowed thread trace elements  
+    // captured for an external monitor (e.g. the VisualVM plugin)
+    public static final int MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS = 
+    	Integer.getInteger(PerfMon.class.getName() + ".MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS", 2500).intValue();
+    
     public static final String ROOT_MONITOR_NAME;
     private final String name;
 

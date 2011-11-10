@@ -902,7 +902,6 @@ public class PerfMonTest extends TestCase {
         assertNull("threadTraceConfig should have been removed", mon.getInternalThreadTraceConfig());
     }
 
-
     public void testConfigureWillSkipClassNotFoundAppender() throws Exception {
         PerfMon.deInit();
         

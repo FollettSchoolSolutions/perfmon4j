@@ -442,6 +442,17 @@ public class IntervalData implements PerfMonData {
         return result;
     }
 
+    /*----------------------------------------------------------------------------*/    
+    public double getThroughputPerSecond() {
+        double result = 0.0;
+        // Use current time if the data has not been stopped yet...
+        long timeMillis = (timeStop == PerfMon.NOT_SET ? MiscHelper.currentTimeWithMilliResolution() : timeStop) - timeStart;
+        if (timeMillis > 0) {
+            result = ((double)totalCompletions / timeMillis) * 1000;
+        }
+        return result;
+    }
+    
 /*----------------------------------------------------------------------------*/    
     public long getAverageDuration() {
         long result = 0;
@@ -719,7 +730,7 @@ public class IntervalData implements PerfMonData {
     	MonitorKey monitorKey = new MonitorKey(MonitorKey.INTERVAL_TYPE, monitorName);
     	
     	fields.add(new FieldKey(monitorKey, "AverageDuration", FieldKey.LONG_TYPE));
-    	fields.add(new FieldKey(monitorKey, "ThroughputPerMinute", FieldKey.DOUBLE_TYPE));
+    	fields.add(new FieldKey(monitorKey, "ThroughputPerSecond", FieldKey.DOUBLE_TYPE));
     	fields.add(new FieldKey(monitorKey, "MaxActiveThreadCount", FieldKey.INTEGER_TYPE));
     	fields.add(new FieldKey(monitorKey, "MaxDuration", FieldKey.LONG_TYPE));
     	fields.add(new FieldKey(monitorKey, "MinDuration", FieldKey.LONG_TYPE));

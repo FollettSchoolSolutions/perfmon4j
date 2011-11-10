@@ -22,6 +22,7 @@
 package org.perfmon4j.remotemanagement;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import junit.framework.TestCase;
@@ -166,6 +167,109 @@ public class ExternalAppenderTest extends TestCase {
         assertEquals("maxActiveThreadCount", 0, mon.getMaxActiveThreadCount());
     }
     
+
+    /*----------------------------------------------------------------------------*/    
+    public void testScheduleThreadTrace() throws Exception {
+        final String MON_NAME = "aaa.b.ccc";
+        
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MON_NAME);
+        FieldKey threadTraceKey = FieldKey.buildThreadTraceKeyFromInterval(monitorKey);
+        
+        ExternalAppender.scheduleThreadTrace(sessionID, threadTraceKey);
+
+        PerfMonTimer t1 = PerfMonTimer.start(MON_NAME);
+        for(int i = 0; i < PerfMon.MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS; i++) {
+        	PerfMonTimer t2 = PerfMonTimer.start("a");
+        		{
+	        	PerfMonTimer t3 = PerfMonTimer.start("b");
+	        		{
+		        	PerfMonTimer t4 = PerfMonTimer.start("c");
+		        	PerfMonTimer.stop(t4);
+	        		}
+	        	PerfMonTimer.stop(t3);
+        		}
+        	PerfMonTimer.stop(t2);
+        }
+        PerfMonTimer.stop(t1);
+        
+        Map<FieldKey, Object> map = ExternalAppender.getThreadTraceData(sessionID);
+        assertNotNull("map", map);
+        
+        assertEquals("map.size()", 1, map.size());
+        String result = (String)map.get(threadTraceKey);
+        assertTrue("Thread trace should have been truncated...", result.contains("Thread Trace Limit Exceeded -- Data truncated"));
+        
+        System.out.println(result);
+    }
+
+    /*----------------------------------------------------------------------------*/    
+    public void testScheduleThreadTraceWithMinDurationToCapture() throws Exception {
+        final String MON_NAME = "aaa.b.ccc";
+        
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MON_NAME);
+        Map<String, String> params = new HashMap<String, String>();
+        params.put(FieldKey.THREAD_TRACE_MIN_DURATION_ARG, "10");
+
+        FieldKey threadTraceKey = 
+        	FieldKey.buildThreadTraceKeyFromInterval(monitorKey, params);
+        
+        ExternalAppender.scheduleThreadTrace(sessionID, threadTraceKey);
+        PerfMonTimer t1 = PerfMonTimer.start(MON_NAME);
+        	{
+        	PerfMonTimer t2 = PerfMonTimer.start("a");
+        		Thread.sleep(100);
+        	PerfMonTimer.stop(t2);
+        	PerfMonTimer t3 = PerfMonTimer.start("shouldbefiltered");
+    		PerfMonTimer.stop(t3);
+        	}
+        PerfMonTimer.stop(t1);
+        
+        Map<FieldKey, Object> map = ExternalAppender.getThreadTraceData(sessionID);
+        assertNotNull("map", map);
+        
+        assertEquals("map.size()", 1, map.size());
+        String result = (String)map.get(threadTraceKey);
+        
+        assertTrue("Thread trace should have filtered element with short duration...", 
+        		!result.contains("shouldbefiltered"));
+        System.out.println(result);
+    }
+    
+    /*----------------------------------------------------------------------------*/    
+    public void testScheduleThreadTraceWithMaxDepth() throws Exception {
+        final String MON_NAME = "aaa.b.ccc";
+        
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MON_NAME);
+        Map<String, String> params = new HashMap<String, String>();
+        params.put(FieldKey.THREAD_TRACE_MAX_DEPTH_ARG, "2");
+
+        FieldKey threadTraceKey = 
+        	FieldKey.buildThreadTraceKeyFromInterval(monitorKey, params);
+        
+        ExternalAppender.scheduleThreadTrace(sessionID, threadTraceKey);
+        PerfMonTimer t1 = PerfMonTimer.start(MON_NAME);
+        	{
+        	PerfMonTimer t2 = PerfMonTimer.start("a");
+	        	PerfMonTimer t3 = PerfMonTimer.start("b");
+		        	PerfMonTimer t4 = PerfMonTimer.start("shouldbefiltered");
+		    		PerfMonTimer.stop(t4);
+	        	PerfMonTimer.stop(t3);
+        	PerfMonTimer.stop(t2);
+        	}
+        PerfMonTimer.stop(t1);
+        
+        Map<FieldKey, Object> map = ExternalAppender.getThreadTraceData(sessionID);
+        assertNotNull("map", map);
+        
+        assertEquals("map.size()", 1, map.size());
+        String result = (String)map.get(threadTraceKey);
+        System.out.println(result);
+        
+        assertTrue("Thread should filter max depth", 
+        		!result.contains("shouldbefiltered"));
+    }
+
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
@@ -184,7 +288,7 @@ public class ExternalAppenderTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new ExternalAppenderTest("testGetSubscribedMonitors"));
+//        newSuite.addTest(new ExternalAppenderTest("testScheduleThreadTraceWithMaxDepth"));
         
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

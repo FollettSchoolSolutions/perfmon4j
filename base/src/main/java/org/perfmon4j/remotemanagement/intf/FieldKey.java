@@ -35,10 +35,15 @@ public class FieldKey implements Comparable<FieldKey>{
 	final public static String DOUBLE_TYPE = "DOUBLE";
 	final public static String TIMESTAMP_TYPE = "TIMESTAMP";
 	final public static String STRING_TYPE = "STRING";
+	
 	private static final Pattern pattern = Pattern.compile(".+?:FIELD\\(name=([^;]+);type=([^\\)]+)\\)");
 	
 	// Returned when session is subscribed to a ThreadTrace, and the data is not available.
 	final public static String THREAD_TRACE_PENDING = "ThreadTracePending";
+	
+	final public static String THREAD_TRACE_MIN_DURATION_ARG = "MinDurationToCapture";
+	final public static String THREAD_TRACE_MAX_DEPTH_ARG = "MaxDepth";
+	
 	
 	public final MonitorKey monitorKey;
 	public final String fieldName;
@@ -117,6 +122,44 @@ public class FieldKey implements Comparable<FieldKey>{
 		return result;
 	}
 
+	public static FieldKey buildThreadTraceKeyFromInterval(MonitorKey intervalKey) {
+		return buildThreadTraceKeyFromInterval(intervalKey, null);
+	}
+
+	/**
+	 * Returns null if the intervalKey parameter is NOT a interval or threadtrace type.
+	 * @param intervalKey
+	 * @return
+	 */
+	public static FieldKey buildThreadTraceKeyFromInterval(MonitorKey intervalKey, Map<String, String> extraParams) {
+		FieldKey result = null;
+		MonitorKey monitorKey = null;
+		String instance = "";
+		
+		if (extraParams != null) {
+			Iterator<Map.Entry<String, String>> itr = extraParams.entrySet().iterator();
+			while(itr.hasNext()) {
+				Map.Entry<String, String> entry = itr.next();
+	 			instance += entry.getKey() + "=" + entry.getValue();
+	 			if (itr.hasNext()) {
+	 				instance+= ",";
+	 			}
+			}
+		}
+		if (intervalKey.getType().equals(MonitorKey.INTERVAL_TYPE)) {
+			monitorKey = new MonitorKey(MonitorKey.THREADTRACE_TYPE, intervalKey.getName(), 
+					"".equals(instance) ? null : instance);
+			
+		} else if (intervalKey.getType().equals(MonitorKey.THREADTRACE_TYPE)) {
+			monitorKey = intervalKey;
+		}
+
+		if (monitorKey != null) {
+			result = new FieldKey(monitorKey, "stack", FieldKey.STRING_TYPE);
+		}
+		return result;
+	}	
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

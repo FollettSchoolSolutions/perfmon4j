@@ -33,9 +33,11 @@ import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
+import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
 
 public class ExternalAppender {
 	private static final Logger logger = LoggerFactory.initLogger(ExternalAppender.class);
@@ -169,8 +171,26 @@ public class ExternalAppender {
 		private final Map<FieldKey, ExternalThreadTraceConfig> scheduledThreadTraces = new HashMap<FieldKey, ExternalThreadTraceConfig>();
 		
 		private void scheduleThreadTrace(FieldKey threadTraceKey) {
+			String extraParams = threadTraceKey.getMonitorKey().getInstance();
 			PerfMon monitor = PerfMon.getMonitor(threadTraceKey.getMonitorKey().getName());
+		
 			ExternalThreadTraceConfig config = new ExternalThreadTraceConfig();
+			if (extraParams != null) {
+				String [] params = MiscHelper.tokenizeCSVString(extraParams);
+				for (int i = 0; i < params.length; i++) {
+					String[] p = params[i].split("=");
+					if (p.length == 2) {
+						try {
+							BeanHelper.setValue(config, p[0], p[1]);
+						} catch (UnableToSetAttributeException e) {
+							logger.logWarn("Unable to set attribute", e);
+						}
+					} else {
+						logger.logWarn("Unable to parse value into a attribute name and value: " +
+								params[i]);
+					}
+				}
+			}
 			scheduledThreadTraces.put(threadTraceKey, config);
 			monitor.scheduleExternalThreadTrace(config);
 		}

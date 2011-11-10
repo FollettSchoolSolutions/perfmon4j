@@ -31,18 +31,18 @@ import org.perfmon4j.util.LoggerFactory;
 
 
 class ThreadTraceMonitor {
-    // Dont use log4j here... The class may not have been loaded
+	// Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(ThreadTraceMonitor.class);    
     
     private static ThreadLocal<ThreadTracesOnStack> internalMonitorsOnThread = new ThreadLocal<ThreadTracesOnStack>() {
          protected synchronized ThreadTracesOnStack initialValue() {
-             return new ThreadTracesOnStack();
+             return new ThreadTracesOnStack(PerfMon.MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS);
          }
      };
 
      private static ThreadLocal<ThreadTracesOnStack> externalMonitorsOnThread = new ThreadLocal<ThreadTracesOnStack>() {
          protected synchronized ThreadTracesOnStack initialValue() {
-             return new ThreadTracesOnStack();
+             return new ThreadTracesOnStack(PerfMon.MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS);
          }
      };
      
@@ -71,8 +71,12 @@ class ThreadTraceMonitor {
         
         final int maxDepth;
         final int minDuratinToCapture;
+        private boolean hadOverflow;
+        private int numElements = 0;
         
         int checkpointsIgnoredDueToMaxDepth = 0; 
+        int checkpointsIgnoredDueToOverflow = 0;
+        
         
         PointerToHead(ThreadTraceData rootElement, int maxDepth, int minDurationToCapture) {
             this.rootElement = rootElement;
@@ -92,10 +96,14 @@ class ThreadTraceMonitor {
      * thread....
      */
     static class ThreadTracesOnStack {
+    	private final int maxElements;
         private Map<String, PointerToHead> threadDataMap = new HashMap<String, PointerToHead>();
         private ExternalThreadTraceConfig externalConfig = null;
         boolean active = false;
         
+        ThreadTracesOnStack(int maxElements) {
+        	this.maxElements = maxElements;
+        }
         
         /**
          * Prevent recursion...  This can happen if multiple instrumentation
@@ -154,7 +162,13 @@ class ThreadTraceMonitor {
 	                        if (head.maxDepth > 0 && head.topOfTheStackElement.getDepth() >= head.maxDepth) {
 	                            head.checkpointsIgnoredDueToMaxDepth++;
 	                        } else {
-	                            head.topOfTheStackElement = new ThreadTraceData(timerMonitorName, head.topOfTheStackElement, startTime);
+	                        	head.numElements++;
+	                        	if (head.numElements > maxElements) {
+	                        		head.rootElement.setOverflow(true);
+	                        		head.checkpointsIgnoredDueToOverflow++;
+	                        	} else {
+	                        		head.topOfTheStackElement = new ThreadTraceData(timerMonitorName, head.topOfTheStackElement, startTime);
+	                        	}
 	                        }
 	                    }
 	                }
@@ -180,6 +194,8 @@ class ThreadTraceMonitor {
                         if (head.uniqueThreadTraceTimerKeys.remove(timerKey.toHashString())) {
                             if (head.checkpointsIgnoredDueToMaxDepth > 0) {
                                 head.checkpointsIgnoredDueToMaxDepth--;
+                            } else if(head.checkpointsIgnoredDueToOverflow > 0) {
+                            	head.checkpointsIgnoredDueToOverflow--;
                             } else {
                                 // Make sure we never get to the root element...
                                 // That is removed via stop...  If for some reason we became 
@@ -190,6 +206,7 @@ class ThreadTraceMonitor {
                                     head.topOfTheStackElement = exitTraceData.getParent();
                                     if (head.minDuratinToCapture > 0 &&
                                         head.minDuratinToCapture > (exitTraceData.getEndTime() - exitTraceData.getStartTime())) {
+                                    	head.numElements--;
                                         exitTraceData.seperateFromParent();
                                     }
                                 } else {

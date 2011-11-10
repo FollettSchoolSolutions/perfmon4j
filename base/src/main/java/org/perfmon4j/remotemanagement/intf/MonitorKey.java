@@ -85,23 +85,6 @@ public class MonitorKey implements Comparable<MonitorKey> {
 		return result;
 	}
 
-	/**
-	 * Returns null if the intervalKey parameter is NOT a interval or threadtrace type.
-	 * @param intervalKey
-	 * @return
-	 */
-	public static MonitorKey buildThreadTraceKeyFromInterval(MonitorKey intervalKey) {
-		MonitorKey result = null;
-		
-		if (intervalKey.getType().equals(MonitorKey.INTERVAL_TYPE)) {
-			result = new MonitorKey(MonitorKey.THREADTRACE_TYPE, intervalKey.getName(), intervalKey.getInstance());
-		} else if (intervalKey.getType().equals(MonitorKey.THREADTRACE_TYPE)) {
-			result = intervalKey;
-		}
-		
-		return result;
-	}
-	
 	
 	@Override
 	public String toString() {

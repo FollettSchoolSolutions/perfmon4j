@@ -47,6 +47,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     private long endTime = -1;
     private final long sqlStartTime;
     private long sqlEndTime = -1;
+    private boolean overflow;
     
     ThreadTraceData(String name, long startTime) {
         this(name, null, startTime);
@@ -91,7 +92,9 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
         String result = String.format(
             "\r\n********************************************************************************\r\n" +
             "%s" +
+            "%s" +
             "********************************************************************************",
+            overflow ? "Thread Trace Limit Exceeded -- Data truncated\r\n" : "", 
             buildAppenderStringBody(""));
         return result;
     }
@@ -197,6 +200,10 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		}
 	}    
     
+	void setOverflow(boolean overflow) {
+		this.overflow = overflow;
+	}
+	
 	public void writeToSQL(Connection conn, String dbSchema)
 		throws SQLException {
 
