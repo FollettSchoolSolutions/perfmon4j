@@ -31,8 +31,9 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 import javax.swing.AbstractListModel;
-import javax.swing.JComponent;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -52,7 +53,6 @@ public class AEDMonitor extends javax.swing.JDialog {
     private final RemoteManagementWrapper wrapper;
     private final MonitorModel monitorModel;
     private FieldKey selectedField = null;
-    private String selectedLabel;
     private float selectedFactor = 1.0f;
     private Color selectedColor = Color.BLUE;
 
@@ -81,16 +81,11 @@ public class AEDMonitor extends javax.swing.JDialog {
     }
 
     private class MonitorModel extends AbstractListModel implements ListSelectionListener {
-
         private MonitorKey selectedKey = null;
-        private final MonitorKey[] allKeys;
+        private MonitorKey[] allKeys;
         private final List<MonitorKey> filteredKeys = new ArrayList<MonitorKey>();
 
         MonitorModel() throws SessionNotFoundException, RemoteException {
-            this.allKeys = wrapper.getMonitors();
-            Arrays.sort(allKeys);
-
-            filteredKeys.addAll(Arrays.asList(allKeys));
         }
 
         public void setFilter(String filter) {
@@ -98,11 +93,21 @@ public class AEDMonitor extends javax.swing.JDialog {
             if (filter == null || "".equals(filter)) {
                 filteredKeys.addAll(Arrays.asList(allKeys));
             } else {
+                String filteredPattern = filter.replaceAll("\\*", ".+?").replaceAll("\\.", "\\.");
+                if (!filteredPattern.endsWith(".+?")) {
+                    filteredPattern += ".*?"; // Zero or more characters...
+                }
+                
+                Pattern pattern = Pattern.compile(filteredPattern);
+                
                 for (int i = 0; i < allKeys.length; i++) {
                     MonitorKey monitorKey = allKeys[i];
-                    if (monitorKey.getName().startsWith(filter)) {
+                    if (pattern.matcher(monitorKey.getName()).matches()) {
                         filteredKeys.add(monitorKey);
                     }
+                }
+                if (filteredKeys.size() > 0) {
+                    filterComboBox.addItem(filter);
                 }
             }
             this.fireContentsChanged(this, 0, Integer.MAX_VALUE);
@@ -120,24 +125,32 @@ public class AEDMonitor extends javax.swing.JDialog {
 
         @Override
         public void valueChanged(ListSelectionEvent e) {
-            selectedKey = filteredKeys.get(e.getFirstIndex());
-            try {
-                FieldKey fields[] = wrapper.getFieldsForMonitor(selectedKey);
-                Arrays.sort(fields);
-                int selectedIndex = 0;
-                fieldsCombo.removeAllItems();;
+            if (!e.getValueIsAdjusting()) {
+                selectedKey = filteredKeys.get(monitorList.getSelectedIndex());
+                try {
+//                    System.out.println(e.getFirstIndex());
+//                    System.out.println(e.getLastIndex());
+//                    System.out.println(e.getSource());
+//                    System.out.println(monitorList.getSelectedValue());
+//                    System.out.println(selectedKey);
+                    
+                    FieldKey fields[] = wrapper.getFieldsForMonitor(selectedKey);
+                    Arrays.sort(fields);
+                    int selectedIndex = 0;
+                    fieldsCombo.removeAllItems();;
 
-                for (int i = 0; i < fields.length; i++) {
-                    FieldKey fieldKey = fields[i];
-                    if (fieldKey.getFieldName().startsWith("Throughput")) {
-                        selectedIndex = i;
+                    for (int i = 0; i < fields.length; i++) {
+                        FieldKey fieldKey = fields[i];
+                        if (fieldKey.getFieldName().startsWith("Throughput")) {
+                            selectedIndex = i;
+                        }
+                        fieldsCombo.addItem(new FieldWrapper(fieldKey));
                     }
-                    fieldsCombo.addItem(new FieldWrapper(fieldKey));
+                    fieldsCombo.setSelectedIndex(selectedIndex);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
-                fieldsCombo.setSelectedIndex(selectedIndex);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+                }
         }
 //        public MonitorKey getSelectedKey() {
 //            return selectedKey;
@@ -154,16 +167,29 @@ public class AEDMonitor extends javax.swing.JDialog {
 //        }
     }
 
+ 
+    private static AEDMonitor dialog = null;
+    
     public static FieldElement showModel(JFrame parent, RemoteManagementWrapper wrapper) throws Exception {
         FieldElement result = null;
-        AEDMonitor dialog = new AEDMonitor(parent, true, wrapper);
+        if (dialog == null) {
+         dialog = new AEDMonitor(parent, true, wrapper);
+        }
+        
+        
+        // TODO:  This really is not good....
+        dialog.monitorModel.allKeys = wrapper.getMonitors();
+        Arrays.sort(dialog.monitorModel.allKeys);
+//        dialog.monitorModel.filteredKeys.clear();
+//        dialog.monitorModel.filteredKeys.addAll(Arrays.asList(dialog.monitorModel.allKeys));
+        dialog.monitorModel.setFilter(null);
 
-        dialog.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        dialog.setDefaultCloseOperation(HIDE_ON_CLOSE);
         dialog.pack();
         dialog.setLocationRelativeTo(parent);
+
         dialog.setVisible(true);
         if (dialog.selectedField != null) {
-            // String label, FieldKey fieldKey, float factor, Color colo
             result = new FieldElement(dialog.selectedField, dialog.selectedFactor, dialog.selectedColor);
         }
 
@@ -357,7 +383,7 @@ public class AEDMonitor extends javax.swing.JDialog {
             selectedFactor = Float.parseFloat((String) factorCombo.getSelectedItem());
             selectedColor = parseColorFromString((String) colorComboBox.getSelectedItem());
         }
-        this.dispose();
+        this.setVisible(false);
     }//GEN-LAST:event_okButtonActionPerformed
 
     private void cancelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cancelButtonActionPerformed
@@ -370,7 +396,9 @@ public class AEDMonitor extends javax.swing.JDialog {
     }//GEN-LAST:event_fieldsComboActionPerformed
 
     private void filterComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_filterComboBoxActionPerformed
-        monitorModel.setFilter(filterComboBox.getSelectedItem().toString());
+        if ("comboBoxChanged".equalsIgnoreCase(evt.getActionCommand())) {
+            monitorModel.setFilter(filterComboBox.getSelectedItem().toString());
+        }
     }//GEN-LAST:event_filterComboBoxActionPerformed
 
     private void colorComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_colorComboBoxActionPerformed
@@ -431,6 +459,7 @@ public class AEDMonitor extends javax.swing.JDialog {
             }
         });
     }
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.ButtonGroup buttonGroup2;

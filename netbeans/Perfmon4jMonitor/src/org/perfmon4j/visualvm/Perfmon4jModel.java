@@ -26,11 +26,15 @@ import com.sun.tools.visualvm.application.jvm.JvmFactory;
 import com.sun.tools.visualvm.core.model.Model;
 import com.sun.tools.visualvm.tools.attach.AttachModel;
 import com.sun.tools.visualvm.tools.attach.AttachModelFactory;
+import com.sun.tools.visualvm.tools.jmx.JmxModel;
+import com.sun.tools.visualvm.tools.jmx.JmxModelFactory;
 import com.sun.tools.visualvm.tools.sa.SaModel;
 import com.sun.tools.visualvm.tools.sa.SaModelFactory;
 import java.util.Map;
 import java.util.Properties;
 import java.util.WeakHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 
@@ -38,6 +42,7 @@ public class Perfmon4jModel extends Model {
 
     private final RemoteManagementWrapper remoteWrapper;
     static private final Map<Application, Perfmon4jModel> modelMap = new WeakHashMap<Application, Perfmon4jModel>();
+    static private final Pattern pattern = Pattern.compile(".*?-javaagent:\\S*?perfmon4j\\S*?.jar=\\S+?-p(\\d+).*");
 
     @SuppressWarnings("CallToThreadDumpStack")
     public static Perfmon4jModel getModelForApp(Application app) {
@@ -51,6 +56,24 @@ public class Perfmon4jModel extends Model {
             }
         }
         return model;
+    }
+
+    private Integer getListenerPortViaCommandLine(Application app) {
+        Integer result = null;
+        try {
+            Jvm model = JvmFactory.getJVMFor(app);
+            if (model != null) {
+                String jvmArgs = model.getJvmArgs();
+                if (jvmArgs != null) {
+                    Matcher m = pattern.matcher(jvmArgs);
+                    if (m.matches()) {
+                        result = Integer.valueOf(m.group(1));
+                    }
+                }
+            }
+        } catch (java.lang.UnsupportedOperationException ex) {
+        }
+        return result;
     }
 
     private Properties getSystemProperiesOfApp(Application app) {
@@ -84,7 +107,7 @@ public class Perfmon4jModel extends Model {
             // Try getting via Serviceability Agent (Only available for apps 
             // on Linux or Solaris.
             try {
-               SaModel model = SaModelFactory.getSAAgentFor(app);
+                SaModel model = SaModelFactory.getSAAgentFor(app);
                 if (model != null) {
                     result = model.getSystemProperties();
                 }
@@ -93,14 +116,20 @@ public class Perfmon4jModel extends Model {
             }
 
         }
-        
-        if (result == null) {
-            // Try via a JmxModel...
+
+//        if (result == null) {
+//          Try via a JmxModel...
 //            JmxModel jmxModel = JmxModelFactory.getJmxModelFor(app);
 //            if (jmxModel != null) {
 //                result = jmxModel.getSystemProperties();
+
+//                MBeanServerConnection conn = jmxModel.getMBeanServerConnection();
+//                
+//                
+//                System.out.println(conn);
+//                result = jmxModel.getSystemProperties();
 //            }
-        }
+//        }
 
         return result;
     }
@@ -108,26 +137,32 @@ public class Perfmon4jModel extends Model {
     private Perfmon4jModel(Application app) throws InstException {
         int port = 0;
         Properties props = getSystemProperiesOfApp(app);
-        if (props == null) {
-            throw new InstException("Unable to retrive properties for app: " + app.getPid());
-        } 
-        
-        String listenerPort = props.getProperty(RemoteInterface.P4J_LISTENER_PORT);
-        if (listenerPort == null) {
-            throw new InstException("Perfmon4j Not Installed In App: " + app.getPid());
+        if (props != null) {
+            String listenerPort = props.getProperty(RemoteInterface.P4J_LISTENER_PORT);
+            if (listenerPort == null) {
+                throw new InstException("Perfmon4j Not Installed In App: " + app.getPid());
+            }
+
+            try {
+                port = Integer.parseInt(listenerPort);
+            } catch (NumberFormatException nfe) {
+                throw new InstException("Application does not include Perfmon4j agent");
+            }
+        } else {
+            Integer p = getListenerPortViaCommandLine(app);
+            if (p == null) {
+                throw new InstException("Application does not include Perfmon4j agent");
+            } else {
+                port = p.intValue();
+                System.err.println("Unable to retrieve System.properties of application... Found Perfmon4j port via command line args");
+            }
         }
-        
-        try {
-            port = Integer.parseInt(listenerPort);
-        } catch (NumberFormatException nfe) {
-            throw new InstException("Application does not include Perfmon4j agent");
-        }
-        
+
         String host = "localhost";
         if (!app.isLocalApplication()) {
             host = app.getHost().getHostName();
         }
-        
+
         try {
             remoteWrapper = RemoteManagementWrapper.open(host, port);
         } catch (Exception ex) {

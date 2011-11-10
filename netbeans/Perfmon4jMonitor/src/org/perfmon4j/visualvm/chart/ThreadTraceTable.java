@@ -43,6 +43,7 @@ import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.visualvm.Perfmon4jMonitorView;
 import org.perfmon4j.visualvm.ThreadTraceViewDlg;
 
@@ -82,8 +83,15 @@ public class ThreadTraceTable extends JPanel implements
                 switch (columnIndex) {
                     case 0:
                         return element.getTimeSubmitted();
-                    case 1:
-                        return element.getFieldKey().getMonitorKey().getName();
+                    case 1: {
+                        MonitorKey key = element.getFieldKey().getMonitorKey();
+                        String monitorName = key.getName();
+                        String params = key.getInstance();
+                        if (params != null) {
+                            monitorName += " (" + params + ")";
+                        }
+                        return monitorName;
+                    }
                 }
             }
             return null;

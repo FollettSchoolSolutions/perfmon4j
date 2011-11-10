@@ -24,15 +24,12 @@ package org.perfmon4j.visualvm.chart;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
-import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import org.jfree.chart.ChartPanel;
@@ -49,8 +46,6 @@ import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
-import org.perfmon4j.remotemanagement.intf.MonitorKey;
-import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 
 public class DynamicTimeSeriesChart extends JPanel implements FieldManager.FieldHandler {
 
@@ -58,20 +53,38 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
     private final TimeSeriesCollection dataset;
     private final XYItemRenderer renderer;
     private final int maxAgeInSeconds;
-
-    private static class ElementWrapper {
-
-        private FieldElement element;
-        private TimeSeries timeSeries;
-
-        ElementWrapper(FieldElement element, TimeSeries timeSeries) {
-            this.element = element;
-            this.timeSeries = timeSeries;
-        }
-    }
     private final Object elementLock = new Object();
     private final Map<FieldKey, ElementWrapper> fieldsMap = new HashMap<FieldKey, ElementWrapper>();
     private static int nextLabel = 0;
+
+    public DynamicTimeSeriesChart(int maxAgeInSeconds) {
+        super(new BorderLayout());
+        this.maxAgeInSeconds = maxAgeInSeconds;
+
+        dataset = new TimeSeriesCollection();
+        renderer = new XYLineAndShapeRenderer(true, false);
+        renderer.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT,
+                BasicStroke.JOIN_BEVEL));
+
+        NumberAxis numberAxis = new NumberAxis();
+        numberAxis.setAutoRange(false);
+        numberAxis.setRange(new Range(0d, 100d));
+
+        DateAxis dateAxis = new DateAxis();
+        dateAxis.setDateFormatOverride(new SimpleDateFormat("HH:mm:ss"));
+        dateAxis.setAutoRange(true);
+        dateAxis.setTickUnit(new DateTickUnit(DateTickUnitType.SECOND, 30));
+        
+
+        XYPlot plot = new XYPlot(dataset, dateAxis, numberAxis, renderer);
+        JFreeChart chart = new JFreeChart(null, null, plot, false);
+        chart.setBackgroundPaint(Color.white);
+      
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1), BorderFactory.createLineBorder(Color.black)));
+        
+        add(chartPanel);
+    }
     
     @Override
     public void addOrUpdateElement(FieldElement element) {
@@ -82,6 +95,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
                     // Adding a new field...
                     TimeSeries timeSeries = new TimeSeries(Integer.toString(nextLabel++), Second.class);
                     timeSeries.setMaximumItemAge(maxAgeInSeconds);
+                    
                     dataset.addSeries(timeSeries);
                     renderer.setSeriesPaint(dataset.getSeriesCount() - 1, element.getColor());
                     wrapper = new ElementWrapper(element, timeSeries);
@@ -143,37 +157,14 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
             }
         }
     }
-
-    public DynamicTimeSeriesChart(int maxAgeInSeconds) {
-        super(new BorderLayout());
-        this.maxAgeInSeconds = maxAgeInSeconds;
-
-        dataset = new TimeSeriesCollection();
-        renderer = new XYLineAndShapeRenderer(true, false);
-        renderer.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT,
-                BasicStroke.JOIN_BEVEL));
-
-        NumberAxis numberAxis = new NumberAxis();
-        numberAxis.setAutoRange(false);
-        numberAxis.setRange(new Range(0d, 100d));
-
-        DateAxis dateAxis = new DateAxis();
-        dateAxis.setDateFormatOverride(new SimpleDateFormat("HH:mm:ss"));
-        dateAxis.setAutoRange(true);
-        dateAxis.setTickUnit(new DateTickUnit(DateTickUnitType.SECOND, 30));
-        
-
-        XYPlot plot = new XYPlot(dataset, dateAxis, numberAxis, renderer);
- 
-        JFreeChart chart = new JFreeChart(null, null, plot, false);
     
-//        JFreeChart chart = new JFreeChart(plot);
-        chart.setBackgroundPaint(Color.white);
-      
+    private static class ElementWrapper {
+        private FieldElement element;
+        private TimeSeries timeSeries;
 
-        ChartPanel chartPanel = new ChartPanel(chart);
-        chartPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1), BorderFactory.createLineBorder(Color.black)));
-        
-        add(chartPanel);
+        ElementWrapper(FieldElement element, TimeSeries timeSeries) {
+            this.element = element;
+            this.timeSeries = timeSeries;
+        }
     }
 }

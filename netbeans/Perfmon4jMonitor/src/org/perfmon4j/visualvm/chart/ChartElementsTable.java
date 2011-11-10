@@ -52,6 +52,8 @@ import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.visualvm.Perfmon4jMonitorView;
+import org.perfmon4j.visualvm.ThreadTraceOptions;
 
 public class ChartElementsTable extends JPanel implements
         FieldManager.FieldHandler {
@@ -364,17 +366,11 @@ public class ChartElementsTable extends JPanel implements
                 public void actionPerformed(ActionEvent e) {
                     final FieldElement element = backingData.get(row).element;
 
-//                    String message = "Schedule thread trace for monitor: \""
-//                            + fieldTrace.getMonitorKey().getName() + "\" Field: \""
-//                            + fieldTrace.getFieldName() + "\"?";
-//
-//                    if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Schedule ",
-//                            JOptionPane.YES_NO_OPTION)
-//                            == JOptionPane.YES_OPTION) {
-//                        manager.removeField(backingData.get(row).element.getFieldKey());
-//                    }
-                    manager.scheduleThreadTrace(element);
-                    
+                    Map<String,String> options = ThreadTraceOptions.showModel(
+                            Perfmon4jMonitorView.getParentFrame((Component)e.getSource()));
+                    if (options != null) { // Null means user hit cancel
+                        manager.scheduleThreadTrace(element, options);
+                    }
                 }
             });
             menu.add(scheduleThreadTrace);

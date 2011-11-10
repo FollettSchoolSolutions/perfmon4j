@@ -23,6 +23,7 @@ package org.perfmon4j.visualvm;
 
 import java.text.SimpleDateFormat;
 import javax.swing.JFrame;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.visualvm.chart.ThreadTraceList;
 
 /**
@@ -38,7 +39,15 @@ public class ThreadTraceViewDlg extends javax.swing.JDialog {
         
         SimpleDateFormat f = new SimpleDateFormat("MM/dd HH:mm:ss");
         timeField.setText(f.format(element.getTimeSubmitted()));
-        monitorField.setText(element.getFieldKey().getMonitorKey().getName());
+     
+        MonitorKey key = element.getFieldKey().getMonitorKey();
+        String monitorName = key.getName();
+        String params = key.getInstance();
+        if (params != null) {
+            monitorName += " (" + params + ")";
+        }
+        
+        monitorField.setText(monitorName);
         threadTraceText.setText(element.getResult());
     }
 

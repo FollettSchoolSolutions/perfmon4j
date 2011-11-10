@@ -135,9 +135,9 @@ public class FieldManager implements PreferenceChangeListener {
         }
     }
 
-    public void scheduleThreadTrace(FieldElement element) {
-        MonitorKey sourceKey = element.getFieldKey().getMonitorKey();
-        FieldKey threadTraceKey = new FieldKey(new MonitorKey(MonitorKey.THREADTRACE_TYPE, sourceKey.getName()), "stack", FieldKey.STRING_TYPE);
+    public void scheduleThreadTrace(FieldElement element, Map<String,String> map) {
+        FieldKey threadTraceKey = FieldKey.buildThreadTraceKeyFromInterval(element.getFieldKey().getMonitorKey(), 
+                map);
 
         if (!threadTraceList.hasPendingRequest(threadTraceKey)) {
             try {
