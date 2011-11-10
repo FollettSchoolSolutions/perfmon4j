@@ -52,6 +52,10 @@
 			<destName>perfmon4j.jar</destName>
 		</file>
 		<file>
+			<source>${basedir}/base/target/perfmon4j-${project.version}-monitor-agent.jar</source>
+			<destName>remote/perfmon4j-monitor-agent.jar</destName>
+		</file>
+		<file>
 			<source>${basedir}/servlet/target/perfmon4j-servlet-${project.version}.jar</source>
 			<destName>perfmon4j-servlet.jar</destName>
 		</file>
