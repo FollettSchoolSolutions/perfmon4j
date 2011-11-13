@@ -40,7 +40,6 @@ import org.perfmon4j.visualvm.chart.ChartElementsTable;
 import org.perfmon4j.visualvm.chart.DynamicTimeSeriesChart;
 import org.perfmon4j.visualvm.chart.FieldElement;
 import org.perfmon4j.visualvm.chart.FieldManager;
-import org.perfmon4j.visualvm.chart.ThreadTraceList;
 import org.perfmon4j.visualvm.chart.ThreadTraceTable;
 
 /**
@@ -74,7 +73,53 @@ public class Perfmon4jMonitorView extends DataSourceView {
         }
         return result;
     } 
- 
+
+    protected DataViewComponent createComponent() {
+        JPanel generalDataArea = new JPanel(new BorderLayout());
+        generalDataArea.setBorder(BorderFactory.createEmptyBorder(14, 8, 14, 8));
+        
+        JButton addMonitorsButton = new JButton("Add Monitors...");
+        addMonitorsButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    FieldElement result = AEDMonitor.showModel(Perfmon4jMonitorView.getParentFrame(dvc.getParent()), wrapper);
+                    if (result != null) {
+                        fieldManager.addOrUpdateField(result);
+                    }
+                    
+                } catch (Exception ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+            }
+        });
+        generalDataArea.add(addMonitorsButton, BorderLayout.LINE_END);
+
+        DataViewComponent.MasterView masterView = new DataViewComponent.MasterView
+                ("Perfmon4j Overview", "This is the master view description", generalDataArea);
+        
+        //Configuration of master view:
+        DataViewComponent.MasterViewConfiguration masterConfiguration = 
+                new DataViewComponent.MasterViewConfiguration(false);
+        
+        //Add the master view and configuration view to the component:
+        dvc = new DataViewComponent(masterView, masterConfiguration);
+        
+        MainWindow window = new MainWindow(fieldManager, wrapper);
+        //Master view:
+
+        //Add configuration details to the component, which are the show/hide checkboxes at the top:
+        dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
+                "Default", false), DataViewComponent.TOP_LEFT);
+        dvc.addDetailsView(new DataViewComponent.DetailsView(
+                "Default", null, 10, window, null), DataViewComponent.TOP_LEFT);
+        
+        
+        return dvc;
+    }
+    
+    
+/*    
     @Override
     protected DataViewComponent createComponent() {
         JPanel generalDataArea = new JPanel(new BorderLayout());
@@ -139,6 +184,7 @@ public class Perfmon4jMonitorView extends DataSourceView {
 
         return dvc;
     }
+  */
 
     @Override
     protected void added() {

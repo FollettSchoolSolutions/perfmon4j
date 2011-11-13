@@ -136,13 +136,18 @@ public class FieldManager implements PreferenceChangeListener {
     }
 
     public void scheduleThreadTrace(FieldElement element, Map<String,String> map) {
-        FieldKey threadTraceKey = FieldKey.buildThreadTraceKeyFromInterval(element.getFieldKey().getMonitorKey(), 
+        scheduleThreadTrace(element.getFieldKey().getMonitorKey(), map);
+    }
+
+    
+    public void scheduleThreadTrace(MonitorKey key, Map<String,String> map) {
+        FieldKey threadTraceKey = FieldKey.buildThreadTraceKeyFromInterval(key, 
                 map);
 
         if (!threadTraceList.hasPendingRequest(threadTraceKey)) {
             try {
                 wrapper.scheduleThreadTrace(threadTraceKey);
-                threadTraceList.add(threadTraceKey, element.getColor());
+                threadTraceList.add(threadTraceKey, Color.BLUE);
             } catch (RemoteException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();

@@ -365,12 +365,8 @@ public class ChartElementsTable extends JPanel implements
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     final FieldElement element = backingData.get(row).element;
-
-                    Map<String,String> options = ThreadTraceOptions.showModel(
-                            Perfmon4jMonitorView.getParentFrame((Component)e.getSource()));
-                    if (options != null) { // Null means user hit cancel
-                        manager.scheduleThreadTrace(element, options);
-                    }
+                    ThreadTraceOptions.getOptionsAndScheduleThreadTrace((Component)e.getSource(), 
+                        manager, element.getFieldKey().getMonitorKey());
                 }
             });
             menu.add(scheduleThreadTrace);

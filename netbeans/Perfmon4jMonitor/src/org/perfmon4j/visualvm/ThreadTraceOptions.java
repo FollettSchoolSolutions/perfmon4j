@@ -10,10 +10,12 @@
  */
 package org.perfmon4j.visualvm;
 
+import java.awt.Component;
 import java.util.HashMap;
 import java.util.Map;
-import javax.swing.JFrame;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.visualvm.chart.FieldManager;
 
 /**
  *
@@ -30,18 +32,23 @@ public class ThreadTraceOptions extends javax.swing.JDialog {
 
     private static ThreadTraceOptions dialog = null;
     
-    public static Map<String, String> showModel(JFrame parent) {
+    public static void getOptionsAndScheduleThreadTrace(Component parent,
+            FieldManager fieldManager,
+            MonitorKey key) {
         if (dialog == null) {
-            dialog = new ThreadTraceOptions(parent);
+            dialog = new ThreadTraceOptions(Perfmon4jMonitorView.getParentFrame(parent));
         }
         dialog.result = null;
         
+        dialog.monitorNameTextField.setText(key.getName());
         dialog.setDefaultCloseOperation(HIDE_ON_CLOSE);
         dialog.pack();
         dialog.setLocationRelativeTo(parent);        
         dialog.setVisible(true);
 
-        return dialog.result;
+        if (dialog.result != null) {
+            fieldManager.scheduleThreadTrace(key, dialog.result);
+        }
     }
     
     /** This method is called from within the constructor to
@@ -59,8 +66,11 @@ public class ThreadTraceOptions extends javax.swing.JDialog {
         maxDepthField = new javax.swing.JTextField();
         okButton = new javax.swing.JButton();
         cancelButton = new javax.swing.JButton();
+        jLabel3 = new javax.swing.JLabel();
+        monitorNameTextField = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setTitle(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.title")); // NOI18N
         setResizable(false);
 
         jLabel1.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.jLabel1.text")); // NOI18N
@@ -85,42 +95,58 @@ public class ThreadTraceOptions extends javax.swing.JDialog {
             }
         });
 
+        jLabel3.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.jLabel3.text")); // NOI18N
+
+        monitorNameTextField.setEditable(false);
+        monitorNameTextField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.monitorNameTextField.text")); // NOI18N
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jLabel1)
-                    .addComponent(jLabel2))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jLabel3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(monitorNameTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 291, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jLabel2)
+                            .addComponent(jLabel1))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(maxDepthField, javax.swing.GroupLayout.DEFAULT_SIZE, 208, Short.MAX_VALUE)
+                            .addComponent(minDurationToCaptureField, javax.swing.GroupLayout.DEFAULT_SIZE, 208, Short.MAX_VALUE)))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addContainerGap(225, Short.MAX_VALUE)
                         .addComponent(okButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(cancelButton))
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(maxDepthField)
-                        .addComponent(minDurationToCaptureField, javax.swing.GroupLayout.DEFAULT_SIZE, 124, Short.MAX_VALUE)))
-                .addContainerGap(18, Short.MAX_VALUE))
+                        .addGap(10, 10, 10)
+                        .addComponent(cancelButton)))
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel3)
+                    .addComponent(monitorNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
                     .addComponent(minDurationToCaptureField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(maxDepthField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel2))
+                    .addComponent(jLabel2)
+                    .addComponent(maxDepthField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(okButton)
                     .addComponent(cancelButton))
-                .addContainerGap(19, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
@@ -195,8 +221,10 @@ public class ThreadTraceOptions extends javax.swing.JDialog {
     private javax.swing.JButton cancelButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
     private javax.swing.JTextField maxDepthField;
     private javax.swing.JTextField minDurationToCaptureField;
+    private javax.swing.JTextField monitorNameTextField;
     private javax.swing.JButton okButton;
     // End of variables declaration//GEN-END:variables
 }
