@@ -17,16 +17,16 @@
  * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
-*/
-
+ */
 package org.perfmon4j.visualvm.chart;
 
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
@@ -54,7 +54,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
     private final XYItemRenderer renderer;
     private final int maxAgeInSeconds;
     private final Object elementLock = new Object();
-    private final Map<FieldKey, ElementWrapper> fieldsMap = new HashMap<FieldKey, ElementWrapper>();
+    private final List<ElementWrapper> currentFields = new ArrayList<ElementWrapper>();
     private static int nextLabel = 0;
 
     public DynamicTimeSeriesChart(int maxAgeInSeconds) {
@@ -74,32 +74,57 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         dateAxis.setDateFormatOverride(new SimpleDateFormat("HH:mm:ss"));
         dateAxis.setAutoRange(true);
         dateAxis.setTickUnit(new DateTickUnit(DateTickUnitType.SECOND, 30));
-        
+
 
         XYPlot plot = new XYPlot(dataset, dateAxis, numberAxis, renderer);
         JFreeChart chart = new JFreeChart(null, null, plot, false);
         chart.setBackgroundPaint(Color.white);
-      
+
         ChartPanel chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1), BorderFactory.createLineBorder(Color.black)));
-        
+
         add(chartPanel);
     }
-    
+
+    private ElementWrapper getWrapperForKey(FieldKey fieldKey) {
+        ElementWrapper result = null;
+        synchronized (elementLock) {
+            Iterator<ElementWrapper> itr = currentFields.iterator();
+            while (itr.hasNext() && result == null) {
+                ElementWrapper w = itr.next();
+                if (w.element.getFieldKey().equals(fieldKey)) {
+                    result = w;
+                }
+            }
+        }
+        return result;
+    }
+
+    private ElementWrapper removeWrapperForKey(FieldKey fieldKey) {
+        ElementWrapper result = null;
+        synchronized (elementLock) {
+            result = getWrapperForKey(fieldKey);
+            if (result != null) {
+                currentFields.remove(result);
+            }
+        }
+        return result;
+    }
+
     @Override
     public void addOrUpdateElement(FieldElement element) {
         if (element.isNumeric()) {
             synchronized (elementLock) {
-                ElementWrapper wrapper = fieldsMap.get(element.getFieldKey());
+                ElementWrapper wrapper = getWrapperForKey(element.getFieldKey());
                 if (wrapper == null) {
                     // Adding a new field...
                     TimeSeries timeSeries = new TimeSeries(Integer.toString(nextLabel++), Second.class);
                     timeSeries.setMaximumItemAge(maxAgeInSeconds);
-                    
+
                     dataset.addSeries(timeSeries);
                     renderer.setSeriesPaint(dataset.getSeriesCount() - 1, element.getColor());
                     wrapper = new ElementWrapper(element, timeSeries);
-                    fieldsMap.put(element.getFieldKey(), wrapper);
+                    currentFields.add(wrapper);
                 } else {
                     // We are updating an existing field...  
                     wrapper.element = element;
@@ -117,7 +142,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
             Second now = new Second();
             while (itr.hasNext()) {
                 FieldKey field = itr.next();
-                ElementWrapper wrapper = fieldsMap.get(field);
+                ElementWrapper wrapper = getWrapperForKey(field);
                 if (wrapper != null) {
                     long value = 0;
                     Object obj = data.get(field);
@@ -129,7 +154,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
                         value = (long) Math.min(100.0, dValue);
                     }
                     wrapper.timeSeries.add(now, value);
-                    
+
                     int offset = dataset.getSeries().indexOf(wrapper.timeSeries);
                     renderer.setSeriesVisible(offset, Boolean.valueOf(wrapper.element.isVisibleInChart()));
                 }
@@ -141,7 +166,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
     public void removeElement(FieldElement element) {
         if (element.isNumeric()) {
             synchronized (elementLock) {
-                ElementWrapper wrapper = fieldsMap.remove(element.getFieldKey());
+                ElementWrapper wrapper = removeWrapperForKey(element.getFieldKey());
                 if (wrapper != null) {
                     // Adding a new field...
                     TimeSeries timeSeries = wrapper.timeSeries;
@@ -149,7 +174,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
 
                     // Must reset all of the colors
                     int index = 0;
-                    Iterator<ElementWrapper> itr = fieldsMap.values().iterator();
+                    Iterator<ElementWrapper> itr = currentFields.iterator();
                     while (itr.hasNext()) {
                         renderer.setSeriesPaint(index++, itr.next().element.getColor());
                     }
@@ -157,8 +182,9 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
             }
         }
     }
-    
+
     private static class ElementWrapper {
+
         private FieldElement element;
         private TimeSeries timeSeries;
 

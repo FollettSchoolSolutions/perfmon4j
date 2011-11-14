@@ -76,24 +76,8 @@ public class Perfmon4jMonitorView extends DataSourceView {
 
     protected DataViewComponent createComponent() {
         JPanel generalDataArea = new JPanel(new BorderLayout());
-        generalDataArea.setBorder(BorderFactory.createEmptyBorder(14, 8, 14, 8));
+        generalDataArea.setBorder(BorderFactory.createEmptyBorder());
         
-        JButton addMonitorsButton = new JButton("Add Monitors...");
-        addMonitorsButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    FieldElement result = AEDMonitor.showModel(Perfmon4jMonitorView.getParentFrame(dvc.getParent()), wrapper);
-                    if (result != null) {
-                        fieldManager.addOrUpdateField(result);
-                    }
-                    
-                } catch (Exception ex) {
-                    Exceptions.printStackTrace(ex);
-                }
-            }
-        });
-        generalDataArea.add(addMonitorsButton, BorderLayout.LINE_END);
 
         DataViewComponent.MasterView masterView = new DataViewComponent.MasterView
                 ("Perfmon4j Overview", "This is the master view description", generalDataArea);
@@ -103,6 +87,8 @@ public class Perfmon4jMonitorView extends DataSourceView {
                 new DataViewComponent.MasterViewConfiguration(false);
         
         //Add the master view and configuration view to the component:
+       
+        
         dvc = new DataViewComponent(masterView, masterConfiguration);
         
         MainWindow window = new MainWindow(fieldManager, wrapper);
@@ -110,9 +96,9 @@ public class Perfmon4jMonitorView extends DataSourceView {
 
         //Add configuration details to the component, which are the show/hide checkboxes at the top:
         dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
-                "Default", false), DataViewComponent.TOP_LEFT);
+                "", false), DataViewComponent.TOP_LEFT);
         dvc.addDetailsView(new DataViewComponent.DetailsView(
-                "Default", null, 10, window, null), DataViewComponent.TOP_LEFT);
+                "", null, 10, window, null), DataViewComponent.TOP_LEFT);
         
         
         return dvc;

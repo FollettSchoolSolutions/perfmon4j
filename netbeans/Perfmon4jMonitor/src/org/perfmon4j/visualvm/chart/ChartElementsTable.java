@@ -25,8 +25,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +35,6 @@ import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -52,7 +49,6 @@ import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
-import org.perfmon4j.visualvm.Perfmon4jMonitorView;
 import org.perfmon4j.visualvm.ThreadTraceOptions;
 
 public class ChartElementsTable extends JPanel implements
@@ -67,20 +63,20 @@ public class ChartElementsTable extends JPanel implements
     private final JTable table;
 
     private static class NumberElement {
+
         private final long time;
         private final Number number;
-        
+
         NumberElement(long now, Number number) {
             this.time = now;
             this.number = number;
         }
     }
-    
-    
+
     private class DataElement {
+
         private final Object samplesLockToken = new Object();
         List<NumberElement> samples = new ArrayList<NumberElement>();
-        
         Number maxValue = null;
         Number minValue = null;
         Number lastValue = null;
@@ -93,10 +89,10 @@ public class ChartElementsTable extends JPanel implements
             double total = 0.0;
             long now = System.currentTimeMillis();
             long miniteAgo = now - (secondsToDisplay * 1000);
-            
-            synchronized(samplesLockToken) {
-                samples.add(new NumberElement(now,lastValue));
-                for(int i = samples.size() - 1; i >= 0; i--) {
+
+            synchronized (samplesLockToken) {
+                samples.add(new NumberElement(now, lastValue));
+                for (int i = samples.size() - 1; i >= 0; i--) {
                     NumberElement current = samples.get(i);
                     double currentValue = current.number.doubleValue();
                     if (current.time < miniteAgo) {
@@ -116,7 +112,7 @@ public class ChartElementsTable extends JPanel implements
             this.lastValue = lastValue;
             this.minValue = new Double(tmpMinValue);
             this.maxValue = new Double(tmpMaxValue);
-            this.avgValue = new Double(total/(double)count);
+            this.avgValue = new Double(total / (double) count);
         }
     }
 
@@ -317,6 +313,7 @@ public class ChartElementsTable extends JPanel implements
     }
 
     public class ColorRenderer extends DefaultTableCellRenderer {
+
         private static final long serialVersionUID = 1L;
 
         public Component getTableCellRendererComponent(JTable table,
@@ -333,6 +330,7 @@ public class ChartElementsTable extends JPanel implements
     }
 
     private class RowActionListener implements ActionListener {
+
         final int row;
 
         RowActionListener(int row) {
@@ -343,6 +341,7 @@ public class ChartElementsTable extends JPanel implements
             JPopupMenu menu = new JPopupMenu();
             JMenuItem removeItem = new JMenuItem("Remove");
             removeItem.addActionListener(new ActionListener() {
+
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     final FieldKey fieldToDelete = backingData.get(row).element.getFieldKey();
@@ -359,25 +358,27 @@ public class ChartElementsTable extends JPanel implements
                 }
             });
             menu.add(removeItem);
-            
+
             JMenuItem scheduleThreadTrace = new JMenuItem("Schedule Thread Trace...");
             scheduleThreadTrace.addActionListener(new ActionListener() {
+
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     final FieldElement element = backingData.get(row).element;
-                    ThreadTraceOptions.getOptionsAndScheduleThreadTrace((Component)e.getSource(), 
-                        manager, element.getFieldKey().getMonitorKey());
+                    ThreadTraceOptions.getOptionsAndScheduleThreadTrace((Component) e.getSource(),
+                            manager, element.getFieldKey().getMonitorKey());
                 }
             });
             menu.add(scheduleThreadTrace);
- 
+
             JComponent c = (JComponent) e.getSource();
-            menu.show(c, c.getX() + (c.getWidth()/2), c.getY());
+            menu.show(c, c.getX() + (c.getWidth() / 2), c.getY());
             table.editingStopped(new ChangeEvent(this));
         }
     }
 
     public class ButtonCellEditor extends AbstractCellEditor implements TableCellEditor {
+
         @Override
         public Component getTableCellEditorComponent(JTable table,
                 Object value, boolean isSelected, int row, int column) {

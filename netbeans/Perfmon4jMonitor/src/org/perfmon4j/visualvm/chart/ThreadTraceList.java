@@ -17,8 +17,7 @@
  * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
-*/
-
+ */
 package org.perfmon4j.visualvm.chart;
 
 import java.awt.Color;
@@ -32,6 +31,7 @@ import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 
 public class ThreadTraceList implements FieldManager.FieldHandler {
+
     private final Object lockToken = new Object();
     private final List<ThreadTraceElement> elements = new ArrayList<ThreadTraceElement>();
     private final List<ThreadTraceListListener> listeners = new ArrayList<ThreadTraceListListener>();
@@ -174,7 +174,7 @@ public class ThreadTraceList implements FieldManager.FieldHandler {
         public FieldKey getFieldKey() {
             return fieldKey;
         }
-        
+
         public Color getColor() {
             return color;
         }

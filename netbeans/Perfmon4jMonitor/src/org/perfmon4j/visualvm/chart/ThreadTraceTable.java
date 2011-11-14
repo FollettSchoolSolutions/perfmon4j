@@ -17,12 +17,10 @@
  * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
-*/
-
+ */
 package org.perfmon4j.visualvm.chart;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -46,7 +44,6 @@ import javax.swing.table.TableColumnModel;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.visualvm.Perfmon4jMonitorView;
 import org.perfmon4j.visualvm.ThreadTraceViewDlg;
-
 
 public class ThreadTraceTable extends JPanel implements
         ThreadTraceList.ThreadTraceListListener {
@@ -107,7 +104,6 @@ public class ThreadTraceTable extends JPanel implements
         }
     }
 
-
     public class ButtonCellEditor extends AbstractCellEditor implements TableCellEditor, TableCellRenderer {
 
         @Override
@@ -117,7 +113,7 @@ public class ThreadTraceTable extends JPanel implements
             JButton result = new JButton();
             final int row = r;
             final ThreadTraceList.ThreadTraceElement element = list.get(row);
-            
+
             if (list.get(row).isPending()) {
                 if (column == 2) {
                     result.setText("Pending");
@@ -127,14 +123,15 @@ public class ThreadTraceTable extends JPanel implements
                     result.setEnabled(true);
 //                    result.setBackground(Color.red);
                     result.addActionListener(new ActionListener() {
+
                         final ThreadTraceList.ThreadTraceElement myElement = element;
                         final int myRow = row;
-                        
+
                         @Override
                         public void actionPerformed(ActionEvent e) {
                             table.editingStopped(new ChangeEvent(this));
-                        String message = "Are you sure you want to cancel thread trace for Monitor: \""
-                            + myElement.getFieldKey().getMonitorKey().getName() + "\"?";
+                            String message = "Are you sure you want to cancel thread trace for Monitor: \""
+                                    + myElement.getFieldKey().getMonitorKey().getName() + "\"?";
 
                             if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
                                     JOptionPane.YES_NO_OPTION)
@@ -152,28 +149,30 @@ public class ThreadTraceTable extends JPanel implements
                     result.setEnabled(true);
                     result.setBackground(element.getColor());
                     result.addActionListener(new ActionListener() {
+
                         final ThreadTraceList.ThreadTraceElement myElement = element;
-                        
+
                         @Override
                         public void actionPerformed(ActionEvent e) {
                             table.editingStopped(new ChangeEvent(this));
-                            ThreadTraceViewDlg.showModel(Perfmon4jMonitorView.getParentFrame((Component)e.getSource()), myElement);
+                            ThreadTraceViewDlg.showModel(Perfmon4jMonitorView.getParentFrame((Component) e.getSource()), myElement);
                         }
                     });
-                    
-                    
+
+
                 } else {
                     result.setText("Delete");
                     result.setEnabled(true);
                     result.addActionListener(new ActionListener() {
+
                         final ThreadTraceList.ThreadTraceElement myElement = element;
                         final int myRow = row;
-                        
+
                         @Override
                         public void actionPerformed(ActionEvent e) {
                             table.editingStopped(new ChangeEvent(this));
-                        String message = "Are you sure you want to delete thread trace for Monitor: \""
-                            + myElement.getFieldKey().getMonitorKey().getName() + "\"?";
+                            String message = "Are you sure you want to delete thread trace for Monitor: \""
+                                    + myElement.getFieldKey().getMonitorKey().getName() + "\"?";
 
                             if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
                                     JOptionPane.YES_NO_OPTION)
