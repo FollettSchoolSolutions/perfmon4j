@@ -50,27 +50,30 @@ public class PerfMonTimer {
         if (!PerfMon.isConfigured() && !ExternalAppender.isActive()) {
             return NULL_TIMER;
         }
-
         PerfMonTimer result = mon.getPerfMonTimer();
-        ThreadTraceMonitor.ThreadTracesOnStack tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
-        ThreadTraceMonitor.ThreadTracesOnStack tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
-        
     	final boolean haveActiveTimer = (NULL_TIMER != result);  // It is OK to do an object compare here.
-    	final boolean haveActiveInternalThreadTrace = tInternalOnStack.isActive();
-    	final boolean haveActiveExternalThreadTrace = tExternalOnStack.isActive();
-        
-        if (haveActiveTimer  || haveActiveInternalThreadTrace || haveActiveExternalThreadTrace) {
-	        String monitorName = "";
+    	final boolean haveActiveThreadTrace = ThreadTraceMonitor.activeThreadTraceFlag.get().isActive(); 
+    	
+        if (haveActiveTimer || haveActiveThreadTrace) {
+        	String monitorName = "";
 	        UniqueThreadTraceTimerKey wrapperInternalKey = null;
 	        UniqueThreadTraceTimerKey wrapperExternalKey = null;
 	        try {
 	        	long startTime = MiscHelper.currentTimeWithMilliResolution(); 
 	            monitorName = mon.getName();
-	            if (haveActiveInternalThreadTrace) {
-	            	wrapperInternalKey = tInternalOnStack.enterCheckpoint(monitorName, startTime);
-	            }
-	            if (haveActiveExternalThreadTrace) {
-	            	wrapperExternalKey = tExternalOnStack.enterCheckpoint(monitorName, startTime);
+	            if (haveActiveThreadTrace) {
+	                ThreadTraceMonitor.ThreadTracesOnStack tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+	                ThreadTraceMonitor.ThreadTracesOnStack tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+
+	            	final boolean haveActiveInternalThreadTrace = tInternalOnStack.isActive();
+	            	final boolean haveActiveExternalThreadTrace = tExternalOnStack.isActive();
+	            
+		            if (haveActiveInternalThreadTrace) {
+		            	wrapperInternalKey = tInternalOnStack.enterCheckpoint(monitorName, startTime);
+		            }
+		            if (haveActiveExternalThreadTrace) {
+		            	wrapperExternalKey = tExternalOnStack.enterCheckpoint(monitorName, startTime);
+		            }
 	            }
 	            if (haveActiveTimer) {
 	            	result.start(startTime);
@@ -82,7 +85,7 @@ public class PerfMonTimer {
 	            result = NULL_TIMER;
 	        }
 	        
-	        if (wrapperInternalKey != null || wrapperExternalKey != null) {
+	        if (haveActiveThreadTrace) {
 	            // To keep track of the checkpoints for thread tracing we 
 	            // must be able to identify the timer passed to PerfMonTimer.stop()
 	            result = new TimerWrapperWithThreadTraceKey(result, wrapperInternalKey, wrapperExternalKey);

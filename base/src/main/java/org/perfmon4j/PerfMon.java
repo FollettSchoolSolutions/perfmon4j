@@ -319,15 +319,14 @@ public class PerfMon {
     void start(long systemTime) {
         ReferenceCount count = getThreadLocalReferenceCount();
         if (count.inc(systemTime) == 1) {
-        	ExternalThreadTraceConfig externalConfig = null;
         	if (externalThreadTraceQueue.hasPendingElements()) {
-        		externalConfig = externalThreadTraceQueue.assignToThread();
-        	}
-        	if (externalConfig != null) {
-        		count.hasExternalThreadTrace = true;
-                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
-                tOnStack.start(getName(), externalConfig.getMaxDepth(), externalConfig.getMinDurationToCapture(), systemTime);
-                tOnStack.setExternalConfig(externalConfig);
+        		ExternalThreadTraceConfig externalConfig = externalThreadTraceQueue.assignToThread();
+	        	if (externalConfig != null) {
+	        		count.hasExternalThreadTrace = true;
+	                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+	                tOnStack.start(getName(), externalConfig.getMaxDepth(), externalConfig.getMinDurationToCapture(), systemTime);
+	                tOnStack.setExternalConfig(externalConfig);
+	        	}
         	}
         	
             ThreadTraceConfig internalConfig = internalThreadTraceConfig;
@@ -370,6 +369,7 @@ public class PerfMon {
             if (count.hasExternalThreadTrace) {
                 ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
                 ThreadTraceData data = tOnStack.stop(getName());
+                count.hasExternalThreadTrace = false;
                 ExternalThreadTraceConfig externalConfig = tOnStack.popExternalConfig();
                 if (data != null && externalConfig != null) {
                 	externalConfig.outputData(data);
@@ -377,7 +377,6 @@ public class PerfMon {
                 		this.clearCachedPerfMonTimer();
                 	}
                 }
-                count.hasExternalThreadTrace = false;
             }
             if (count.hasInternalThreadTrace) {
                 ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();

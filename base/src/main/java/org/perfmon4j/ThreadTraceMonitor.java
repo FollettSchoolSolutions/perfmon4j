@@ -34,6 +34,18 @@ class ThreadTraceMonitor {
 	// Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(ThreadTraceMonitor.class);    
     
+    
+    /**
+     * This allows us a quick way to indicate if a specific thread is actively
+     * involved in any(one or more) ThreadTraces. Internal(Standard appender) or External(VisualVM).
+     */
+    public static ThreadLocal<ActiveThreadTraceFlag> activeThreadTraceFlag = new ThreadLocal<ActiveThreadTraceFlag>() {
+        protected synchronized ActiveThreadTraceFlag initialValue() {
+            return new ActiveThreadTraceFlag();
+        }
+    };
+
+    
     private static ThreadLocal<ThreadTracesOnStack> internalMonitorsOnThread = new ThreadLocal<ThreadTracesOnStack>() {
          protected synchronized ThreadTracesOnStack initialValue() {
              return new ThreadTracesOnStack(PerfMon.MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS);
@@ -123,6 +135,7 @@ class ThreadTraceMonitor {
             ThreadTraceData rootElement = new ThreadTraceData(monitorName, startTime);
             threadDataMap.put(monitorName, new PointerToHead(rootElement, maxDepth, minDurationToCapture));
             active = true;
+            activeThreadTraceFlag.get().incActive();
         }
         
         ThreadTraceData stop(String monitorName) {
@@ -139,6 +152,7 @@ class ThreadTraceMonitor {
                 result = head.rootElement;
             }
             active = !threadDataMap.isEmpty();
+            activeThreadTraceFlag.get().decActive();
             
             return result;
         }
@@ -249,4 +263,21 @@ class ThreadTraceMonitor {
             return hashString;
         }
     }
+
+    
+    static public class ActiveThreadTraceFlag {
+    	private volatile int activeThreadTraceCount = 0;
+    	
+    	private void incActive() {
+    		activeThreadTraceCount++;
+    	}
+    	private void decActive() {
+    		activeThreadTraceCount--;
+    	}
+    	
+    	public boolean isActive() {
+    		return activeThreadTraceCount > 0;
+    	}
+    }
+    
 }
