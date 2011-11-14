@@ -48,8 +48,10 @@ import org.perfmon4j.visualvm.chart.ThreadTraceTable;
  */
 public class Perfmon4jMonitorView extends DataSourceView {
     private DataViewComponent dvc;
-    //Reusing an image from the sources:
+    
+    // TODO: Add a perfmon4j image...
     private static final String IMAGE_PATH = "com/sun/tools/visualvm/coredump/resources/coredump.png"; // NOI18N
+    
     private final RemoteManagementWrapper wrapper;
     private final FieldManager fieldManager;
     private DynamicTimeSeriesChart chart;
@@ -77,24 +79,16 @@ public class Perfmon4jMonitorView extends DataSourceView {
     protected DataViewComponent createComponent() {
         JPanel generalDataArea = new JPanel(new BorderLayout());
         generalDataArea.setBorder(BorderFactory.createEmptyBorder());
-        
 
+        MainWindow window = new MainWindow(fieldManager, wrapper);
+        
         DataViewComponent.MasterView masterView = new DataViewComponent.MasterView
                 ("Perfmon4j Overview", "This is the master view description", generalDataArea);
         
-        //Configuration of master view:
         DataViewComponent.MasterViewConfiguration masterConfiguration = 
                 new DataViewComponent.MasterViewConfiguration(false);
         
-        //Add the master view and configuration view to the component:
-       
-        
         dvc = new DataViewComponent(masterView, masterConfiguration);
-        
-        MainWindow window = new MainWindow(fieldManager, wrapper);
-        //Master view:
-
-        //Add configuration details to the component, which are the show/hide checkboxes at the top:
         dvc.configureDetailsArea(new DataViewComponent.DetailsAreaConfiguration(
                 "", false), DataViewComponent.TOP_LEFT);
         dvc.addDetailsView(new DataViewComponent.DetailsView(

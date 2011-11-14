@@ -25,6 +25,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,10 +47,13 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
+import org.openide.awt.MouseUtils.PopupMouseAdapter;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
-import org.perfmon4j.visualvm.ThreadTraceOptions;
+import org.perfmon4j.visualvm.MainWindow;
+import org.perfmon4j.visualvm.ThreadTraceOptionsDlg;
 
 public class ChartElementsTable extends JPanel implements
         FieldManager.FieldHandler {
@@ -59,9 +63,124 @@ public class ChartElementsTable extends JPanel implements
     private final Object elementLock = new Object();
     private final TableModel tableModel;
     private final TableColumnModel columnModel;
-    private final FieldManager manager;
+    private final MainWindow mainWindow;
     private final JTable table;
 
+    public ChartElementsTable(MainWindow mainWindow, int secondsToDisplay) {
+        super(new BorderLayout());
+        tableModel = new TableModel();
+        this.mainWindow = mainWindow;
+        this.secondsToDisplay = secondsToDisplay;
+
+        table = new JTable(tableModel);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+        columnModel = table.getColumnModel();
+        // columnModel.getColumn(0).setPreferredWidth(25);
+        columnModel.getColumn(1).setPreferredWidth(175);
+        columnModel.getColumn(2).setPreferredWidth(125);
+
+        TableColumn factorColumn = table.getColumnModel().getColumn(7);
+        JComboBox comboBox = new JComboBox();
+
+        comboBox.addItem(Float.valueOf(100000.0f));
+        comboBox.addItem(Float.valueOf(10000.0f));
+        comboBox.addItem(Float.valueOf(1000.0f));
+        comboBox.addItem(Float.valueOf(100.0f));
+        comboBox.addItem(Float.valueOf(10.0f));
+        comboBox.addItem(Float.valueOf(1.0f));
+        comboBox.addItem(Float.valueOf(0.1f));
+        comboBox.addItem(Float.valueOf(0.01f));
+        comboBox.addItem(Float.valueOf(0.001f));
+        comboBox.addItem(Float.valueOf(0.0001f));
+        comboBox.addItem(Float.valueOf(0.00001f));
+        comboBox.addItem(Float.valueOf(0.000001f));
+        factorColumn.setCellEditor(new DefaultCellEditor(comboBox));
+
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
+        renderer.setToolTipText("Click to edit...");
+        factorColumn.setCellRenderer(renderer);
+
+        final String rightOptions = "Right click for options...";
+        DefaultTableCellRenderer rightClick = new DefaultTableCellRenderer();
+        rightClick.setToolTipText(rightOptions);
+        for (int i = 1; i < 6; i++) {
+            TableColumn c = table.getColumnModel().getColumn(i);
+            c.setCellRenderer(rightClick);
+        }
+
+        table.setDefaultRenderer(Color.class, new ColorRenderer(rightOptions));
+        
+        JScrollPane scroller = new JScrollPane(table,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        this.add(scroller);
+        table.addMouseListener(new TableMouseAdapter());
+    }
+
+    private class TableMouseAdapter extends PopupMouseAdapter {
+
+        @Override
+        public void showPopup(MouseEvent e) {
+            JTable table = (JTable) e.getSource();
+            final int row =  table.rowAtPoint(e.getPoint());
+            if (row >= 0) {
+                table.getSelectionModel().setSelectionInterval(row, row);
+                JPopupMenu popup = new JPopupMenu();
+                
+                JMenuItem changeColor = new JMenuItem("Change Color...");
+                changeColor.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        Color color = SelectColorDlg.doSelectColor(mainWindow);
+                        if (color != null) {
+                            FieldElement elm = backingData.get(row).element;
+                            elm.setColor(color);
+                            mainWindow.getFieldManager().addOrUpdateField(elm);
+                        }
+                    }
+                });
+                popup.add(changeColor);
+
+                JMenuItem threadTrace = new JMenuItem("Schedule Thread Trace...");
+                threadTrace.addActionListener(new ActionListener() {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        FieldElement elm = backingData.get(row).element;
+                        ThreadTraceOptionsDlg.doScheduleThreadTrace(mainWindow, 
+                                elm.getFieldKey().getMonitorKey());
+                    }
+                });
+                popup.add(threadTrace);
+                popup.add(new JPopupMenu.Separator());
+                
+                JMenuItem remove = new JMenuItem("Remove");
+                remove.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        FieldElement elm = backingData.get(row).element;
+                        final FieldKey fieldToDelete = elm.getFieldKey();
+
+                        String message = "Are you sure you want to delete Monitor: \""
+                                + fieldToDelete.getMonitorKey().getName() + "\" Field: \""
+                                + fieldToDelete.getFieldName() + "\"?";
+
+                        if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
+                                JOptionPane.YES_NO_OPTION)
+                                == JOptionPane.YES_OPTION) {
+                            mainWindow.getFieldManager().removeField(elm);
+                        }
+                    }
+                });
+                popup.add(remove);
+                
+                popup.show(table, e.getX(), e.getY());
+            }
+        }
+    }
+    
     private static class NumberElement {
 
         private final long time;
@@ -154,7 +273,8 @@ public class ChartElementsTable extends JPanel implements
             }
         }
     }
-
+    
+    
     @Override
     public void handleData(Map<FieldKey, Object> data) {
         synchronized (elementLock) {
@@ -169,11 +289,12 @@ public class ChartElementsTable extends JPanel implements
                         value = (Number) obj;
                     }
                     wrapper.data.setLastValue(value);
+                    int row = backingData.indexOf(wrapper);
+                    tableModel.fireNumericFieldsUpdatedForRow(row);
                 }
             }
         }
-        // TODO -- Should be more elegant to prevent flicker!
-        tableModel.fireTableDataChanged();
+        
     }
 
     @Override
@@ -203,7 +324,7 @@ public class ChartElementsTable extends JPanel implements
         return value;
     }
     private static final String[] HEADER_VALUE = new String[]{
-        "Action", // 0
+        "", // 0
         "Monitor Name", // 1 
         "Field Name", // 2
         "Last Value", // 3
@@ -247,6 +368,12 @@ public class ChartElementsTable extends JPanel implements
             }
         }
 
+        public void fireNumericFieldsUpdatedForRow(int row) {
+            for (int i = 3; i <= 6; i++) {
+                tableModel.fireTableCellUpdated(row, i);
+            }
+        }
+        
         @Override
         public Object getValueAt(int rowIndex, int columnIndex) {
             ElementWrapper w = null;
@@ -285,7 +412,7 @@ public class ChartElementsTable extends JPanel implements
 
         @Override
         public boolean isCellEditable(int row, int col) {
-            if (col == 0 || col == 7 || col == 8) {
+            if (col == 7 || col == 8) {
                 return true;
             } else {
                 return false;
@@ -313,9 +440,12 @@ public class ChartElementsTable extends JPanel implements
     }
 
     public class ColorRenderer extends DefaultTableCellRenderer {
-
         private static final long serialVersionUID = 1L;
 
+        ColorRenderer(String toolTipText) {
+            this.setToolTipText(toolTipText);
+        }
+        
         public Component getTableCellRendererComponent(JTable table,
                 Object value, boolean isSelected, boolean hasFocus, int row,
                 int column) {
@@ -327,119 +457,5 @@ public class ChartElementsTable extends JPanel implements
             }
             return cell;
         }
-    }
-
-    private class RowActionListener implements ActionListener {
-
-        final int row;
-
-        RowActionListener(int row) {
-            this.row = row;
-        }
-
-        public void actionPerformed(ActionEvent e) {
-            JPopupMenu menu = new JPopupMenu();
-            JMenuItem removeItem = new JMenuItem("Remove");
-            removeItem.addActionListener(new ActionListener() {
-
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    final FieldKey fieldToDelete = backingData.get(row).element.getFieldKey();
-
-                    String message = "Are you sure you want to delete Monitor: \""
-                            + fieldToDelete.getMonitorKey().getName() + "\" Field: \""
-                            + fieldToDelete.getFieldName() + "\"?";
-
-                    if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
-                            JOptionPane.YES_NO_OPTION)
-                            == JOptionPane.YES_OPTION) {
-                        manager.removeField(backingData.get(row).element.getFieldKey());
-                    }
-                }
-            });
-            menu.add(removeItem);
-
-            JMenuItem scheduleThreadTrace = new JMenuItem("Schedule Thread Trace...");
-            scheduleThreadTrace.addActionListener(new ActionListener() {
-
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    final FieldElement element = backingData.get(row).element;
-                    ThreadTraceOptions.getOptionsAndScheduleThreadTrace((Component) e.getSource(),
-                            manager, element.getFieldKey().getMonitorKey());
-                }
-            });
-            menu.add(scheduleThreadTrace);
-
-            JComponent c = (JComponent) e.getSource();
-            menu.show(c, c.getX() + (c.getWidth() / 2), c.getY());
-            table.editingStopped(new ChangeEvent(this));
-        }
-    }
-
-    public class ButtonCellEditor extends AbstractCellEditor implements TableCellEditor {
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table,
-                Object value, boolean isSelected, int row, int column) {
-
-            JButton result = new JButton();
-            result.addActionListener(new RowActionListener(row));
-            result.setBackground((Color) value);
-            result.setForeground(Color.white);
-
-            return result;
-        }
-
-        @Override
-        public Object getCellEditorValue() {
-            return "";
-        }
-    }
-
-    public ChartElementsTable(FieldManager manager, int secondsToDisplay) {
-        super(new BorderLayout());
-        tableModel = new TableModel();
-        this.manager = manager;
-        this.secondsToDisplay = secondsToDisplay;
-
-        table = new JTable(tableModel);
-        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        table.setDefaultRenderer(Color.class, new ColorRenderer());
-
-        columnModel = table.getColumnModel();
-        // columnModel.getColumn(0).setPreferredWidth(25);
-        columnModel.getColumn(1).setPreferredWidth(350);
-        columnModel.getColumn(2).setPreferredWidth(250);
-
-        TableColumn factorColumn = table.getColumnModel().getColumn(7);
-        JComboBox comboBox = new JComboBox();
-
-        comboBox.addItem(Float.valueOf(100000.0f));
-        comboBox.addItem(Float.valueOf(10000.0f));
-        comboBox.addItem(Float.valueOf(1000.0f));
-        comboBox.addItem(Float.valueOf(100.0f));
-        comboBox.addItem(Float.valueOf(10.0f));
-        comboBox.addItem(Float.valueOf(1.0f));
-        comboBox.addItem(Float.valueOf(0.1f));
-        comboBox.addItem(Float.valueOf(0.01f));
-        comboBox.addItem(Float.valueOf(0.001f));
-        comboBox.addItem(Float.valueOf(0.0001f));
-        comboBox.addItem(Float.valueOf(0.00001f));
-        comboBox.addItem(Float.valueOf(0.000001f));
-        factorColumn.setCellEditor(new DefaultCellEditor(comboBox));
-
-        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
-        renderer.setToolTipText("Click to edit");
-        factorColumn.setCellRenderer(renderer);
-
-        TableColumn colorColumn = table.getColumnModel().getColumn(0);
-        colorColumn.setCellEditor(new ButtonCellEditor());
-
-        JScrollPane scroller = new JScrollPane(table,
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-
-        this.add(scroller);
     }
 }

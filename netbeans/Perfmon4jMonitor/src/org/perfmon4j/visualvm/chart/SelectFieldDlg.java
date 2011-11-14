@@ -29,27 +29,25 @@ package org.perfmon4j.visualvm.chart;
 import java.awt.Color;
 import java.awt.Component;
 import java.util.Arrays;
-import javax.swing.JFrame;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
-import org.perfmon4j.visualvm.Perfmon4jMonitorView;
+import org.perfmon4j.visualvm.MainWindow;
 
 /**
  *
  * @author ddeucher
  */
 public class SelectFieldDlg extends javax.swing.JDialog {
-
-    private static SelectFieldDlg selectFieldDlg = null;
     private FieldKey selectedField = null;
+    private final MainWindow mainWindow;
 
     /** Creates new form AEDMonitor */
-    public SelectFieldDlg(java.awt.Frame parent) {
-        super(parent, "Select Field", true);
+    public SelectFieldDlg(MainWindow mainWindow) {
+        super(mainWindow.getParentFrame(), "Select Field", true);
+        this.mainWindow = mainWindow;
         initComponents();
     }
 
     private static class FieldWrapper implements Comparable<FieldWrapper> {
-
         final FieldKey field;
 
         FieldWrapper(FieldKey field) {
@@ -67,14 +65,16 @@ public class SelectFieldDlg extends javax.swing.JDialog {
         }
     }
 
-    public static FieldElement doSelectFieldForChart(Component c, FieldKey fields[]) {
+    public static FieldElement doSelectFieldForChart(MainWindow mainWindow, FieldKey fields[]) {
         FieldElement result = null;
-        JFrame parent = Perfmon4jMonitorView.getParentFrame(c);
 
-        if (selectFieldDlg == null) {
-            selectFieldDlg = new SelectFieldDlg(parent);
+        if (mainWindow.selectFieldDlg == null) {
+            mainWindow.selectFieldDlg = new SelectFieldDlg(mainWindow);
         }
-        selectFieldDlg.fieldsCombo.removeAllItems();;
+        SelectFieldDlg dlg = mainWindow.selectFieldDlg;
+        
+        
+        dlg.fieldsCombo.removeAllItems();;
 
 
         FieldWrapper[] wrappedFields = new FieldWrapper[fields.length];
@@ -85,22 +85,22 @@ public class SelectFieldDlg extends javax.swing.JDialog {
         Arrays.sort(wrappedFields);
         for (int i = 0; i < wrappedFields.length; i++) {
             FieldWrapper fieldWrapper = wrappedFields[i];
-            selectFieldDlg.fieldsCombo.addItem(fieldWrapper);
+            dlg.fieldsCombo.addItem(fieldWrapper);
             if (fieldWrapper.toString().startsWith("Through")) {
-                selectFieldDlg.fieldsCombo.setSelectedItem(fieldWrapper);
+                dlg.fieldsCombo.setSelectedItem(fieldWrapper);
             }
         }
 
-        selectFieldDlg.setDefaultCloseOperation(HIDE_ON_CLOSE);
-        selectFieldDlg.pack();
-        selectFieldDlg.setLocationRelativeTo(parent);
-        selectFieldDlg.setVisible(true);
+        dlg.setDefaultCloseOperation(HIDE_ON_CLOSE);
+        dlg.pack();
+        dlg.setLocationRelativeTo(mainWindow.getParentFrame());
+        dlg.setVisible(true);
 
-        if (selectFieldDlg.selectedField != null) {
-            Float value = Float.parseFloat(selectFieldDlg.factorCombo.getSelectedItem().toString());
+        if (dlg.selectedField != null) {
+            Float value = Float.parseFloat(dlg.factorCombo.getSelectedItem().toString());
 
-            result = new FieldElement(selectFieldDlg.selectedField, value,
-                    selectFieldDlg.colorPanel.getBackground());
+            result = new FieldElement(dlg.selectedField, value,
+                    dlg.colorPanel.getBackground());
         }
 
         return result;
@@ -151,6 +151,7 @@ public class SelectFieldDlg extends javax.swing.JDialog {
             }
         });
 
+        colorPanel.setBackground(new java.awt.Color(51, 51, 255));
         colorPanel.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
         javax.swing.GroupLayout colorPanelLayout = new javax.swing.GroupLayout(colorPanel);
@@ -241,7 +242,7 @@ public class SelectFieldDlg extends javax.swing.JDialog {
     }//GEN-LAST:event_fieldsComboActionPerformed
 
     private void colorButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_colorButtonActionPerformed
-        Color color = SelectColorDlg.doSelectColor((Component) evt.getSource());
+        Color color = SelectColorDlg.doSelectColor(mainWindow);
         if (color != null) {
             colorPanel.setBackground(color);
         }
@@ -260,49 +261,6 @@ public class SelectFieldDlg extends javax.swing.JDialog {
         this.setVisible(false);
     }//GEN-LAST:event_cancelButtonActionPerformed
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(SelectFieldDlg.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(SelectFieldDlg.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(SelectFieldDlg.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(SelectFieldDlg.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the dialog */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-
-            public void run() {
-                SelectFieldDlg dialog = new SelectFieldDlg(new javax.swing.JFrame());
-                dialog.addWindowListener(new java.awt.event.WindowAdapter() {
-
-                    @Override
-                    public void windowClosing(java.awt.event.WindowEvent e) {
-                        System.exit(0);
-                    }
-                });
-                dialog.setVisible(true);
-            }
-        });
-    }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.ButtonGroup buttonGroup2;

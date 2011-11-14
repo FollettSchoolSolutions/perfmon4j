@@ -21,7 +21,6 @@
 
 package org.perfmon4j.visualvm;
 
-import java.awt.Component;
 import java.util.HashMap;
 import java.util.Map;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
@@ -32,33 +31,34 @@ import org.perfmon4j.visualvm.chart.FieldManager;
  *
  * @author ddeucher
  */
-public class ThreadTraceOptions extends javax.swing.JDialog {
+public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
     private Map<String, String> result = null;
     
     /** Creates new form ThreadTraceOptions */
-    public ThreadTraceOptions(java.awt.Frame parent) {
-        super(parent, true);
+    public ThreadTraceOptionsDlg(MainWindow mainWindow) {
+        super(mainWindow.getParentFrame(), true);
         initComponents();
     }
-
-    private static ThreadTraceOptions dialog = null;
     
-    public static void getOptionsAndScheduleThreadTrace(Component parent,
-            FieldManager fieldManager,
+    public static void doScheduleThreadTrace(MainWindow mainWindow,
             MonitorKey key) {
-        if (dialog == null) {
-            dialog = new ThreadTraceOptions(Perfmon4jMonitorView.getParentFrame(parent));
-        }
-        dialog.result = null;
         
-        dialog.monitorNameTextField.setText(key.getName());
-        dialog.setDefaultCloseOperation(HIDE_ON_CLOSE);
-        dialog.pack();
-        dialog.setLocationRelativeTo(parent);        
-        dialog.setVisible(true);
+        if (mainWindow.threadTraceOptionsDlg == null) {
+            mainWindow.threadTraceOptionsDlg = new ThreadTraceOptionsDlg(mainWindow);
+        }
+        ThreadTraceOptionsDlg dlg = mainWindow.threadTraceOptionsDlg;
+        
+        dlg.result = null;
+        
+        dlg.monitorNameTextField.setText(key.getName());
+        dlg.setDefaultCloseOperation(HIDE_ON_CLOSE);
+        dlg.pack();
+        dlg.setLocationRelativeTo(mainWindow.getParentFrame());        
+        dlg.setVisible(true);
 
-        if (dialog.result != null) {
-            fieldManager.scheduleThreadTrace(key, dialog.result);
+        if (dlg.result != null) {
+            mainWindow.getFieldManager().scheduleThreadTrace(key, dlg.result);
+            mainWindow.bringThreadTraceWindowToFront();
         }
     }
     
@@ -81,49 +81,48 @@ public class ThreadTraceOptions extends javax.swing.JDialog {
         monitorNameTextField = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.title")); // NOI18N
+        setTitle(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.title")); // NOI18N
         setResizable(false);
 
-        jLabel1.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.jLabel1.text")); // NOI18N
+        jLabel1.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.jLabel1.text")); // NOI18N
 
-        minDurationToCaptureField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.minDurationToCaptureField.text")); // NOI18N
+        minDurationToCaptureField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.minDurationToCaptureField.text")); // NOI18N
 
-        jLabel2.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.jLabel2.text")); // NOI18N
+        jLabel2.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.jLabel2.text")); // NOI18N
 
-        maxDepthField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.maxDepthField.text")); // NOI18N
+        maxDepthField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.maxDepthField.text")); // NOI18N
 
-        okButton.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.okButton.text")); // NOI18N
+        okButton.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.okButton.text")); // NOI18N
         okButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 okButtonActionPerformed(evt);
             }
         });
 
-        cancelButton.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.cancelButton.text")); // NOI18N
+        cancelButton.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.cancelButton.text")); // NOI18N
         cancelButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 cancelButtonActionPerformed(evt);
             }
         });
 
-        jLabel3.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.jLabel3.text")); // NOI18N
+        jLabel3.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.jLabel3.text")); // NOI18N
 
         monitorNameTextField.setEditable(false);
-        monitorNameTextField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptions.class, "ThreadTraceOptions.monitorNameTextField.text")); // NOI18N
+        monitorNameTextField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.monitorNameTextField.text")); // NOI18N
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
                         .addComponent(jLabel3)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(monitorNameTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 291, Short.MAX_VALUE))
                     .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addComponent(jLabel2)
                             .addComponent(jLabel1))
@@ -132,7 +131,6 @@ public class ThreadTraceOptions extends javax.swing.JDialog {
                             .addComponent(maxDepthField, javax.swing.GroupLayout.DEFAULT_SIZE, 208, Short.MAX_VALUE)
                             .addComponent(minDurationToCaptureField, javax.swing.GroupLayout.DEFAULT_SIZE, 208, Short.MAX_VALUE)))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addContainerGap(225, Short.MAX_VALUE)
                         .addComponent(okButton)
                         .addGap(10, 10, 10)
                         .addComponent(cancelButton)))
@@ -177,57 +175,14 @@ public class ThreadTraceOptions extends javax.swing.JDialog {
             // TODO should check for non-numeric and or negative values...
             result.put(FieldKey.THREAD_TRACE_MIN_DURATION_ARG, minDur);
         }
-        dialog.setVisible(false);
+        this.setVisible(false);
     }//GEN-LAST:event_okButtonActionPerformed
 
     private void cancelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cancelButtonActionPerformed
-        dialog.result = null;
-        dialog.setVisible(false);
+        this.result = null;
+        this.setVisible(false);
     }//GEN-LAST:event_cancelButtonActionPerformed
     
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ThreadTraceOptions.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ThreadTraceOptions.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ThreadTraceOptions.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ThreadTraceOptions.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the dialog */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-
-            public void run() {
-                ThreadTraceOptions dialog = new ThreadTraceOptions(new javax.swing.JFrame());
-                dialog.addWindowListener(new java.awt.event.WindowAdapter() {
-
-                    @Override
-                    public void windowClosing(java.awt.event.WindowEvent e) {
-                        System.exit(0);
-                    }
-                });
-                dialog.setVisible(true);
-            }
-        });
-    }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton cancelButton;
     private javax.swing.JLabel jLabel1;

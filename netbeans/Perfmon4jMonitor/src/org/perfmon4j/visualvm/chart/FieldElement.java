@@ -28,7 +28,7 @@ import org.perfmon4j.remotemanagement.intf.FieldKey;
 public class FieldElement {
 
     private final FieldKey fieldKey;
-    private final Color color;
+    private Color color;
     private float factor;
     private boolean visibleInChart = true;
 
@@ -67,5 +67,9 @@ public class FieldElement {
 
     public Color getColor() {
         return color;
+    }
+    
+    public void setColor(Color color) {
+        this.color = color;
     }
 }

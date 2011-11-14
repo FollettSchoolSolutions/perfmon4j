@@ -42,6 +42,7 @@ import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.visualvm.MainWindow;
 import org.perfmon4j.visualvm.Perfmon4jMonitorView;
 import org.perfmon4j.visualvm.ThreadTraceViewDlg;
 
@@ -51,11 +52,62 @@ public class ThreadTraceTable extends JPanel implements
     private static final long serialVersionUID = 1L;
     private final TableModel tableModel;
     private final JTable table;
-    private final FieldManager manager;
+    private final MainWindow mainWindow;
     private final ThreadTraceList list;
     private static final String[] HEADER_VALUE = new String[]{"Time Submitted",
         "Monitor Name", "View", "Cancel",};
 
+    public ThreadTraceTable(MainWindow mainWindow) {
+        super(new BorderLayout());
+        this.mainWindow = mainWindow;
+        this.list = mainWindow.getFieldManager().getThreadTraceList();
+        list.addDataHandler(this);
+
+        tableModel = new TableModel();
+        table = new JTable(tableModel);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+        TableCellRenderer tableCellRenderer = new DefaultTableCellRenderer() {
+
+            SimpleDateFormat f = new SimpleDateFormat("MM/dd HH:mm:ss");
+
+            @Override
+            public Component getTableCellRendererComponent(JTable table,
+                    Object value, boolean isSelected, boolean hasFocus,
+                    int row, int column) {
+                if (value instanceof Date) {
+                    value = f.format(value);
+                }
+                return super.getTableCellRendererComponent(table, value, isSelected,
+                        hasFocus, row, column);
+            }
+        };
+
+        TableColumnModel columnModel = table.getColumnModel();
+        columnModel.getColumn(0).setCellRenderer(tableCellRenderer);
+        columnModel.getColumn(0).setPreferredWidth(100);
+
+        columnModel.getColumn(1).setPreferredWidth(250);
+
+
+        TableColumn viewColumn = columnModel.getColumn(2);
+        TableColumn cancelColumn = columnModel.getColumn(3);
+        ButtonCellEditor editor = new ButtonCellEditor();
+        viewColumn.setCellEditor(editor);
+        viewColumn.setCellRenderer(editor);
+
+        cancelColumn.setCellEditor(editor);
+        cancelColumn.setCellRenderer(editor);
+
+
+        JScrollPane scroller = new JScrollPane(table,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        this.add(scroller);
+    }
+    
+    
     private class TableModel extends AbstractTableModel {
 
         @Override
@@ -105,7 +157,6 @@ public class ThreadTraceTable extends JPanel implements
     }
 
     public class ButtonCellEditor extends AbstractCellEditor implements TableCellEditor, TableCellRenderer {
-
         @Override
         public Component getTableCellEditorComponent(JTable t,
                 Object value, boolean isSelected, int r, int column) {
@@ -136,7 +187,7 @@ public class ThreadTraceTable extends JPanel implements
                             if (JOptionPane.showConfirmDialog((Component) e.getSource(), message, "Delete",
                                     JOptionPane.YES_NO_OPTION)
                                     == JOptionPane.YES_OPTION) {
-                                manager.unScheduleThreadTrace(myElement.getFieldKey());
+                                mainWindow.getFieldManager().unScheduleThreadTrace(myElement.getFieldKey());
                                 list.delete(row);
                             }
                         }
@@ -155,7 +206,7 @@ public class ThreadTraceTable extends JPanel implements
                         @Override
                         public void actionPerformed(ActionEvent e) {
                             table.editingStopped(new ChangeEvent(this));
-                            ThreadTraceViewDlg.showModel(Perfmon4jMonitorView.getParentFrame((Component) e.getSource()), myElement);
+                            mainWindow.showThreadTraceElement(myElement);
                         }
                     });
 
@@ -201,56 +252,6 @@ public class ThreadTraceTable extends JPanel implements
             return getTableCellEditorComponent(table,
                     value, isSelected, row, column);
         }
-    }
-
-    public ThreadTraceTable(FieldManager manager) {
-        super(new BorderLayout());
-        this.manager = manager;
-        this.list = manager.getThreadTraceList();
-        list.addDataHandler(this);
-
-        tableModel = new TableModel();
-        table = new JTable(tableModel);
-        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-
-        TableCellRenderer tableCellRenderer = new DefaultTableCellRenderer() {
-
-            SimpleDateFormat f = new SimpleDateFormat("MM/dd HH:mm:ss");
-
-            @Override
-            public Component getTableCellRendererComponent(JTable table,
-                    Object value, boolean isSelected, boolean hasFocus,
-                    int row, int column) {
-                if (value instanceof Date) {
-                    value = f.format(value);
-                }
-                return super.getTableCellRendererComponent(table, value, isSelected,
-                        hasFocus, row, column);
-            }
-        };
-
-        TableColumnModel columnModel = table.getColumnModel();
-        columnModel.getColumn(0).setCellRenderer(tableCellRenderer);
-        columnModel.getColumn(0).setPreferredWidth(100);
-
-        columnModel.getColumn(1).setPreferredWidth(250);
-
-
-        TableColumn viewColumn = columnModel.getColumn(2);
-        TableColumn cancelColumn = columnModel.getColumn(3);
-        ButtonCellEditor editor = new ButtonCellEditor();
-        viewColumn.setCellEditor(editor);
-        viewColumn.setCellRenderer(editor);
-
-        cancelColumn.setCellEditor(editor);
-        cancelColumn.setCellRenderer(editor);
-
-
-        JScrollPane scroller = new JScrollPane(table,
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-
-        this.add(scroller);
     }
 
     @Override
