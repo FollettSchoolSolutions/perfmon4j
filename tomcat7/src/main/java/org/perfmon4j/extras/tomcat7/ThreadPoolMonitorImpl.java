@@ -26,9 +26,14 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotGauge;
+import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.util.JDBCHelper;
@@ -57,8 +62,14 @@ public class ThreadPoolMonitorImpl extends JMXMonitorBase {
 	public ThreadPoolMonitorImpl(String instanceName) {
 		super(buildBaseObjectName(), "name", instanceName);
 	}
+
+	@SnapShotInstanceDefinition
+	static public String[] getInstanceNames() throws MalformedObjectNameException, NullPointerException {
+		MBeanServer mBeanServer = MiscHelper.findMBeanServer(MiscHelper.isRunningInJBossAppServer() ? "jboss" : null);
+		return MiscHelper.getAllObjectName(mBeanServer, new ObjectName(buildBaseObjectName()), "name");
+	}
 	
-	@SnapShotString
+	@SnapShotString(isInstanceName=true)
 	public String getInstanceName() {
 		return MiscHelper.getInstanceNames(getMBeanServer(), getQueryObjectName(), "name");
 	}
