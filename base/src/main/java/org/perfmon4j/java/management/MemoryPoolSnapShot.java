@@ -26,18 +26,19 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotGauge;
+import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.snapshot.GeneratedData;
 import org.perfmon4j.instrument.snapshot.Ratio;
-import org.perfmon4j.java.management.GarbageCollectorSnapShot.GarbageCollectorData;
 import org.perfmon4j.util.ByteFormatter;
 import org.perfmon4j.util.JDBCHelper;
 
@@ -102,7 +103,7 @@ public class MemoryPoolSnapShot {
 		this.monitorName = monitorName;
 	}
 	
-	@SnapShotString()
+	@SnapShotString(isInstanceName=true)
 	public String getInstanceName() {
 		String result = monitorName;
 		
@@ -173,6 +174,18 @@ public class MemoryPoolSnapShot {
 		}
 		
 		return result;
+	}
+	
+	@SnapShotInstanceDefinition
+	static public String[] getInstanceNames() {
+		List<String> result = new ArrayList<String>();
+
+		MemoryPoolMXBean[] beans = getAllMemoryPools();
+		for (int i = 0; i < beans.length; i++) {
+			result.add(beans[i].getName());
+		}
+		
+		return result.toArray(new String[result.size()]);
 	}
 
 	

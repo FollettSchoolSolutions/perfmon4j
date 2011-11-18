@@ -38,14 +38,20 @@ import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
+import org.perfmon4j.instrument.InstrumentationMonitor;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
+import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.SnapShotStringFormatter;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator.SnapShotLifecycle;
+import org.perfmon4j.java.management.JVMSnapShot;
+import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.MiscHelper;
 
 public class SnapShotGeneratorTest extends TestCase {
@@ -750,6 +756,152 @@ System.out.println(appenderString);
     }
     
     
+    public void validateContainsField(MonitorKeyWithFields key, String fieldName, String fieldType) throws Exception {
+    	boolean found = false;
+    	FieldKey fields[] = key.getFields();
+    	
+    	for (int i = 0; (i < fields.length) && !found; i++) {
+			FieldKey f = fields[i];
+			found = fieldName.equals(f.getFieldName()) && fieldType.equals(f.getFieldType());
+		}
+    	if (!found) {
+    		fail("Expected to find field key with fieldName=\"" + fieldName + "\" fieldType=\"" 
+    			+ fieldType + "\"");
+    	}
+    }
+    
+
+    public void testSimpleGetMonitorKeyWithFields() throws Exception {
+    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(JVMSnapShot.class);
+    	
+    	assertNotNull("keys[]", keys);
+    	assertEquals("keys.length", 1, keys.length);
+    	
+    	assertEquals("keys[0].getType()", MonitorKey.SNAPSHOT_TYPE, keys[0].getType());
+    	assertEquals("keys[0].getName()", JVMSnapShot.class.getName(), keys[0].getName());
+    	
+    	assertNull("keys[0].getInstance()", keys[0].getInstance());
+    	
+    	// Validate a ratio field.
+    	// Ratios should always add "Percent" to the attribute name
+    	validateContainsField(keys[0], "heapMemUsedCommittedPercent", FieldKey.DOUBLE_TYPE);
+    	
+    	// Validate a counter (Counters contain ever increasing values)
+    	// Counters should always add "PerSecond" to the attribute name
+    	validateContainsField(keys[0], "unloadedClassCountPerSecond", FieldKey.DOUBLE_TYPE);
+
+    	// Validate a Gauge (Gauge values can increase/decrease)
+    	validateContainsField(keys[0], "classesLoaded", FieldKey.INTEGER_TYPE);
+    }
+
+    public void testSimpleGetMonitorKeyWithStringField() throws Exception {
+    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(InstrumentationMonitor.class);
+    	
+    	assertNotNull("keys[]", keys);
+    	assertEquals("keys.length", 1, keys.length);
+    	
+    	assertEquals("keys[0].getType()", MonitorKey.SNAPSHOT_TYPE, keys[0].getType());
+    	assertEquals("keys[0].getName()", InstrumentationMonitor.class.getName(), keys[0].getName());
+    	
+    	assertNull("keys[0].getInstance()", keys[0].getInstance());
+    	
+    	// Validate a String field
+    	// Ratios should always add "Percent" to the attribute name
+    	validateContainsField(keys[0], "loggingFramework", FieldKey.STRING_TYPE);
+    }
+
+    @SnapShotProvider(type=SnapShotProvider.Type.STATIC)
+    public static class StaticMonitor {
+    	private static int counter = 0;
+    	
+    	public static void incCounter(int value) {
+    		counter += value;	
+    	}
+    	
+    	@SnapShotCounter
+    	public static int getCounter() {
+    		return counter;
+    	}
+    }
+    
+
+    public void testSimpleGetMonitorKeyWithStaticMonitor() throws Exception {
+    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(StaticMonitor.class);
+    	
+    	assertNotNull("keys[]", keys);
+    	assertEquals("keys.length", 1, keys.length);
+    	
+    	assertEquals("keys[0].getType()", MonitorKey.SNAPSHOT_TYPE, keys[0].getType());
+    	assertEquals("keys[0].getName()", StaticMonitor.class.getName(), keys[0].getName());
+    	
+    	assertNull("keys[0].getInstance()", keys[0].getInstance());
+    	
+    	// Validate a counter (Counters cotain ever increasing values)
+    	// Counters should always add "PerSecond" to the attribute name
+    	validateContainsField(keys[0], "counterPerSecond", FieldKey.DOUBLE_TYPE);
+    	
+//    	SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(StaticMonitor.class);
+//    	SnapShotMonitor w = new SnapShotProviderWrapper("", bundle);
+    	
+//    	long now = System.currentTimeMillis();
+//    	
+//    	SnapShotData d = w.initSnapShot(now);
+//    	
+//    	StaticMonitor.incCounter(100);
+//    	
+//    	SnapShotData d2 = w.initSnapShot(now + 1000);
+//    	StaticMonitor.incCounter(50);
+//    	w.takeSnapShot(d2, now + 2000);
+//    	
+//    	System.out.println(d2.toAppenderString());
+//    	
+//    	w.takeSnapShot(d, now + 3000);
+//    	
+//    	System.out.println(d.toAppenderString());
+    }
+    
+    
+    @SnapShotProvider
+    public static class MonitorWithInstance {
+    	private final String instanceName;
+    	
+    	public MonitorWithInstance() {
+    		instanceName = null;
+    	}
+    	
+    	public MonitorWithInstance(String instanceName) {
+    		this.instanceName = instanceName;
+    	}
+    	
+    	@SnapShotInstanceDefinition
+    	public static String[] getInstances() {
+    		return new String[]{"A", "B", "C"};
+    	}
+    	
+    	@SnapShotGauge
+    	public int getValue() {
+    		return 1;
+    	}
+    	
+    	@SnapShotString(isInstanceName=true)
+    	public String getInstanceName() {
+    		return instanceName;
+    	}
+    }
+    
+    /*----------------------------------------------------------------------------*/
+    public void testSimpleGetMonitorKeyWithFieldsFromMonitorWithInstances() throws Exception {
+    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(MonitorWithInstance.class);
+    	
+    	assertNotNull("keys[]", keys);
+    	assertEquals("keys.length", 3, keys.length);
+    	
+    	MonitorKeyWithFields instanceA = keys[0];
+    	assertEquals("instance", "C", instanceA.getInstance());
+
+    	validateContainsField(keys[0], "value", FieldKey.INTEGER_TYPE);
+    }
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
 //    	System.setProperty("UNIT", "arg1");
@@ -768,7 +920,7 @@ System.out.println(appenderString);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new SnapShotGeneratorTest("testInaccessiblePrivateMethodDoesNotBlowUp"));
+        newSuite.addTest(new SnapShotGeneratorTest("testSimpleGetMonitorKeyWithStaticMonitor"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

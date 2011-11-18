@@ -36,6 +36,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.java.management.GarbageCollectorSnapShot;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
@@ -188,7 +189,20 @@ public class RemoteImplTest extends TestCase {
     	RemoteImpl.getSingleton().disconnect(sessionID);
     }
 
-    
+    public void testGetFieldsForMultiInstanceSnapShotMonitor() throws Exception {
+    	String sessionID = RemoteImpl.getSingleton().connect(ManagementVersion.VERSION);
+    	
+    	MonitorKey monitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE,
+    			GarbageCollectorSnapShot.class.getName(),
+    			GarbageCollectorSnapShot.getInstanceNames()[0]);
+    	
+    	String fields[] = RemoteImpl.getSingleton().getFieldsForMonitor(sessionID, monitorKey.toString());
+    	assertNotNull(fields);
+    	assertTrue("Should have one or more fields", fields.length > 0);
+    	
+    	RemoteImpl.getSingleton().disconnect(sessionID);
+    }
+
     public void testGetFieldsForThreadTraceMonitor() throws Exception {
     	MonitorKey threadTraceKey = new MonitorKey(MonitorKey.THREADTRACE_TYPE, "org.apache");
     	
@@ -239,8 +253,6 @@ System.err.println(traceData);
     		i.disconnect(sessionID);
     	}
     }
-
-    
     
     public void testSubscribeToIntervalMonitor() throws Exception {
     	ExternalAppender.setEnabled(true);
@@ -359,7 +371,7 @@ System.err.println(traceData);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new RemoteImplTest("testGetMonitorsIncludesSnapShotMonitors"));
+//		newSuite.addTest(new RemoteImplTest("testGetFieldsForMultiInstanceSnapShotMonitor"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

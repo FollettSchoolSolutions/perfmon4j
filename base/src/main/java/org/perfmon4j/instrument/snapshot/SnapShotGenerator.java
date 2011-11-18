@@ -43,6 +43,7 @@ import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
+import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
@@ -566,9 +567,50 @@ public class SnapShotGenerator {
 	public static Bundle generateBundle(JMXSnapShotImpl impl, ClassPool classPool) throws GenerateSnapShotException {
 		return generateBundle(impl.getClass(), null, impl, classPool);
 	}
+	
+	private static List<FieldKey> createFields(MonitorKey keys[], String name, String fieldType) {
+		List<FieldKey> fields = new ArrayList<FieldKey>();
+		
+		for (int i = 0; i < keys.length; i++) {
+			fields.add(new FieldKey(keys[i], name, fieldType));
+		}
+		
+		return fields;
+	}
 
+	private static MonitorKey[] getMonitorKeysForClass(Class<?> clazz) {
+		List<MonitorKey> result = new ArrayList<MonitorKey>();
+
+		Method methods[] = clazz.getMethods();
+		for (int i = 0; i < methods.length; i++) {
+			Method method = methods[i];
+			
+			SnapShotInstanceDefinition  instanceDef = method.getAnnotation(SnapShotInstanceDefinition.class);
+			if (instanceDef != null) {
+				try {
+					String instances[] = (String[])method.invoke(null, new Object[]{});
+					for (int j = 0; j < instances.length; j++) {
+						result.add(new MonitorKey(MonitorKey.SNAPSHOT_TYPE, clazz.getName(), instances[j]));
+					}
+					break;
+				} catch (Exception e) {
+					logger.logWarn("Unable to determine instances for SnapShot class: " + clazz.getName(),
+							e);
+				}
+			}
+		}
+		if (result.isEmpty()) {
+			result.add(new MonitorKey(MonitorKey.SNAPSHOT_TYPE, clazz.getName()));
+		}
+		
+		return result.toArray(new MonitorKey[result.size()]);
+	}
+	
+	
+	
 	public static MonitorKeyWithFields[] generateExternalMonitorKeys (Class<?> clazz) {
-		MonitorKey monitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, clazz.getName());
+		MonitorKey monitorKey[] = getMonitorKeysForClass(clazz);
+		
 		List<FieldKey> fields = new ArrayList<FieldKey>();
 		
 		Annotation classAnnotations[] = clazz.getAnnotations();
@@ -576,16 +618,14 @@ public class SnapShotGenerator {
 			Annotation annotation = classAnnotations[i];
 			if (annotation instanceof SnapShotRatio) {
 				SnapShotRatio snapShotRatio = (SnapShotRatio)annotation;
-				FieldKey fieldKey = new FieldKey(monitorKey, snapShotRatio.name() + RATIO_FIELD_SUFFIX,
-						FieldKey.DOUBLE_TYPE); 
-				fields.add(fieldKey);
+				fields.addAll(createFields(monitorKey, snapShotRatio.name() + RATIO_FIELD_SUFFIX,
+						FieldKey.DOUBLE_TYPE));
 			} else if (annotation instanceof SnapShotRatios) {
 				SnapShotRatios snapShotRatios = (SnapShotRatios)annotation;
 				for (int j = 0; j < snapShotRatios.value().length; j++) {
 					SnapShotRatio snapShotRatio = snapShotRatios.value()[j];
-					FieldKey fieldKey = new FieldKey(monitorKey, snapShotRatio.name() + RATIO_FIELD_SUFFIX,
-							FieldKey.DOUBLE_TYPE); 
-					fields.add(fieldKey);
+					fields.addAll(createFields(monitorKey, snapShotRatio.name() + RATIO_FIELD_SUFFIX,
+							FieldKey.DOUBLE_TYPE));
 				}
 			}
 		}
@@ -595,9 +635,8 @@ public class SnapShotGenerator {
 			
 			SnapShotCounter counter = method.getAnnotation(SnapShotCounter.class);
 			if (counter != null) {
-				FieldKey fieldKey = new FieldKey(monitorKey,  generateFieldName(method.getName()) + DELTA_FIELD_SUFFIX,
-						FieldKey.DOUBLE_TYPE); 
-				fields.add(fieldKey);
+				fields.addAll(createFields(monitorKey, generateFieldName(method.getName()) + DELTA_FIELD_SUFFIX,
+						FieldKey.DOUBLE_TYPE));
 			}
 			SnapShotGauge gauge = method.getAnnotation(SnapShotGauge.class);
 			if (gauge != null) {
@@ -605,17 +644,15 @@ public class SnapShotGenerator {
 				if (method.getReturnType().equals(Integer.class) || method.getReturnType().equals(int.class)) {
 					fieldType = FieldKey.INTEGER_TYPE;
 				}
-				FieldKey fieldKey = new FieldKey(monitorKey,  generateFieldName(method.getName()),
-						fieldType); 
-				fields.add(fieldKey);
+				fields.addAll(createFields(monitorKey, generateFieldName(method.getName()),
+						fieldType));
 			}
 			SnapShotString str = method.getAnnotation(SnapShotString.class);
-			if (str != null) {
-				FieldKey fieldKey = new FieldKey(monitorKey,  generateFieldName(method.getName()),
-						FieldKey.STRING_TYPE); 
-				fields.add(fieldKey);
+			if (str != null && !str.isInstanceName()) {
+				fields.addAll(createFields(monitorKey, generateFieldName(method.getName()),
+						FieldKey.STRING_TYPE));
 			}
 		}
-		return new MonitorKeyWithFields[]{new MonitorKeyWithFields(monitorKey, fields)};
+		return MonitorKeyWithFields.groupFields(fields.toArray(new FieldKey[fields.size()]));
 	}
 }

@@ -31,6 +31,7 @@ import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
 import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -101,6 +102,8 @@ public class SnapShotManager {
                 	// Must be a generated Snap Shot class.
                 	SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
                 	result = new SnapShotProviderWrapper(monitorID.getName(), bundle);
+                	
+                	ExternalAppender.registerSnapShotClass(clazz.getName());
                 }
                 monitorMap.put(monitorID, result);
             } catch (ClassNotFoundException nfe) {

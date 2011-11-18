@@ -34,6 +34,7 @@ import java.util.Map;
 
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.instrument.InstrumentationMonitor;
 import org.perfmon4j.java.management.GarbageCollectorSnapShot;
 import org.perfmon4j.java.management.JVMSnapShot;
 import org.perfmon4j.java.management.MemoryPoolSnapShot;
@@ -59,6 +60,7 @@ public class RemoteImpl implements RemoteInterface {
 	static final private RemoteImpl singleton = new RemoteImpl();
 	
 	private RemoteImpl() {
+		ExternalAppender.registerSnapShotClass(InstrumentationMonitor.class.getName());
 		ExternalAppender.registerSnapShotClass(JVMSnapShot.class.getName());
 		ExternalAppender.registerSnapShotClass(GarbageCollectorSnapShot.class.getName());
 		ExternalAppender.registerSnapShotClass(MemoryPoolSnapShot.class.getName());

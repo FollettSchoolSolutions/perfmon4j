@@ -26,11 +26,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
+import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.snapshot.Delta;
@@ -87,7 +89,9 @@ public class GarbageCollectorSnapShot {
 		this.monitorName = monitorName;
 	}
 	
-	@SnapShotString()
+	
+	
+	@SnapShotString(isInstanceName=true)
 	public String getInstanceName() {
 		String result = monitorName;
 		
@@ -127,6 +131,18 @@ public class GarbageCollectorSnapShot {
 		return result;
 	}
 
+	@SnapShotInstanceDefinition
+	static public String[] getInstanceNames() {
+		List<String> result = new ArrayList<String>();
+
+		GarbageCollectorMXBean[] beans = getAllGarbageCollectors();
+		for (int i = 0; i < beans.length; i++) {
+			result.add(beans[i].getName());
+		}
+		
+		return result.toArray(new String[result.size()]);
+	}
+	
 	/** Package level for testing **/
 	static GarbageCollectorMXBean[] getAllGarbageCollectors() {
 		List<GarbageCollectorMXBean> beans = ManagementFactory.getGarbageCollectorMXBeans();

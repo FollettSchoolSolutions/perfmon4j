@@ -30,10 +30,12 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -398,6 +400,23 @@ public class MiscHelper {
 		}
 		return result;
 	}
+
+	
+	public static String[] getAllObjectName(MBeanServer server, ObjectName baseObjectName, 
+			String propertyName) {
+		Set<String> result = new HashSet<String>();
+		
+		Iterator<ObjectName> itr = server.queryNames(appendWildCard(baseObjectName), null).iterator();
+		while (itr.hasNext()) {
+			ObjectName objName = itr.next();
+			String val = objName.getKeyProperty(propertyName);
+			if (val != null) {
+				result.add(val);
+			}
+		}
+		return result.toArray(new String[result.size()]);
+	}
+	
 	
 	public static boolean isRunningInJBossAppServer() {
 		return (System.getProperty("jboss.home.dir") != null)

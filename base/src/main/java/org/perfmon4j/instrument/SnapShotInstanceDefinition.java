@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008-2011 Follett Software Company 
+ *	Copyright 2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -28,7 +28,5 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface SnapShotString {
-	public Class<? extends SnapShotStringFormatter> formatter() default SnapShotStringFormatter.class;
-	public boolean isInstanceName() default false; 
+public @interface SnapShotInstanceDefinition {
 }

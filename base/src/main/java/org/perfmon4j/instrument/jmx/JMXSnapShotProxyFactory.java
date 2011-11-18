@@ -38,7 +38,6 @@ import javassist.CtNewConstructor;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
-import javax.management.MBeanServerFactory;
 import javax.management.ObjectName;
 
 import org.perfmon4j.InvalidConfigException;
@@ -552,6 +551,10 @@ public class JMXSnapShotProxyFactory {
 
 		 public Class<? extends Annotation> annotationType() {
 			 return SnapShotString.class;
+		 }
+
+		 public boolean isInstanceName() {
+			 return false;
 		 }
 	 }
 	 
