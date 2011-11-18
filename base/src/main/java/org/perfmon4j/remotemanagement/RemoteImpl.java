@@ -34,6 +34,9 @@ import java.util.Map;
 
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.java.management.GarbageCollectorSnapShot;
+import org.perfmon4j.java.management.JVMSnapShot;
+import org.perfmon4j.java.management.MemoryPoolSnapShot;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
 import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
@@ -56,6 +59,17 @@ public class RemoteImpl implements RemoteInterface {
 	static final private RemoteImpl singleton = new RemoteImpl();
 	
 	private RemoteImpl() {
+		ExternalAppender.registerSnapShotClass(JVMSnapShot.class.getName());
+		ExternalAppender.registerSnapShotClass(GarbageCollectorSnapShot.class.getName());
+		ExternalAppender.registerSnapShotClass(MemoryPoolSnapShot.class.getName());
+		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.sunjava6.MemoryMonitorImpl");
+		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.sunjava6.OperatingSystemMonitorImpl");
+		
+		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat55.GlobalRequestProcessorMonitorImpl");
+		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat55.ThreadPoolMonitorImpl");
+		
+		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.GlobalRequestProcessorMonitorImpl");
+		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.ThreadPoolMonitorImpl");
 	}
 
 	public static RemoteImpl getSingleton() {
@@ -166,6 +180,9 @@ public class RemoteImpl implements RemoteInterface {
 			} else if (MonitorKey.THREADTRACE_TYPE.equals(key.getType())) {
 				FieldKey fields[] = new FieldKey[]{new FieldKey(key, "stack", FieldKey.STRING_TYPE)}; 
 				result = FieldKey.toStringArray(fields);
+			} else if (MonitorKey.SNAPSHOT_TYPE.equals(key.getType())) {
+				FieldKey fields[] = ExternalAppender.getFieldsForSnapShotMonitor(key);
+				result = FieldKey.toStringArray(fields);
 			}
 		} catch (UnableToParseKeyException e) {
 			logger.logWarn("Unable to parse monitor key: " + monitorKey);
@@ -182,6 +199,11 @@ public class RemoteImpl implements RemoteInterface {
 		while (intervalMonitors.hasNext()) {
 			MonitorKey key = new MonitorKey(MonitorKey.INTERVAL_TYPE, intervalMonitors.next());
 			result.add(key.toString());
+		}
+		
+		MonitorKey keys[] = ExternalAppender.getSnapShotMonitorKeys();
+		for (int i = 0; i < keys.length; i++) {
+			result.add(keys[i].toString());
 		}
 		
 		return result.toArray(new String[]{});	

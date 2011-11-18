@@ -21,13 +21,21 @@
 
 package org.perfmon4j.remotemanagement;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.perfmon4j.ExternalThreadTraceConfig;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
+import org.perfmon4j.SnapShotData;
+import org.perfmon4j.SnapShotMonitor;
+import org.perfmon4j.SnapShotProviderWrapper;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
@@ -46,6 +54,8 @@ public class ExternalAppender {
 	private static final SessionManager<MonitorMap> sessionManager = new SessionManager<MonitorMap>();
 	private static boolean enabled = false;
 	
+	private static final Object snapShotLockToken = new Object();
+	private static Map<String, RegisteredSnapShotElement> registeredSnapShots = new HashMap<String, RegisteredSnapShotElement>(); 
 	
 	private ExternalAppender() {
 	}
@@ -149,9 +159,9 @@ public class ExternalAppender {
 		logger.logInfo("External appender (sessionID:" + sessionID + ") unsubscribed from monitor: " + monitorKey);
 	}
 	
-	public String[] getMonitors() {
-		return new String[]{};
-	}
+//	public String[] getMonitors() {
+//		return new String[]{};
+//	}
 	
 	public static boolean isActive() {
 		return enabled || sessionManager.getSessionCount() > 0;
@@ -166,7 +176,8 @@ public class ExternalAppender {
 	}
 
 	private static final class MonitorMap implements SessionManager.SessionData {
-		private final Map<MonitorKey, PerfMonData> map = new HashMap<MonitorKey, PerfMonData>();
+		private final Map<MonitorKey, PerfMonData> intervalMonitors = new HashMap<MonitorKey, PerfMonData>();
+		private final Map<MonitorKey, SnapShotMonitorAndData> snapShotMonitors = new HashMap<MonitorKey, SnapShotMonitorAndData>();
 		private final Map<MonitorKey, MonitorKeyWithFields> fieldProperties = new HashMap<MonitorKey, MonitorKeyWithFields>();
 		private final Map<FieldKey, ExternalThreadTraceConfig> scheduledThreadTraces = new HashMap<FieldKey, ExternalThreadTraceConfig>();
 		
@@ -230,16 +241,31 @@ public class ExternalAppender {
 			// we might be adding/removing fields.
 			fieldProperties.put(monitorKey, monitorKeyWithFields);
 				
-			if (map.get(monitorKey) != null) {
-				return;  // Already subscribed... Nothing to do.
-			}
 			
 			if (monitorKey.getType().equals(MonitorKey.INTERVAL_TYPE)) {
-				PerfMon mon = PerfMon.getMonitor(monitorKey.getName());
-				IntervalData d = new IntervalData(mon);
-				mon.addExternalElement(d);
-				
-				map.put(monitorKey, d);
+				if (intervalMonitors.get(monitorKey) == null) {
+					PerfMon mon = PerfMon.getMonitor(monitorKey.getName());
+					IntervalData d = new IntervalData(mon);
+					mon.addExternalElement(d);
+					
+					intervalMonitors.put(monitorKey, d);
+				}
+			} else if (monitorKey.getType().equals(MonitorKey.SNAPSHOT_TYPE)) {
+				if (snapShotMonitors.get(monitorKey) == null) {
+					String className = monitorKey.getName();
+					String instanceName = monitorKey.getInstance();
+					try {
+						Class<?> clazz = PerfMon.getClassLoader().loadClass(className);
+						SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(clazz, instanceName);
+		            	SnapShotMonitor monitor = new SnapShotProviderWrapper("", bundle);
+		            	SnapShotData data = monitor.initSnapShot(MiscHelper.currentTimeWithMilliResolution());
+		            	
+		            	snapShotMonitors.put(monitorKey, new SnapShotMonitorAndData(monitor, data));
+		            	
+					} catch (Exception e) {
+						logger.logError("Unable to create snapShotInstance for monitor: " + monitorKey, e);
+					}
+				}
 			} else {
 				logger.logError("Unable to subscribe to monitor: " + monitorKey);
 			}
@@ -248,12 +274,14 @@ public class ExternalAppender {
 		private void unSubscribe(MonitorKeyWithFields monitorKeyWithFields) {
 			MonitorKey monitorKey = monitorKeyWithFields.getMonitorKeyOnly();
 			if (MonitorKey.INTERVAL_TYPE.equals(monitorKey.getType())) {
-				IntervalData data = (IntervalData)map.remove(monitorKey);
+				IntervalData data = (IntervalData)intervalMonitors.remove(monitorKey);
 				if (data != null) { 
 					PerfMon mon = PerfMon.getMonitor(monitorKey.getName());
 					mon.removeExternalElement(data);
 				}
 				fieldProperties.remove(monitorKey);
+			} else if (MonitorKey.SNAPSHOT_TYPE.equals(monitorKey.getType())) {
+				snapShotMonitors.remove(monitorKey);
 			}
 		}
 
@@ -261,19 +289,28 @@ public class ExternalAppender {
 			Map<FieldKey, Object> result = null;
 			MonitorKey monitorKey = monitorKeyWithFields.getMonitorKeyOnly();
 			
-			PerfMonData r = null;
 			
 			if (MonitorKey.INTERVAL_TYPE.equals(monitorKey.getType())) {
-				IntervalData data = (IntervalData)map.get(monitorKey);
+				IntervalData data = (IntervalData)intervalMonitors.get(monitorKey);
 				if (data == null) {
 					throw new MonitorNotFoundException(monitorKey.toString());
 				}
 				PerfMon mon = PerfMon.getMonitor(monitorKey.getName());
-				r = data;
-				data = mon.replaceExternalElement((IntervalData)data, new IntervalData(mon));
-				map.put(monitorKey, data);
-				((IntervalData)r).setTimeStop(MiscHelper.currentTimeWithMilliResolution());
-				result = r.getFieldData(monitorKeyWithFields.getFields());
+				IntervalData newData = mon.replaceExternalElement((IntervalData)data, new IntervalData(mon));
+				intervalMonitors.put(monitorKey, newData);
+				data.setTimeStop(MiscHelper.currentTimeWithMilliResolution());
+				result = data.getFieldData(monitorKeyWithFields.getFields());
+			} else if (MonitorKey.SNAPSHOT_TYPE.equals(monitorKey.getType())){
+				SnapShotMonitorAndData monitorAndData = snapShotMonitors.get(monitorKey);
+				if (monitorAndData == null) {
+					throw new MonitorNotFoundException(monitorKey.toString());
+				}
+				long now = MiscHelper.currentTimeWithMilliResolution();
+				SnapShotData nowSnapShot = monitorAndData.monitor.takeSnapShot(monitorAndData.data, now);
+				
+				// Initialize the next snapshot
+				monitorAndData.data = monitorAndData.monitor.initSnapShot(now);
+				result = nowSnapShot.getFieldData(monitorKeyWithFields.getFields());
 			} else {
 				logger.logError("Unable to take shapshot of monitor: " + monitorKey);
 			}
@@ -285,6 +322,98 @@ public class ExternalAppender {
 			for (int i = 0; i < keys.length; i++) {
 				unSubscribe(keys[i]);
 			}
+		}
+	}
+
+	public static void registerSnapShotClass(String name) {
+		synchronized (snapShotLockToken) {
+			if (!registeredSnapShots.containsKey(name)) {
+				registeredSnapShots.put(name, new RegisteredSnapShotElement());
+			}
+		}
+	}
+	
+	private static RegisteredSnapShotElement[] populateAndRetrieveElements() {
+		List<RegisteredSnapShotElement> result = new ArrayList<RegisteredSnapShotElement>(); 
+		
+		synchronized (snapShotLockToken) {
+			Iterator<Map.Entry<String, RegisteredSnapShotElement>> itr = registeredSnapShots.entrySet().iterator();
+			while (itr.hasNext()) {
+				Map.Entry<String, RegisteredSnapShotElement> entry = itr.next();
+				String className = entry.getKey();
+				RegisteredSnapShotElement element = entry.getValue();
+				if (element.monitorClass == null || element.monitorClass.get() == null) {
+					// Try loading class and determining the monitor fields...
+					try {
+						Class<?> clazz = PerfMon.getClassLoader().loadClass(className);
+						if (clazz != null) {
+							MonitorKeyWithFields m[] = SnapShotGenerator.generateExternalMonitorKeys(clazz);
+							if (m != null) {
+								element.monitors = m;
+								element.monitorClass = new WeakReference<Class<?>>(clazz);
+							}
+						}
+					} catch (ClassNotFoundException e) {
+						// Nothing todo....
+					}
+				}
+				result.add(element);
+			}
+		}
+		return result.toArray(new RegisteredSnapShotElement[result.size()]);
+	}
+	
+
+	public static MonitorKey[] getSnapShotMonitorKeys() {
+		List<MonitorKey> result = new ArrayList<MonitorKey>();
+		RegisteredSnapShotElement elements[] = populateAndRetrieveElements();
+		for (int i = 0; i < elements.length; i++) {
+			MonitorKeyWithFields keys[] = elements[i].monitors;
+			if (keys != null) {
+				for (int j = 0; j < keys.length; j++) {
+					result.add(keys[j].getMonitorKeyOnly());
+				}
+			}
+		}
+		return result.toArray(new MonitorKey[result.size()]);
+	}
+	
+	private static class RegisteredSnapShotElement {
+		WeakReference<Class<?>> monitorClass = null;
+		MonitorKeyWithFields monitors[] = null;
+	}
+	
+	private static class SnapShotMonitorAndData {
+		final SnapShotMonitor monitor;
+		SnapShotData data;
+		
+		SnapShotMonitorAndData(SnapShotMonitor monitor, SnapShotData data) {
+			this.monitor = monitor;
+			this.data = data;
+		}
+	}
+
+	public static FieldKey[] getFieldsForSnapShotMonitor(MonitorKey monitorKey) {
+		MonitorKeyWithFields result = null;
+		
+		if (MonitorKey.SNAPSHOT_TYPE.equals(monitorKey.getType())) {
+			RegisteredSnapShotElement elements[] = populateAndRetrieveElements();
+			for (int i = 0; i < elements.length && result == null; i++) {
+				MonitorKeyWithFields monitors[] = elements[i].monitors;
+				if (monitors != null) {
+					for (int j = 0; j < monitors.length && result == null; j++) {
+						MonitorKeyWithFields m = monitors[j];
+						if (monitorKey.equals(m.getMonitorKeyOnly())) {
+							result = m;
+						}
+					}
+				}
+			}
+		}
+		if (result == null) {
+			return new FieldKey[]{};
+		} else {
+			return result.getFields();
 		}
 	}
 }

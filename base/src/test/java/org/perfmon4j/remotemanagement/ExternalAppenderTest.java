@@ -22,6 +22,7 @@
 package org.perfmon4j.remotemanagement;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,7 +34,10 @@ import org.apache.log4j.BasicConfigurator;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.instrument.SnapShotCounter;
+import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -269,7 +273,53 @@ public class ExternalAppenderTest extends TestCase {
         		!result.contains("shouldbefiltered"));
     }
 
+
+    @SnapShotProvider(type=SnapShotProvider.Type.INSTANCE_PER_MONITOR)
+    public static final class SimpleInstancePerMonitorSnapShot {
+    	@SnapShotCounter()
+    	public long getCurrentMillis() {
+    		return System.currentTimeMillis();
+    	}
+    }
+
+    /*----------------------------------------------------------------------------*/    
+    public void testRegisterInstancePerMonitorSnapShot() throws Exception {
+    	final MonitorKey expectedMonitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, SimpleInstancePerMonitorSnapShot.class.getName());
+    	final FieldKey expectedFieldKey = new FieldKey(expectedMonitorKey, "currentMillisPerSecond", FieldKey.DOUBLE_TYPE);
+    	
+    	ExternalAppender.registerSnapShotClass(SimpleInstancePerMonitorSnapShot.class.getName());
+    	
+    	MonitorKey monitors[] = ExternalAppender.getSnapShotMonitorKeys();
+    	assertTrue("Should have returned the monitor key", Arrays.asList(monitors).contains(expectedMonitorKey));
+    	
+    	FieldKey fieldKey[] = ExternalAppender.getFieldsForSnapShotMonitor(expectedMonitorKey);
+    	assertNotNull("fieldKey[]", fieldKey);
+    	assertEquals("fieldKey[].length", 1, fieldKey.length);
+    	assertTrue("Should match expected field key", expectedFieldKey.equals(fieldKey[0]));
+    }
     
+
+    /*----------------------------------------------------------------------------*/    
+    public void testSubscribeToSnapShot() throws Exception {
+    	final MonitorKey expectedMonitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, SimpleInstancePerMonitorSnapShot.class.getName());
+    	ExternalAppender.registerSnapShotClass(SimpleInstancePerMonitorSnapShot.class.getName());
+    	
+    	
+    	FieldKey fieldKey[] = ExternalAppender.getFieldsForSnapShotMonitor(expectedMonitorKey);
+    	MonitorKeyWithFields monitorKey[] = MonitorKeyWithFields.groupFields(fieldKey);
+    	
+    	FieldKey millisPerSecond = FieldKey.getFieldByName(fieldKey, "currentMillisPerSecond");
+    	ExternalAppender.subscribe(sessionID, monitorKey[0]);
+
+    	Thread.sleep(1000);
+    	
+    	Map<FieldKey, Object> data = ExternalAppender.takeSnapShot(sessionID, monitorKey[0]);
+    	assertNotNull(data);
+    	
+    	assertNotNull("Should have millisPerSecond field", data.get(millisPerSecond));
+    	
+    	System.out.println(data.get(millisPerSecond));
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
@@ -288,7 +338,7 @@ public class ExternalAppenderTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new ExternalAppenderTest("testScheduleThreadTraceWithMaxDepth"));
+        newSuite.addTest(new ExternalAppenderTest("testExternalMonitor"));
         
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

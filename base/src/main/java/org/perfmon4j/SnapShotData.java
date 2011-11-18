@@ -23,9 +23,18 @@ package org.perfmon4j;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.perfmon4j.instrument.snapshot.Delta;
+import org.perfmon4j.instrument.snapshot.Ratio;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.util.BeanHelper;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
+import org.perfmon4j.util.BeanHelper.UnableToGetAttributeException;
 
 public abstract class SnapShotData implements PerfMonData {
+	private static final Logger logger = LoggerFactory.initLogger(SnapShotData.class);
+	
     private String name;
     
     public void setName(String name) {
@@ -39,7 +48,48 @@ public abstract class SnapShotData implements PerfMonData {
     public Map<FieldKey, Object> getFieldData(FieldKey[] fields) {
     	Map<FieldKey, Object> result = new HashMap<FieldKey, Object>();
 
-    	
+    	for (int i = 0; i < fields.length; i++) {
+			FieldKey field = fields[i];
+			
+			Object value = null;
+			try {
+				value = BeanHelper.getValue(this, field.getFieldName());
+			} catch (UnableToGetAttributeException e) {
+				if (field.getFieldName().endsWith(SnapShotGenerator.DELTA_FIELD_SUFFIX) &&	
+						FieldKey.DOUBLE_TYPE.equals(field.getFieldType())) {
+					
+					String attrName = field.getFieldName().replaceAll(SnapShotGenerator.DELTA_FIELD_SUFFIX + "$", "");
+					try {
+						Object tmp = BeanHelper.getValue(this, attrName);
+						if (tmp instanceof Delta) {
+							value = ((Delta)tmp).getDeltaPerSecond_object();
+						}
+					} catch (UnableToGetAttributeException e1) {
+						logger.logError("", e1);
+						// Nothing todo... We will log the original exception below.
+					}
+				} else if (field.getFieldName().endsWith(SnapShotGenerator.RATIO_FIELD_SUFFIX) &&	
+						FieldKey.DOUBLE_TYPE.equals(field.getFieldType())) {
+					
+					String attrName = field.getFieldName().replaceAll(SnapShotGenerator.RATIO_FIELD_SUFFIX + "$", "");
+					try {
+						Object tmp = BeanHelper.getValue(this, attrName);
+						if (tmp instanceof Ratio) {
+							value = new Double(((Ratio)tmp).getRatio());
+						}
+					} catch (UnableToGetAttributeException e1) {
+						logger.logError("", e1);
+						// Nothing todo... We will log the original exception below.
+					}
+				}
+				if (value == null) {
+					logger.logWarn("Unable to get attribute", e);
+				}
+			}
+			if (value != null) {
+				result.put(field, field.matchObjectToFieldType(value));
+			}
+		}
     	return result;
     }
 }

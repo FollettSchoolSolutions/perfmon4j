@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008, 2009, 2010 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -21,10 +21,13 @@
 
 package org.perfmon4j.instrument.snapshot;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import javassist.CannotCompileException;
 import javassist.ClassClassPath;
@@ -46,6 +49,9 @@ import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory.JMXSnapShotImpl;
+import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -54,6 +60,9 @@ import org.perfmon4j.util.NumberFormatter;
 public class SnapShotGenerator {
     static private final Logger logger = LoggerFactory.initLogger(SnapShotGenerator.class);
 	private static int SERIAL_NUMBER = 0;
+	
+	public static final String DELTA_FIELD_SUFFIX = "PerSecond";
+	public static final String RATIO_FIELD_SUFFIX = "Percent";
     
     static public interface SnapShotLifecycle {
     	public long getStartTime();
@@ -107,7 +116,7 @@ public class SnapShotGenerator {
 			StringBuffer toAppenderStringBody, SnapShotCounter counterAnnotation) throws CannotCompileException {
 		String fieldName = generateFieldName(method.getName());
 		
-		Class retType = method.getReturnType();
+		Class<?> retType = method.getReturnType();
 		if (!retType.equals(long.class) && !retType.equals(int.class) && !retType.equals(short.class)) {
 			throw new IllegalArgumentException("Invalid field type: " + retType.getName());
 		} 
@@ -154,7 +163,7 @@ public class SnapShotGenerator {
 		String fieldTypeName;
 		String toNumberMethod = null;
 		
-		Class retType = method.getReturnType();
+		Class<?> retType = method.getReturnType();
 		if (retType.equals(long.class)) {
 			f = new CtField(CtClass.longType, fieldName, cls);
 			fieldTypeName = "long";
@@ -209,7 +218,7 @@ public class SnapShotGenerator {
 	}
 
 	static private void generateStringAnnotation(Method method, CtClass cls, StringBuffer providerBody, StringBuffer toAppenderStringBody, SnapShotString stringAnnotation) throws CannotCompileException {
-		Class retType = method.getReturnType();
+		Class<?> retType = method.getReturnType();
 		if (retType.isPrimitive()) {
 			throw new IllegalArgumentException("Invalid field type: " + retType.getName());
 		} 
@@ -243,15 +252,15 @@ public class SnapShotGenerator {
 		}
 	}
 	
-	public static Class generateSnapShotDataImpl(Class dataProvider) throws GenerateSnapShotException {
+	public static Class<?> generateSnapShotDataImpl(Class<?> dataProvider) throws GenerateSnapShotException {
 		return generateSnapShotDataImpl(dataProvider, null, null);
 	}
 	
-	public static Class generateSnapShotDataImpl(Class dataProvider, JMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
+	public static Class<?> generateSnapShotDataImpl(Class<?> dataProvider, JMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean useJMXConfig = jmxConfig != null;
 		boolean isStatic = false;
-		Class dataInterface = null;
-		Class sqlWriter = null;
+		Class<?> dataInterface = null;
+		Class<?> sqlWriter = null;
 		
 		if (!useJMXConfig) {
 			SnapShotProvider provider =  (SnapShotProvider)dataProvider.getAnnotation(SnapShotProvider.class);
@@ -446,22 +455,21 @@ public class SnapShotGenerator {
 			addMethod(ctClass, providerBody.toString());
 			addMethod(ctClass, toAppenderStringBody.toString());
 			
-			
 			return ctClass.toClass(PerfMon.getClassLoader());
 		} catch (Exception ex) {
 			throw new GenerateSnapShotException("Error generating SnapShotDataImpl", ex);
 		}
 		
 	}
-	static public Bundle generateBundle(Class provider) throws GenerateSnapShotException {
+	static public Bundle generateBundle(Class<?> provider) throws GenerateSnapShotException {
 		return generateBundle(provider, null);
 	}
 	
-	static public Bundle generateBundle(Class provider, String instanceName) throws GenerateSnapShotException {
+	static public Bundle generateBundle(Class<?> provider, String instanceName) throws GenerateSnapShotException {
 		return generateBundle(provider, instanceName, null, null);
 	}
 	
-	static public Bundle generateBundle(Class provider, String instanceName, JMXSnapShotProxyFactory.JMXSnapShotImpl jmxWrapper, ClassPool classPool) throws GenerateSnapShotException {
+	static public Bundle generateBundle(Class<?> provider, String instanceName, JMXSnapShotProxyFactory.JMXSnapShotImpl jmxWrapper, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean isJMXWrapperClass = jmxWrapper != null;
 		JMXSnapShotProxyFactory.Config jmxSnapShotConfig = null;
 		
@@ -472,7 +480,7 @@ public class SnapShotGenerator {
 		
 		boolean usePriorityTimer = false;
 		Object providerInstance = null;
-		Class dataClass = generateSnapShotDataImpl(provider, jmxSnapShotConfig, classPool);
+		Class<?> dataClass = generateSnapShotDataImpl(provider, jmxSnapShotConfig, classPool);
 		if (isJMXWrapperClass) {
 			providerInstance = jmxWrapper;
 		} else {
@@ -487,7 +495,7 @@ public class SnapShotGenerator {
 				}
 			} else if (SnapShotProvider.Type.INSTANCE_PER_MONITOR.equals(pAnnotation.type())) {
 				try {
-					Constructor c;
+					Constructor<?> c;
 					Object args[];
 					if (instanceName != null) {
 						c = provider.getConstructor(new Class[]{String.class});
@@ -523,11 +531,11 @@ public class SnapShotGenerator {
 	
 
 	static public class Bundle {
-	    private final Class dataClass;
+	    private final Class<?> dataClass;
 	    private final Object providerInstance;
 	    private final boolean usePriorityTimer;
 	    
-	    private Bundle(Class dataClass, Object providerInstance, boolean usePriorityTimer) {
+	    private Bundle(Class<?> dataClass, Object providerInstance, boolean usePriorityTimer) {
 	    	this.dataClass = dataClass;
 	    	this.providerInstance = providerInstance;
 	    	this.usePriorityTimer = usePriorityTimer;
@@ -557,5 +565,57 @@ public class SnapShotGenerator {
 	 */
 	public static Bundle generateBundle(JMXSnapShotImpl impl, ClassPool classPool) throws GenerateSnapShotException {
 		return generateBundle(impl.getClass(), null, impl, classPool);
+	}
+
+	public static MonitorKeyWithFields[] generateExternalMonitorKeys (Class<?> clazz) {
+		MonitorKey monitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, clazz.getName());
+		List<FieldKey> fields = new ArrayList<FieldKey>();
+		
+		Annotation classAnnotations[] = clazz.getAnnotations();
+		for (int i = 0; i < classAnnotations.length; i++) {
+			Annotation annotation = classAnnotations[i];
+			if (annotation instanceof SnapShotRatio) {
+				SnapShotRatio snapShotRatio = (SnapShotRatio)annotation;
+				FieldKey fieldKey = new FieldKey(monitorKey, snapShotRatio.name() + RATIO_FIELD_SUFFIX,
+						FieldKey.DOUBLE_TYPE); 
+				fields.add(fieldKey);
+			} else if (annotation instanceof SnapShotRatios) {
+				SnapShotRatios snapShotRatios = (SnapShotRatios)annotation;
+				for (int j = 0; j < snapShotRatios.value().length; j++) {
+					SnapShotRatio snapShotRatio = snapShotRatios.value()[j];
+					FieldKey fieldKey = new FieldKey(monitorKey, snapShotRatio.name() + RATIO_FIELD_SUFFIX,
+							FieldKey.DOUBLE_TYPE); 
+					fields.add(fieldKey);
+				}
+			}
+		}
+		Method methods[] = clazz.getMethods();
+		for (int i = 0; i < methods.length; i++) {
+			Method method = methods[i];
+			
+			SnapShotCounter counter = method.getAnnotation(SnapShotCounter.class);
+			if (counter != null) {
+				FieldKey fieldKey = new FieldKey(monitorKey,  generateFieldName(method.getName()) + DELTA_FIELD_SUFFIX,
+						FieldKey.DOUBLE_TYPE); 
+				fields.add(fieldKey);
+			}
+			SnapShotGauge gauge = method.getAnnotation(SnapShotGauge.class);
+			if (gauge != null) {
+				String fieldType = FieldKey.LONG_TYPE;
+				if (method.getReturnType().equals(Integer.class) || method.getReturnType().equals(int.class)) {
+					fieldType = FieldKey.INTEGER_TYPE;
+				}
+				FieldKey fieldKey = new FieldKey(monitorKey,  generateFieldName(method.getName()),
+						fieldType); 
+				fields.add(fieldKey);
+			}
+			SnapShotString str = method.getAnnotation(SnapShotString.class);
+			if (str != null) {
+				FieldKey fieldKey = new FieldKey(monitorKey,  generateFieldName(method.getName()),
+						FieldKey.STRING_TYPE); 
+				fields.add(fieldKey);
+			}
+		}
+		return new MonitorKeyWithFields[]{new MonitorKeyWithFields(monitorKey, fields)};
 	}
 }

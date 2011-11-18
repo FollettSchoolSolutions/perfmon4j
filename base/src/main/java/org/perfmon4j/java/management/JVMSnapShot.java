@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -42,7 +42,6 @@ import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.instrument.snapshot.GeneratedData;
-import org.perfmon4j.java.management.GarbageCollectorSnapShot.GarbageCollectorData;
 import org.perfmon4j.util.ByteFormatter;
 import org.perfmon4j.util.JDBCHelper;
 
@@ -283,8 +282,7 @@ public class JVMSnapShot {
 			}
 		}
 	}
-
-	//    public static void main(String args[]) throws Exception {
+//    public static void main(String args[]) throws Exception {
 //    	System.setProperty("PERFMON_APPENDER_ASYNC_TIMER_MILLIS", "500");
 //    	
 //    	BasicConfigurator.configure();

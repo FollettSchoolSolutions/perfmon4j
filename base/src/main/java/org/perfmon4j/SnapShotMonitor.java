@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Timer;
-import java.util.TimerTask;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.FailSafeTimerTask;

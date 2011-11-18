@@ -716,7 +716,7 @@ public class IntervalData implements PerfMonData {
     		
     		try {
 				Object o = BeanHelper.getValue(this, field.getFieldName());
-				result.put(field, o);
+				result.put(field, field.matchObjectToFieldType(o));
 			} catch (UnableToGetAttributeException e) {
 				logger.logWarn("Unable to get attribute", e);
 			}

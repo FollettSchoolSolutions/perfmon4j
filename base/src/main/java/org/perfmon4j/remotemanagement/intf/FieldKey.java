@@ -231,4 +231,28 @@ public class FieldKey implements Comparable<FieldKey>{
 	public int compareTo(FieldKey o) {
 		return fieldName.compareTo(o.fieldName);
 	}
+	
+	public Object matchObjectToFieldType(Object obj) {
+		Object result = obj;
+		
+		if (INTEGER_TYPE.equals(fieldType)) {
+			if (!(obj instanceof Integer)) {
+				result = new Integer(((Number)obj).intValue());
+			}
+		} else if (LONG_TYPE.equals(fieldType) || TIMESTAMP_TYPE.equals(fieldType)) {
+			if (!(obj instanceof Long)) {
+				result = new Long(((Number)obj).longValue());
+			}
+		} else if (DOUBLE_TYPE.equals(fieldType)) {
+			if (!(obj instanceof Double)) {
+				result = new Double(((Number)obj).doubleValue());
+			}
+		} else if (STRING_TYPE.equals(fieldType) ) {
+			if (!(obj instanceof String)) {
+				result = obj.toString();
+			}
+		} 
+		
+		return result;
+	}
 }

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009, 2011 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -202,7 +202,18 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     
     
     public static void premain(String packageName,  Instrumentation inst)  {
-        logger.logInfo("Perfmon4j Instrumentation Agent v." + PerfMonTimerTransformer.class.getPackage().getImplementationVersion() + " installed. (http://perfmon4j.org)");
+    	
+    	if (!Boolean.getBoolean("Perfmon4j.HideBanner")) {
+	    	logger.logInfo(" _____            __                      _  _   _ ");
+	    	logger.logInfo("|  __ \\          / _|                    | || | (_)");
+	    	logger.logInfo("| |__) |___ _ __| |_ _ __ ___   ___  _ __| || |_ _ ");
+	    	logger.logInfo("|  ___// _ \\ '__|  _| '_ ` _ \\ / _ \\| '_ \\__   _| |");
+	    	logger.logInfo("| |   |  __/ |  | | | | | | | | (_) | | | | | | | |");
+	    	logger.logInfo("|_|    \\___|_|  |_| |_| |_| |_|\\___/|_| |_| |_| | |");
+	    	logger.logInfo("                                               _/ |");
+	    	logger.logInfo("                                              |__/ ");
+    	}
+    	logger.logInfo("Perfmon4j Instrumentation Agent v." + PerfMonTimerTransformer.class.getPackage().getImplementationVersion() + " installed. (http://perfmon4j.org)");
 
         String javassistVersion = javassist.CtClass.class.getPackage().getSpecificationVersion();
         if (javassistVersion != null) {

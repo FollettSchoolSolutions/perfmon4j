@@ -24,15 +24,22 @@ package org.perfmon4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
-
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
+import org.perfmon4j.instrument.InstrumentationMonitor;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.java.management.JVMSnapShot;
+import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
+import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 
 public class SnapShotManagerTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -281,7 +288,62 @@ public class SnapShotManagerTest extends TestCase {
         assertEquals("bob", monitor.getStrVal());
     }
     
-/*----------------------------------------------------------------------------*/
+    
+    public void validateContainsField(MonitorKeyWithFields key, String fieldName, String fieldType) throws Exception {
+    	boolean found = false;
+    	FieldKey fields[] = key.getFields();
+    	
+    	for (int i = 0; (i < fields.length) && !found; i++) {
+			FieldKey f = fields[i];
+			found = fieldName.equals(f.getFieldName()) && fieldType.equals(f.getFieldType());
+		}
+    	if (!found) {
+    		fail("Expected to find field key with fieldName=\"" + fieldName + "\" fieldType=\"" 
+    			+ fieldType + "\"");
+    	}
+    }
+    
+
+    public void testSimpleGetMonitorKeyWithFields() throws Exception {
+    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(JVMSnapShot.class);
+    	
+    	assertNotNull("keys[]", keys);
+    	assertEquals("keys.length", 1, keys.length);
+    	
+    	assertEquals("keys[0].getType()", MonitorKey.SNAPSHOT_TYPE, keys[0].getType());
+    	assertEquals("keys[0].getName()", JVMSnapShot.class.getName(), keys[0].getName());
+    	
+    	assertNull("keys[0].getInstance()", keys[0].getInstance());
+    	
+    	// Validate a ratio field.
+    	// Ratios should always add "Percent" to the attribute name
+    	validateContainsField(keys[0], "heapMemUsedCommittedPercent", FieldKey.DOUBLE_TYPE);
+    	
+    	// Validate a counter (Counters contain ever increasing values)
+    	// Counters should always add "PerSecond" to the attribute name
+    	validateContainsField(keys[0], "unloadedClassCountPerSecond", FieldKey.DOUBLE_TYPE);
+
+    	// Validate a Gauge (Gauge values can increase/decrease)
+    	validateContainsField(keys[0], "classesLoaded", FieldKey.INTEGER_TYPE);
+    }
+
+    public void testSimpleGetMonitorKeyWithStringField() throws Exception {
+    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(InstrumentationMonitor.class);
+    	
+    	assertNotNull("keys[]", keys);
+    	assertEquals("keys.length", 1, keys.length);
+    	
+    	assertEquals("keys[0].getType()", MonitorKey.SNAPSHOT_TYPE, keys[0].getType());
+    	assertEquals("keys[0].getName()", InstrumentationMonitor.class.getName(), keys[0].getName());
+    	
+    	assertNull("keys[0].getInstance()", keys[0].getInstance());
+    	
+    	// Validate a String field
+    	// Ratios should always add "Percent" to the attribute name
+    	validateContainsField(keys[0], "loggingFramework", FieldKey.STRING_TYPE);
+    }
+    
+ /*----------------------------------------------------------------------------*/
     public static class TestSnapShotData extends SnapShotData  {
         final int count;
         
@@ -331,8 +393,9 @@ public class SnapShotManagerTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//        newSuite.addTest(new SnapShotManagerTest("testDefineMonitorWithAttributes"));
-
+        newSuite.addTest(new SnapShotManagerTest("testSimpleGetMonitorKeyWithFields"));
+        newSuite.addTest(new SnapShotManagerTest("testSimpleGetMonitorKeyWithStringField"));
+        
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
         // we run the full suite of tests.

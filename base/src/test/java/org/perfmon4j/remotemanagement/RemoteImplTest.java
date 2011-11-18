@@ -163,6 +163,32 @@ public class RemoteImplTest extends TestCase {
 				result.contains("FieldDefinition: INTERVAL(name=testGetMonitorsIncludesIntervalMonitors):FIELD(name=AverageDuration;type=LONG)"));
     }
 
+    public void testGetMonitorsIncludesSnapShotMonitors() throws Exception {
+    	String sessionID = RemoteImpl.getSingleton().connect(ManagementVersion.VERSION);
+    	
+    	String keys[] = RemoteImpl.getSingleton().getMonitors(sessionID);
+    	
+    	boolean found = false;
+    	for (int i = 0; i < keys.length && !found; i++) {
+    		found = "SNAPSHOT(name=org.perfmon4j.java.management.JVMSnapShot)".equals(keys[i]);
+		}
+    	assertTrue("Should have found snapShotMonitor", found);
+    	
+    	RemoteImpl.getSingleton().disconnect(sessionID);
+    }
+    
+
+    public void testGetFieldsForSnapShotMonitor() throws Exception {
+    	String sessionID = RemoteImpl.getSingleton().connect(ManagementVersion.VERSION);
+    	
+    	String fields[] = RemoteImpl.getSingleton().getFieldsForMonitor(sessionID, "SNAPSHOT(name=org.perfmon4j.java.management.JVMSnapShot)");
+    	assertNotNull(fields);
+    	assertTrue("Should have one or more fields", fields.length > 0);
+    	
+    	RemoteImpl.getSingleton().disconnect(sessionID);
+    }
+
+    
     public void testGetFieldsForThreadTraceMonitor() throws Exception {
     	MonitorKey threadTraceKey = new MonitorKey(MonitorKey.THREADTRACE_TYPE, "org.apache");
     	
@@ -333,7 +359,7 @@ System.err.println(traceData);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new RemoteImplTest("testScheduleThreadTrace"));
+//		newSuite.addTest(new RemoteImplTest("testGetMonitorsIncludesSnapShotMonitors"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
