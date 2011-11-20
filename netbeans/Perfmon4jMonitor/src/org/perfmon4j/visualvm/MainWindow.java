@@ -13,7 +13,6 @@ package org.perfmon4j.visualvm;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
@@ -57,7 +56,8 @@ public class MainWindow extends javax.swing.JPanel {
     private DynamicTimeSeriesChart chart;
     private ChartElementsTable table;
     private ThreadTraceTable threadTraceTable;
-    private MonitorKeyWrapper root = null;
+    private MonitorKeyWrapper rootIntervalMonitors = null;
+    private MonitorKeyWrapper rootSnapShotMonitors = null;
     private JFrame parentFrame = null;
     
     
@@ -86,17 +86,29 @@ public class MainWindow extends javax.swing.JPanel {
         threadTraceTable = new ThreadTraceTable(this);
         threadTraceListPanel.add(threadTraceTable);
 
-        DefaultTreeModel model = (DefaultTreeModel) monitorFieldTree.getModel();
-        root = new MonitorKeyWrapper(model, null, "Interval Monitors");
-        model.setRoot(root);
+        DefaultTreeModel model = (DefaultTreeModel) intervalMonitorFieldTree.getModel();
+        rootIntervalMonitors = new MonitorKeyWrapper(model, null, "Interval Monitors");
+        model.setRoot(rootIntervalMonitors);
 
-        monitorFieldTree.addMouseListener(new MonitorTreeMouseAdapter(this));
+        intervalMonitorFieldTree.addMouseListener(new MonitorTreeMouseAdapter(this, true));
+
+        model = (DefaultTreeModel) snapShotMonitorTreeField.getModel();
+        rootSnapShotMonitors = new MonitorKeyWrapper(model, null, "Snapshot Monitors");
+        model.setRoot(rootSnapShotMonitors);
+        
+        snapShotMonitorTreeField.addMouseListener(new MonitorTreeMouseAdapter(this, false));
         refreshMonitors();
-
-        int numRootChildren = root.getChildCount();
+        
+        int numRootChildren = rootIntervalMonitors.getChildCount();
         for (int i = 0; i < numRootChildren; i++) {
-            monitorFieldTree.expandPath(new TreePath(
-                    model.getPathToRoot(root.getChildAt(i))));
+            intervalMonitorFieldTree.expandPath(new TreePath(
+                    model.getPathToRoot(rootIntervalMonitors.getChildAt(i))));
+        }
+        
+        numRootChildren = rootSnapShotMonitors.getChildCount();
+        for (int i = 0; i < numRootChildren; i++) {
+            snapShotMonitorTreeField.expandPath(new TreePath(
+                    model.getPathToRoot(rootSnapShotMonitors.getChildAt(i))));
         }
     }
 
@@ -140,11 +152,12 @@ public class MainWindow extends javax.swing.JPanel {
     }
     
     private static class MonitorTreeMouseAdapter extends PopupMouseAdapter {
-
         private final MainWindow mainWindow;
+        private final boolean showThreadTraceOption;
 
-        MonitorTreeMouseAdapter(MainWindow mainWindow) {
+        MonitorTreeMouseAdapter(MainWindow mainWindow, boolean showThreadTraceOption) {
             this.mainWindow = mainWindow;
+            this.showThreadTraceOption = showThreadTraceOption;
         }
 
         @Override
@@ -154,39 +167,43 @@ public class MainWindow extends javax.swing.JPanel {
             if (path != null) {
                 tree.setSelectionPath(path);
                 final MonitorKeyWrapper wrapper = (MonitorKeyWrapper) path.getLastPathComponent();
-                JPopupMenu popup = new JPopupMenu();
+                if (wrapper.getMonitorKey() != null) {
+                    JPopupMenu popup = new JPopupMenu();
 
-                JMenuItem addFieldToChart = new JMenuItem("Add Field to Chart...");
-                addFieldToChart.addActionListener(new ActionListener() {
+                    JMenuItem addFieldToChart = new JMenuItem("Add Field to Chart...");
+                    addFieldToChart.addActionListener(new ActionListener() {
 
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        try {
-                            FieldKey fields[] = mainWindow.managementWrapper.getFieldsForMonitor(wrapper.getMonitorKey());
-                            FieldElement element = SelectFieldDlg.doSelectFieldForChart(mainWindow, fields);
-                            if (element != null) {
-                                mainWindow.fieldManager.addOrUpdateField(element);
-                                mainWindow.bringDetailsWindowToFront();
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            try {
+                                FieldKey fields[] = mainWindow.managementWrapper.getFieldsForMonitor(wrapper.getMonitorKey());
+                                FieldElement element = SelectFieldDlg.doSelectFieldForChart(mainWindow, fields);
+                                if (element != null) {
+                                    mainWindow.fieldManager.addOrUpdateField(element);
+                                    mainWindow.bringDetailsWindowToFront();
+                                }
+                            } catch (SessionNotFoundException ex) {
+                                Exceptions.printStackTrace(ex);
+                            } catch (RemoteException ex) {
+                                Exceptions.printStackTrace(ex);
                             }
-                        } catch (SessionNotFoundException ex) {
-                            Exceptions.printStackTrace(ex);
-                        } catch (RemoteException ex) {
-                            Exceptions.printStackTrace(ex);
                         }
-                    }
-                });
-                popup.add(addFieldToChart);
+                    });
+                    popup.add(addFieldToChart);
 
-                JMenuItem threadTrace = new JMenuItem("Schedule Thread Trace...");
-                threadTrace.addActionListener(new ActionListener() {
+                    if (showThreadTraceOption) {
+                        JMenuItem threadTrace = new JMenuItem("Schedule Thread Trace...");
+                        threadTrace.addActionListener(new ActionListener() {
 
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        ThreadTraceOptionsDlg.doScheduleThreadTrace(mainWindow, wrapper.getMonitorKey());
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                ThreadTraceOptionsDlg.doScheduleThreadTrace(mainWindow, wrapper.getMonitorKey());
+                            }
+                        });
+                        popup.add(threadTrace);
                     }
-                });
-                popup.add(threadTrace);
-                popup.show(tree, e.getX(), e.getY());
+                    popup.show(tree, e.getX(), e.getY());
+                }
             }
         }
     }
@@ -197,8 +214,18 @@ public class MainWindow extends javax.swing.JPanel {
             Arrays.sort(keys);
             for (int i = 0; i < keys.length; i++) {
                 MonitorKey keyToAdd = keys[i];
-                String str[] = parseIntoArray(keyToAdd.getName());
-                root.addMonitor(keyToAdd, str, -1);
+                if (MonitorKey.INTERVAL_TYPE.equals(keyToAdd.getType())) {
+                    String str[] = parseIntoArray(keyToAdd.getName());
+                    rootIntervalMonitors.addMonitor(keyToAdd, str, -1);
+                } else {
+                    String str[];
+                    if (keyToAdd.getInstance() != null) {
+                        str = new String[]{keyToAdd.getName(), keyToAdd.getInstance()};
+                    } else {
+                        str = new String[]{keyToAdd.getName()};
+                    }
+                    rootSnapShotMonitors.addMonitor(keyToAdd, str, -1);
+                }
             }
         } catch (SessionNotFoundException ex) {
             Exceptions.printStackTrace(ex);
@@ -337,7 +364,11 @@ public class MainWindow extends javax.swing.JPanel {
         leftPanel = new javax.swing.JPanel();
         monitorTreeRefreshButton = new javax.swing.JButton();
         monitorTreeScrollPane = new javax.swing.JScrollPane();
-        monitorFieldTree = new javax.swing.JTree();
+        intervalMonitorFieldTree = new javax.swing.JTree();
+        jLabel3 = new javax.swing.JLabel();
+        jLabel4 = new javax.swing.JLabel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        snapShotMonitorTreeField = new javax.swing.JTree();
         rightSplitPane = new javax.swing.JSplitPane();
         topRightPanel = new javax.swing.JPanel();
         bottomRightTabbedPanel = new javax.swing.JTabbedPane();
@@ -371,17 +402,23 @@ public class MainWindow extends javax.swing.JPanel {
             }
         });
 
-        monitorFieldTree.addMouseListener(new java.awt.event.MouseAdapter() {
+        intervalMonitorFieldTree.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
-                monitorFieldTreeMouseClicked(evt);
+                intervalMonitorFieldTreeMouseClicked(evt);
             }
         });
-        monitorFieldTree.addTreeSelectionListener(new javax.swing.event.TreeSelectionListener() {
+        intervalMonitorFieldTree.addTreeSelectionListener(new javax.swing.event.TreeSelectionListener() {
             public void valueChanged(javax.swing.event.TreeSelectionEvent evt) {
-                monitorFieldTreeValueChanged(evt);
+                intervalMonitorFieldTreeValueChanged(evt);
             }
         });
-        monitorTreeScrollPane.setViewportView(monitorFieldTree);
+        monitorTreeScrollPane.setViewportView(intervalMonitorFieldTree);
+
+        jLabel3.setText(org.openide.util.NbBundle.getMessage(MainWindow.class, "MainWindow.jLabel3.text")); // NOI18N
+
+        jLabel4.setText(org.openide.util.NbBundle.getMessage(MainWindow.class, "MainWindow.jLabel4.text")); // NOI18N
+
+        jScrollPane2.setViewportView(snapShotMonitorTreeField);
 
         javax.swing.GroupLayout leftPanelLayout = new javax.swing.GroupLayout(leftPanel);
         leftPanel.setLayout(leftPanelLayout);
@@ -389,14 +426,30 @@ public class MainWindow extends javax.swing.JPanel {
             leftPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(leftPanelLayout.createSequentialGroup()
                 .addContainerGap()
+                .addComponent(jLabel3)
+                .addContainerGap(83, Short.MAX_VALUE))
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 179, Short.MAX_VALUE)
+            .addGroup(leftPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel4)
+                .addContainerGap(80, Short.MAX_VALUE))
+            .addComponent(monitorTreeScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 179, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, leftPanelLayout.createSequentialGroup()
+                .addContainerGap(98, Short.MAX_VALUE)
                 .addComponent(monitorTreeRefreshButton)
                 .addContainerGap())
-            .addComponent(monitorTreeScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 179, Short.MAX_VALUE)
         );
         leftPanelLayout.setVerticalGroup(
             leftPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, leftPanelLayout.createSequentialGroup()
-                .addComponent(monitorTreeScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 396, Short.MAX_VALUE)
+                .addContainerGap()
+                .addComponent(jLabel3)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(monitorTreeScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 216, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel4)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 118, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(monitorTreeRefreshButton)
                 .addContainerGap())
@@ -462,7 +515,7 @@ public class MainWindow extends javax.swing.JPanel {
                     .addComponent(jLabel2)
                     .addComponent(traceDetailMonitorField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 134, Short.MAX_VALUE))
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 115, Short.MAX_VALUE))
         );
 
         bottomRightTabbedPanel.addTab(org.openide.util.NbBundle.getMessage(MainWindow.class, "MainWindow.threadTraceDetailsPanel.TabConstraints.tabTitle"), threadTraceDetailsPanel); // NOI18N
@@ -487,13 +540,13 @@ public class MainWindow extends javax.swing.JPanel {
         refreshMonitors();
     }//GEN-LAST:event_monitorTreeRefreshButtonActionPerformed
 
-    private void monitorFieldTreeValueChanged(javax.swing.event.TreeSelectionEvent evt) {//GEN-FIRST:event_monitorFieldTreeValueChanged
+    private void intervalMonitorFieldTreeValueChanged(javax.swing.event.TreeSelectionEvent evt) {//GEN-FIRST:event_intervalMonitorFieldTreeValueChanged
         // TODO add your handling code here:
-    }//GEN-LAST:event_monitorFieldTreeValueChanged
+    }//GEN-LAST:event_intervalMonitorFieldTreeValueChanged
 
-    private void monitorFieldTreeMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_monitorFieldTreeMouseClicked
+    private void intervalMonitorFieldTreeMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_intervalMonitorFieldTreeMouseClicked
         // TODO add your handling code here:
-    }//GEN-LAST:event_monitorFieldTreeMouseClicked
+    }//GEN-LAST:event_intervalMonitorFieldTreeMouseClicked
 
     private void traceDetailTimeFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_traceDetailTimeFieldActionPerformed
         // TODO add your handling code here:
@@ -503,15 +556,19 @@ public class MainWindow extends javax.swing.JPanel {
     private javax.swing.JSplitPane baseSplitPane;
     private javax.swing.JTabbedPane bottomRightTabbedPanel;
     private javax.swing.JPanel detailsPanel;
+    private javax.swing.JTree intervalMonitorFieldTree;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JPanel leftPanel;
-    private javax.swing.JTree monitorFieldTree;
     private javax.swing.JButton monitorTreeRefreshButton;
     private javax.swing.JScrollPane monitorTreeScrollPane;
     private javax.swing.JSplitPane rightSplitPane;
+    private javax.swing.JTree snapShotMonitorTreeField;
     private javax.swing.JPanel threadTraceDetailsPanel;
     private javax.swing.JPanel threadTraceListPanel;
     private javax.swing.JPanel topRightPanel;

@@ -43,8 +43,6 @@ import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.visualvm.MainWindow;
-import org.perfmon4j.visualvm.Perfmon4jMonitorView;
-import org.perfmon4j.visualvm.ThreadTraceViewDlg;
 
 public class ThreadTraceTable extends JPanel implements
         ThreadTraceList.ThreadTraceListListener {

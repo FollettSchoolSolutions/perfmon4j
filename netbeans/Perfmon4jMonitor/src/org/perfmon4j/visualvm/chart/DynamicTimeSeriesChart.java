@@ -38,13 +38,19 @@ import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.DateTickUnit;
 import org.jfree.chart.axis.DateTickUnitType;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.plot.CrosshairState;
+import org.jfree.chart.plot.PlotRenderingInfo;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
+import org.jfree.chart.renderer.xy.XYItemRendererState;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.Range;
 import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.time.TimeSeriesDataItem;
+import org.jfree.data.xy.XYDataset;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 
 public class DynamicTimeSeriesChart extends JPanel implements FieldManager.FieldHandler {
@@ -62,8 +68,8 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         this.maxAgeInSeconds = maxAgeInSeconds;
 
         dataset = new TimeSeriesCollection();
-        renderer = new XYLineAndShapeRenderer(true, false);
-        renderer.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT,
+        renderer = new MyXYRenderer();
+        renderer.setStroke(new BasicStroke(3f, BasicStroke.CAP_BUTT,
                 BasicStroke.JOIN_BEVEL));
 
         NumberAxis numberAxis = new NumberAxis();
@@ -84,6 +90,93 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         chartPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1), BorderFactory.createLineBorder(Color.black)));
 
         add(chartPanel);
+    }
+
+    static class TimeSeriesWithFactor extends TimeSeries {
+
+        private float factor;
+
+        public TimeSeriesWithFactor(Comparable c, Class clazz) {
+            super(c, clazz);
+            factor = 1.0f;
+        }
+
+        public float getFactor() {
+            return factor;
+        }
+
+        public void setFactor(float factor) {
+            this.factor = factor;
+        }
+
+        public Number adjustNumberBasedOnFactor(Number value) {
+            Number result = value;
+            if (value != null) {
+                double dValue = value.doubleValue();
+                dValue *= factor;
+
+                dValue = Math.max(0.0d, dValue);
+                result = new Double(Math.min(100.0, dValue));
+            }
+            return result;
+        }
+    }
+
+    public static class MyXYRenderer extends XYLineAndShapeRenderer {
+
+        MyXYRenderer() {
+            super(true, false);
+        }
+
+        @Override
+        public void drawItem(java.awt.Graphics2D g2,
+                XYItemRendererState state,
+                java.awt.geom.Rectangle2D dataArea,
+                PlotRenderingInfo info,
+                XYPlot plot,
+                ValueAxis domainAxis,
+                ValueAxis rangeAxis,
+                XYDataset dataset,
+                int series,
+                int item,
+                CrosshairState crosshairState,
+                int pass) {
+
+            TimeSeriesCollection col = (TimeSeriesCollection) dataset;
+            TimeSeriesWithFactor s = (TimeSeriesWithFactor) col.getSeries(series);
+        
+            TimeSeriesDataItem dataItemCurrent = (TimeSeriesDataItem) s.getItems().get(item);
+            TimeSeriesDataItem dataItemPrevious = null;
+            if (item > 0) {
+                dataItemPrevious = (TimeSeriesDataItem) s.getItems().get(item-1);
+            }
+            
+            Number current = dataItemCurrent.getValue();
+            Number previous = dataItemPrevious == null ? null : dataItemPrevious.getValue();
+            try {
+                dataItemCurrent.setValue(s.adjustNumberBasedOnFactor(current));
+                if (dataItemPrevious != null) {
+                    dataItemPrevious.setValue(s.adjustNumberBasedOnFactor(previous));
+                }
+                super.drawItem(g2,
+                        state,
+                        dataArea,
+                        info,
+                        plot,
+                        domainAxis,
+                        rangeAxis,
+                        dataset,
+                        series,
+                        item,
+                        crosshairState,
+                        pass);
+            } finally {
+                dataItemCurrent.setValue(current);
+                if (dataItemPrevious != null) { 
+                    dataItemPrevious.setValue(previous);
+                }
+            }
+        }
     }
 
     private ElementWrapper getWrapperForKey(FieldKey fieldKey) {
@@ -118,7 +211,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
                 ElementWrapper wrapper = getWrapperForKey(element.getFieldKey());
                 if (wrapper == null) {
                     // Adding a new field...
-                    TimeSeries timeSeries = new TimeSeries(Integer.toString(nextLabel++), Second.class);
+                    TimeSeriesWithFactor timeSeries = new TimeSeriesWithFactor(Integer.toString(nextLabel++), Second.class);
                     timeSeries.setMaximumItemAge(maxAgeInSeconds);
 
                     dataset.addSeries(timeSeries);
@@ -144,16 +237,18 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
                 FieldKey field = itr.next();
                 ElementWrapper wrapper = getWrapperForKey(field);
                 if (wrapper != null) {
-                    long value = 0;
-                    Object obj = data.get(field);
-                    if (obj != null && obj instanceof Number) {
-                        double dValue = ((Number) obj).doubleValue();
-                        dValue *= wrapper.element.getFactor();
-
-                        dValue = Math.max(0.0d, dValue);
-                        value = (long) Math.min(100.0, dValue);
-                    }
-                    wrapper.timeSeries.add(now, value);
+                    
+//                    long value = 0;
+//                    Object obj = data.get(field);
+//                    if (obj != null && obj instanceof Number) {
+//                        double dValue = ((Number) obj).doubleValue();
+//                        dValue *= wrapper.element.getFactor();
+//
+//                        dValue = Math.max(0.0d, dValue);
+//                        value = (long) Math.min(100.0, dValue);
+//                    }
+                    wrapper.timeSeries.setFactor(wrapper.element.getFactor());
+                    wrapper.timeSeries.add(now, (Number)data.get(field));
 
                     int offset = dataset.getSeries().indexOf(wrapper.timeSeries);
                     renderer.setSeriesVisible(offset, Boolean.valueOf(wrapper.element.isVisibleInChart()));
@@ -186,9 +281,9 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
     private static class ElementWrapper {
 
         private FieldElement element;
-        private TimeSeries timeSeries;
+        private TimeSeriesWithFactor timeSeries;
 
-        ElementWrapper(FieldElement element, TimeSeries timeSeries) {
+        ElementWrapper(FieldElement element, TimeSeriesWithFactor timeSeries) {
             this.element = element;
             this.timeSeries = timeSeries;
         }

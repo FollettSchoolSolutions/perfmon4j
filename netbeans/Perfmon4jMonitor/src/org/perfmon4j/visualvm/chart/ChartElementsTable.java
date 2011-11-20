@@ -52,6 +52,7 @@ import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import org.openide.awt.MouseUtils.PopupMouseAdapter;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.visualvm.MainWindow;
 import org.perfmon4j.visualvm.ThreadTraceOptionsDlg;
 
@@ -388,8 +389,16 @@ public class ChartElementsTable extends JPanel implements
                 switch (columnIndex) {
                     case 0:
                         return w.element.getColor();
-                    case 1:
-                        return w.element.getFieldKey().getMonitorKey().getName();
+                    case 1: {
+                        MonitorKey key = w.element.getFieldKey().getMonitorKey();
+                        String instanceName = key.getInstance();
+                        if (instanceName == null || "".equals(instanceName)) {
+                            return w.element.getFieldKey().getMonitorKey().getName();
+                        } else {
+                            return w.element.getFieldKey().getMonitorKey().getName() + "("
+                                    + instanceName + ")";
+                        }
+                    }
                     case 2:
                         return w.element.getFieldKey().getFieldName();
                     case 3:
