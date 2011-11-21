@@ -35,6 +35,28 @@
 					<target>1.5</target>
 				</configuration>
 			</plugin>
+			<!--  Unable to get this working to build the "*.nbm" plugin module: 11/21/11 -->
+			<!--
+			
+			 <plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<configuration>
+							<tasks>
+								<ant dir="G:/projects/NetBeansProjects/Perfmon4jMonitor">
+								</ant>
+							</tasks>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			-->
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.2-beta-4</version>

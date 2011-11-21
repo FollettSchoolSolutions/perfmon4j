@@ -202,8 +202,9 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     
     
     public static void premain(String packageName,  Instrumentation inst)  {
+    	final String hideBannerProperty="Perfmon4j.HideBanner";
     	
-    	if (!Boolean.getBoolean("Perfmon4j.HideBanner")) {
+    	if (!Boolean.getBoolean(hideBannerProperty)) {
 	    	logger.logInfo(" _____            __                      _  _   _ ");
 	    	logger.logInfo("|  __ \\          / _|                    | || | (_)");
 	    	logger.logInfo("| |__) |___ _ __| |_ _ __ ___   ___  _ __| || |_ _ ");
@@ -212,6 +213,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	    	logger.logInfo("|_|    \\___|_|  |_| |_| |_| |_|\\___/|_| |_| |_| | |");
 	    	logger.logInfo("                                               _/ |");
 	    	logger.logInfo("                                              |__/ ");
+	    	logger.logInfo("To hide banner add \"-D" + hideBannerProperty + "=true\" to your command line");
     	}
     	logger.logInfo("Perfmon4j Instrumentation Agent v." + PerfMonTimerTransformer.class.getPackage().getImplementationVersion() + " installed. (http://perfmon4j.org)");
 
