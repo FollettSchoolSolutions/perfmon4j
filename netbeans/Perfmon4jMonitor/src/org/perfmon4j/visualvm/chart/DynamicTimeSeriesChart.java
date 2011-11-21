@@ -42,6 +42,7 @@ import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.CrosshairState;
 import org.jfree.chart.plot.PlotRenderingInfo;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.SamplingXYLineRenderer;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYItemRendererState;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -79,7 +80,9 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         DateAxis dateAxis = new DateAxis();
         dateAxis.setDateFormatOverride(new SimpleDateFormat("HH:mm:ss"));
         dateAxis.setAutoRange(true);
+        dateAxis.setFixedAutoRange(maxAgeInSeconds * 1000);
         dateAxis.setTickUnit(new DateTickUnit(DateTickUnitType.SECOND, 30));
+//        renderer.set
 
 
         XYPlot plot = new XYPlot(dataset, dateAxis, numberAxis, renderer);
@@ -87,6 +90,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         chart.setBackgroundPaint(Color.white);
 
         ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setDisplayToolTips(true);
         chartPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1), BorderFactory.createLineBorder(Color.black)));
 
         add(chartPanel);
@@ -122,10 +126,11 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         }
     }
 
-    public static class MyXYRenderer extends XYLineAndShapeRenderer {
+//    public static class MyXYRenderer extends XYLineAndShapeRenderer {
+    public static class MyXYRenderer extends SamplingXYLineRenderer {
 
         MyXYRenderer() {
-            super(true, false);
+            super();
         }
 
         @Override

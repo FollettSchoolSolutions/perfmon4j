@@ -71,7 +71,7 @@ public class MainWindow extends javax.swing.JPanel {
     public MainWindow(FieldManager fm, RemoteManagementWrapper wrapper) {
         this.fieldManager = fm;
         this.managementWrapper = wrapper;
-        int secondsToDisplay = 180; // 3 Minutes
+        int secondsToDisplay = 300; // 5 Minutes
 
         initComponents();
 
