@@ -63,7 +63,6 @@ public class SnapShotGenerator {
 	private static int SERIAL_NUMBER = 0;
 	
 	public static final String DELTA_FIELD_SUFFIX = "PerSecond";
-	public static final String RATIO_FIELD_SUFFIX = "Percent";
     
     static public interface SnapShotLifecycle {
     	public long getStartTime();
@@ -618,13 +617,13 @@ public class SnapShotGenerator {
 			Annotation annotation = classAnnotations[i];
 			if (annotation instanceof SnapShotRatio) {
 				SnapShotRatio snapShotRatio = (SnapShotRatio)annotation;
-				fields.addAll(createFields(monitorKey, snapShotRatio.name() + RATIO_FIELD_SUFFIX,
+				fields.addAll(createFields(monitorKey, snapShotRatio.name(),
 						FieldKey.DOUBLE_TYPE));
 			} else if (annotation instanceof SnapShotRatios) {
 				SnapShotRatios snapShotRatios = (SnapShotRatios)annotation;
 				for (int j = 0; j < snapShotRatios.value().length; j++) {
 					SnapShotRatio snapShotRatio = snapShotRatios.value()[j];
-					fields.addAll(createFields(monitorKey, snapShotRatio.name() + RATIO_FIELD_SUFFIX,
+					fields.addAll(createFields(monitorKey, snapShotRatio.name(),
 							FieldKey.DOUBLE_TYPE));
 				}
 			}

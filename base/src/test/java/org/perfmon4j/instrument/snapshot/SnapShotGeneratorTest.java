@@ -784,7 +784,7 @@ System.out.println(appenderString);
     	
     	// Validate a ratio field.
     	// Ratios should always add "Percent" to the attribute name
-    	validateContainsField(keys[0], "heapMemUsedCommittedPercent", FieldKey.DOUBLE_TYPE);
+    	validateContainsField(keys[0], "heapMemUsedCommitted", FieldKey.DOUBLE_TYPE);
     	
     	// Validate a counter (Counters contain ever increasing values)
     	// Counters should always add "PerSecond" to the attribute name
@@ -920,7 +920,7 @@ System.out.println(appenderString);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-        newSuite.addTest(new SnapShotGeneratorTest("testSimpleGetMonitorKeyWithStaticMonitor"));
+//        newSuite.addTest(new SnapShotGeneratorTest("testSimpleGetMonitorKeyWithStaticMonitor"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

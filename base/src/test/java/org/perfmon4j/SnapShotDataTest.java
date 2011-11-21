@@ -84,7 +84,7 @@ public class SnapShotDataTest extends TestCase {
 	
 	public void testGetFieldDataForRatio() throws Exception {
 		MonitorKey monitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, "dave");
-		FieldKey ratioKey = new FieldKey(monitorKey, "valuePercent", FieldKey.DOUBLE_TYPE);
+		FieldKey ratioKey = new FieldKey(monitorKey, "value", FieldKey.DOUBLE_TYPE);
 		FieldKey doubleKey = new FieldKey(monitorKey, "otherValuePercent", FieldKey.DOUBLE_TYPE);
 		
 		SnapShotData d = new RatioTestClass();

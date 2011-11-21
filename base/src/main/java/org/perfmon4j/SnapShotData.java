@@ -54,6 +54,9 @@ public abstract class SnapShotData implements PerfMonData {
 			Object value = null;
 			try {
 				value = BeanHelper.getValue(this, field.getFieldName());
+				if (value instanceof Ratio) {
+					value = new Double(((Ratio)value).getRatio());
+				}
 			} catch (UnableToGetAttributeException e) {
 				if (field.getFieldName().endsWith(SnapShotGenerator.DELTA_FIELD_SUFFIX) &&	
 						FieldKey.DOUBLE_TYPE.equals(field.getFieldType())) {
@@ -68,20 +71,7 @@ public abstract class SnapShotData implements PerfMonData {
 						logger.logError("", e1);
 						// Nothing todo... We will log the original exception below.
 					}
-				} else if (field.getFieldName().endsWith(SnapShotGenerator.RATIO_FIELD_SUFFIX) &&	
-						FieldKey.DOUBLE_TYPE.equals(field.getFieldType())) {
-					
-					String attrName = field.getFieldName().replaceAll(SnapShotGenerator.RATIO_FIELD_SUFFIX + "$", "");
-					try {
-						Object tmp = BeanHelper.getValue(this, attrName);
-						if (tmp instanceof Ratio) {
-							value = new Double(((Ratio)tmp).getRatio());
-						}
-					} catch (UnableToGetAttributeException e1) {
-						logger.logError("", e1);
-						// Nothing todo... We will log the original exception below.
-					}
-				}
+				} 
 				if (value == null) {
 					logger.logWarn("Unable to get attribute", e);
 				}
