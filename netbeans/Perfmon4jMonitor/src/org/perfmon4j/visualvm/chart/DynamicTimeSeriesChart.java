@@ -45,7 +45,6 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.SamplingXYLineRenderer;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYItemRendererState;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.Range;
 import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
@@ -70,7 +69,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
 
         dataset = new TimeSeriesCollection();
         renderer = new MyXYRenderer();
-        renderer.setStroke(new BasicStroke(3f, BasicStroke.CAP_BUTT,
+        renderer.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT,
                 BasicStroke.JOIN_BEVEL));
 
         NumberAxis numberAxis = new NumberAxis();
@@ -82,19 +81,39 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         dateAxis.setAutoRange(true);
         dateAxis.setFixedAutoRange(maxAgeInSeconds * 1000);
         dateAxis.setTickUnit(new DateTickUnit(DateTickUnitType.SECOND, 30));
+//        renderer.setBaseToolTipGenerator(new ToolTipGenerator());
+       
 //        renderer.set
 
-
         XYPlot plot = new XYPlot(dataset, dateAxis, numberAxis, renderer);
+
+//        plot.setDomainCrosshairVisible(true);
+//        plot.setDomainCrosshairLockedOnData(true);
+//        plot.setRangeCrosshairVisible(true);
+//        plot.setRangeCrosshairLockedOnData(true);
+        
         JFreeChart chart = new JFreeChart(null, null, plot, false);
+        
         chart.setBackgroundPaint(Color.white);
 
         ChartPanel chartPanel = new ChartPanel(chart);
-        chartPanel.setDisplayToolTips(true);
+        chartPanel.setDomainZoomable(false);
+        chartPanel.setRangeZoomable(false);
+        chartPanel.setPopupMenu(null);
+        
         chartPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1), BorderFactory.createLineBorder(Color.black)));
 
         add(chartPanel);
     }
+    
+//    static class ToolTipGenerator implements XYToolTipGenerator {
+//
+//        @Override
+//        public String generateToolTip(XYDataset xyd, int series, int item) {
+//            Number number = xyd.getXValue(series, item);
+//            return number.toString();
+//        }
+//    }
 
     static class TimeSeriesWithFactor extends TimeSeries {
 
