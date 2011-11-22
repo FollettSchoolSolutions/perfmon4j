@@ -229,7 +229,7 @@ public class FieldKey implements Comparable<FieldKey>{
 	}
 
 	public int compareTo(FieldKey o) {
-		return fieldName.compareTo(o.fieldName);
+		return this.toString().compareTo(o.toString());
 	}
 	
 	public Object matchObjectToFieldType(Object obj) {
