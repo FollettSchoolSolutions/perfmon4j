@@ -31,6 +31,7 @@ public class FieldElement {
     private Color color;
     private float factor;
     private boolean visibleInChart = true;
+    private boolean highlighted = false;
 
     public FieldElement(FieldKey fieldKey, float factor, Color color) {
         this.fieldKey = fieldKey;
@@ -59,7 +60,11 @@ public class FieldElement {
     }
     
     public boolean isNumeric() {
-        final String fieldType = getFieldKey().getFieldType();
+        return isFieldNumeric(getFieldKey());
+    }
+
+    public static boolean isFieldNumeric(FieldKey fieldKey) {
+        final String fieldType = fieldKey.getFieldType();
         return fieldType.equals(FieldKey.DOUBLE_TYPE)
                 || fieldType.equals(FieldKey.LONG_TYPE)
                 || fieldType.equals(FieldKey.INTEGER_TYPE);
@@ -71,5 +76,13 @@ public class FieldElement {
     
     public void setColor(Color color) {
         this.color = color;
+    }
+    
+    public void setHighlighted(boolean highlighted) {
+        this.highlighted = highlighted;
+    }   
+    
+    public boolean isHighlighted() {
+        return this.highlighted;
     }
 }

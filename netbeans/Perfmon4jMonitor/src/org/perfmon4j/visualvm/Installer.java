@@ -28,10 +28,12 @@ public class Installer extends ModuleInstall {
     @Override
     public void restored() {
         Perfmon4jMonitorViewProvider.initialize();
+        Perfmon4jMonitorHostViewProvider.initialize();
     }
 
     @Override
     public void uninstalled() {
         Perfmon4jMonitorViewProvider.unregister();
+        Perfmon4jMonitorHostViewProvider.unregister();
     }
 }

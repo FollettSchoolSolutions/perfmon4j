@@ -31,23 +31,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Iterator;
-import javax.swing.AbstractCellEditor;
 import javax.swing.DefaultCellEditor;
-import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
-import javax.swing.event.ChangeEvent;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import org.openide.awt.MouseUtils.PopupMouseAdapter;
@@ -75,6 +72,9 @@ public class ChartElementsTable extends JPanel implements
 
         table = new JTable(tableModel);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        
+        ListSelectionModel list = table.getSelectionModel();
+        list.addListSelectionListener(new ListSelection());
 
         columnModel = table.getColumnModel();
         // columnModel.getColumn(0).setPreferredWidth(25);
@@ -118,8 +118,29 @@ public class ChartElementsTable extends JPanel implements
 
         this.add(scroller);
         table.addMouseListener(new TableMouseAdapter());
+        
+        
     }
 
+
+    private class ListSelection implements ListSelectionListener {
+        @Override
+        public void valueChanged(ListSelectionEvent e) {
+            if (!e.getValueIsAdjusting()) {
+                ListSelectionModel m = (ListSelectionModel)e.getSource();
+                synchronized(elementLock) {
+                    Iterator<ElementWrapper> itr =  backingData.iterator();
+                    int offset = 0;
+                    int selectedRow = m.getMaxSelectionIndex();
+                    while (itr.hasNext()) {
+                        itr.next().element.setHighlighted((offset++ == selectedRow));
+                    }
+                }
+            }
+            
+        }
+    }
+    
     private class TableMouseAdapter extends PopupMouseAdapter {
 
         @Override

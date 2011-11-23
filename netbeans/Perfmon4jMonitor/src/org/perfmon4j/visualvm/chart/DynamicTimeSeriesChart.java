@@ -62,6 +62,10 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
     private final Object elementLock = new Object();
     private final List<ElementWrapper> currentFields = new ArrayList<ElementWrapper>();
     private static int nextLabel = 0;
+    private final BasicStroke NORMAL_STROKE = new BasicStroke(1.5f, BasicStroke.CAP_BUTT,
+                BasicStroke.JOIN_BEVEL);
+    private final BasicStroke HIGHLIGHTED_STROKE = new BasicStroke(2.5f, BasicStroke.CAP_BUTT,
+                BasicStroke.JOIN_BEVEL);
 
     public DynamicTimeSeriesChart(int maxAgeInSeconds) {
         super(new BorderLayout());
@@ -69,8 +73,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
 
         dataset = new TimeSeriesCollection();
         renderer = new MyXYRenderer();
-        renderer.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT,
-                BasicStroke.JOIN_BEVEL));
+        renderer.setBaseStroke(NORMAL_STROKE);
 
         NumberAxis numberAxis = new NumberAxis();
         numberAxis.setAutoRange(false);
@@ -81,19 +84,9 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
         dateAxis.setAutoRange(true);
         dateAxis.setFixedAutoRange(maxAgeInSeconds * 1000);
         dateAxis.setTickUnit(new DateTickUnit(DateTickUnitType.SECOND, 30));
-//        renderer.setBaseToolTipGenerator(new ToolTipGenerator());
-       
-//        renderer.set
 
         XYPlot plot = new XYPlot(dataset, dateAxis, numberAxis, renderer);
-
-//        plot.setDomainCrosshairVisible(true);
-//        plot.setDomainCrosshairLockedOnData(true);
-//        plot.setRangeCrosshairVisible(true);
-//        plot.setRangeCrosshairLockedOnData(true);
-        
         JFreeChart chart = new JFreeChart(null, null, plot, false);
-        
         chart.setBackgroundPaint(Color.white);
 
         ChartPanel chartPanel = new ChartPanel(chart);
@@ -239,13 +232,14 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
                     timeSeries.setMaximumItemAge(maxAgeInSeconds);
 
                     dataset.addSeries(timeSeries);
-                    renderer.setSeriesPaint(dataset.getSeriesCount() - 1, element.getColor());
+                    int offset = dataset.getSeries().indexOf(timeSeries);
+                    
+                    renderer.setSeriesPaint(offset, element.getColor());
                     wrapper = new ElementWrapper(element, timeSeries);
                     currentFields.add(wrapper);
                 } else {
                     // We are updating an existing field...  
                     wrapper.element = element;
-                    // First reset the color...
                     renderer.setSeriesPaint(dataset.getSeries().indexOf(wrapper.timeSeries), element.getColor());
                 }
             }
@@ -261,21 +255,13 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
                 FieldKey field = itr.next();
                 ElementWrapper wrapper = getWrapperForKey(field);
                 if (wrapper != null) {
-                    
-//                    long value = 0;
-//                    Object obj = data.get(field);
-//                    if (obj != null && obj instanceof Number) {
-//                        double dValue = ((Number) obj).doubleValue();
-//                        dValue *= wrapper.element.getFactor();
-//
-//                        dValue = Math.max(0.0d, dValue);
-//                        value = (long) Math.min(100.0, dValue);
-//                    }
                     wrapper.timeSeries.setFactor(wrapper.element.getFactor());
                     wrapper.timeSeries.add(now, (Number)data.get(field));
 
                     int offset = dataset.getSeries().indexOf(wrapper.timeSeries);
                     renderer.setSeriesVisible(offset, Boolean.valueOf(wrapper.element.isVisibleInChart()));
+                    renderer.setSeriesStroke(offset, wrapper.element.isHighlighted() ?
+                            HIGHLIGHTED_STROKE : NORMAL_STROKE);
                 }
             }
         }
@@ -292,10 +278,11 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
                     dataset.removeSeries(timeSeries);
 
                     // Must reset all of the colors
-                    int index = 0;
                     Iterator<ElementWrapper> itr = currentFields.iterator();
                     while (itr.hasNext()) {
-                        renderer.setSeriesPaint(index++, itr.next().element.getColor());
+                        ElementWrapper w = itr.next();
+                        int offset = dataset.getSeries().indexOf(w.timeSeries);
+                        renderer.setSeriesPaint(offset, w.element.getColor());
                     }
                 }
             }

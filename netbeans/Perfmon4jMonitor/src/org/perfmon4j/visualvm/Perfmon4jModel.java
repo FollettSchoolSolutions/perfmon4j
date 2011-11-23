@@ -24,8 +24,11 @@ import com.sun.tools.visualvm.application.Application;
 import com.sun.tools.visualvm.application.jvm.Jvm;
 import com.sun.tools.visualvm.application.jvm.JvmFactory;
 import com.sun.tools.visualvm.core.model.Model;
+import com.sun.tools.visualvm.host.Host;
 import com.sun.tools.visualvm.tools.attach.AttachModel;
 import com.sun.tools.visualvm.tools.attach.AttachModelFactory;
+import com.sun.tools.visualvm.tools.jmx.JmxModel;
+import com.sun.tools.visualvm.tools.jmx.JmxModelFactory;
 import com.sun.tools.visualvm.tools.sa.SaModel;
 import com.sun.tools.visualvm.tools.sa.SaModelFactory;
 import java.util.Map;
@@ -33,6 +36,8 @@ import java.util.Properties;
 import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.activation.DataSource;
+import javax.management.MBeanServerConnection;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 
@@ -115,19 +120,15 @@ public class Perfmon4jModel extends Model {
 
         }
 
-//        if (result == null) {
-//          Try via a JmxModel...
-//            JmxModel jmxModel = JmxModelFactory.getJmxModelFor(app);
-//            if (jmxModel != null) {
-//                result = jmxModel.getSystemProperties();
-
+        if (result == null) {
+            JmxModel jmxModel = JmxModelFactory.getJmxModelFor(app);
+            
+            if (jmxModel != null) {
+                result = jmxModel.getSystemProperties();
 //                MBeanServerConnection conn = jmxModel.getMBeanServerConnection();
-//                
-//                
-//                System.out.println(conn);
 //                result = jmxModel.getSystemProperties();
-//            }
-//        }
+            }
+        }
 
         return result;
     }

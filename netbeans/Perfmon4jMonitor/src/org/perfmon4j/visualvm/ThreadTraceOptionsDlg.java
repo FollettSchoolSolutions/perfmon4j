@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
-import org.perfmon4j.visualvm.chart.FieldManager;
 
 /**
  *
@@ -72,13 +71,13 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
     private void initComponents() {
 
         jLabel1 = new javax.swing.JLabel();
-        minDurationToCaptureField = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
-        maxDepthField = new javax.swing.JTextField();
         okButton = new javax.swing.JButton();
         cancelButton = new javax.swing.JButton();
         jLabel3 = new javax.swing.JLabel();
         monitorNameTextField = new javax.swing.JTextField();
+        minDurationToCaptureField = new javax.swing.JFormattedTextField();
+        maxDepthField = new javax.swing.JFormattedTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.title")); // NOI18N
@@ -86,11 +85,7 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
 
         jLabel1.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.jLabel1.text")); // NOI18N
 
-        minDurationToCaptureField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.minDurationToCaptureField.text")); // NOI18N
-
         jLabel2.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.jLabel2.text")); // NOI18N
-
-        maxDepthField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.maxDepthField.text")); // NOI18N
 
         okButton.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.okButton.text")); // NOI18N
         okButton.addActionListener(new java.awt.event.ActionListener() {
@@ -110,6 +105,11 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
 
         monitorNameTextField.setEditable(false);
         monitorNameTextField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.monitorNameTextField.text")); // NOI18N
+
+        minDurationToCaptureField.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(new javax.swing.text.NumberFormatter(new java.text.DecimalFormat("#,###"))));
+        minDurationToCaptureField.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.minDurationToCaptureField.text")); // NOI18N
+
+        maxDepthField.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(new javax.swing.text.NumberFormatter(java.text.NumberFormat.getIntegerInstance())));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -148,7 +148,7 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
                     .addComponent(jLabel1)
                     .addComponent(minDurationToCaptureField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel2)
                     .addComponent(maxDepthField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
@@ -188,8 +188,8 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
-    private javax.swing.JTextField maxDepthField;
-    private javax.swing.JTextField minDurationToCaptureField;
+    private javax.swing.JFormattedTextField maxDepthField;
+    private javax.swing.JFormattedTextField minDurationToCaptureField;
     private javax.swing.JTextField monitorNameTextField;
     private javax.swing.JButton okButton;
     // End of variables declaration//GEN-END:variables

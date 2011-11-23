@@ -28,6 +28,8 @@ package org.perfmon4j.visualvm.chart;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.Arrays;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.visualvm.MainWindow;
@@ -71,10 +73,27 @@ public class SelectFieldDlg extends javax.swing.JDialog {
         if (mainWindow.selectFieldDlg == null) {
             mainWindow.selectFieldDlg = new SelectFieldDlg(mainWindow);
         }
-        SelectFieldDlg dlg = mainWindow.selectFieldDlg;
+        final SelectFieldDlg dlg = mainWindow.selectFieldDlg;
         
         
         dlg.fieldsCombo.removeAllItems();;
+        dlg.fieldsCombo.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                FieldWrapper wrapper = (FieldWrapper)dlg.fieldsCombo.getSelectedItem();
+                if (wrapper == null || !FieldElement.isFieldNumeric(wrapper.field)) {
+                    dlg.factorCombo.setEnabled(false);
+                    dlg.colorButton.setEnabled(false);
+                    dlg.colorPanel.setEnabled(false);
+                } else {
+                    dlg.factorCombo.setEnabled(true);
+                    dlg.colorButton.setEnabled(true);
+                    dlg.colorPanel.setEnabled(true);
+                }
+            }
+            
+        });
 
 
         FieldWrapper[] wrappedFields = new FieldWrapper[fields.length];

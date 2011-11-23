@@ -42,6 +42,7 @@ import org.perfmon4j.visualvm.chart.FieldElement;
 import org.perfmon4j.visualvm.chart.FieldManager;
 import org.perfmon4j.visualvm.chart.SelectColorDlg;
 import org.perfmon4j.visualvm.chart.SelectFieldDlg;
+import org.perfmon4j.visualvm.chart.TextElementsTable;
 import org.perfmon4j.visualvm.chart.ThreadTraceList;
 import org.perfmon4j.visualvm.chart.ThreadTraceTable;
 
@@ -55,6 +56,7 @@ public class MainWindow extends javax.swing.JPanel {
     private final RemoteManagementWrapper managementWrapper;
     private DynamicTimeSeriesChart chart;
     private ChartElementsTable table;
+    private TextElementsTable textElementsTable;
     private ThreadTraceTable threadTraceTable;
     private MonitorKeyWrapper rootIntervalMonitors = null;
     private MonitorKeyWrapper rootSnapShotMonitors = null;
@@ -65,6 +67,11 @@ public class MainWindow extends javax.swing.JPanel {
     public SelectFieldDlg selectFieldDlg = null;
     public SelectColorDlg selectColorDlg = null;
     public ThreadTraceOptionsDlg threadTraceOptionsDlg = null;
+    
+    public static final int DETAILS_TAB_INDEX = 0;
+    public static final int TEXT_FIELDS_TAB_INDEX = 1;
+    public static final int THREAD_TRACE_LIST_TAB_INDEX = 2;
+    public static final int THREAD_TRACE_DETAIL_TAB_INDEX = 3;
 
 
     /** Creates new form MainWindow */
@@ -84,7 +91,11 @@ public class MainWindow extends javax.swing.JPanel {
         detailsPanel.add(table);
 
         threadTraceTable = new ThreadTraceTable(this);
-        threadTraceListPanel.add(threadTraceTable);
+        testFieldsPanel.add(threadTraceTable);
+        
+        textElementsTable = new TextElementsTable(this);
+        fieldManager.addDataHandler(textElementsTable);
+        textFieldsPanel.add(textElementsTable);
 
         DefaultTreeModel model = (DefaultTreeModel) intervalMonitorFieldTree.getModel();
         rootIntervalMonitors = new MonitorKeyWrapper(model, null, "Interval Monitors");
@@ -129,21 +140,26 @@ public class MainWindow extends javax.swing.JPanel {
     }
 
     public void bringDetailsWindowToFront() {
-        bottomRightTabbedPanel.setSelectedIndex(0);
+        bottomRightTabbedPanel.setSelectedIndex(DETAILS_TAB_INDEX);
     }
     
     public void bringThreadTraceWindowToFront() {
-        bottomRightTabbedPanel.setSelectedIndex(1);
+        bottomRightTabbedPanel.setSelectedIndex(THREAD_TRACE_LIST_TAB_INDEX);
     }
 
+    public void bringTextFieldsWindowToFront() {
+        bottomRightTabbedPanel.setSelectedIndex(TEXT_FIELDS_TAB_INDEX);
+    }
+    
     public void showThreadTraceElement(ThreadTraceList.ThreadTraceElement element) {
         SimpleDateFormat f = new SimpleDateFormat("MM/dd HH:mm:ss");
         
         traceDetailTimeField.setText(f.format(element.getTimeSubmitted()));
         traceDetailMonitorField.setText(element.getFieldKey().getMonitorKey().toString());
         traceDetailTextArea.setText(element.getResult());
+        traceDetailTextArea.setCaretPosition(0);
         
-        bottomRightTabbedPanel.setSelectedIndex(2);
+        bottomRightTabbedPanel.setSelectedIndex(THREAD_TRACE_DETAIL_TAB_INDEX);
     }
     
     
@@ -180,7 +196,11 @@ public class MainWindow extends javax.swing.JPanel {
                                 FieldElement element = SelectFieldDlg.doSelectFieldForChart(mainWindow, fields);
                                 if (element != null) {
                                     mainWindow.fieldManager.addOrUpdateField(element);
-                                    mainWindow.bringDetailsWindowToFront();
+                                    if (element.isNumeric()) {
+                                        mainWindow.bringDetailsWindowToFront();
+                                    } else {
+                                        mainWindow.bringTextFieldsWindowToFront();
+                                    }
                                 }
                             } catch (SessionNotFoundException ex) {
                                 Exceptions.printStackTrace(ex);
@@ -373,7 +393,8 @@ public class MainWindow extends javax.swing.JPanel {
         topRightPanel = new javax.swing.JPanel();
         bottomRightTabbedPanel = new javax.swing.JTabbedPane();
         detailsPanel = new javax.swing.JPanel();
-        threadTraceListPanel = new javax.swing.JPanel();
+        textFieldsPanel = new javax.swing.JPanel();
+        testFieldsPanel = new javax.swing.JPanel();
         threadTraceDetailsPanel = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         traceDetailTimeField = new javax.swing.JTextField();
@@ -466,8 +487,11 @@ public class MainWindow extends javax.swing.JPanel {
         detailsPanel.setLayout(new java.awt.BorderLayout());
         bottomRightTabbedPanel.addTab(org.openide.util.NbBundle.getMessage(MainWindow.class, "MainWindow.detailsPanel.TabConstraints.tabTitle"), detailsPanel); // NOI18N
 
-        threadTraceListPanel.setLayout(new java.awt.BorderLayout());
-        bottomRightTabbedPanel.addTab(org.openide.util.NbBundle.getMessage(MainWindow.class, "MainWindow.threadTraceListPanel.TabConstraints.tabTitle"), threadTraceListPanel); // NOI18N
+        textFieldsPanel.setLayout(new java.awt.BorderLayout());
+        bottomRightTabbedPanel.addTab(org.openide.util.NbBundle.getMessage(MainWindow.class, "MainWindow.textFieldsPanel.TabConstraints.tabTitle"), textFieldsPanel); // NOI18N
+
+        testFieldsPanel.setLayout(new java.awt.BorderLayout());
+        bottomRightTabbedPanel.addTab(org.openide.util.NbBundle.getMessage(MainWindow.class, "MainWindow.testFieldsPanel.TabConstraints.tabTitle"), testFieldsPanel); // NOI18N
 
         jLabel1.setText(org.openide.util.NbBundle.getMessage(MainWindow.class, "MainWindow.jLabel1.text")); // NOI18N
 
@@ -569,8 +593,9 @@ public class MainWindow extends javax.swing.JPanel {
     private javax.swing.JScrollPane monitorTreeScrollPane;
     private javax.swing.JSplitPane rightSplitPane;
     private javax.swing.JTree snapShotMonitorTreeField;
+    private javax.swing.JPanel testFieldsPanel;
+    private javax.swing.JPanel textFieldsPanel;
     private javax.swing.JPanel threadTraceDetailsPanel;
-    private javax.swing.JPanel threadTraceListPanel;
     private javax.swing.JPanel topRightPanel;
     private javax.swing.JTextField traceDetailMonitorField;
     private javax.swing.JTextArea traceDetailTextArea;
