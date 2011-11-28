@@ -188,6 +188,33 @@ public class RemoteImplTest extends TestCase {
     	
     	RemoteImpl.getSingleton().disconnect(sessionID);
     }
+    
+    /**
+     * This test exposes a defect where there was a problem subscribing and
+     * re-subscribing to a SnapShot monitor.  On each subsequent attempt to
+     * re-subscribe the snapshot monitor was not being reinitialized.
+     * 
+     * @throws Exception
+     */
+    public void testSubscribeReSubscribeToSnapShotMonitor() throws Exception {
+    	RemoteImpl impl = RemoteImpl.getSingleton();
+    	
+    	String sessionID = impl.connect(ManagementVersion.VERSION);
+
+    	String field = RemoteImpl.getSingleton().getFieldsForMonitor(sessionID, "SNAPSHOT(name=org.perfmon4j.java.management.JVMSnapShot)")[0];
+ 
+    	impl.subscribe(sessionID, new String[]{field});
+    	assertTrue("Should be subscribed to snapshot monitor", impl.getData(sessionID).containsKey(field));
+
+    	impl.subscribe(sessionID, new String[]{}); // Unsubscribe (by passing an empty field array)
+    	assertFalse("Should be unsubscribed from snapshot monitor", impl.getData(sessionID).containsKey(field));
+    	
+    	impl.subscribe(sessionID, new String[]{field}); // Re-subscribe!
+    	assertTrue("Should be subscribed to snapshot monitor ON re-subscribe", impl.getData(sessionID).containsKey(field));
+    	
+    	impl.disconnect(sessionID);
+    }    
+    
 
     public void testGetFieldsForMultiInstanceSnapShotMonitor() throws Exception {
     	String sessionID = RemoteImpl.getSingleton().connect(ManagementVersion.VERSION);
@@ -371,7 +398,7 @@ System.err.println(traceData);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new RemoteImplTest("testGetFieldsForMultiInstanceSnapShotMonitor"));
+		newSuite.addTest(new RemoteImplTest("testSubscribeReSubscribeToSnapShotMonitor"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

@@ -279,10 +279,10 @@ public class ExternalAppender {
 					PerfMon mon = PerfMon.getMonitor(monitorKey.getName());
 					mon.removeExternalElement(data);
 				}
-				fieldProperties.remove(monitorKey);
 			} else if (MonitorKey.SNAPSHOT_TYPE.equals(monitorKey.getType())) {
 				snapShotMonitors.remove(monitorKey);
 			}
+			fieldProperties.remove(monitorKey);
 		}
 
 		private Map<FieldKey, Object> takeSnapShot(MonitorKeyWithFields monitorKeyWithFields) throws MonitorNotFoundException {

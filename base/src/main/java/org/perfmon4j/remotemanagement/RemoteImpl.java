@@ -157,7 +157,11 @@ public class RemoteImpl implements RemoteInterface {
 				from = ExternalAppender.takeSnapShot(sessionID, monitors[i]);
 				copyToResultMap(from, result);
 			} catch (MonitorNotFoundException e) {
-				logger.logWarn("Monitor not found", e);
+				if (logger.isDebugEnabled()) {
+					logger.logWarn("Monitor not found", e);
+				} else {
+					logger.logInfo("Monitor not found: " + monitors[i].getMonitorKeyOnly().toString());
+				}
 			}			
 		}
 		
