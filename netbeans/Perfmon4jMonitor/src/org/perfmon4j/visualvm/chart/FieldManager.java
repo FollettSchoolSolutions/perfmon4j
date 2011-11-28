@@ -27,10 +27,13 @@ import java.util.prefs.PreferenceChangeListener;
 import java.awt.Color;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
@@ -44,7 +47,7 @@ public class FieldManager implements PreferenceChangeListener {
     private final Object wrapperToken = new Object();
     private final RemoteManagementWrapper wrapper;
     private final GlobalPreferences preferences;
-    private Object mapToken = new Object();
+    private final Object mapToken = new Object();
     private final Map<FieldKey, FieldElement> mapElements = new HashMap<FieldKey, FieldElement>();
     private final List<FieldHandler> fieldHandlers = new ArrayList<FieldHandler>();
     private final ThreadTraceList threadTraceList = new ThreadTraceList();
@@ -85,6 +88,13 @@ public class FieldManager implements PreferenceChangeListener {
         }
     }
 
+    public int getNumElements() {
+        synchronized(mapToken) {
+            return mapElements.size();
+        }
+    }
+    
+    
     public void addOrUpdateField(FieldElement element) {
         FieldKey[] fields = null;
         synchronized (mapToken) {
@@ -113,15 +123,15 @@ public class FieldManager implements PreferenceChangeListener {
 
     public void removeField(FieldElement element) {
         FieldKey[] fields = null;
+        
+        synchronized (mapToken) {
+            mapElements.remove(element.getFieldKey());
+            fields = mapElements.keySet().toArray(new FieldKey[mapElements.size()]);
+        }
 
         FieldHandler[] handlers = fieldHandlers.toArray(new FieldHandler[fieldHandlers.size()]);
         for (int i = 0; i < handlers.length; i++) {
             handlers[i].removeElement(element);
-        }
-
-        synchronized (mapToken) {
-            mapElements.remove(element.getFieldKey());
-            fields = mapElements.keySet().toArray(new FieldKey[mapElements.size()]);
         }
 
         synchronized (wrapperToken) {
@@ -138,6 +148,94 @@ public class FieldManager implements PreferenceChangeListener {
     public void scheduleThreadTrace(FieldElement element, Map<String,String> map) {
         scheduleThreadTrace(element.getFieldKey().getMonitorKey(), map);
     }
+    
+    
+    /**
+     * Returns true if one or more fields could not be added...
+     * 
+     * @param props
+     * @return
+     * @throws Exception 
+     */
+    public boolean readFromProperties(Properties props) throws Exception {
+        boolean fieldSkipped = false;
+        
+        // First get a list of all of the currently tracked fields...
+        List<FieldKey> currentMonitoredFields = new ArrayList<FieldKey>();
+        
+        synchronized(mapToken) {
+            FieldElement fields[] = mapElements.values().toArray(new FieldElement[mapElements.values().size()]);
+            for (int i = 0; i < fields.length; i++) {
+                currentMonitoredFields.add(fields[i].getFieldKey());
+            }
+        }
+       
+        List<MonitorKey> availableMonitors = null;
+        synchronized (wrapperToken) {
+            availableMonitors = Arrays.asList(wrapper.getMonitors());
+        }
+        
+
+        boolean loading = true;
+        int i = -1;
+        while (loading) {
+            i++;
+            String key = props.getProperty("field[" + i + "].fieldKey");
+            if (key != null) {
+                FieldKey fieldKey = FieldKey.parseNoThrow(key);
+                if (fieldKey != null) {
+                    boolean isExistingField = currentMonitoredFields.remove(fieldKey);
+                    
+                    if (!isExistingField) {
+                        // Make sure the Monitor is available in the existing VM...
+                        // Otherwise, refuse to load it!!!
+                        if (!availableMonitors.contains(fieldKey.getMonitorKey())) {
+                            fieldSkipped = true;
+                            continue;
+                        }
+                    }
+                    float factor = Float.parseFloat(props.getProperty("field[" + i + "].factor"));
+                    Color color =  new Color(Integer.valueOf(props.getProperty("field[" + i + "].color")).intValue());
+                    boolean visible = Boolean.valueOf(props.getProperty("field[" + i + "].visible"));
+                    
+                    FieldElement element = new FieldElement(fieldKey, factor, color);
+                    element.setVisibleInChart(visible);
+                    addOrUpdateField(element);
+                }
+            } else {
+                loading = false;
+            }
+        }
+        
+        // Now remove any fields that are no longer being monitored.
+        Iterator<FieldKey> itr = currentMonitoredFields.iterator();
+        while (itr.hasNext()) {
+            this.removeField(itr.next());
+        }
+        
+        return fieldSkipped;
+    }
+    
+    public Properties writeToProperies() {
+        Properties result = new Properties();
+
+        FieldElement fields[] = null;
+        synchronized(mapToken) {
+           fields = mapElements.values().toArray(new FieldElement[mapElements.values().size()]);
+        }
+        
+        for (int i = 0; i < fields.length; i++) {
+            FieldElement fieldElement = fields[i];
+//System.out.println(fieldElement.getFieldKey().toString());               
+            result.setProperty("field[" + i + "].fieldKey", fieldElement.getFieldKey().toString());
+            result.setProperty("field[" + i + "].factor", Float.toString(fieldElement.getFactor()));
+            result.setProperty("field[" + i + "].color", Integer.toString(fieldElement.getColor().getRGB()));
+            result.setProperty("field[" + i + "].visible", Boolean.toString(fieldElement.isVisibleInChart()));
+        }
+       
+       return result;
+    }
+    
 
     
     public void scheduleThreadTrace(MonitorKey key, Map<String,String> map) {
