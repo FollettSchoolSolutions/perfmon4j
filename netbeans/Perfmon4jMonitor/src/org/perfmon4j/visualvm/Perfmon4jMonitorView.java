@@ -45,6 +45,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.filechooser.FileFilter;
 import org.openide.util.Exceptions;
+import org.openide.util.ImageUtilities;
 import org.openide.util.Utilities;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
@@ -58,13 +59,12 @@ import org.perfmon4j.visualvm.chart.FieldManager;
 public class Perfmon4jMonitorView extends DataSourceView {
 
     private DataViewComponent dvc;
-    // TODO: Add a perfmon4j image...
-    private static final String IMAGE_PATH = "com/sun/tools/visualvm/coredump/resources/coredump.png"; // NOI18N
+    private static final String IMAGE_PATH = "org/perfmon4j/visualvm/gear.png"; // NOI18N
     private final RemoteManagementWrapper wrapper;
     private final FieldManager fieldManager;
 
     public Perfmon4jMonitorView(Application app) {
-        super(app, "Perfmon4j", new ImageIcon(Utilities.loadImage(IMAGE_PATH, true)).getImage(), 60, false);
+        super(app, "Perfmon4j", new ImageIcon(ImageUtilities.loadImage(IMAGE_PATH, true)).getImage(), 60, false);
         wrapper = Perfmon4jModel.getModelForApp(app).getRemoteWrapper();
         fieldManager = new FieldManager(wrapper);
     }
