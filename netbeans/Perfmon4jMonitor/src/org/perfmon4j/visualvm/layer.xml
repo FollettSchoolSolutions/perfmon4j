@@ -18,6 +18,21 @@
             </file>
         </folder>
     </folder>
+    <!-- Below is an Example of how to add a context menu
+        to the VisualVM explorer window...  We don't need it right now, but
+        it took me a while to figure out and I dont want to loose it... Dave
+    -->
+    <!--    
+    <folder name="VisualVM">
+        <folder name="ExplorerPopupSelection">
+            <file name="org.perfmon4j.visualvm-Perfmon4jAction.instance">
+                <attr name="SystemFileSystem.localizingBundle" stringvalue="org.perfmon4j.visualvm.Bundle"/>
+                <attr name="position" intvalue="3000"/>
+            </file>
+        </folder>
+    </folder>    
+    -->
+    
     <folder name="Windows2">
         <folder name="Components"/>
         <folder name="Modes">

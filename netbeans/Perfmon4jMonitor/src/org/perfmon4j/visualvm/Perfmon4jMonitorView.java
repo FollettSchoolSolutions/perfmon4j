@@ -44,9 +44,10 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.filechooser.FileFilter;
+import org.openide.modules.ModuleInfo;
+import org.openide.modules.Modules;
 import org.openide.util.Exceptions;
 import org.openide.util.ImageUtilities;
-import org.openide.util.Utilities;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 import org.perfmon4j.visualvm.chart.FieldElement;
@@ -62,11 +63,20 @@ public class Perfmon4jMonitorView extends DataSourceView {
     private static final String IMAGE_PATH = "org/perfmon4j/visualvm/gear.png"; // NOI18N
     private final RemoteManagementWrapper wrapper;
     private final FieldManager fieldManager;
+    private final String pluginInfo;
 
     public Perfmon4jMonitorView(Application app) {
         super(app, "Perfmon4j", new ImageIcon(ImageUtilities.loadImage(IMAGE_PATH, true)).getImage(), 60, false);
         wrapper = Perfmon4jModel.getModelForApp(app).getRemoteWrapper();
         fieldManager = new FieldManager(wrapper);
+        
+        ModuleInfo info = Modules.getDefault().ownerOf(Perfmon4jModel.class);
+       
+        String name = info.getDisplayName();
+        String buildVersion = info.getBuildVersion();
+        String specVersion = info.getSpecificationVersion().toString();
+        
+        pluginInfo = name + " " + specVersion + " (" + buildVersion + ")";
     }
 
     public static JFrame getParentFrame(Component c) {
@@ -89,7 +99,7 @@ public class Perfmon4jMonitorView extends DataSourceView {
 
         MainWindow window = new MainWindow(fieldManager, wrapper);
 
-        DataViewComponent.MasterView masterView = new DataViewComponent.MasterView("Perfmon4j Overview", "This is the master view description", generalDataArea);
+        DataViewComponent.MasterView masterView = new DataViewComponent.MasterView(pluginInfo, "This is the master view description", generalDataArea);
 
         DataViewComponent.MasterViewConfiguration masterConfiguration =
                 new DataViewComponent.MasterViewConfiguration(false);
@@ -129,8 +139,8 @@ public class Perfmon4jMonitorView extends DataSourceView {
             this.fieldManager = fieldManager;
             this.fieldManager.addDataHandler(this);
             saveButton.setEnabled(false);
-
-
+           
+            
             this.add(loadButton);
             this.add(saveButton);
 

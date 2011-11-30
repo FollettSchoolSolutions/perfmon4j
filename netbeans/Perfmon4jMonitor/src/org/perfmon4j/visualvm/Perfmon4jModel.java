@@ -36,8 +36,6 @@ import java.util.Properties;
 import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.activation.DataSource;
-import javax.management.MBeanServerConnection;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 
@@ -81,7 +79,7 @@ public class Perfmon4jModel extends Model {
 
     private Properties getSystemProperiesOfApp(Application app) {
         Properties result = null;
-
+        
         if (result == null) {
             // Try via Jvm
             try {
@@ -156,7 +154,7 @@ public class Perfmon4jModel extends Model {
                 System.err.println("Unable to retrieve System.properties of application... Found Perfmon4j port via command line args");
             }
         }
-
+        
         String host = "localhost";
         if (!app.isLocalApplication()) {
             host = app.getHost().getHostName();

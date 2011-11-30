@@ -33,7 +33,7 @@ import com.sun.tools.visualvm.core.ui.DataSourceViewsManager;
  */
 public class Perfmon4jMonitorViewProvider extends DataSourceViewProvider<Application> {
 
-    private static final DataSourceViewProvider<Application>
+    public static final DataSourceViewProvider<Application>
             instance = new Perfmon4jMonitorViewProvider();
 
     static void initialize() {
