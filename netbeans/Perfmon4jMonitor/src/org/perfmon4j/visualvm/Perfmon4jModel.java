@@ -24,7 +24,6 @@ import com.sun.tools.visualvm.application.Application;
 import com.sun.tools.visualvm.application.jvm.Jvm;
 import com.sun.tools.visualvm.application.jvm.JvmFactory;
 import com.sun.tools.visualvm.core.model.Model;
-import com.sun.tools.visualvm.host.Host;
 import com.sun.tools.visualvm.tools.attach.AttachModel;
 import com.sun.tools.visualvm.tools.attach.AttachModelFactory;
 import com.sun.tools.visualvm.tools.jmx.JmxModel;
