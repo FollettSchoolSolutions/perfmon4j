@@ -378,7 +378,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	try {
         		RemoteImpl.registerRMIListener(port);
 			} catch (RemoteException e) {
-				logger.logError("Error starting management listener on port: " + port, e);
+				if (port == TransformerParams.REMOTE_PORT_AUTO) {
+					String range = RemoteImpl.AUTO_RMI_PORT_RANGE_START +
+						" and " + RemoteImpl.AUTO_RMI_PORT_RANGE_END;
+					logger.logError("Error starting management listener on an open port between " + range, e);
+				} else {
+					logger.logError("Error starting management listener on port: " + port, e);
+				}
 			}
         }
     }

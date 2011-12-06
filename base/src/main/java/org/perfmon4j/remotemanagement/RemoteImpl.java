@@ -35,6 +35,7 @@ import java.util.Map;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.instrument.InstrumentationMonitor;
+import org.perfmon4j.instrument.TransformerParams;
 import org.perfmon4j.java.management.GarbageCollectorSnapShot;
 import org.perfmon4j.java.management.JVMSnapShot;
 import org.perfmon4j.java.management.MemoryPoolSnapShot;
@@ -56,6 +57,11 @@ public class RemoteImpl implements RemoteInterface {
 	private static final long serialVersionUID = ManagementVersion.RMI_VERSION;
 	private static Registry registry = null;
 	private static Integer registeredPort = null;
+	
+	public static final int AUTO_RMI_PORT_RANGE_START=
+		Integer.getInteger(RemoteImpl.class.getName() + ".AUTO_RMI_PORT_RANGE_START", 5400).intValue();
+	public static final int AUTO_RMI_PORT_RANGE_END=
+		Integer.getInteger(RemoteImpl.class.getName() + ".AUTO_RMI_PORT_RANGE_END", 5500).intValue();
 	
 	static final private RemoteImpl singleton = new RemoteImpl();
 	
@@ -88,8 +94,23 @@ public class RemoteImpl implements RemoteInterface {
 		}
 		boolean bound = false;
         try {
-			registry = LocateRegistry.createRegistry(port);
-	
+        	int portStart = port;
+        	int portEnd = port;
+        	if (port == TransformerParams.REMOTE_PORT_AUTO) {
+        		portStart = RemoteImpl.AUTO_RMI_PORT_RANGE_START;
+        		portEnd = RemoteImpl.AUTO_RMI_PORT_RANGE_END;
+        	}
+        	port = portStart;
+        	while (true) {
+	        	try {
+	        		registry = LocateRegistry.createRegistry(port);
+	        		break; // Found a port... break out of the loop....
+	        	} catch (RemoteException ex) {
+	        		if (++port > portEnd) {
+	        			throw ex;
+	        		}
+	        	}
+        	}
 			RemoteInterface stub = (RemoteInterface)UnicastRemoteObject.exportObject(singleton, 0);
 			registry.bind(RemoteInterface.serviceName, stub);
 			bound = true;

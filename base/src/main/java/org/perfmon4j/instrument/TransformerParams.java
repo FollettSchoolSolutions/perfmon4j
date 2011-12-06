@@ -37,7 +37,7 @@ import javassist.NotFoundException;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
-class TransformerParams {
+public class TransformerParams {
 	private static final Logger logger = LoggerFactory.initLogger(TransformerParams.class);
 	
     static final int MODE_NONE = 0;
@@ -77,8 +77,11 @@ class TransformerParams {
     private boolean extremeSQLMonitorEnabled = false;
     private final List<String> extremeSQLPackages = new Vector<String>();
 	private boolean remoteManagementEnabled = false;
-	private int remoteManagementPort = -1;
-    
+	private int remoteManagementPort = REMOTE_PORT_DISABLED;
+	
+	public static final int REMOTE_PORT_DISABLED = -1;
+	public static final int REMOTE_PORT_AUTO = 0;
+	public static final String REMOTE_PORT_AUTO_PARAM="AUTO";
     
 	TransformerParams() {
         this("");
@@ -181,7 +184,11 @@ class TransformerParams {
                 } else if (isParam('p', params)) {
                 	nextParam = getNextParam(params);
                 	remoteManagementEnabled = true;
-                    remoteManagementPort = Integer.parseInt(nextParam.parameter);
+                	if (REMOTE_PORT_AUTO_PARAM.equalsIgnoreCase(nextParam.parameter)) {
+                		remoteManagementPort = REMOTE_PORT_AUTO;
+                	} else {
+	                    remoteManagementPort = Integer.parseInt(nextParam.parameter);
+                	}
                 } else if (isParam('r', params)) {
                 	nextParam = getNextParam(params);
                 	String val = nextParam.parameter;

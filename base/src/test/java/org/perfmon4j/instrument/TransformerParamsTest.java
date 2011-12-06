@@ -276,6 +276,16 @@ public class TransformerParamsTest extends TestCase {
     	params = new TransformerParams("-p5945");
         assertTrue(params.isRemoteManagementEnabled());
         assertEquals(5945, params.getRemoteManagementPort());
+        
+        
+        params = new TransformerParams("-pAUTO");
+        assertTrue(params.isRemoteManagementEnabled());
+        assertEquals(TransformerParams.REMOTE_PORT_AUTO, params.getRemoteManagementPort());
+     
+        params = new TransformerParams("-pauto");
+        assertTrue(params.isRemoteManagementEnabled());
+        assertEquals(TransformerParams.REMOTE_PORT_AUTO, params.getRemoteManagementPort());
+        
     }    
     
     
