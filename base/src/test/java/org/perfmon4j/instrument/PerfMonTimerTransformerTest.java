@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008, 2011 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -504,6 +504,42 @@ System.out.println(output);
     			output.contains("[main] INFO org.perfmon4j.instrument.PerfMonTimerTransformerTest$Log4jRuntimeLoggerTest  - info - post initialize"));
     }
     
+    
+	public static interface DoSomething {
+		public void doSomething();
+	}
+    
+    public static class DoSomethingElseTest implements DoSomething {
+		public void doSomething() {
+		}
+		
+		public void doSomethingElse() {
+		}
+		
+		public void doSomethingWithVarArgs(String...strings) {
+		}
+	}
+	
+    public void testInterfacesAreInstrumented() throws Exception {
+    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(DoSomethingElseTest.class, "-vtrue,-eorg.perfmon4j", perfmon4jJar);
+    	
+    	assertTrue("Should have instrumented method declared in iterface",
+    			output.contains("Adding extreme monitor: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DoSomethingElseTest.doSomething"));
+    }
+    
+    
+    public void testVarArgsMethodIsInstrumented() throws Exception {
+    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(DoSomethingElseTest.class, "-vtrue,-eorg.perfmon4j", perfmon4jJar);
+//System.out.println(output);    	
+
+//		CtClass clazz = ClassPool.getDefault().getCtClass(DoSomethingElseTest.class.getName());
+//		RuntimeTimerInjector.injectPerfMonTimers(clazz, false);
+    	assertTrue("Should have instrumented var args method",
+    			output.contains("Adding extreme monitor: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DoSomethingElseTest.doSomethingWithVarArgs"));
+    }
+    
+
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
@@ -530,7 +566,8 @@ System.out.println(output);
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
 //		newSuite.addTest(new PerfMonTimerTransformerTest("testInstrumentSQLStatement"));
-//        newSuite.addTest(new PerfMonTimerTransformerTest("testPerfmon4jLoggerUsesLog4jWhenInitialized"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testInterfacesAreInstrumented"));
+        newSuite.addTest(new PerfMonTimerTransformerTest("testVarArgsMethodIsInstrumented"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -21,18 +21,11 @@
 package org.perfmon4j.instrument;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
-import java.util.Vector;
-
-import org.perfmon4j.PerfMon;
-import org.perfmon4j.PerfMonTimer;
-import org.perfmon4j.util.Logger;
-import org.perfmon4j.util.LoggerFactory;
 
 import javassist.CannotCompileException;
 import javassist.CtClass;
@@ -45,6 +38,11 @@ import javassist.SerialVersionUID;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.AttributeInfo;
 import javassist.bytecode.ParameterAnnotationsAttribute;
+
+import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
 
 public class RuntimeTimerInjector {
     final private static String IMPL_METHOD_SUFFIX = "$Impl";
@@ -102,6 +100,10 @@ public class RuntimeTimerInjector {
 				verbose.logDebug(itr.next());
 			}
 		}
+
+		public boolean isExtremeTimer() {
+			return extremeTimer;
+		}
     }
  
     static Set<CtClass> getInterfaces(CtClass clazz) throws NotFoundException {
@@ -125,7 +127,7 @@ public class RuntimeTimerInjector {
         int mode = TransformerParams.MODE_ANNOTATE;
         TransformerParams.TransformOptions transformOptions = TransformerParams.TransformOptions.DEFAULT;
         int numTimers = 0;
-        List<PendingTimer> pendingTimers = new Vector();
+        List<PendingTimer> pendingTimers = new ArrayList<PendingTimer>();
         boolean extremeSQLClass = false;
         
         logger.logDebug("Injecting timer into: " + clazz.getName());
@@ -178,12 +180,13 @@ public class RuntimeTimerInjector {
                 System.arraycopy(clazz.getDeclaredMethods(), 0, methods, 0, len);    
                 for (int i = 0; i < methods.length; i++) {
                     CtMethod method = methods[i];
+
                     if (!method.getName().endsWith(IMPL_METHOD_SUFFIX) 
                         && !Modifier.isAbstract(method.getModifiers())
                         && !Modifier.isNative(method.getModifiers())
                         && !Modifier.isStrict(method.getModifiers())
                         && !Modifier.isVolatile(method.getModifiers())
-                        && !Modifier.isTransient(method.getModifiers())
+//                        && !Modifier.isTransient(method.getModifiers())
                         && methodHasBody(method)) {
                         DeclarePerfMonTimer an = getRuntimeAnnotation(method);
                         String timerKeyAnnotation = null;
@@ -362,7 +365,8 @@ public class RuntimeTimerInjector {
         }
     }
     
-    private static void moveAnnotations(CtMethod src, CtMethod dest) {
+    @SuppressWarnings("unchecked")
+	private static void moveAnnotations(CtMethod src, CtMethod dest) {
         // Move over all of the annotations....
         List sAttributes = src.getMethodInfo().getAttributes();
         List dAttributes = dest.getMethodInfo().getAttributes();
@@ -392,9 +396,6 @@ public class RuntimeTimerInjector {
        
         // Rename the method to be timed...
         method.setName(implMethod);
-        
-        
-        String sqlMonitorKey = null;
         
         try {
 	        // Now create the new method with the original name....
@@ -573,7 +574,7 @@ public class RuntimeTimerInjector {
     // Oh and in fairness, javassist is a great tool and I am pretty confident it can do
     // what I want, however, you have to use it to directly manipulate java byte code, ick.
     public static class PushTimerForBootClass {
-        private static ThreadLocal<Stack<PerfMonTimer>> bootClassTimers = new ThreadLocal() {
+        private static ThreadLocal<Stack<PerfMonTimer>> bootClassTimers = new ThreadLocal<Stack<PerfMonTimer>>() {
              protected synchronized Stack<PerfMonTimer> initialValue() {
                  return new Stack<PerfMonTimer>();
              }
