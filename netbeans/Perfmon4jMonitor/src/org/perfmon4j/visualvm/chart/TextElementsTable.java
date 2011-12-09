@@ -96,18 +96,32 @@ public class TextElementsTable extends JPanel implements
             if (row >= 0) {
                 table.getSelectionModel().setSelectionInterval(row, row);
                 JPopupMenu popup = new JPopupMenu();
-
-                JMenuItem threadTrace = new JMenuItem("Schedule Thread Trace...");
-                threadTrace.addActionListener(new ActionListener() {
+                
+                JMenuItem addFieldToChart = new JMenuItem("Add Field to Chart...");
+                addFieldToChart.addActionListener(new ActionListener() {
 
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        ElementWrapper elm = backingData.get(row);
-                        ThreadTraceOptionsDlg.doScheduleThreadTrace(mainWindow, 
-                                elm.fieldElement.getFieldKey().getMonitorKey());
+                        FieldElement elm = backingData.get(row).fieldElement;
+                        SelectFieldDlg.doSelectFieldForChart(mainWindow, 
+                                elm.getFieldKey().getMonitorKey());
                     }
                 });
-                popup.add(threadTrace);
+                popup.add(addFieldToChart);
+                
+                if (backingData.get(row).fieldElement.isIntervalMonitor()) {
+                    JMenuItem threadTrace = new JMenuItem("Schedule Thread Trace...");
+                    threadTrace.addActionListener(new ActionListener() {
+
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            ElementWrapper elm = backingData.get(row);
+                            ThreadTraceOptionsDlg.doScheduleThreadTrace(mainWindow, 
+                                    elm.fieldElement.getFieldKey().getMonitorKey());
+                        }
+                    });
+                    popup.add(threadTrace);
+                }
                 popup.add(new JPopupMenu.Separator());
                 
                 JMenuItem remove = new JMenuItem("Remove");

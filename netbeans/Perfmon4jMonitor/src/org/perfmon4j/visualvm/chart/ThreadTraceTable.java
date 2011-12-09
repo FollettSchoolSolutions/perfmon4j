@@ -24,13 +24,16 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import javax.swing.AbstractCellEditor;
 import javax.swing.JButton;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ScrollPaneConstants;
@@ -41,8 +44,10 @@ import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
+import org.openide.awt.MouseUtils.PopupMouseAdapter;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.visualvm.MainWindow;
+import org.perfmon4j.visualvm.ThreadTraceOptionsDlg;
 
 public class ThreadTraceTable extends JPanel implements
         ThreadTraceList.ThreadTraceListListener {
@@ -103,6 +108,7 @@ public class ThreadTraceTable extends JPanel implements
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         this.add(scroller);
+        table.addMouseListener(new TableMouseAdapter());
     }
     
     
@@ -150,6 +156,48 @@ public class ThreadTraceTable extends JPanel implements
                 return true;
             } else {
                 return false;
+            }
+        }
+    }
+    
+    private class TableMouseAdapter extends PopupMouseAdapter {
+        @Override
+        public void showPopup(MouseEvent e) {
+            JTable table = (JTable) e.getSource();
+            final int row =  table.rowAtPoint(e.getPoint());
+            if (row >= 0) {
+                table.getSelectionModel().setSelectionInterval(row, row);
+                JPopupMenu popup = new JPopupMenu();
+
+                JMenuItem addFieldToChart = new JMenuItem("Add Field to Chart...");
+                addFieldToChart.addActionListener(new ActionListener() {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        ThreadTraceList.ThreadTraceElement element = list.get(row);
+                        MonitorKey snapShotKey = element.getFieldKey().getMonitorKey();
+                        
+                        MonitorKey intervalKey = new MonitorKey(MonitorKey.INTERVAL_TYPE, 
+                                snapShotKey.getName());
+                        SelectFieldDlg.doSelectFieldForChart(mainWindow, intervalKey);
+                    }
+                });
+                popup.add(addFieldToChart);
+                if (!list.get(row).isPending()) {
+                    JMenuItem threadTrace = new JMenuItem("Reschedule Thread Trace...");
+                    threadTrace.addActionListener(new ActionListener() {
+
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            ThreadTraceList.ThreadTraceElement element = list.get(row);
+                            MonitorKey monitorKey = element.getFieldKey().getMonitorKey();
+                            ThreadTraceOptionsDlg.doScheduleThreadTrace(mainWindow, 
+                                    monitorKey);
+                        }
+                    });
+                    popup.add(threadTrace);
+                }
+                popup.show(table, e.getX(), e.getY());
             }
         }
     }

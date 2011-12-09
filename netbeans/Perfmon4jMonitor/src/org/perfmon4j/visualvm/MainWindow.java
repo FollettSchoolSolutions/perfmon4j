@@ -191,22 +191,7 @@ public class MainWindow extends javax.swing.JPanel {
 
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                            try {
-                                FieldKey fields[] = mainWindow.managementWrapper.getFieldsForMonitor(wrapper.getMonitorKey());
-                                FieldElement element = SelectFieldDlg.doSelectFieldForChart(mainWindow, fields);
-                                if (element != null) {
-                                    mainWindow.fieldManager.addOrUpdateField(element);
-                                    if (element.isNumeric()) {
-                                        mainWindow.bringDetailsWindowToFront();
-                                    } else {
-                                        mainWindow.bringTextFieldsWindowToFront();
-                                    }
-                                }
-                            } catch (SessionNotFoundException ex) {
-                                Exceptions.printStackTrace(ex);
-                            } catch (RemoteException ex) {
-                                Exceptions.printStackTrace(ex);
-                            }
+                            SelectFieldDlg.doSelectFieldForChart(mainWindow, wrapper.getMonitorKey());
                         }
                     });
                     popup.add(addFieldToChart);
@@ -263,6 +248,10 @@ public class MainWindow extends javax.swing.JPanel {
         return result.toArray(new String[result.size()]);
     }
 
+    public RemoteManagementWrapper getManagementWrapper() {
+        return managementWrapper;
+    }
+    
     static class MonitorKeyWrapper implements TreeNode {
 
         private final MonitorKeyWrapper parent;

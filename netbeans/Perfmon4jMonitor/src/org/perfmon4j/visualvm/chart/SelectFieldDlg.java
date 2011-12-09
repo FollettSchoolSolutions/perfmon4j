@@ -30,8 +30,12 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.rmi.RemoteException;
 import java.util.Arrays;
+import org.openide.util.Exceptions;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 import org.perfmon4j.visualvm.MainWindow;
 
 /**
@@ -39,6 +43,7 @@ import org.perfmon4j.visualvm.MainWindow;
  * @author ddeucher
  */
 public class SelectFieldDlg extends javax.swing.JDialog {
+
     private FieldKey selectedField = null;
     private final MainWindow mainWindow;
 
@@ -50,6 +55,7 @@ public class SelectFieldDlg extends javax.swing.JDialog {
     }
 
     private static class FieldWrapper implements Comparable<FieldWrapper> {
+
         final FieldKey field;
 
         FieldWrapper(FieldKey field) {
@@ -67,6 +73,25 @@ public class SelectFieldDlg extends javax.swing.JDialog {
         }
     }
 
+    public static void doSelectFieldForChart(MainWindow mainWindow, MonitorKey monitorKey) {
+        try {
+            FieldKey fields[] = mainWindow.getManagementWrapper().getFieldsForMonitor(monitorKey);
+            FieldElement element = SelectFieldDlg.doSelectFieldForChart(mainWindow, fields);
+            if (element != null) {
+                mainWindow.getFieldManager().addOrUpdateField(element);
+                if (element.isNumeric()) {
+                    mainWindow.bringDetailsWindowToFront();
+                } else {
+                    mainWindow.bringTextFieldsWindowToFront();
+                }
+            }
+        } catch (SessionNotFoundException ex) {
+            Exceptions.printStackTrace(ex);
+        } catch (RemoteException ex) {
+            Exceptions.printStackTrace(ex);
+        }
+    }
+
     public static FieldElement doSelectFieldForChart(MainWindow mainWindow, FieldKey fields[]) {
         FieldElement result = null;
 
@@ -74,14 +99,14 @@ public class SelectFieldDlg extends javax.swing.JDialog {
             mainWindow.selectFieldDlg = new SelectFieldDlg(mainWindow);
         }
         final SelectFieldDlg dlg = mainWindow.selectFieldDlg;
-        
-        
+
+
         dlg.fieldsCombo.removeAllItems();;
         dlg.fieldsCombo.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                FieldWrapper wrapper = (FieldWrapper)dlg.fieldsCombo.getSelectedItem();
+                FieldWrapper wrapper = (FieldWrapper) dlg.fieldsCombo.getSelectedItem();
                 if (wrapper == null || !FieldElement.isFieldNumeric(wrapper.field)) {
                     dlg.factorCombo.setEnabled(false);
                     dlg.colorButton.setEnabled(false);
@@ -92,7 +117,6 @@ public class SelectFieldDlg extends javax.swing.JDialog {
                     dlg.colorPanel.setEnabled(true);
                 }
             }
-            
         });
 
 
@@ -279,7 +303,6 @@ public class SelectFieldDlg extends javax.swing.JDialog {
         selectedField = null;
         this.setVisible(false);
     }//GEN-LAST:event_cancelButtonActionPerformed
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.ButtonGroup buttonGroup2;

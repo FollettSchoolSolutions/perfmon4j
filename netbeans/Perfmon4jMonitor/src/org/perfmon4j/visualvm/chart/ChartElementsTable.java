@@ -118,8 +118,6 @@ public class ChartElementsTable extends JPanel implements
 
         this.add(scroller);
         table.addMouseListener(new TableMouseAdapter());
-        
-        
     }
 
 
@@ -164,18 +162,33 @@ public class ChartElementsTable extends JPanel implements
                     }
                 });
                 popup.add(changeColor);
+                popup.add(new JPopupMenu.Separator());
 
-                JMenuItem threadTrace = new JMenuItem("Schedule Thread Trace...");
-                threadTrace.addActionListener(new ActionListener() {
+                JMenuItem addFieldToChart = new JMenuItem("Add Field to Chart...");
+                addFieldToChart.addActionListener(new ActionListener() {
 
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         FieldElement elm = backingData.get(row).element;
-                        ThreadTraceOptionsDlg.doScheduleThreadTrace(mainWindow, 
+                        SelectFieldDlg.doSelectFieldForChart(mainWindow, 
                                 elm.getFieldKey().getMonitorKey());
                     }
                 });
-                popup.add(threadTrace);
+                popup.add(addFieldToChart);
+                
+                if (backingData.get(row).element.isIntervalMonitor()) {
+                    JMenuItem threadTrace = new JMenuItem("Schedule Thread Trace...");
+                    threadTrace.addActionListener(new ActionListener() {
+
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            FieldElement elm = backingData.get(row).element;
+                            ThreadTraceOptionsDlg.doScheduleThreadTrace(mainWindow, 
+                                    elm.getFieldKey().getMonitorKey());
+                        }
+                    });
+                    popup.add(threadTrace);
+                }
                 popup.add(new JPopupMenu.Separator());
                 
                 JMenuItem remove = new JMenuItem("Remove");

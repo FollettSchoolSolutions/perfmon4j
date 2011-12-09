@@ -239,6 +239,10 @@ public class FieldManager implements PreferenceChangeListener {
 
     
     public void scheduleThreadTrace(MonitorKey key, Map<String,String> map) {
+        if (!MonitorKey.INTERVAL_TYPE.equals(key.getType())) {
+            // Reset it back to an interval type key...
+            key = new MonitorKey(MonitorKey.INTERVAL_TYPE, key.getName());
+        }
         FieldKey threadTraceKey = FieldKey.buildThreadTraceKeyFromInterval(key, 
                 map);
 

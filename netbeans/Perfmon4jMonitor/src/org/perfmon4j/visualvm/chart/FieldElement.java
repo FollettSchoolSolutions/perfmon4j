@@ -24,6 +24,7 @@ package org.perfmon4j.visualvm.chart;
 import java.awt.Color;
 
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 
 public class FieldElement {
 
@@ -32,11 +33,13 @@ public class FieldElement {
     private float factor;
     private boolean visibleInChart = true;
     private boolean highlighted = false;
+    private final boolean intervalMonitor;
 
     public FieldElement(FieldKey fieldKey, float factor, Color color) {
         this.fieldKey = fieldKey;
         this.factor = factor;
         this.color = color;
+        this.intervalMonitor = MonitorKey.INTERVAL_TYPE.equals(fieldKey.monitorKey.getType());
     }
 
     public FieldKey getFieldKey() {
@@ -53,6 +56,10 @@ public class FieldElement {
     
     public boolean isVisibleInChart() {
         return visibleInChart;
+    }
+    
+    public boolean isIntervalMonitor() {
+        return intervalMonitor;
     }
 
     public void setVisibleInChart(boolean visibleInChart) {
