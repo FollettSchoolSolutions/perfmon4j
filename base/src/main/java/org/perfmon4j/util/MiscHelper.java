@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008-2011 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -14,7 +14,7 @@
  * 	perfmon4j@fsc.follett.com
  * 	David Deuchert
  * 	Follett Software Company
- * 	1391 Corparate Drive
+ * 	1391 Corporate Drive
  * 	McHenry, IL 60050
  * 
 */
@@ -190,6 +190,8 @@ public class MiscHelper {
      * 
      */
     private static final long SYSTEM_TIME_NANO_TIMER_DIFF;
+    private static final String HIGH_RESOLUTION_PROPERTY = "Perfmon4j.UseHighResolutionMillis";
+    public static final boolean USE_HIGH_RESOLUTION_MILLIS = Boolean.getBoolean(HIGH_RESOLUTION_PROPERTY);
     
     static {
         long millis = System.currentTimeMillis();
@@ -197,10 +199,17 @@ public class MiscHelper {
         
         SYSTEM_TIME_NANO_TIMER_DIFF = millis - (nanos/1000000);
     }
-    public static final boolean USE_TIGHT_RESOLUTION = false;
+
+    public static String getHighResolutionTimerEnabledDisabledMessage() {
+        if (USE_HIGH_RESOLUTION_MILLIS) {
+        	return "Perfmon4j high resolution timer is ENABLED.";
+        } else {
+	    	return "Perfmon4j high resolution timer is DISABLED. To enable add \"-D" + HIGH_RESOLUTION_PROPERTY + "=true\" to your command line";
+        }
+    }
     
     public static long currentTimeWithMilliResolution() {
-        if (USE_TIGHT_RESOLUTION) {
+        if (USE_HIGH_RESOLUTION_MILLIS) {
             return (System.nanoTime()/1000000) + SYSTEM_TIME_NANO_TIMER_DIFF;
         } else {
             return System.currentTimeMillis();

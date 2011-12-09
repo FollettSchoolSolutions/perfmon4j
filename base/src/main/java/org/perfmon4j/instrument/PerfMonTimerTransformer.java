@@ -216,11 +216,12 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	    	logger.logInfo("To hide banner add \"-D" + hideBannerProperty + "=true\" to your command line");
     	}
     	logger.logInfo("Perfmon4j Instrumentation Agent v." + PerfMonTimerTransformer.class.getPackage().getImplementationVersion() + " installed. (http://perfmon4j.org)");
-
+    	
         String javassistVersion = javassist.CtClass.class.getPackage().getSpecificationVersion();
         if (javassistVersion != null) {
         	logger.logInfo("Perfmon4j found Javassist bytcode instrumentation library version: " + javassistVersion);
         }
+    	logger.logInfo(MiscHelper.getHighResolutionTimerEnabledDisabledMessage());
         
         PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
 

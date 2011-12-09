@@ -498,8 +498,9 @@ System.out.println(output);
     	String output = LaunchRunnableInVM.run(Log4jRuntimeLoggerTest.class, "", "", perfmon4jJar);
     	System.out.println(output);
     	
-    	assertTrue("Before LOG4J initialize, logging should be through STDOUT",
-    			output.contains("[STDOUT] info - pre initialize"));
+    	assertTrue("Before LOG4J initialize, logging should be through java logging",
+    			output.contains("[STDERR] INFO: info - pre initialize"));
+    	
     	assertTrue("After LOG4J initialize, logging should be through LOG4J",
     			output.contains("[main] INFO org.perfmon4j.instrument.PerfMonTimerTransformerTest$Log4jRuntimeLoggerTest  - info - post initialize"));
     }
@@ -565,9 +566,9 @@ System.out.println(output);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new PerfMonTimerTransformerTest("testInstrumentSQLStatement"));
+		newSuite.addTest(new PerfMonTimerTransformerTest("testPerfmon4jLoggerUsesLog4jWhenInitialized"));
 //        newSuite.addTest(new PerfMonTimerTransformerTest("testInterfacesAreInstrumented"));
-        newSuite.addTest(new PerfMonTimerTransformerTest("testVarArgsMethodIsInstrumented"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testVarArgsMethodIsInstrumented"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
