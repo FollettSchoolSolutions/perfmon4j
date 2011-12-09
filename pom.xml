@@ -8,8 +8,7 @@
 		CHILD POM!!!  AT LEAST UNTIL MAVEN
 		ADDS FUNCTIOANLITY THAT MAKES MORE SENSE!
 	-->
-<!--		<version>1.2.0-ALPHA_4-SNAPSHOT</version> -->
-		<version>1.2.0-ALPHA_3</version>
+	<version>1.2.0-ALPHA_4-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
