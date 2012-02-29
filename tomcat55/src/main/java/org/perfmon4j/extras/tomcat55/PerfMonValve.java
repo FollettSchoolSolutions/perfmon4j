@@ -58,6 +58,7 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
     private boolean abortTimerOnRedirect = false;
     private boolean abortTimerOnImageResponse = false;
     private String abortTimerOnURLPattern = null;
+    private String skipTimerOnURLPattern = null;
     private boolean outputRequestAndDuration = false;
     private String pushCookiesOnNDC = null;
     private String pushSessionAttributesOnNDC = null;
@@ -80,6 +81,7 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_ABORT_TIMER_ON_REDIRECT, Boolean.toString(isAbortTimerOnRedirect()));
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_ABORT_TIMER_ON_IMAGE_RESPONSE, Boolean.toString(isAbortTimerOnImageResponse()));
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_ABORT_TIMER_ON_URL_PATTERN, getAbortTimerOnURLPattern());
+			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_SKIP_TIMER_ON_URL_PATTERN, getSkipTimerOnURLPattern());
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_OUTPUT_REQUEST_AND_DURATION, 
 					Boolean.toString(isOutputRequestAndDuration()));
 			
@@ -90,7 +92,7 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
 			filterConfig.setInitParameter(PerfMonNDCFilter.PROPERTY_PUSH_SESSION_ATTRIBUTES, 
 					getPushSessionAttributesOnNDC());
 			
-			filter = new PerfMonNDCFilter();
+			filter = new PerfMonNDCFilter(true);
 			filter.init(filterConfig);
 
 			logger.logInfo(this.getClass().getSimpleName() + " started.");
@@ -176,6 +178,14 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
 
 	public void addLifecycleListener(LifecycleListener listener) {
 		listeners.add(listener);
+	}
+
+	public String getSkipTimerOnURLPattern() {
+		return skipTimerOnURLPattern;
+	}
+
+	public void setSkipTimerOnURLPattern(String skipTimerOnURLPattern) {
+		this.skipTimerOnURLPattern = skipTimerOnURLPattern;
 	}
 
 	public LifecycleListener[] findLifecycleListeners() {

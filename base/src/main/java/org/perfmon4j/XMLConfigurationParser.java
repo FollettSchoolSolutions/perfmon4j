@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
-import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -60,13 +59,26 @@ class XMLConfigurationParser extends DefaultHandler {
         result.attachAppenderToMonitor(PerfMon.ROOT_MONITOR_NAME, APPENDER_NAME, PerfMon.APPENDER_PATTERN_CHILDREN_ONLY);
         return result;
     }
+
+    public static final String DEFAULT_XML_READER_CLASS = "com.sun.org.apache.xerces.internal.parsers.SAXParser";
+    public static String lastKnownGoodXMLReaderClass = null;
     
     public static XMLPerfMonConfiguration parseXML(Reader reader)
         throws InvalidConfigException {
         XMLPerfMonConfiguration result = null;
         try {
             XMLConfigurationParser handler = new XMLConfigurationParser();
-            XMLReader xr = XMLReaderFactory.createXMLReader();
+            XMLReader xr = null;
+            
+            try {
+                xr = XMLReaderFactory.createXMLReader();
+                lastKnownGoodXMLReaderClass = xr.getClass().getName();
+            } catch (SAXException ex) {
+            	String clazzToUse = lastKnownGoodXMLReaderClass != null 
+            		? lastKnownGoodXMLReaderClass :
+            		DEFAULT_XML_READER_CLASS;
+            	xr = XMLReaderFactory.createXMLReader(clazzToUse);
+            }
             xr.setContentHandler(handler);
             xr.setErrorHandler(handler);
             xr.parse(new InputSource(reader));

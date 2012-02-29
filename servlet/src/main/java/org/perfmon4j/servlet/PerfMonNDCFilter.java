@@ -51,6 +51,14 @@ public class PerfMonNDCFilter extends PerfMonFilter {
     private String[] pushCookies = null;
     private String[] pushSessionAttributes = null;
     
+    public PerfMonNDCFilter() {
+    	super();
+    }
+    
+    public PerfMonNDCFilter(boolean childOfValve) {
+    	super(childOfValve);
+    }
+    
 /*----------------------------------------------------------------------------*/    
     public void init(FilterConfig filterConfig) throws ServletException {
     	super.init(filterConfig);

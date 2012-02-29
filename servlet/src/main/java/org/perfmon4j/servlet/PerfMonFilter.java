@@ -60,6 +60,7 @@ public class PerfMonFilter implements Filter {
     final static public String PROPERTY_ABORT_TIMER_ON_REDIRECT = "ABORT_TIMER_ON_REDIRECT";
     final static public String PROPERTY_ABORT_TIMER_ON_IMAGE_RESPONSE = "ABORT_TIMER_ON_IMAGE_RESPONSE";
     final static public String PROPERTY_ABORT_TIMER_ON_URL_PATTERN = "ABORT_TIMER_ON_URL_PATTERN";
+    final static public String PROPERTY_SKIP_TIMER_ON_URL_PATTERN = "SKIP_TIMER_ON_URL_PATTERN";
     
     // Default pattern /images/.*|.*\\.(css|gif|jpg|jpeg|tiff|wav|au)
     
@@ -67,9 +68,20 @@ public class PerfMonFilter implements Filter {
     protected boolean abortTimerOnRedirect = false;
     protected boolean abortTimerOnImageResponse = false;
     protected Pattern abortTimerOnURLPattern = null;
+    protected Pattern skipTimerOnURLPattern = null;
     protected boolean outputRequestAndDuration = false;
+
+    // Indicates if this filter is installed via a specific context, via web.xml OR
+    // across contexts via a Tomcat Valve.
+    private final boolean childOfPerfMonValve;
     
+    public PerfMonFilter() {
+    	this(false);
+    }
     
+    public PerfMonFilter(boolean childOfPerfmonValve) {
+    	this.childOfPerfMonValve = childOfPerfmonValve; 
+    }
  
     protected static String getInitParameter(FilterConfig filterConfig, String key, 
         String defaultValue) {
@@ -97,13 +109,30 @@ public class PerfMonFilter implements Filter {
                 logger.logError("Error compiling pattern: " + pattern, ex);
             }
         }
+        
+        
+        pattern = getInitParameter(filterConfig, PROPERTY_SKIP_TIMER_ON_URL_PATTERN, null);
+        if (pattern != null) {
+            try {
+                skipTimerOnURLPattern = Pattern.compile(pattern, 
+                    Pattern.CASE_INSENSITIVE);
+            } catch (PatternSyntaxException ex) {
+                logger.logError("Error compiling pattern: " + pattern, ex);
+            }
+        }
     }
     
 /*----------------------------------------------------------------------------*/    
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    	boolean handled = false;
     	if (request instanceof HttpServletRequest) {
-    		doFilterHttpRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
-    	} else {
+    		if (skipTimerOnURLPattern == null 
+    				|| !matchesURLPattern((HttpServletRequest)request, skipTimerOnURLPattern)) {
+        		doFilterHttpRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
+        		handled = true;
+    		}
+    	}
+    	if (!handled) {
     		chain.doFilter(request, response);
     	}
     }
@@ -388,6 +417,29 @@ public class PerfMonFilter implements Filter {
 				}
 			}
 			return result;
-		}
+		}  
     }
+    
+    Pattern getAbortTimerOnURLPattern() {
+		return abortTimerOnURLPattern;
+	}
+
+	Pattern getSkipTimerOnURLPattern() {
+		return skipTimerOnURLPattern;
+	}
+
+	// Package level for testing....
+    boolean matchesURLPattern(HttpServletRequest request, Pattern pattern) {
+		String path = request.getServletPath();
+        
+		if (childOfPerfMonValve) {
+			String contextPath = request.getContextPath();
+			if (contextPath != null) {
+				path = contextPath + path;
+			}
+		}
+        Matcher matcher = pattern.matcher(path);
+        return matcher.matches();
+	}
+    
 }

@@ -299,6 +299,50 @@ public class PerfMonFilterTest extends TestCase {
 		assertEquals("", "/default/something.do?mypassword=*******", result);
 	}
 	
+	
+	public void testURLFilterIncludesDOESNotIncluedContextServletFilter() throws Exception {
+		PerfMonFilter filter = new PerfMonFilter(false);
+		
+		FilterConfig config = Mockito.mock(FilterConfig.class);
+		Mockito.when(config.getInitParameter(PerfMonFilter.PROPERTY_ABORT_TIMER_ON_URL_PATTERN)).thenReturn("/something\\.do");
+		
+		filter.init(config);
+		
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		
+		Mockito.when(request.getContextPath()).thenReturn("/default");
+		Mockito.when(request.getServletPath()).thenReturn("/something.do");
+
+		assertTrue("When the filter is attached to a specific context, the pattern should NOT be evaluated " +
+			" with the context name included. "
+			,filter.matchesURLPattern(request, filter.getAbortTimerOnURLPattern()));
+	}
+
+	
+	public void testURLFilterRequiersContextFromValve() throws Exception {
+		boolean childOfValve = true;
+		PerfMonFilter filter = new PerfMonFilter(childOfValve);
+		
+		FilterConfig config = Mockito.mock(FilterConfig.class);
+		Mockito.when(config.getInitParameter(PerfMonFilter.PROPERTY_ABORT_TIMER_ON_URL_PATTERN)).thenReturn("/default/something\\.do");
+		
+		filter.init(config);
+		
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		
+		Mockito.when(request.getContextPath()).thenReturn("/default");
+		Mockito.when(request.getServletPath()).thenReturn("/something.do");
+
+		assertTrue("When called from valve context path is significant to pattern matching! " 
+			,filter.matchesURLPattern(request, filter.getAbortTimerOnURLPattern()));
+
+	
+		Mockito.when(request.getContextPath()).thenReturn("/someothercontext");
+		assertFalse("Context path does not match should not match pattern" 
+				,filter.matchesURLPattern(request, filter.getAbortTimerOnURLPattern()));
+	}
+	
+	
 	/**
 	 * With the increased usage of RESTFUL frameworks dynamic URL's are
 	 * increasing dynamic url paths we should not "create" monitors
