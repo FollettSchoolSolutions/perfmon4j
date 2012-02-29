@@ -34,6 +34,31 @@ Contact us through the SourceForge forums
 Dave
 ****** Please Help ********************************************************************************************
 
+Version 1.2.0-ALPHA-4
+- Fixed an obscure defect found under tomcat Aspen where the perfmon4j confuration file could no longer 
+be parsed after the WAR file was loaded.  The problem was the default XML parser was changed and the new
+parser was not available to the root classloader, which loaded perfmon4j.
+
+- Added a SKIP_TIMER_ON_URL_PATTERN option to the PerfMonFilter.  This functions similar
+to the ABORT_TIMER_ON_URL_PATTERN except it will not even start a timer on a web request that
+matches the pattern
+
+- Now with the PerfMonValve a URLPattern for the "skipTimerOnURLPattern" or "abortTimerOnURLPattern"
+will match with the context name of the request included.  The match for the valve will be evaluated against
+the servlet context + servlet path.
+
+
+Version 1.2.0-ALPHA-3
+???
+
+Version 1.2.0-ALPHA-2
+???
+
+Version 1.2.0-ALPHA-1
+???
+
+
+
 Changes
 *** Version 1.1.1.GA (released 2011-9-30) ***  
 	(SVN Release Branch: https://perfmon4j.svn.sourceforge.net/svnroot/perfmon4j/branches/BRANCH1.1.x)
