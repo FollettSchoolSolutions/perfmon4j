@@ -34,7 +34,6 @@ import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.Modifier;
 import javassist.NotFoundException;
-import javassist.SerialVersionUID;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.AttributeInfo;
 import javassist.bytecode.ParameterAnnotationsAttribute;
@@ -163,7 +162,7 @@ public class RuntimeTimerInjector {
                 if (!beingRedefined) {
                     // No need to set serial versionID because when a redefined class
                     // is being instrumented it does not have methods added.
-                    SerialVersionUID.setSerialVersionUID(clazz);
+                	SerialVersionUID.setSerialVersionUID(clazz);
                 }
                 
                 serialNumber++; // We have to ensure we have a unique name for each

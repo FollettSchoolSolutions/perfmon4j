@@ -167,6 +167,36 @@ public class RuntimeTimerInjectorTest extends TestCase {
             newSerialVersionID);
     }
     
+    
+    public static class TestSerializableNoExplicitID implements Serializable {
+    	/*
+    	 * NOTE This class does not have a defined serialVersionUID
+    	 *  
+    	 */
+		public void doNothing() {
+        }
+    }   
+    
+    /*----------------------------------------------------------------------------*/    
+    public void testMaintainSerialVersionIDOnClassWithNoExplicitSerialVersionID() throws Exception {
+        JavaAssistClassLoader loader = new JavaAssistClassLoader();
+        ClassPool.doPruning = false;
+        CtClass clazz = cloneLoadedClass(TestSerializableNoExplicitID.class);
+        
+        long originalSerialVersionID = ObjectStreamClass.lookup(loader.loadClass(clazz.getName())).getSerialVersionUID();
+        clazz.defrost();
+        
+        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+        assertEquals("Number of inserted timers", 1, numTimersInserted);
+        
+        loader = new JavaAssistClassLoader();
+        long newSerialVersionID = ObjectStreamClass.lookup(loader.loadClass(clazz.getName())).getSerialVersionUID();
+        
+        assertEquals("Should have maintained serialVersionID", originalSerialVersionID, 
+            newSerialVersionID);
+    }
+    
+    
 /*----------------------------------------------------------------------------*/    
     public static class TestExtremeInjection {
         public static void noAnnotation() {
