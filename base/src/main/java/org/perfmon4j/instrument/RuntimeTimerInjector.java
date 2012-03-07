@@ -40,6 +40,7 @@ import javassist.bytecode.ParameterAnnotationsAttribute;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -122,6 +123,8 @@ public class RuntimeTimerInjector {
     	gcMethod.insertBefore("if (1==1) {return;}\r\n");
     }
     
+    private static SerialVersionUIDHelper serialVersionHelper = null;
+    
     public static int injectPerfMonTimers(CtClass clazz, boolean beingRedefined, TransformerParams params) throws ClassNotFoundException, NotFoundException, CannotCompileException {
         int mode = TransformerParams.MODE_ANNOTATE;
         TransformerParams.TransformOptions transformOptions = TransformerParams.TransformOptions.DEFAULT;
@@ -160,9 +163,23 @@ public class RuntimeTimerInjector {
                  * by inserting our instrumentation...
                  */
                 if (!beingRedefined) {
-                    // No need to set serial versionID because when a redefined class
-                    // is being instrumented it does not have methods added.
-                	SerialVersionUID.setSerialVersionUID(clazz);
+                	if (serialVersionHelper == null) {
+                		serialVersionHelper = new SerialVersionUIDHelper();
+                	}
+                	
+                	if (serialVersionHelper.requiresSerialVesionUID(clazz)) {
+                		if (serialVersionHelper.isSkipGenerationOfSerialVersionUID()) {
+                            logger.logInfo("Skipping instrumentation of serializable class: " + clazz.getName() +
+                            " because the class does not contain an explicit serialVesionUID.");
+                            return 0;
+                		}
+                		
+                		if (!serialVersionHelper.setSerialVersionUID(clazz)) {
+                            logger.logError("Unable to instrument serializable class: " + clazz.getName() +
+                            " unable to calculate proper serialVersionUID - You must add explicit serialVersionUID field to class.");
+                            return 0;
+                		}
+                	}
                 }
                 
                 serialNumber++; // We have to ensure we have a unique name for each

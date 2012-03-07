@@ -39,6 +39,7 @@ import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.TextAppender;
+import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
 
 
 public class RuntimeTimerInjectorTest extends TestCase {
@@ -194,6 +195,53 @@ public class RuntimeTimerInjectorTest extends TestCase {
         
         assertEquals("Should have maintained serialVersionID", originalSerialVersionID, 
             newSerialVersionID);
+    }
+
+    public static class TestSkipSerializableNoExplicitID implements Serializable {
+    	/*
+    	 * NOTE This class does not have a defined serialVersionUID
+    	 *  
+    	 */
+		public void doNothing() {
+        }
+    }   
+    
+    /*----------------------------------------------------------------------------*/    
+    public void testSkipSerialVersionIDOnClassWithNoExplicitSerialVersionID() throws Exception {
+        JavaAssistClassLoader loader = new JavaAssistClassLoader();
+        
+        System.setProperty(SerialVersionUIDHelper.REQUIRE_EXPLICIT_SERIAL_VERSION_UID, "true");
+        try {
+            CtClass clazz = cloneLoadedClass(TestSkipSerializableNoExplicitID.class);
+            
+            int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+            assertEquals("Class should NOT have been instrumented", 0, numTimersInserted);
+        	
+        } finally {
+            System.getProperties().remove(SerialVersionUIDHelper.REQUIRE_EXPLICIT_SERIAL_VERSION_UID);
+        }
+    }
+
+    public static class TestDoNOTSkipSerializableWithExplicitID implements Serializable {
+		private static final long serialVersionUID = 1L;
+		public void doNothing() {
+        }
+    }   
+    
+    /*----------------------------------------------------------------------------*/    
+    public void testIgnoreSkipSerialVersionIDOnClassWithExplicitSerialVersionID() throws Exception {
+        JavaAssistClassLoader loader = new JavaAssistClassLoader();
+        
+        System.setProperty(SerialVersionUIDHelper.REQUIRE_EXPLICIT_SERIAL_VERSION_UID, "true");
+        try {
+            CtClass clazz = cloneLoadedClass(TestDoNOTSkipSerializableWithExplicitID.class);
+            
+            int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+            assertEquals("Class should have been instrumented", 1, numTimersInserted);
+        	
+        } finally {
+            System.getProperties().remove(SerialVersionUIDHelper.REQUIRE_EXPLICIT_SERIAL_VERSION_UID);
+        }
     }
     
     

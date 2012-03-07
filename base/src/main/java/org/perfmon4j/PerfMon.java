@@ -173,9 +173,12 @@ public class PerfMon {
             parent.childMonitors.add(this);
         }
 
-        if (logger.isDebugEnabled()) {
-            logger.logDebug("Constructing monitor: " + this);
-        }
+//        DO NOT LOG HERE!  You can create an infinite loop when debug is enabled!
+//        if (logger.isDebugEnabled()) {
+//            logger.logDebug("Constructing monitor: " + this.getName());
+//        }
+        
+        
         // Assign any Appenders associated with our parent to us...
         if (parent != null) {
             Iterator<Appender> itr = parent.appenderList.iterator();
