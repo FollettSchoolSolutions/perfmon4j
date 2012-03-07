@@ -370,6 +370,13 @@ public class TransformerParamsTest extends TestCase {
         
         private static class StatementImpl implements java.sql.Statement {
 
+        	public boolean isCloseOnCompletion() {
+        		return false;
+        	}
+        	
+        	public void closeOnCompletion() {
+        	}
+        	
 			public void addBatch(String sql) throws SQLException {
 				// TODO Auto-generated method stub
 				
