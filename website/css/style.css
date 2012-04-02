@@ -1,124 +1,21 @@
-/***************************************************************************
-*                                                                          *
-* contented4 - An open source xhtml/css website template by Contented      *
-* Designs.  You're free to modify it and use it for any purpose without    *
-* cost or obligation. We'd prefer that you leave the link to our website   *
-* in the footer but it's not required.                                     *
-*                                                                          *
-* If you have comments or questions, please contact us at                  *
-* http://www.ContentedDesigns.com. Thanks!                                 *
-*                                                                          *
-***************************************************************************/
+h1, h2, h3, h4, h5, h6, p, pre, blockquote, label, ul, ol, dl, 
+fieldset, address { margin:0.75em 0;}
 
+pre, code, kbd, samp { font-family: monospace, serif; _font-family: 'courier new', monospace; font-size: 12px; }
 
-* {
-	padding:0;
-	margin:0;
-}
 
 body {
 	color: #000000;
 	background-color:#EEEEEE;
 	font-family:Verdana,Tahoma,Arial,sans-serif;
 	font-size:0.83em;
-	margin:20px auto;
-	width:760px;
-        padding-left:10px;
-        padding-right:10px;
+	margin:10px auto;
+	width:90%;
+	min-width: 760px;
 }
 
-h1, h2, h3, h4, h5, h6, p, pre, blockquote, label, ul, ol, dl, 
-fieldset, address { margin:0.75em 0;}
-
-h1 {font-size:1.67em;}
-
-h2 {font-size:1.39em;}
-
-h3 {font-size:1.2em;}
-
-h4 {font-size:1em;}
-
-li, dd { 
-	margin-left:2em;
-}
-
-a {
-        color: #009900;
-        background-color: #EEEEEE;
-        font-weight: normal;
-        text-decoration: underline;
-	outline:none;
-}
-
-a:hover {
-        color: #00CC00;
-        background-color: #EEEEEE;
-        font-weight: normal;
-        text-decoration: underline;
-}
-
-#contact {
-        padding:5px 10px 0px 0px;
-        float:right;
-}
-
-#contact a {
-        color: #FFFFFF;
-	background-color:#72A372;
-        font-weight:bold;
-        text-decoration:none;
-}
-
-#contact a:hover {
-        color: #FFFFFF;
-	background-color:#72A372;
-        text-decoration:underline;
-}
-
-#title {
-	color:#FFFFFF;
-	background-color:#72A372;
-        font-size:3em;
-        font-weight:normal;
-	margin:22px 0px 0px 20px;
-        float:left;
-}
-
-#slogan {
-	color:#FFFFFF;
-	background-color:#72A372;
-	font-size:medium;
-	font-weight:normal;
-	font-style:normal;
-	padding:50px 0px 0px 0px;
-	float:right;
-	margin:0px 0px 0px 0px;
-}
-
-#path {
-        width:530px;
-        clear:both;
-        float:left;
-        font-size:0.83em;
-        font-weight:normal;
-        margin:0px 0px 25px 0px;
-}
-
-#path a {
-        font-weight:normal;
-}
-
-#header {
-	padding:0px 0px 0px 0px;
-	margin:0px 0px 0px 0px;
-	color:#CFE6CF;
-	background-color:#72A372;
-	height:75px;
-	width:100%;
-}
-
-#sidecontent {
-	clear:both;
+.nav {
+	clear:left;
 	font-family:Arial, sans-serif;
 	color:#000000;
 	background-color:#CFE6CF;
@@ -127,42 +24,105 @@ a:hover {
 	margin:0px 0px 10px 0px;
 	width:200px;
 	float:left;
+	}
+
+.main {	
+	margin-left: 205px;
+	}
+
+li { 
+	margin-left:2em;
 }
 
-#sidecontent a {
+.header {
+	padding:0px 0px 0px 0px;
+	margin:0px 0px 0px 0px;
+	color:#CFE6CF;
+	background-color:#72A372;
+	height:75px;
+	width:100%;
+}
+pre {
+		background-color: white;
+		border: 1px solid black;
+		margin-left: 5px;
+	}
+
+.header .title {
+	color:#FFFFFF;
+ 	font-size:3em;
+ 	font-weight:normal;
+ 	padding-top:20px;
+ 	padding-left:10px; 
+ 	float:left;
+}
+
+.header .slogan {
+	color:#FFFFFF;
+	font-size:medium;
+	font-weight:normal;
+	font-style:normal;
+	padding-top:26px;
+	padding-right:10px;
+	float:right;
+	clear:right;
+}
+
+.header .contact {
+	padding-top:5px;
+	padding-right:10px;
+ 	float:right;
+	clear:right;
+}
+
+.header .contact a {
+        color: #FFFFFF;
+	background-color:#72A372;
+        font-weight:bold;
+        text-decoration:none;
+}
+
+.header .contact a:hover {
+        color: #FFFFFF;
+	background-color:#72A372;
+        text-decoration:underline;
+}
+	
+.nav a {
 	color:#009900;
 	background-color:#CFE6CF;
 }
 
-#sidecontent a:hover {
+.nav a:hover {
 	color:#00CC00;
 	background-color:#CFE6CF;
-}
-
-#sidecontent h2 { margin:1.5em 0.5em 0.5em 0.5em;}
-
-#sidecontent ul { margin:0.5em 0.5em 0.5em 1.5em;}
-
-ul#nav {
+}	
+	
+.nav ul {
 	clear:both;
 	float:left;
 	color: #000000;
 	background: #CFE6CF; 
-	padding:0px 0px 20px 0px;
-	margin:0px 0px 20px 0px;
+	padding:5px 0px 5px 0px;
+	margin:5px 0px 5px 0px;
 	list-style: none;
 	width:200px;
+	border-top:1px solid #72A372;
 	border-bottom:1px solid #72A372;
 }
+.nav img {
+	margin: 5px;
+	margin-left: 10px;	
+	}
 
-ul#nav li {
+.nav ul li {
 	padding:2px 0px 2px 0px;
 	margin:0px 0px 0px 0px;
 	float: left;
 	width:200px;
 }
 
-ul#nav li a {
+.nav ul li a {
 	border:1px solid #CFE6CF;
 	display: block;
 	font-size: small;
@@ -172,55 +132,50 @@ ul#nav li a {
 	margin:0px 0px 0px 0px;
 }
 
-ul#nav li a:hover { 
+.nav ul li a:hover { 
 	background: #FFFFFF; 
 	color: #009900;
 	width:178px;
 	border:1px solid #72A372;
 }
 
-#maincontent {
-	font-size:1.0em;
-	padding:0px 0px 5px 0px;
-	margin:5px 10px 10px 20px;
-	width:530px;
-	float:left;
+.nav h1, .nav h2 {
+	color:#009900;
+	margin-bottom: 0px;
 }
-
-
-#footer {
+	
+.nav p {
+	color:#009900;
+	margin: 4px
+}
+	
+.main h1, .main h2 {
+	margin-top: 5px;
+	margin-bottom: 3px;
+}
+	
+.footer {
 	color:#000000;
 	background-color:#EEEEEE;
 	border-top:1px solid #009900;
 	font-size:80%;
 	line-height:1.5em;
-	width: 760px;
-	clear:both;
+	width: 100%;
+	clear: both;
+}	
+
+.footer .copyright {
+	float: left;
 }
 
-#footer a {
-        color:#009900;
-        background-color:#EEEEEE;
-        text-decoration: none;
+.footer .contact {
+	float: right;
 }
 
-#footer a:hover {
-        color:#60BF60;
-        background-color:#EEEEEE;
-        font-weight: normal;
-        text-decoration: underline;
+a {
+	color: #000000;
 }
 
-#copyright {
-	color:#000000;
-	background-color:#EEEEEE;
-	padding:5px 20px 5px 10px;
-	float:left;
-}
-
-#footercontact {
-	color:#60BF60;
-	background-color:#EEEEEE;
-	padding:5px 10px 5px 0px;
-	float:right;
+a:hover {
+	color: grey;
 }

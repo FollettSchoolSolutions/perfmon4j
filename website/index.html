@@ -1,232 +1,135 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
 <head>
+  <meta charset="utf-8">
   <title>Perfmon4j</title>
-
-
-  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-
-  <meta name="description" content="Perfmon4j is a system API designed to monitor Java Enterprise Systems under load." />
-
-  <meta name="keywords" content="perfmon4j, java, enterprise, application, performance, monitor, profiler" />
-
-  <link href="css/style.css" rel="stylesheet" type="text/css" />
-
+  <meta name="description" content="">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 
 
 <body>
-
-<div id="header">
-<div id="contact"><a href="mailto:ddeucher@users.sourceforge.net">Contact</a></div>
-
-<div id="title">Perfmon4j</div>
-
-<div id="slogan">System monitoring API for Java&#8482;
-Enterprise
-Applications</div>
-
-</div>
-
-<!-- end header -->
-<div id="sidecontent">
-<h2>Navigation Title</h2>
-
-<ul id="nav">
-
-  <li><a href="#Overview">Overview</a></li>
-
-  <li><a href="#Features">Features</a></li>
-
-  <li><a href="#Documentation">Documentation</a></li>
-
-  <li><a href="#Acknowledgments">Acknowledgments</a></li>
-
-</ul>
-<a href="http://www.java.net">
-<img src="images/javanet_button_170.gif" width="170" height="47" border="0" alt="java.net Member Button: 170px wide"> 
-</a>
-<a href="http://sourceforge.net/projects/perfmon4j">
-<img src="http://sflogo.sourceforge.net/sflogo.php?group_id=224368&amp;type=11" width="120" height="30" alt="Get PerfMon4j at SourceForge.net. Fast, secure and Free Open Source software downloads" />
-</a>
-<h2>News</h2>
-<ul>
-<li><strong>Update 1.1.1.GA is available!</strong>&nbsp;<a href="https://sourceforge.net/projects/perfmon4j/files/perfmon4j-project-1.1.1.GA-bin.zip/download">Download Now</a> (9/30/2011)</li>
-<li>Updated Documetation! <a href="#Documentation">Documents</a> include configuration instructions for installing Perfmon4j on both the JBoss and Tomcat Application Servers (09/2009)</li>
-</ul>
-
-<h2>Notes</h2>
-
-<ul>
-
-  <li> Perfmon4j is a system API designed to monitor Java
-Enterprise Systems under load.</li>
-
-  <li>Perfmon4j can be deployed with an extremly low performance
-overhead.</li>
-
-  <li>Monitoring can be tailored at runtime via XML configuration
-files.</li>
-
-</ul>
-
-<h2>Links</h2>
-
-<ul>
-
-  <li><a target="_blank" href="http://sourceforge.net/projects/perfmon4j">SourceForge
-Project Page</a></li>
-
-</ul>
-
-<h2>License</h2>
-
-<img style="width: 147px; height: 51px;" alt="LGPL v3" src="images/lgpl.png" />
-</div>
-<!-- end sidecontent -->
-<div id="maincontent">
-<div id="path"><a href="#">Home</a>&nbsp;
-</div>
-
-<h2><a name="WhatsNew"></a>Whats New in 1.1.1.GA</h2>
-PerfMon4j&#8482; 1.1.1.GA is a maintenance release containing some minor fixes and enhancements.  See the
-<a href="./doc/readme.1.1.1.GA.txt">readme.text</a> file for details.
-
-<h2><a name="WhatsNew"></a>Whats New in 1.1.0.GA</h2>
-PerfMon4j&#8482; can now monitor what percentage of your application processing time is spent in SQL.
-<img alt="SQL Logging Example" src="images/SQLMonitorExample.jpg" />
-
-<h2><a name="Overview"></a>Overview</h2>
-
-PerfMon4j&#8482; is a
-software API
-designed to diagnose and monitor application performance while the
-software is under load. It allows monitoring application on many
-levels, including:
-<ul>
-
-  <li>Method&nbsp; via
-declarative programming using <a href="http://java.sun.com/j2se/1.5.0/docs/guide/language/annotations.html" target="_blank">Java Annotations</a>. </li>
-
-  <li>Method
-level via the <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/instrument/package-summary.html" target="_blank">Java Agent Instrumentation API</a>. </li>
-
-  <li>Servlet
-Request level via a Servlet Filter.&nbsp;</li>
-
-  <li>Arbitrary
-code execution point via inserted timers.</li>
-
-</ul>
-
-<p>Additional
-facilities enable monitoring
-web request, client browser information and arbitrary system health
-information</p>
-
-<p>Perfmon4j
-should not be confused with a profiler. &nbsp;While profilers are
-typically used to snapshot performance in test environments Perfmon4j
-provides an API to build performance monitors into your application.
-&nbsp;Like a profiler, Perfmon4j can monitor Java classes/methods
-at
-the byte code level without inserting custom code. &nbsp;Perfmon4j
-&nbsp;provides features beyond those typically found in profilers
-to
-enable the creation of a comprehensive monitoring system that enables
-detailed metrics on the usage and performance of your deployed system
-under load. &nbsp;These features include:</p>
-
-<ul>
-
-  <li>Random Sampling -&nbsp;</li>
-
-  <li>UserAgent Tracking (For Web based applications)</li>
-
-  <li>Arbitrary timings based on code insertion</li>
-
-  <li>Nested timings</li>
-
-  <li>Monitor throughput and maximum concurrent threads</li>
-
-  <li>Monitor arbitrary server metrics.</li>
-
-  <li>Extremely low overhead when monitoring is disabled</li>
-
-  <li>Extendable appender can be used to write data metrics to a
-variety of output formats.</li>
-
-  <li>Arbitrary timings based on method parameters</li>
-
-</ul>
-
-Perfmon4j is an API
-designed
-to integrate performance monitoring and logging into your enterprise
-application. &nbsp;It is intended to be deployed in production
-environment to monitor detailed system metrics and usage pattern.
-&nbsp;
-<p style="margin-bottom: 0in;">Perfmon4j has proven to be
-a powerful and effective tool in monitoring large scale enterprise
-applications under load. &nbsp;</p>
-
-<h2><a name="Features"></a>Features</h2>
-
-<ul>
-
-  <li>Interval Timing</li>
-
-  <li>Java Agent Instrumentation of code</li>
-
-  <li>Runtime configuration through XML Based Configuration files</li>
-
-  <li>Servlet Request Monitoring</li>
-
-  <li>Java Stack Trace Sampling</li>
-
-  <li>Interval Monitoring</li>
-
-  <li>Snapshot Monitor Support</li>
-
-</ul>
-
-<h2><a name="Documentation"></a>Documentation</h2>
-
-<ul>
-	<li><a href="./doc/Perfmon4j-UserGuide.pdf" target="_blank">User Guide</a></li>
-	<li><a href="./doc/Perfmon4j-Tomcat-ConfigGuide.pdf" target="_blank">Apache-Tomcat Configuration Guide</a></li>
-	<li><a href="./doc/Perfmon4j-JBossConfigGuide.pdf" target="_blank">JBoss Configuration Guide</a></li>
-	<li><a href="./doc/Perfmon4j-ConfigSamples.pdf" target="_blank">Configuration Samples</a></li>
-</ul>
-
-<h2><a name="Acknowledgments"></a>Acknowledgments</h2>
-
-Java byte code manipulation is implemented with the <a href="http://www.jboss.org/javassist/" target="_blank">Javaasist
-Byte Code</a> library.
-<p style="font-style: italic;">Perfmon4j&#8482; is a trademark of Follett Software Company</p>
-
-<p style="font-style: italic;">Java&#8482; is a trademark of Sun
-Microsystems, Inc
-</p>
-
-<p><span style="font-style: italic;">Javassist
-©1999-2008, Shigeru Chiba.</span>
-<!-- end maincontent --></p>
-
-</div>
-
-<div id="footer">
-<div id="copyright">Copyright © 2008, 2009 Follett Software
-Company |
-Design by <a href="http://ContentedDesigns.com">Contented
-Designs</a>
-</div>
-
-<div id="footercontact">
-<a href="mailto:ddeucher@users.sourceforge.net">Contact</a>
-</div>
-
-</div>
-
+  <div class="header">
+  		<div class="title">Perfmon4j</div>
+		<div class="contact"><a href="mailto:ddeucher@users.sourceforge.net">Contact</a></div>
+		<div class="slogan">System monitoring API for Java&#8482; Enterprise Applications</div>
+	</div> <!-- end of header -->
+  
+	<div class="nav">
+		<img src="images/p4j.png" alt="Perfmon4j Logo" >
+
+		<ul>
+			<li><a href="#Overview">Overview</a></li>
+  			<li><a href="#Features">Features</a></li>
+  			<li><a href="#Documentation">Documentation</a></li>
+  			<li><a href="#Acknowledgments">Acknowledgments</a></li>
+		</ul>	
+		
+		<a href="http://www.java.net">
+			<img src="images/javanet_button_170.gif" width="170" height="47" border="0" alt="java.net Member"> 
+		</a>
+
+		<a href="http://sourceforge.net/projects/perfmon4j">
+			<img src="http://sflogo.sourceforge.net/sflogo.php?group_id=224368&amp;type=11" width="120" height="30" alt="Get PerfMon4j at SourceForge.net. Fast, secure and Free Open Source software downloads" />
+		</a>
+		
+		<h2>News</h2>
+		<p><b>Update 1.1.1.GA is available!</b> <a href="https://sourceforge.net/projects/perfmon4j/files/perfmon4j-project-1.1.1.GA-bin.zip/download">Download Now</a> (9/30/2011)</p>
+		<p><b>Updated Documentation!</b> <a href="#Documentation">Documents</a> include configuration instructions for installing Perfmon4j on both the JBoss and Tomcat Application Servers (09/2009)</p>
+
+		<h2>Notes</h2>
+		<p>Perfmon4j is a system API designed to monitor Java
+		Enterprise Systems under load.</p>
+		<p>Perfmon4j can be deployed with an extremely low performance
+			overhead.</p>
+  		<p>Monitoring can be tailored at runtime via XML configuration
+			files.</p>
+
+		<h2>Links</h2>
+  		<p><a href="http://sourceforge.net/projects/perfmon4j">SourceForge
+			Project Page</a></p>
+
+		<h2>License</h2>
+		<img style="width: 147px; height: 51px;" alt="LGPL v3" src="img/lgpl.png" />
+	</div>  <!-- end of nav -->
+  
+  <div class="main">
+  <!--
+		<h2><a name="WhatsNew"></a>Whats New in 1.1.1.GA</h2>
+		PerfMon4j &#8482; 1.1.1.GA is a maintenance release containing some minor fixes and enhancements.  See the
+		<a href="./doc/readme.1.1.1.GA.txt">readme.text</a> file for details.
+
+		<h2><a name="WhatsNew"></a>Whats New in 1.1.0.GA</h2>
+		PerfMon4j&#8482; can now monitor what percentage of your application processing time is spent in SQL	.
+		<img alt="SQL Logging Example" src="imgages/SQLMonitorExample.jpg" />
+
+-->
+
+		<h2><a name="Overview"></a>Overview</h2>
+		PerfMon4j&#8482; is a software API designed to diagnose and monitor application performance while the software is under load. It allows monitoring application on many
+		levels, including:
+		<ul>
+  		 	<li>Method via declarative programming using <a href="http://docs.oracle.com/javase/1.5.0/docs/guide/language/annotations.html" target="_blank">Java Annotations</a>. </li>
+		  	<li>Method level via the <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/instrument/package-summary.html" target="_blank">Java Agent Instrumentation API</a>.</li>
+		  	<li>Servlet Request level via a Servlet Filter or Apache Tomcat Valve.</li>
+		  	<li>Arbitrary code execution point via inserted timers.</li>
+		</ul>
+
+		<p>Additional facilities enable monitoring web request, client browser information and arbitrary system health information</p>
+		<p>Perfmon4j should not be confused with a profiler. While profilers are typically used to snapshot performance in test environments Perfmon4j
+			provides an API to build performance monitors into your application. Like a profiler, Perfmon4j can monitor Java classes/methods
+			at the byte code level without inserting custom code. Perfmon4j provides features beyond those typically found in profilers to
+			enable the creation of a comprehensive monitoring system that enables detailed metrics on the usage and performance of your deployed system
+			under load. These features include:</p>
+		<ul>
+		  <li>Random Sampling</li>
+		  <li>UserAgent Tracking (For Web based applications)</li>
+		  <li>Arbitrary timings based on code insertion</li>
+		  <li>Nested timings</li>
+		  <li>Monitor throughput and maximum concurrent threads</li>
+		  <li>Monitor arbitrary server metrics.</li>
+		  <li>Extremely low overhead when monitoring is disabled</li>
+  		  <li>Extensible appender can be used to write data metrics to a variety of output formats, including writing to the server log or an SQL database.</li>
+  			<li>Arbitrary timings based on method parameters</li>
+		</ul>
+
+		<p>Perfmon4j is an API designed to integrate performance monitoring and logging into your enterprise application. It is intended to be deployed in production
+		environment to monitor detailed system metrics and usage pattern.</p>
+
+		<p>Perfmon4j has proven to be a powerful and effective tool in monitoring large scale enterprise
+		applications under load.</p>
+
+		<h2><a name="Features"></a>Features</h2>
+		<ul>
+		  <li>Interval Timing</li>
+		  <li>Java Agent Instrumentation of code</li>
+		  <li>Runtime configuration through XML Based Configuration files</li>
+		  <li>Servlet Request Monitoring</li>
+		  <li>Java Stack Trace Sampling</li>
+		  <li>Interval Monitoring</li>
+		  <li>Snapshot Monitor Support</li>
+		</ul>
+
+		<h2><a name="Documentation"></a>Documentation</h2>
+		<ul>
+			<li><a href="./doc/Perfmon4j-UserGuide.pdf" target="_blank">User Guide</a></li>
+			<li><a href="./doc/Perfmon4j-Tomcat-ConfigGuide.pdf" target="_blank">Apache-Tomcat Configuration Guide</a></li>
+			<li><a href="./doc/Perfmon4j-JBossConfigGuide.pdf" target="_blank">JBoss Configuration Guide</a></li>
+			<li><a href="./doc/Perfmon4j-ConfigSamples.pdf" target="_blank">Configuration Samples</a></li>
+		</ul>
+
+		<h2><a name="Acknowledgments"></a>Acknowledgments</h2>
+		<div class="acknowlegments">
+			<p>Java byte code manipulation is implemented with the <a href="http://www.jboss.org/javassist/" target="_blank">Javaasist
+			Byte Code</a> library.<p>
+			<p>Perfmon4j&#8482; is a trademark of Follett Software Company.</p>
+			<p >Java&#8482; is a trademark of Oracle and/or its affiliates. in the United States and other countries.</p>
+			<p>Javassist Â©1999-2008, Shigeru Chiba.</span></p>
+		</div>
+  </div> <!-- End of main content -->
+  
+  <div class="footer">
+		<div class="copyright">Copyright &copy; 2008-2012 Follett Software Company</div>
+		<div class="contact"><a href="mailto:ddeucher@users.sourceforge.net">Contact</a></div>
+  </div>
 </body>
 </html>
