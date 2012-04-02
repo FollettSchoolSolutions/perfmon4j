@@ -3,7 +3,6 @@ fieldset, address { margin:0.75em 0;}
 
 pre, code, kbd, samp { font-family: monospace, serif; _font-family: 'courier new', monospace; font-size: 12px; }
 
-
 body {
 	color: #000000;
 	background-color:#EEEEEE;
@@ -26,8 +25,9 @@ body {
 	float:left;
 	}
 
+
 .main {	
-	margin-left: 205px;
+	margin-left: 210px;
 	}
 
 li { 
@@ -97,6 +97,12 @@ pre {
 	color:#00CC00;
 	background-color:#CFE6CF;
 }	
+
+.nav .menuspacer {
+margin-top: 0px;
+margin-bottom: 3px;
+border-bottom:1px solid #72A372;
+}
 	
 .nav ul {
 	clear:both;
@@ -164,6 +170,7 @@ pre {
 	clear: both;
 }	
 
+	
 .footer .copyright {
 	float: left;
 }
