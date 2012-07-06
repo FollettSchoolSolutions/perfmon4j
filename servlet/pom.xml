@@ -44,7 +44,7 @@
 			<groupId>${project.groupId}</groupId>
 			<version>${project.version}</version>
 			<artifactId>perfmon4j</artifactId>
-			<scope>compile</scope>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 	
