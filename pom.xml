@@ -23,7 +23,7 @@
 		<module>tomcat7</module>
 		<module>sunjava6</module>
 		<module>reportconsole</module>
-		<module>perfmon4jweb</module>
+<!--		<module>perfmon4jweb</module> -->
 	</modules>
 
 	<build>
