@@ -717,7 +717,7 @@ System.out.println(appenderString);
     public static class MySQLDataWriter implements SnapShotSQLWriter {
     	private static SnapShotData lastWritten = null;
     	
-		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+		public void writeToSQL(Connection conn, String schema, SnapShotData data, long systemID)
 				throws SQLException {
 			lastWritten = data;
 		}
@@ -740,7 +740,7 @@ System.out.println(appenderString);
     	assertTrue("Should implement the SQLWritable interface", data instanceof SQLWriteable);
     	
     	SQLWriteable w = (SQLWriteable)data;
-    	w.writeToSQL(null, "dave");
+    	w.writeToSQL(null, "dave", 1);
     	assertTrue("Should have invoked our sql writer", w == MySQLDataWriter.lastWritten);
     	
     	// Should also implement the GeneratedData interface.

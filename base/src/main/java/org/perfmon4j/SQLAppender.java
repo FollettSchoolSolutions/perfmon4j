@@ -21,7 +21,6 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,6 +32,7 @@ import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MedianCalculator;
+import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
 import org.perfmon4j.util.MedianCalculator.MedianResult;
 import org.perfmon4j.util.ThresholdCalculator.ThresholdResult;
@@ -44,6 +44,8 @@ public abstract class SQLAppender extends Appender {
 	private String selectCategoryPS = null;
 	private String insertIntervalPS = null;
 	private String insertThresholdPS = null;
+	private String systemName = MiscHelper.getDefaultSystemName();
+	private Long systemID = null;
 	
 	public SQLAppender(AppenderID id) {
 		super(id);
@@ -62,7 +64,7 @@ public abstract class SQLAppender extends Appender {
 			if (data instanceof IntervalData) {
 				outputIntervalData(conn, (IntervalData)data);
 			} else if (data instanceof SQLWriteable){
-				((SQLWriteable)data).writeToSQL(conn, dbSchema);
+				((SQLWriteable)data).writeToSQL(conn, dbSchema, getSystemID());
 			} else {
 				logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
 			}
@@ -92,7 +94,7 @@ public abstract class SQLAppender extends Appender {
 		return selectCategoryPS;
 	}
 
-	public String getInsertIntervalPS(boolean includeOptionalCols) {
+	public String getInsertIntervalPS() {
 		if (insertIntervalPS == null) {
 			insertIntervalPS = String.format(INSERT_INTERVAL_PS, dbSchema == null ? "" : (dbSchema + "."));
 		}
@@ -108,13 +110,13 @@ public abstract class SQLAppender extends Appender {
 	private final static String INSERT_CATEGORY_PS = "INSERT INTO %sP4JCategory (CategoryName) VALUES(?)";
 	private final static String SELECT_CATEGORY_PS = "SELECT CategoryID FROM %sP4JCategory WHERE CategoryName=?";
 	
-	private final static String INSERT_INTERVAL_PS = "INSERT INTO %sP4JIntervalData (CategoryID, StartTime, EndTime, " +
+	private final static String INSERT_INTERVAL_PS = "INSERT INTO %sP4JIntervalData (SystemID, CategoryID, StartTime, EndTime, " +
 		"TotalHits, TotalCompletions, MaxActiveThreads, MaxActiveThreadsSet, MaxDuration, " +
 		"MaxDurationSet, MinDuration, MinDurationSet, averageDuration, standardDeviation,  " +
 		"normalizedThroughputPerMinute, durationSum, durationSumOfSquares, medianDuration, " +
 		"SQLMaxDuration, SQLMaxDurationSet, SQLMinDuration, SQLMinDurationSet, " +
 		"SQLAverageDuration, SQLStandardDeviation, SQLDurationSum, SQLDurationSumOfSquares) " +
-		"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, " +
+		"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, " +
 		"?, ?, ?, ?)";
 	
 	private final static String INSERT_THRESHOLD_PS = "INSERT INTO %sP4JIntervalThreshold (intervalID, ThresholdMillis, " +
@@ -220,45 +222,47 @@ public abstract class SQLAppender extends Appender {
 					&& !data.isSQLMonitor());
 			
 			if (oracleConnection) {
-				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(includeOptionalCols), new int[]{1});
+				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), new int[]{1});
 			} else {
-				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(includeOptionalCols), Statement.RETURN_GENERATED_KEYS);
+				insertIntervalStmt = conn.prepareStatement(getInsertIntervalPS(), Statement.RETURN_GENERATED_KEYS);
 			}
-			insertIntervalStmt.setLong(1, categoryID);
-			insertIntervalStmt.setTimestamp(2, new Timestamp(startTime));
-			insertIntervalStmt.setTimestamp(3, new Timestamp(endTime));
-			insertIntervalStmt.setLong(4, totalHits);
-			insertIntervalStmt.setLong(5, totalCompletions);
-			insertIntervalStmt.setLong(6, maxActiveThreads);
-			insertIntervalStmt.setObject(7, maxActiveThreadsSet, Types.TIMESTAMP);
-			insertIntervalStmt.setLong(8, maxDuration);
-			insertIntervalStmt.setObject(9, maxDurationSet, Types.TIMESTAMP);
-			insertIntervalStmt.setLong(10, minDuration);
-			insertIntervalStmt.setObject(11, minDurationSet, Types.TIMESTAMP);
-			insertIntervalStmt.setDouble(12, averageDuration);
-			insertIntervalStmt.setDouble(13, standardDeviation);
-			insertIntervalStmt.setDouble(14, normalizedThroughputPerMinute);
-			insertIntervalStmt.setLong(15, durationSum);
-			insertIntervalStmt.setLong(16, durationSumOfSquares);
-			insertIntervalStmt.setObject(17, medianDuration, Types.DOUBLE);
+			int index = 1;
+			insertIntervalStmt.setLong(index++, getSystemID());
+			insertIntervalStmt.setLong(index++, categoryID);
+			insertIntervalStmt.setTimestamp(index++, new Timestamp(startTime));
+			insertIntervalStmt.setTimestamp(index++, new Timestamp(endTime));
+			insertIntervalStmt.setLong(index++, totalHits);
+			insertIntervalStmt.setLong(index++, totalCompletions);
+			insertIntervalStmt.setLong(index++, maxActiveThreads);
+			insertIntervalStmt.setObject(index++, maxActiveThreadsSet, Types.TIMESTAMP);
+			insertIntervalStmt.setLong(index++, maxDuration);
+			insertIntervalStmt.setObject(index++, maxDurationSet, Types.TIMESTAMP);
+			insertIntervalStmt.setLong(index++, minDuration);
+			insertIntervalStmt.setObject(index++, minDurationSet, Types.TIMESTAMP);
+			insertIntervalStmt.setDouble(index++, averageDuration);
+			insertIntervalStmt.setDouble(index++, standardDeviation);
+			insertIntervalStmt.setDouble(index++, normalizedThroughputPerMinute);
+			insertIntervalStmt.setLong(index++, durationSum);
+			insertIntervalStmt.setLong(index++, durationSumOfSquares);
+			insertIntervalStmt.setObject(index++, medianDuration, Types.DOUBLE);
 			if (includeOptionalCols) {
-				insertIntervalStmt.setLong(18, maxSQLDuration);
-				insertIntervalStmt.setObject(19, maxSQLDurationSet, Types.TIMESTAMP);
-				insertIntervalStmt.setLong(20, minSQLDuration);
-				insertIntervalStmt.setObject(21, minSQLDurationSet, Types.TIMESTAMP);
-				insertIntervalStmt.setDouble(22, averageSQLDuration);
-				insertIntervalStmt.setDouble(23, sqlStdDeviation);
-				insertIntervalStmt.setLong(24, totalSQLDuration);
-				insertIntervalStmt.setLong(25, sumOfSQLSquares);
+				insertIntervalStmt.setLong(index++, maxSQLDuration);
+				insertIntervalStmt.setObject(index++, maxSQLDurationSet, Types.TIMESTAMP);
+				insertIntervalStmt.setLong(index++, minSQLDuration);
+				insertIntervalStmt.setObject(index++, minSQLDurationSet, Types.TIMESTAMP);
+				insertIntervalStmt.setDouble(index++, averageSQLDuration);
+				insertIntervalStmt.setDouble(index++, sqlStdDeviation);
+				insertIntervalStmt.setLong(index++, totalSQLDuration);
+				insertIntervalStmt.setLong(index++, sumOfSQLSquares);
 			} else {
-				insertIntervalStmt.setObject(18, null, Types.INTEGER);
-				insertIntervalStmt.setObject(19, null, Types.TIMESTAMP);
-				insertIntervalStmt.setObject(20, null, Types.INTEGER);
-				insertIntervalStmt.setObject(21, null, Types.TIMESTAMP);
-				insertIntervalStmt.setObject(22, null, Types.DOUBLE);
-				insertIntervalStmt.setObject(23, null, Types.DOUBLE);
-				insertIntervalStmt.setObject(24, null, Types.INTEGER);
-				insertIntervalStmt.setObject(25, null, Types.INTEGER);
+				insertIntervalStmt.setObject(index++, null, Types.INTEGER);
+				insertIntervalStmt.setObject(index++, null, Types.TIMESTAMP);
+				insertIntervalStmt.setObject(index++, null, Types.INTEGER);
+				insertIntervalStmt.setObject(index++, null, Types.TIMESTAMP);
+				insertIntervalStmt.setObject(index++, null, Types.DOUBLE);
+				insertIntervalStmt.setObject(index++, null, Types.DOUBLE);
+				insertIntervalStmt.setObject(index++, null, Types.INTEGER);
+				insertIntervalStmt.setObject(index++, null, Types.INTEGER);
 			}
 			insertIntervalStmt.execute();
 			generatedKeys = insertIntervalStmt.getGeneratedKeys();
@@ -316,4 +320,28 @@ public abstract class SQLAppender extends Appender {
 		this.insertThresholdPS = null;
 		this.selectCategoryPS = null;
 	}
+	
+	public void setSystemName(String systemName) {
+		this.systemName = systemName;
+		this.systemID = null;
+	}
+	
+	public String getSystemName() {
+		return systemName;
+	}
+	
+	public long getSystemID() throws SQLException {
+		long result;
+		
+		if (systemID != null) {
+			result = systemID.longValue();
+		} else {
+			String s = (dbSchema == null) ? "" : (dbSchema + ".");
+			result = JDBCHelper.simpleGetOrCreate(this.getConnection(), s + "P4JSystem", 
+					"SystemID", "SystemName", systemName);
+			systemID = new Long(result);
+		}
+		
+		return result;
+	}	
 }

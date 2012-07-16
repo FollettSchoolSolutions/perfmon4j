@@ -4,5 +4,5 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public interface SQLWriteable {
-	public void writeToSQL(Connection conn, String dbSchema) throws SQLException;
+	public void writeToSQL(Connection conn, String dbSchema, long systemID) throws SQLException;
 }

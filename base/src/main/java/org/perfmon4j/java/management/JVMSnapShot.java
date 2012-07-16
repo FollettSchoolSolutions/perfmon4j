@@ -217,17 +217,17 @@ public class JVMSnapShot {
 	}
 
 	public static class SQLWriter implements SnapShotSQLWriter {
-		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+		public void writeToSQL(Connection conn, String schema, SnapShotData data, long systemID)
 			throws SQLException {
-			writeToSQL(conn, schema, (JVMData)data);
+			writeToSQL(conn, schema, (JVMData)data, systemID);
 		}
 		
-		public void writeToSQL(Connection conn, String schema, JVMData data)
+		public void writeToSQL(Connection conn, String schema, JVMData data, long systemID)
 			throws SQLException {
 			schema = (schema == null) ? "" : (schema + ".");
 			
 			final String SQL = "INSERT INTO " + schema + "P4JVMSnapShot " +
-				"(StartTime, EndTime, Duration, CurrentClassLoadCount, " +
+				"(SystemID, StartTime, EndTime, Duration, CurrentClassLoadCount, " +
 		    	" ClassLoadCountInPeriod, ClassLoadCountPerMinute, ClassUnloadCountInPeriod, " +
 		    	" ClassUnloadCountPerMinute, PendingClassFinalizationCount, " +  
 		    	" CurrentThreadCount, CurrentDaemonThreadCount, " +
@@ -235,42 +235,45 @@ public class JVMSnapShot {
 		    	" HeapMemUsedMB,  HeapMemCommitedMB,  HeapMemMaxMB, " +
 		    	" NonHeapMemUsedMB, NonHeapMemCommittedUsedMB, NonHeapMemMaxUsedMB, " +  
 		    	" SystemLoadAverage, CompilationMillisInPeriod, CompilationMillisPerMinute) " +
-				" VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+				" VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 			PreparedStatement stmt = null;
 			try {
 				stmt = conn.prepareStatement(SQL);
-	        	stmt.setTimestamp(1, new Timestamp(data.getStartTime()));
-	        	stmt.setTimestamp(2, new Timestamp(data.getEndTime()));
-	        	stmt.setLong(3, data.getDuration());
-	        	stmt.setInt(4, data.getClassesLoaded());
-	        	stmt.setLong(5, data.getTotalLoadedClassCount().getDelta());
-	        	stmt.setDouble(6, data.getTotalLoadedClassCount().getDeltaPerMinute());
-	        	stmt.setLong(7, data.getUnloadedClassCount().getDelta());
-	        	stmt.setDouble(8, data.getUnloadedClassCount().getDeltaPerMinute());
-	        	stmt.setLong(9, data.getPendingFinalization());
-	        	stmt.setLong(10, data.getThreadCount());
-	        	stmt.setLong(11, data.getDaemonThreadCount());
-	        	stmt.setLong(12, data.getThreadsStarted().getDelta());
-	        	stmt.setDouble(13, data.getThreadsStarted().getDeltaPerMinute());
-	        	stmt.setDouble(14, data.getHeapMemUsed() / (double)1024);
-	        	stmt.setDouble(15, data.getHeapMemCommitted() / (double)1024);
-	        	stmt.setDouble(16, data.getHeapMemMax() / (double)1024);
-	        	stmt.setDouble(17, data.getNonHeapMemUsed() / (double)1024);
-	        	stmt.setDouble(18, data.getNonHeapMemCommitted() / (double)1024);
-	        	stmt.setDouble(19, data.getNonHeapMemMax() / (double)1024);
+				
+				int index = 1;
+	        	stmt.setLong(index++, systemID);
+	        	stmt.setTimestamp(index++, new Timestamp(data.getStartTime()));
+	        	stmt.setTimestamp(index++, new Timestamp(data.getEndTime()));
+	        	stmt.setLong(index++, data.getDuration());
+	        	stmt.setInt(index++, data.getClassesLoaded());
+	        	stmt.setLong(index++, data.getTotalLoadedClassCount().getDelta());
+	        	stmt.setDouble(index++, data.getTotalLoadedClassCount().getDeltaPerMinute());
+	        	stmt.setLong(index++, data.getUnloadedClassCount().getDelta());
+	        	stmt.setDouble(index++, data.getUnloadedClassCount().getDeltaPerMinute());
+	        	stmt.setLong(index++, data.getPendingFinalization());
+	        	stmt.setLong(index++, data.getThreadCount());
+	        	stmt.setLong(index++, data.getDaemonThreadCount());
+	        	stmt.setLong(index++, data.getThreadsStarted().getDelta());
+	        	stmt.setDouble(index++, data.getThreadsStarted().getDeltaPerMinute());
+	        	stmt.setDouble(index++, data.getHeapMemUsed() / (double)1024);
+	        	stmt.setDouble(index++, data.getHeapMemCommitted() / (double)1024);
+	        	stmt.setDouble(index++, data.getHeapMemMax() / (double)1024);
+	        	stmt.setDouble(index++, data.getNonHeapMemUsed() / (double)1024);
+	        	stmt.setDouble(index++, data.getNonHeapMemCommitted() / (double)1024);
+	        	stmt.setDouble(index++, data.getNonHeapMemMax() / (double)1024);
 	        	
 	        	if (data.getSystemLoadAverage() < 0) {
-		        	stmt.setNull(20, Types.DECIMAL);
+		        	stmt.setNull(index++, Types.DECIMAL);
 	        	} else {
-	        		stmt.setDouble(20, data.getSystemLoadAverage());
+	        		stmt.setDouble(index++, data.getSystemLoadAverage());
 	        	}
 	        	
 	        	if (data.getCompilationTimeActive()) {
-		        	stmt.setLong(21, data.getCompilationTime().getDelta());
-		        	stmt.setDouble(22, data.getCompilationTime().getDeltaPerMinute());
+		        	stmt.setLong(index++, data.getCompilationTime().getDelta());
+		        	stmt.setDouble(index++, data.getCompilationTime().getDeltaPerMinute());
 	        	} else {
-		        	stmt.setNull(21, Types.INTEGER);
-		        	stmt.setNull(22, Types.DECIMAL);
+		        	stmt.setNull(index++, Types.INTEGER);
+		        	stmt.setNull(index++, Types.DECIMAL);
 	        	}
 				
 				int count = stmt.executeUpdate();

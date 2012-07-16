@@ -104,40 +104,43 @@ public class GlobalRequestProcessorMonitorImpl extends JMXMonitorBase {
 	}
 	
 	public static class SQLWriter implements SnapShotSQLWriter {
-		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+		public void writeToSQL(Connection conn, String schema, SnapShotData data, long systemID)
 			throws SQLException {
-			writeToSQL(conn, schema, (GlobalRequestProcessorMonitor)data);
+			writeToSQL(conn, schema, (GlobalRequestProcessorMonitor)data, systemID);
 		}
 		
-		public void writeToSQL(Connection conn, String schema, GlobalRequestProcessorMonitor data)
+		public void writeToSQL(Connection conn, String schema, GlobalRequestProcessorMonitor data, long systemID)
 			throws SQLException {
 			schema = (schema == null) ? "" : (schema + ".");
 			
 			final String SQL = "INSERT INTO " + schema + "P4JGlobalRequestProcessor " +
-	    	" (InstanceName, StartTime, EndTime, Duration, " +
+	    	" (SystemID, InstanceName, StartTime, EndTime, Duration, " +
 	    	" RequestCountInPeriod, RequestCountPerMinute, KBytesSentInPeriod, " +
 	    	" KBytesSentPerMinute, KBytesReceivedInPeriod, KBytesReceivedPerMinute, " +
 	    	" ProcessingMillisInPeriod, ProcessingMillisPerMinute, ErrorCountInPeriod, " +
 	    	" ErrorCountPerMinute) " +				
-			" VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			" VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 			
 			PreparedStatement stmt = null;
 			try {
 				stmt = conn.prepareStatement(SQL);
-	        	stmt.setString(1, data.getInstanceName());
-	        	stmt.setTimestamp(2, new Timestamp(data.getStartTime()));
-	        	stmt.setTimestamp(3, new Timestamp(data.getEndTime()));
-	        	stmt.setLong(4, data.getDuration());
-	        	stmt.setLong(5, data.getRequestCount().getDelta());
-	        	stmt.setDouble(6, data.getRequestCount().getDeltaPerMinute());
-	        	stmt.setLong(7, (data.getBytesSent().getDelta() / 1024));
-	        	stmt.setDouble(8, (data.getBytesSent().getDeltaPerMinute() / 1024));
-	        	stmt.setLong(9, (data.getBytesReceived().getDelta() / 1024));
-	        	stmt.setDouble(10, (data.getBytesReceived().getDeltaPerMinute() / 1024));
-	        	stmt.setLong(11, data.getProcessingTimeMillis().getDelta());
-	        	stmt.setDouble(12, data.getProcessingTimeMillis().getDeltaPerMinute());
-	        	stmt.setLong(13, data.getErrorCount().getDelta());
-	        	stmt.setDouble(14, data.getErrorCount().getDeltaPerMinute());
+				
+				int index = 1;
+				stmt.setLong(index++, systemID);
+	        	stmt.setString(index++, data.getInstanceName());
+	        	stmt.setTimestamp(index++, new Timestamp(data.getStartTime()));
+	        	stmt.setTimestamp(index++, new Timestamp(data.getEndTime()));
+	        	stmt.setLong(index++, data.getDuration());
+	        	stmt.setLong(index++, data.getRequestCount().getDelta());
+	        	stmt.setDouble(index++, data.getRequestCount().getDeltaPerMinute());
+	        	stmt.setLong(index++, (data.getBytesSent().getDelta() / 1024));
+	        	stmt.setDouble(index++, (data.getBytesSent().getDeltaPerMinute() / 1024));
+	        	stmt.setLong(index++, (data.getBytesReceived().getDelta() / 1024));
+	        	stmt.setDouble(index++, (data.getBytesReceived().getDeltaPerMinute() / 1024));
+	        	stmt.setLong(index++, data.getProcessingTimeMillis().getDelta());
+	        	stmt.setDouble(index++, data.getProcessingTimeMillis().getDeltaPerMinute());
+	        	stmt.setLong(index++, data.getErrorCount().getDelta());
+	        	stmt.setDouble(index++, data.getErrorCount().getDeltaPerMinute());
 				
 				int count = stmt.executeUpdate();
 				if (count != 1) {

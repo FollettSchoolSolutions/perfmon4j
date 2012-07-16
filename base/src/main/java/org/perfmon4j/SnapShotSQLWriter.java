@@ -25,5 +25,5 @@ import java.sql.SQLException;
 
 public interface SnapShotSQLWriter {
 	public void writeToSQL(Connection conn, String schema, 
-			SnapShotData data) throws SQLException;
+			SnapShotData data, long systemID) throws SQLException;
 }

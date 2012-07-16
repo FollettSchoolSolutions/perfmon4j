@@ -73,7 +73,24 @@ GO
 
 DROP TABLE dbo.P4JCategory
 GO
-*/
+
+DROP TABLE dbo.P4JSystem
+GO
+
+**/
+
+
+/** Start added in Perfmon4j 1.2.0 **/
+CREATE TABLE dbo.P4JSystem (
+	SystemID INT IDENTITY(1,1) NOT NULL,
+	SystemName NCHAR(450) NOT NULL,
+	CONSTRAINT P4JSystem_pk PRIMARY KEY CLUSTERED (
+		SystemID
+	)
+)
+GO
+/** End added in Perfmon4j 1.2.0 **/
+
 
 CREATE TABLE dbo.P4JCategory (
 	CategoryID INT IDENTITY(1,1) NOT NULL,
@@ -91,6 +108,9 @@ CREATE  UNIQUE INDEX P4JCategory_CategoryName_idx
 GO
 
 CREATE TABLE dbo.P4JIntervalData (
+/** Start added in Perfmon4j 1.2.0 **/
+	SystemID INT NOT NULL,
+/** End added in Perfmon4j 1.2.0 **/
 	IntervalID INT IDENTITY(1,1) NOT NULL,
 	CategoryID INT NOT NULL,
 	StartTime DATETIME NOT NULL,
@@ -126,7 +146,14 @@ CREATE TABLE dbo.P4JIntervalData (
 		CategoryID
 	) REFERENCES dbo.P4JCategory (
 		CategoryID
+	) ON DELETE CASCADE,
+/** Start added in Perfmon4j 1.2.0 **/
+	CONSTRAINT P4JIntervalData_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
 	) ON DELETE CASCADE
+/** End added in Perfmon4j 1.2.0 **/
 ) 
 GO
 
@@ -220,6 +247,9 @@ CREATE UNIQUE INDEX P4JUserAgentOSVersion_OSVersion_idx
 GO
 
 CREATE TABLE dbo.P4JUserAgentOccurance (
+/** Start added in Perfmon4j 1.2.0 **/
+	SystemID INT NOT NULL,
+/** End added in Perfmon4j 1.2.0 **/
 	CollectionDate DATETIME NOT NULL,
 	BrowserID INT NOT NULL,
 	BrowserVersionID INT NOT NULL,
@@ -252,12 +282,23 @@ CREATE TABLE dbo.P4JUserAgentOccurance (
 		OSID
 	) REFERENCES dbo.P4JUserAgentOSVersion (
 		OSVersionID
+	) ON DELETE CASCADE,
+/** Start added in Perfmon4j 1.2.0 **/
+	CONSTRAINT P4JUserAgentOccurance_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
 	) ON DELETE CASCADE
+/** End added in Perfmon4j 1.2.0 **/
 )
 GO
 
 CREATE VIEW dbo.P4JUserAgentView AS
 SELECT 
+/** Start added in Perfmon4j 1.2.0 **/
+	oc.SystemID
+	,
+/** End added in Perfmon4j 1.2.0 **/
 	oc.CollectionDate
 	,b.BrowserName
 	,bv.BrowserVersion
@@ -272,6 +313,9 @@ JOIN dbo.P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID
 GO
 
 CREATE TABLE dbo.P4JGarbageCollection(
+/** Start added in Perfmon4j 1.2.0 **/
+	SystemID INT NOT NULL,
+/** End added in Perfmon4j 1.2.0 **/
 	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
@@ -284,11 +328,21 @@ CREATE TABLE dbo.P4JGarbageCollection(
 		InstanceName,
 		StartTime,
 		EndTime 
-	)
+	),
+/** Start added in Perfmon4j 1.2.0 **/
+	CONSTRAINT P4JJGarbageCollection_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
+	) ON DELETE CASCADE
+/** End added in Perfmon4j 1.2.0 **/
 )
 GO
 
 CREATE TABLE dbo.P4JVMSnapShot(
+/** Start added in Perfmon4j 1.2.0 **/
+	SystemID INT NOT NULL,
+/** End added in Perfmon4j 1.2.0 **/
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
 	Duration INT NOT NULL,
@@ -314,12 +368,22 @@ CREATE TABLE dbo.P4JVMSnapShot(
 	CONSTRAINT P4JVMSnapShot_pk PRIMARY KEY CLUSTERED (
 		StartTime,
 		EndTime 
-	)
+	),
+/** Start added in Perfmon4j 1.2.0 **/
+	CONSTRAINT P4JVMSnapShot_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
+	) ON DELETE CASCADE
+/** End added in Perfmon4j 1.2.0 **/
 )
 GO
 
 
 CREATE TABLE dbo.P4JMemoryPool(
+/** Start added in Perfmon4j 1.2.0 **/
+	SystemID INT NOT NULL,
+/** End added in Perfmon4j 1.2.0 **/
 	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
@@ -333,12 +397,22 @@ CREATE TABLE dbo.P4JMemoryPool(
 		InstanceName,
 		StartTime,
 		EndTime 
-	)
+	),
+/** Start added in Perfmon4j 1.2.0 **/
+	CONSTRAINT P4JMemoryPool_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
+	) ON DELETE CASCADE
+/** End added in Perfmon4j 1.2.0 **/
 )
 GO
 
 
 CREATE TABLE dbo.P4JGlobalRequestProcessor(
+/** Start added in Perfmon4j 1.2.0 **/
+	SystemID INT NOT NULL,
+/** End added in Perfmon4j 1.2.0 **/
 	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
@@ -357,11 +431,21 @@ CREATE TABLE dbo.P4JGlobalRequestProcessor(
 		InstanceName,
 		StartTime,
 		EndTime 
-	)
+	),
+/** Start added in Perfmon4j 1.2.0 **/
+	CONSTRAINT P4JGlobalRequestProcessor_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
+	) ON DELETE CASCADE
+/** End added in Perfmon4j 1.2.0 **/
 )
 GO
 
 CREATE TABLE dbo.P4JThreadPoolMonitor(
+/** Start added in Perfmon4j 1.2.0 **/
+	SystemID INT NOT NULL,
+/** End added in Perfmon4j 1.2.0 **/
 	ThreadPoolOwner NVARCHAR(50) NOT NULL,
 	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
@@ -374,11 +458,21 @@ CREATE TABLE dbo.P4JThreadPoolMonitor(
 		InstanceName,
 		StartTime,
 		EndTime 
-	)
+	),
+/** Start added in Perfmon4j 1.2.0 **/
+	CONSTRAINT P4JThredPoolMonitor_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
+	) ON DELETE CASCADE
+/** End added in Perfmon4j 1.2.0 **/
 )
 GO
 
 CREATE TABLE dbo.P4JThreadTrace(
+/** Start added in Perfmon4j 1.2.0 **/
+	SystemID INT NOT NULL,
+/** End added in Perfmon4j 1.2.0 **/
 	TraceRowID INT IDENTITY NOT NULL,
 	ParentRowID INT NULL,
 	CategoryID INT NOT NULL,
@@ -400,7 +494,14 @@ CREATE TABLE dbo.P4JThreadTrace(
 		ParentRowID
 	) REFERENCES dbo.P4JThreadTrace (
 		TraceRowID
-	) 
+	),
+/** Start added in Perfmon4j 1.2.0 **/
+	CONSTRAINT P4JThreadTrace_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
+	) ON DELETE CASCADE
+/** End added in Perfmon4j 1.2.0 **/
 )
 GO
 

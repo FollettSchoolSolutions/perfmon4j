@@ -211,31 +211,34 @@ public class MemoryPoolSnapShot {
 	}
 
 	public static class SQLWriter implements SnapShotSQLWriter {
-		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+		public void writeToSQL(Connection conn, String schema, SnapShotData data, long systemID)
 			throws SQLException {
-			writeToSQL(conn, schema, (MemoryPoolData)data);
+			writeToSQL(conn, schema, (MemoryPoolData)data, systemID);
 		}
 
-		public void writeToSQL(Connection conn, String schema, MemoryPoolData data)
+		public void writeToSQL(Connection conn, String schema, MemoryPoolData data, long systemID)
 			throws SQLException {
 			schema = (schema == null) ? "" : (schema + ".");
 			
 			final String SQL = "INSERT INTO " + schema + "P4JMemoryPool " +
-				"(InstanceName, StartTime, EndTime, Duration, InitialMB, " +
+				"(SystemID, InstanceName, StartTime, EndTime, Duration, InitialMB, " +
 				"UsedMB, CommittedMB, MaxMB, MemoryType) " +
-				"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+				"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 			PreparedStatement stmt = null;
 			try {
 				stmt = conn.prepareStatement(SQL);
-				stmt.setString(1, data.getInstanceName());
-				stmt.setTimestamp(2, new Timestamp(data.getStartTime()));
-				stmt.setTimestamp(3, new Timestamp(data.getEndTime()));
-				stmt.setLong(4, data.getDuration());
-				stmt.setLong(5, data.getInit()/1024);
-				stmt.setLong(6, data.getUsed()/1024);
-				stmt.setDouble(7, data.getCommitted()/1024);
-				stmt.setDouble(8, data.getMax()/1024);
-				stmt.setString(9, data.getType());
+				
+				int index = 1;
+	        	stmt.setLong(index++, systemID);
+				stmt.setString(index++, data.getInstanceName());
+				stmt.setTimestamp(index++, new Timestamp(data.getStartTime()));
+				stmt.setTimestamp(index++, new Timestamp(data.getEndTime()));
+				stmt.setLong(index++, data.getDuration());
+				stmt.setLong(index++, data.getInit()/1024);
+				stmt.setLong(index++, data.getUsed()/1024);
+				stmt.setDouble(index++, data.getCommitted()/1024);
+				stmt.setDouble(index++, data.getMax()/1024);
+				stmt.setString(index++, data.getType());
 				
 				int count = stmt.executeUpdate();
 				if (count != 1) {

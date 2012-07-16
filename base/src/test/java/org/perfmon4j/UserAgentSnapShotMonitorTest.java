@@ -29,23 +29,24 @@ import org.perfmon4j.util.UserAgentVO;
 
 public class UserAgentSnapShotMonitorTest extends SQLTest {
     
-    final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JUserAgentBrowser(\r\n" +
+    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JUserAgentBrowser(\r\n" +
     	"	BrowserID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
     	"	BrowserName VARCHAR(100) NOT NULL\r\n" +
     	")\r\n";
-    final String DERBY_CREATE_2 = "CREATE TABLE p4j.P4JUserAgentBrowserVersion(\r\n" +
+    final String DERBY_CREATE_2 = "CREATE TABLE mydb.P4JUserAgentBrowserVersion(\r\n" +
 		"	BrowserVersionID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
 		"	BrowserVersion VARCHAR(50) NOT NULL\r\n" +
 		")\r\n";
-    final String DERBY_CREATE_3 = "CREATE TABLE p4j.P4JUserAgentOS(\r\n" +
+    final String DERBY_CREATE_3 = "CREATE TABLE mydb.P4JUserAgentOS(\r\n" +
 		"	OSID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
 		"	OSName VARCHAR(100) NOT NULL\r\n" +
 		")\r\n";
-	final String DERBY_CREATE_4 = "CREATE TABLE p4j.P4JUserAgentOSVersion(\r\n" +
+	final String DERBY_CREATE_4 = "CREATE TABLE mydb.P4JUserAgentOSVersion(\r\n" +
 		"	OSVersionID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
 		"	OSVersion VARCHAR(50) NOT NULL\r\n" +
 		")\r\n";
-	final String DERBY_CREATE_5 = "CREATE TABLE p4j.P4JUserAgentOccurance(\r\n" +
+	final String DERBY_CREATE_5 = "CREATE TABLE mydb.P4JUserAgentOccurance(\r\n" +
+		"	SystemID INT NOT NULL,\r\n" +
 		"	CollectionDate TIMESTAMP NOT NULL,\r\n" +
 		"	BrowserID INT NOT NULL,\r\n" +
 		"	BrowserVersionID INT,\r\n" +
@@ -53,26 +54,27 @@ public class UserAgentSnapShotMonitorTest extends SQLTest {
 		"	OSVersionID INT,\r\n" +
 		"	RequestCount INT WITH DEFAULT 0\r\n" +
 		")\r\n";
-	final String DERBY_CREATE_6 = "CREATE VIEW p4j.P4JUserAgentView AS\r\n" +
-		"SELECT\r\n" + 
-		"	oc.CollectionDate\r\n" +
+	final String DERBY_CREATE_6 = "CREATE VIEW mydb.P4JUserAgentView AS\r\n" +
+		"SELECT\r\n" +
+		"	oc.SystemID" + 
+		"	,oc.CollectionDate\r\n" +
 		"	,b.BrowserName\r\n" +
 		"	,bv.BrowserVersion\r\n" +
 		"	,os.OSName\r\n" +
 		"	,osv.OSVersion\r\n" +
 		"	,oc.RequestCount\r\n" +
-		"FROM p4j.P4JUserAgentOccurance oc\r\n" +
-		"JOIN p4j.P4JUserAgentBrowser b ON b.BrowserID = oc.BrowserID\r\n" +
-		"LEFT JOIN p4j.P4JUserAgentBrowserVersion bv ON bv.BrowserVersionID = oc.BrowserVersionID\r\n" +
-		"LEFT JOIN p4j.P4JUserAgentOS os ON os.OSID = oc.OSID\r\n" +
-		"LEFT JOIN p4j.P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID\r\n";
+		"FROM mydb.P4JUserAgentOccurance oc\r\n" +
+		"JOIN mydb.P4JUserAgentBrowser b ON b.BrowserID = oc.BrowserID\r\n" +
+		"LEFT JOIN mydb.P4JUserAgentBrowserVersion bv ON bv.BrowserVersionID = oc.BrowserVersionID\r\n" +
+		"LEFT JOIN mydb.P4JUserAgentOS os ON os.OSID = oc.OSID\r\n" +
+		"LEFT JOIN mydb.P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID\r\n";
 	
-	final String DERBY_DROP_1 = "DROP TABLE p4j.P4JUserAgentBrowser";
-	final String DERBY_DROP_2 = "DROP TABLE p4j.P4JUserAgentBrowserVersion";
-	final String DERBY_DROP_3 = "DROP TABLE p4j.P4JUserAgentOS";
-	final String DERBY_DROP_4 = "DROP TABLE p4j.P4JUserAgentOSVersion";
-	final String DERBY_DROP_5 = "DROP TABLE p4j.P4JUserAgentOccurance";
-	final String DERBY_DROP_6 = "DROP VIEW p4j.P4JUserAgentView";
+	final String DERBY_DROP_1 = "DROP TABLE mydb.P4JUserAgentBrowser";
+	final String DERBY_DROP_2 = "DROP TABLE mydb.P4JUserAgentBrowserVersion";
+	final String DERBY_DROP_3 = "DROP TABLE mydb.P4JUserAgentOS";
+	final String DERBY_DROP_4 = "DROP TABLE mydb.P4JUserAgentOSVersion";
+	final String DERBY_DROP_5 = "DROP TABLE mydb.P4JUserAgentOccurance";
+	final String DERBY_DROP_6 = "DROP VIEW mydb.P4JUserAgentView";
     
     private Connection conn;
 	
@@ -119,19 +121,18 @@ public class UserAgentSnapShotMonitorTest extends SQLTest {
 		counter.setCount(1);
 		
 		d.getUserAgentMap().put(vo, counter);
-		appender.setDbSchema("p4j");
 		appender.outputData(d);
 		
 		long browserCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-				"FROM p4j.P4JUserAgentBrowser WHERE BrowserName='IE'");
+				"FROM mydb.P4JUserAgentBrowser WHERE BrowserName='IE'");
 		long browserVersionCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-			"FROM p4j.P4JUserAgentBrowserVersion WHERE BrowserVersion='7.0'");
+			"FROM mydb.P4JUserAgentBrowserVersion WHERE BrowserVersion='7.0'");
 		long osCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-		"FROM p4j.P4JUserAgentOS WHERE OSName='XP'");
+		"FROM mydb.P4JUserAgentOS WHERE OSName='XP'");
 		long osVersionCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-			"FROM p4j.P4JUserAgentOSVersion WHERE OSVersion='3.0'");
+			"FROM mydb.P4JUserAgentOSVersion WHERE OSVersion='3.0'");
 		long requestCount = JDBCHelper.getQueryCount(conn, "SELECT requestCount " +
-		"FROM p4j.P4JUserAgentView " +
+		"FROM mydb.P4JUserAgentView " +
 		"WHERE BrowserName='IE' " +
 		"	AND BrowserVersion='7.0' " +
 		"	AND OSName='XP' " +
@@ -147,15 +148,15 @@ public class UserAgentSnapShotMonitorTest extends SQLTest {
 		appender.outputData(d);
 		
 		browserCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-			"FROM p4j.P4JUserAgentBrowser WHERE BrowserName='IE'");
+			"FROM mydb.P4JUserAgentBrowser WHERE BrowserName='IE'");
 		browserVersionCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-			"FROM p4j.P4JUserAgentBrowserVersion WHERE BrowserVersion='7.0'");
+			"FROM mydb.P4JUserAgentBrowserVersion WHERE BrowserVersion='7.0'");
 		osCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-			"FROM p4j.P4JUserAgentOS WHERE OSName='XP'");
+			"FROM mydb.P4JUserAgentOS WHERE OSName='XP'");
 		osVersionCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-			"FROM p4j.P4JUserAgentOSVersion WHERE OSVersion='3.0'");
+			"FROM mydb.P4JUserAgentOSVersion WHERE OSVersion='3.0'");
 		requestCount = JDBCHelper.getQueryCount(conn, "SELECT requestCount " +
-				"FROM p4j.P4JUserAgentView " +
+				"FROM mydb.P4JUserAgentView " +
 				"WHERE BrowserName='IE' " +
 				"	AND BrowserVersion='7.0' " +
 				"	AND OSName='XP' " +
@@ -177,19 +178,18 @@ public class UserAgentSnapShotMonitorTest extends SQLTest {
 		counter.setCount(1);
 		
 		d.getUserAgentMap().put(vo, counter);
-		appender.setDbSchema("p4j");
 		appender.outputData(d);
 		
 		long browserCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-				"FROM p4j.P4JUserAgentBrowser WHERE BrowserName='[UNKNOWN]'");
+				"FROM mydb.P4JUserAgentBrowser WHERE BrowserName='[UNKNOWN]'");
 		long browserVersionCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-			"FROM p4j.P4JUserAgentBrowserVersion WHERE BrowserVersion='[UNKNOWN]'");
+			"FROM mydb.P4JUserAgentBrowserVersion WHERE BrowserVersion='[UNKNOWN]'");
 		long osCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-		"FROM p4j.P4JUserAgentOS WHERE OSName='[UNKNOWN]'");
+		"FROM mydb.P4JUserAgentOS WHERE OSName='[UNKNOWN]'");
 		long osVersionCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*) " +
-			"FROM p4j.P4JUserAgentOSVersion WHERE OSVersion='[UNKNOWN]'");
+			"FROM mydb.P4JUserAgentOSVersion WHERE OSVersion='[UNKNOWN]'");
 		long requestCount = JDBCHelper.getQueryCount(conn, "SELECT requestCount " +
-		"FROM p4j.P4JUserAgentView " +
+		"FROM mydb.P4JUserAgentView " +
 		"WHERE BrowserName='[UNKNOWN]' " +
 		"	AND BrowserVersion='[UNKNOWN]' " +
 		"	AND OSName='[UNKNOWN]' " +

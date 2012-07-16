@@ -317,8 +317,8 @@ public class SnapShotGenerator {
 						" new " + sqlWriter.getName() + "();";
 				ctClass.addField(CtField.make(s, ctClass));
 				
-				final String m = "public void writeToSQL(java.sql.Connection conn, String dbSchema) throws java.sql.SQLException {" +
-						" sqlWriter.writeToSQL(conn, dbSchema, this);" +
+				final String m = "public void writeToSQL(java.sql.Connection conn, String dbSchema, long systemID) throws java.sql.SQLException {" +
+						" sqlWriter.writeToSQL(conn, dbSchema, this, systemID);" +
 						"}";
 				addMethod(ctClass, m);
 			}

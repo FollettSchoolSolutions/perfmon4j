@@ -21,7 +21,6 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
-import java.sql.Statement;
 import java.util.GregorianCalendar;
 import java.util.List;
 
@@ -33,6 +32,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MedianCalculator;
+import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
 import org.perfmon4j.util.vo.ResponseInfo;
 
@@ -40,59 +40,6 @@ import org.perfmon4j.util.vo.ResponseInfo;
 public class JDBCSQLAppenderTest extends SQLTest {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
-    final String DERBY_DROP_CATEGORY = "DROP TABLE mydb.P4JCategory";
-    
-    
-    final String DERBY_CREATE_CATEGORY = "CREATE TABLE mydb.P4JCategory(\r\n" +
-    	"CategoryID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-    	"CategoryName varchar(450) NOT NULL\r\n" +
-    	")";
-
-    final String DERBY_DROP_INTERVAL_DATA = "DROP TABLE mydb.P4JIntervalData";
-    
-    final String DERBY_CREATE_INTERVAL_DATA = "CREATE TABLE mydb.P4JIntervalData (\r\n" +
-		"IntervalID BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY," +
-		"CategoryID INT NOT NULL,\r\n" +
-		"StartTime TIMESTAMP NOT NULL,\r\n" +
-		"EndTime TIMESTAMP NOT NULL,\r\n" +
-		"TotalHits BIGINT NOT NULL,\r\n" +
-		"TotalCompletions BIGINT NOT NULL,\r\n" +
-		"MaxActiveThreads BIGINT NOT NULL,\r\n" +
-		"MaxActiveThreadsSet TIMESTAMP,\r\n" +
-		"MaxDuration int NOT NULL,\r\n" +
-		"MaxDurationSet TIMESTAMP,\r\n" +
-		"MinDuration int NOT NULL,\r\n" +
-		"MinDurationSet TIMESTAMP,\r\n" +
-		"AverageDuration DECIMAL(18, 2) NOT NULL,\r\n" +
-		"MedianDuration  DECIMAL(18, 2),\r\n " +
-		"StandardDeviation DECIMAL(18, 2) NOT NULL,\r\n" +
-		"NormalizedThroughputPerMinute DECIMAL(18, 2) NOT NULL," +
-		"DurationSum BIGINT NOT NULL," +
-		"DurationSumOfSquares BIGINT NOT NULL,\r\n" +
-
-		// All SQL Durations must allow NULL, not all monitors will contain SQL information...
-		// These columns are also optional for the table...
-		// All columns must exist for data to be written.
-		"SQLMaxDuration int,\r\n" +
-		"SQLMaxDurationSet TIMESTAMP,\r\n" +
-		"SQLMinDuration int,\r\n" +
-		"SQLMinDurationSet TIMESTAMP,\r\n" +
-		"SQLAverageDuration DECIMAL(18, 2),\r\n" +
-		"SQLStandardDeviation DECIMAL(18, 2),\r\n" +
-		"SQLDurationSum BIGINT," +
-		"SQLDurationSumOfSquares BIGINT\r\n" +
-		")";    
-    
-    final String DERBY_DROP_THRESHOLD = "DROP TABLE mydb.P4JIntervalThreshold";
-    
-    final String DERBY_CREATE_THRESHOLD = "CREATE TABLE mydb.P4JIntervalThreshold (\r\n" +
-		"IntervalID BIGINT NOT NULL,\r\n" +
-		"ThresholdMillis INT NOT NULL,\r\n" +
-		"CompletionsOver BIGINT NOT NULL,\r\n" +
-		"PercentOver DECIMAL(5, 2) NOT NULL\r\n" +
-		")";
-    
-    
     final long MIDNIGHT = (new GregorianCalendar(2007, 0, 0)).getTimeInMillis();
     final long SECOND = 1000;
     final long MINUTE = SECOND * 60;
@@ -103,49 +50,16 @@ public class JDBCSQLAppenderTest extends SQLTest {
         super(name);
     }
 
-    private void createTables() throws Exception {
-		Connection conn = appender.getConnection();
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_THRESHOLD);
-			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_INTERVAL_DATA);
-			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_CATEGORY);
-			
-			stmt.execute(DERBY_CREATE_CATEGORY);
-			stmt.execute(DERBY_CREATE_INTERVAL_DATA);
-			stmt.execute(DERBY_CREATE_THRESHOLD);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-			stmt = null;
-		}
-    }
 
-    private void dropTables() throws Exception {
-		Connection conn = appender.getConnection();
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_THRESHOLD);
-			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_INTERVAL_DATA);
-			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_CATEGORY);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-			stmt = null;
-		}
-    }
-    
     boolean originalSQLTimeEnabled;
     public void setUp() throws Exception {
     	super.setUp();
-    	createTables();
     	originalSQLTimeEnabled = SQLTime.isEnabled();
     }
     
     
     public void tearDown() throws Exception {
     	SQLTime.setEnabled(originalSQLTimeEnabled);
-    	dropTables();
 		super.tearDown();
     }
     
@@ -326,7 +240,38 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalDat
     	ResponseInfo element = list.get(0);
     	assertEquals("dave", element.getMonitorName());
     }    
+
     
+    public void testGetOrCreateSystem() throws Exception {
+    	Connection conn = appender.getConnection();
+
+    	String systemName = MiscHelper.getDefaultSystemName();
+    	final String SQL_COUNT = "SELECT COUNT(*) FROM mydb.P4JSystem WHERE SystemName = '" + systemName + "'";
+    	
+    	long count = JDBCHelper.getQueryCount(conn, SQL_COUNT);
+    	assertEquals("Should not have system row", 0, count);
+    	
+    	long id = appender.getSystemID();
+    	assertEquals("Should be the second systemID", 2, id);
+    	
+    	count = JDBCHelper.getQueryCount(conn, SQL_COUNT);
+    	assertEquals("Should have added system row", 1, count);
+    }    
+    
+    public void testOverrideSystemName() throws Exception {
+    	Connection conn = appender.getConnection();
+    	String systemName = "My System -- testOverrideSystemName";
+    	
+    	appender.setSystemName(systemName);
+    	
+    	long id = appender.getSystemID();
+    	assertEquals("Should be the second systemID", 2, id);
+    	
+    	final String SQL_COUNT = "SELECT COUNT(*) FROM mydb.P4JSystem WHERE SystemName = '" + systemName + "'";
+    	long count = JDBCHelper.getQueryCount(conn, SQL_COUNT);
+    	assertEquals("Should have added system row", 1, count);
+    }    
+
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

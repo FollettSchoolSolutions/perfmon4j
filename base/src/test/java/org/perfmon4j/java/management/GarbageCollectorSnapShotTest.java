@@ -47,7 +47,8 @@ import org.perfmon4j.util.JDBCHelper;
 public class GarbageCollectorSnapShotTest extends SQLTest {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
-    final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JGarbageCollection(\r\n" +
+    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JGarbageCollection(\r\n" +
+	"	SystemID INT NOT NULL,\r\n" +
 	"	InstanceName VARCHAR(200) NOT NULL,\r\n" +
 	"	StartTime TIMESTAMP NOT NULL,\r\n" +
 	"	EndTime TIMESTAMP NOT NULL,\r\n" +
@@ -58,7 +59,7 @@ public class GarbageCollectorSnapShotTest extends SQLTest {
 	"	CollectionMillisPerMinute DECIMAL(9,2) NOT NULL\r\n" +
 	")\r\n";
 
-    final String DERBY_DROP_1 = "DROP TABLE p4j.P4JGarbageCollection";
+    final String DERBY_DROP_1 = "DROP TABLE mydb.P4JGarbageCollection";
     private Connection conn;
 
 	protected void setUp() throws Exception {
@@ -140,12 +141,13 @@ public class GarbageCollectorSnapShotTest extends SQLTest {
     	Mockito.when(data.getCollectionCount()).thenReturn(new Delta(1, 5, 60000));
     	Mockito.when(data.getCollectionTime()).thenReturn(new Delta(100, 1100, 60000));
 
-    	writer.writeToSQL(conn, "p4j", data);
+    	writer.writeToSQL(conn, "mydb", data, 1);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
-    		" FROM p4j.P4JGarbageCollection\r\n" +
-    		" WHERE InstanceName='Mark/Sweep'\r \n" +
+    		" FROM mydb.P4JGarbageCollection\r\n" +
+    		" WHERE SystemID=1\r\n " +
+    		" AND InstanceName='Mark/Sweep'\r \n" +
     		" AND StartTime=?\r\n" +
     		" AND EndTime=?\r\n" +
     		" AND Duration=?\r\n" +

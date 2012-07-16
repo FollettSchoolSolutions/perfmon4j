@@ -85,29 +85,32 @@ public class ThreadPoolMonitorImpl extends JMXMonitorBase {
 	}
 	
 	public static class SQLWriter implements SnapShotSQLWriter {
-		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+		public void writeToSQL(Connection conn, String schema, SnapShotData data, long systemID)
 			throws SQLException {
-			writeToSQL(conn, schema, (ThreadPoolMonitor)data);
+			writeToSQL(conn, schema, (ThreadPoolMonitor)data, systemID);
 		}
 		
-		public void writeToSQL(Connection conn, String schema, ThreadPoolMonitor data)
+		public void writeToSQL(Connection conn, String schema, ThreadPoolMonitor data, long systemID)
 			throws SQLException {
 			schema = (schema == null) ? "" : (schema + ".");
 			
 			final String SQL = "INSERT INTO " + schema + "P4JThreadPoolMonitor " +
-				"(ThreadPoolOwner, InstanceName, StartTime, EndTime, Duration,  " +
+				"(SystemID, ThreadPoolOwner, InstanceName, StartTime, EndTime, Duration,  " +
 				"CurrentThreadsBusy, CurrentThreadCount) " +
-				"VALUES(?, ?, ?, ?, ?, ?, ?)";
+				"VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
 			PreparedStatement stmt = null;
 			try {
 				stmt = conn.prepareStatement(SQL);
-				stmt.setString(1, "Apache/Tomcat");
-				stmt.setString(2, data.getInstanceName());
-				stmt.setTimestamp(3, new Timestamp(data.getStartTime()));
-				stmt.setTimestamp(4, new Timestamp(data.getEndTime()));
-				stmt.setLong(5, data.getDuration());
-				stmt.setLong(6, data.getCurrentThreadsBusy());
-				stmt.setLong(7, data.getCurrentThreadCount());
+				
+				int index = 1;
+				stmt.setLong(index++, systemID);
+				stmt.setString(index++, "Apache/Tomcat");
+				stmt.setString(index++, data.getInstanceName());
+				stmt.setTimestamp(index++, new Timestamp(data.getStartTime()));
+				stmt.setTimestamp(index++, new Timestamp(data.getEndTime()));
+				stmt.setLong(index++, data.getDuration());
+				stmt.setLong(index++, data.getCurrentThreadsBusy());
+				stmt.setLong(index++, data.getCurrentThreadCount());
 				
 				int count = stmt.executeUpdate();
 				if (count != 1) {

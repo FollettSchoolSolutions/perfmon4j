@@ -164,30 +164,33 @@ public class GarbageCollectorSnapShot {
 	
 	
 	public static class SQLWriter implements SnapShotSQLWriter {
-		public void writeToSQL(Connection conn, String schema, SnapShotData data)
+		public void writeToSQL(Connection conn, String schema, SnapShotData data, long systemID)
 			throws SQLException {
-			writeToSQL(conn, schema, (GarbageCollectorData)data);
+			writeToSQL(conn, schema, (GarbageCollectorData)data, systemID);
 		}
 		
-		public void writeToSQL(Connection conn, String schema, GarbageCollectorData data)
+		public void writeToSQL(Connection conn, String schema, GarbageCollectorData data, long systemID)
 			throws SQLException {
 			schema = (schema == null) ? "" : (schema + ".");
 			
 			final String SQL = "INSERT INTO " + schema + "P4JGarbageCollection " +
-				"(InstanceName, StartTime, EndTime, Duration, NumCollections, " +
+				"(SystemID, InstanceName, StartTime, EndTime, Duration, NumCollections, " +
 				"CollectionMillis, NumCollectionsPerMinute, CollectionMillisPerMinute) " +
-				"VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
+				"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
 			PreparedStatement stmt = null;
 			try {
 				stmt = conn.prepareStatement(SQL);
-				stmt.setString(1, data.getInstanceName());
-				stmt.setTimestamp(2, new Timestamp(data.getStartTime()));
-				stmt.setTimestamp(3, new Timestamp(data.getEndTime()));
-				stmt.setLong(4, data.getDuration());
-				stmt.setLong(5, data.getCollectionCount().getDelta());
-				stmt.setLong(6, data.getCollectionTime().getDelta());
-				stmt.setDouble(7, data.getCollectionCount().getDeltaPerMinute());
-				stmt.setDouble(8, data.getCollectionTime().getDeltaPerMinute());
+				int index = 1;
+				
+				stmt.setLong(index++, systemID);
+				stmt.setString(index++, data.getInstanceName());
+				stmt.setTimestamp(index++, new Timestamp(data.getStartTime()));
+				stmt.setTimestamp(index++, new Timestamp(data.getEndTime()));
+				stmt.setLong(index++, data.getDuration());
+				stmt.setLong(index++, data.getCollectionCount().getDelta());
+				stmt.setLong(index++, data.getCollectionTime().getDelta());
+				stmt.setDouble(index++, data.getCollectionCount().getDeltaPerMinute());
+				stmt.setDouble(index++, data.getCollectionTime().getDeltaPerMinute());
 				
 				int count = stmt.executeUpdate();
 				if (count != 1) {

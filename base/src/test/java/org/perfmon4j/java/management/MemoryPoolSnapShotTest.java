@@ -50,7 +50,8 @@ public class MemoryPoolSnapShotTest extends SQLTest {
         super(name);
     }
     
-    final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JMemoryPool(\r\n" +
+    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JMemoryPool(\r\n" +
+	"	SystemID INT NOT NULL,\r\n" +
 	"	InstanceName VARCHAR(200) NOT NULL,\r\n" +
 	"	StartTime TIMESTAMP NOT NULL,\r\n" +
 	"	EndTime TIMESTAMP NOT NULL,\r\n" +
@@ -63,7 +64,7 @@ public class MemoryPoolSnapShotTest extends SQLTest {
 	")\r\n";
 
     
-    final String DERBY_DROP_1 = "DROP TABLE p4j.P4JMemoryPool";
+    final String DERBY_DROP_1 = "DROP TABLE mydb.P4JMemoryPool";
     private Connection conn;
 
 	protected void setUp() throws Exception {
@@ -142,12 +143,13 @@ public class MemoryPoolSnapShotTest extends SQLTest {
     	Mockito.when(data.getMax()).thenReturn(new Long(1000 * 64));
     	Mockito.when(data.getType()).thenReturn("My type");
     	
-    	writer.writeToSQL(conn, "p4j", data);
+    	writer.writeToSQL(conn, "mydb", data, 1);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
-    		" FROM p4j.P4JMemoryPool\r\n" +
-    		" WHERE InstanceName='Heap'\r \n" +
+    		" FROM mydb.P4JMemoryPool\r\n" +
+    		" WHERE SystemID=1\r\n" +
+    		" AND InstanceName='Heap'\r \n" +
     		" AND StartTime=?\r\n" +
     		" AND EndTime=?\r\n" +
     		" AND Duration=?\r\n" +

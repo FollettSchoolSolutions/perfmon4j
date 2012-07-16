@@ -20,16 +20,8 @@
 */
 package org.perfmon4j;
 
-import java.io.File;
-import java.lang.ref.WeakReference;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
 
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;

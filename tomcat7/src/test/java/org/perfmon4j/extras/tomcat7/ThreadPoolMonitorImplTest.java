@@ -32,6 +32,7 @@ import org.perfmon4j.util.JDBCHelper;
 
 public class ThreadPoolMonitorImplTest extends SQLTest {
     final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JThreadPoolMonitor(\r\n" +
+	"	SystemID INT NOT NULL,\r\n" +
 	"	ThreadPoolOwner VARCHAR(50) NOT NULL," +
 	"	InstanceName VARCHAR(200) NOT NULL,\r\n" +
 	"	StartTime TIMESTAMP NOT NULL,\r\n" +
@@ -82,10 +83,11 @@ public class ThreadPoolMonitorImplTest extends SQLTest {
     	Mockito.when(data.getCurrentThreadsBusy()).thenReturn(new Long(25));
     	Mockito.when(data.getCurrentThreadCount()).thenReturn(new Long(125));
 
-    	writer.writeToSQL(conn, "p4j", data);
+    	writer.writeToSQL(conn, "p4j", data, 1);
 
     	final String VALIDATE_SQL = "SELECT COUNT(*) FROM p4j.P4JThreadPoolMonitor " +
-    			" WHERE ThreadPoolOwner=? " +
+    			" WHERE SystemID=1 " +
+    			" AND ThreadPoolOwner=? " +
     			" AND InstanceName=? " +
     			" AND StartTime=? " +
     			" AND EndTime=? " +

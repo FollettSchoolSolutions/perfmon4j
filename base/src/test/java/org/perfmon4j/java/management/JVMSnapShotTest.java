@@ -45,6 +45,7 @@ import org.perfmon4j.util.JDBCHelper;
 
 public class JVMSnapShotTest extends SQLTest {
     final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JVMSnapShot(\r\n" +
+	"	SystemID INT NOT NULL,\r\n" +
 	"	StartTime TIMESTAMP NOT NULL,\r\n" +
 	"	EndTime TIMESTAMP NOT NULL,\r\n" +
 	"	Duration INT NOT NULL,\r\n" +
@@ -156,12 +157,13 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
     	JVMData data = createMockJVMData();
     	
-    	writer.writeToSQL(conn, "p4j", data);
+    	writer.writeToSQL(conn, "p4j", data, 1);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
     		" FROM p4j.P4JVMSnapShot\r\n" +
-    		" WHERE StartTime=?\r\n" +
+    		" WHERE SystemID=1\r\n" +
+    		" AND StartTime=?\r\n" +
     		" AND EndTime=?\r\n" +
     		
     		" AND Duration=?\r\n" +
@@ -231,7 +233,7 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMData data = createMockJVMData();
     	
        	Mockito.when(data.getCompilationTimeActive()).thenReturn(Boolean.FALSE);
-    	writer.writeToSQL(conn, "p4j", data);
+    	writer.writeToSQL(conn, "p4j", data, 1);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
@@ -249,7 +251,7 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMData data = createMockJVMData();
     	
        	Mockito.when(data.getSystemLoadAverage()).thenReturn(new Double(-1));
-    	writer.writeToSQL(conn, "p4j", data);
+    	writer.writeToSQL(conn, "p4j", data, 1);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +

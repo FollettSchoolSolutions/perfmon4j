@@ -32,7 +32,8 @@ import org.perfmon4j.util.JDBCHelper;
 
 
 public class GlobalRequestProcessorMonitorImplTest extends SQLTest {
-    final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JGlobalRequestProcessor(\r\n" +
+    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JGlobalRequestProcessor(\r\n" +
+	"	SystemID INT NOT NULL,\r\n" +
 	"	InstanceName VARCHAR(200) NOT NULL,\r\n" +
 	"	StartTime TIMESTAMP NOT NULL,\r\n" +
 	"	EndTime TIMESTAMP NOT NULL,\r\n" +
@@ -49,7 +50,7 @@ public class GlobalRequestProcessorMonitorImplTest extends SQLTest {
 	"	ErrorCountPerMinute DECIMAL(18, 2) NOT NULL\r\n" +
 	")\r\n";
 
-    final String DERBY_DROP_1 = "DROP TABLE p4j.P4JGlobalRequestProcessor";
+    final String DERBY_DROP_1 = "DROP TABLE mydb.P4JGlobalRequestProcessor";
     private Connection conn;
 
 	protected void setUp() throws Exception {
@@ -93,9 +94,9 @@ public class GlobalRequestProcessorMonitorImplTest extends SQLTest {
     	Mockito.when(data.getProcessingTimeMillis()).thenReturn(new Delta(0, 320000, 60000));
     	Mockito.when(data.getErrorCount()).thenReturn(new Delta(0, 72, 60000));
 
-    	writer.writeToSQL(conn, "p4j", data);
+    	writer.writeToSQL(conn, "mydb", data, 1);
 
-    	final String VALIDATE_SQL = "SELECT COUNT(*) FROM p4j.P4JGlobalRequestProcessor " +
+    	final String VALIDATE_SQL = "SELECT COUNT(*) FROM mydb.P4JGlobalRequestProcessor " +
 	    	" WHERE InstanceName=?\r\n" +
 	    	" AND StartTime=?\r\n" +
 	    	" AND EndTime=?\r\n" +

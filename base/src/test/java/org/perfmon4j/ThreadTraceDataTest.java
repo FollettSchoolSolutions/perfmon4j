@@ -47,13 +47,10 @@ public class ThreadTraceDataTest extends SQLTest {
         super(name);
     }
     
-    final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JCategory(\r\n" +
-		"CategoryID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-		"CategoryName VARCHAR(450) NOT NULL\r\n" +
-	")";
 
     // Full (1.1.0+) schema WITH JDBC/SQL time option.
-    final String DERBY_CREATE_2 = "CREATE TABLE p4j.P4JThreadTrace(\r\n" +
+    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JThreadTrace(\r\n" +
+	"	SystemID INT NOT NULL,\r\n" +
 	"	ThreadRowID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
 	"	ParentRowID INT,\r\n" +
 	"	CategoryID INT NOT NULL,\r\n" +
@@ -62,8 +59,7 @@ public class ThreadTraceDataTest extends SQLTest {
 	"	Duration INT NOT NULL,\r\n" +
 	"	SQLDuration INT)\r\n";
 
-    final String DERBY_DROP_1 = "DROP TABLE p4j.P4JCategory";
-	final String DERBY_DROP_2 = "DROP TABLE p4j.P4JThreadTrace";
+	final String DERBY_DROP_1 = "DROP TABLE mydb.P4JThreadTrace";
 
 	private Connection conn;
 
@@ -73,7 +69,6 @@ public class ThreadTraceDataTest extends SQLTest {
 		try {
 			stmt = conn.createStatement();
 			stmt.execute(DERBY_CREATE_1);
-			stmt.execute(DERBY_CREATE_2);
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 		}
@@ -83,7 +78,6 @@ public class ThreadTraceDataTest extends SQLTest {
 		Statement stmt = null;
 		try {
 			stmt = conn.createStatement();
-			stmt.execute(DERBY_DROP_2);
 			stmt.execute(DERBY_DROP_1);
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
@@ -138,16 +132,16 @@ public class ThreadTraceDataTest extends SQLTest {
         ThreadTraceData child = new ThreadTraceData("com.perfmon4j.MiscHelper.formatString", data, data.getStartTime() + SECOND);
         child.setEndTime(data.getEndTime() - SECOND);
         
-        data.writeToSQL(conn, "p4j");
+        data.writeToSQL(conn, "mydb", appender.getSystemID());
         
 System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" + 
-				"	FROM p4j.P4JThreadTrace tt\r\n" +
-				"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n"));
+				"	FROM mydb.P4JThreadTrace tt\r\n" +
+				"	JOIN mydb.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n"));
 
         
 		long parentCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
-			"	FROM p4j.P4JThreadTrace tt\r\n" +
-			"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n" +
+			"	FROM mydb.P4JThreadTrace tt\r\n" +
+			"	JOIN mydb.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n" +
 			"	WHERE tt.ThreadRowID = 1\r\n" +
 			"	AND tt.ParentRowID IS NULL\r\n" +
 			"	AND c.CategoryName = 'com.perfmon4j.Test.test'\r\n" +
@@ -156,8 +150,8 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
 			"	AND tt.Duration = 60000");
 		
 		long childCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
-				"	FROM p4j.P4JThreadTrace tt\r\n" +
-				"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n" +
+				"	FROM mydb.P4JThreadTrace tt\r\n" +
+				"	JOIN mydb.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n" +
 				"	WHERE tt.ThreadRowID = 2\r\n" +
 				"	AND tt.ParentRowID = 1\r\n" +
 				"	AND c.CategoryName = 'com.perfmon4j.MiscHelper.formatString'\r\n" +
@@ -177,7 +171,7 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
         ThreadTraceData child = new ThreadTraceData("com.perfmon4j.MiscHelper.formatString", data, data.getStartTime() + SECOND);
         child.setEndTime(data.getEndTime() - SECOND);
         
-        data.writeToSQL(conn, "p4j");
+        data.writeToSQL(conn, "mydb", appender.getSystemID());
     }
     
     public void testNestedToSQLDisabled() throws Exception {
@@ -185,11 +179,11 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
     	writeTraceData();
     	
 System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" + 
-				"	FROM p4j.P4JThreadTrace tt\r\n" +
-				"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n"));
+				"	FROM mydb.P4JThreadTrace tt\r\n" +
+				"	JOIN mydb.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n"));
         
 		long rowCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
-			"	FROM p4j.P4JThreadTrace tt\r\n" +
+			"	FROM mydb.P4JThreadTrace tt\r\n" +
 			"	WHERE tt.sqlDuration IS NULl\r\n");
 		assertEquals("sqlDuration should be NULL because SQL/JDBC monitoring is NOT enabled", 2, rowCount);
     }
@@ -201,11 +195,11 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
     	writeTraceData();
     	
 System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" + 
-				"	FROM p4j.P4JThreadTrace tt\r\n" +
-				"	JOIN p4j.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n"));
+				"	FROM mydb.P4JThreadTrace tt\r\n" +
+				"	JOIN mydb.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n"));
 
 		long rowCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
-			"	FROM p4j.P4JThreadTrace tt\r\n" +
+			"	FROM mydb.P4JThreadTrace tt\r\n" +
 			"	WHERE tt.sqlDuration = 0\r\n");
 		assertEquals("Should have inserted rows with sqlDuration", 2, rowCount);
     }

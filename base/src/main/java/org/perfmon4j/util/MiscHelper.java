@@ -27,6 +27,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -552,4 +554,37 @@ public class MiscHelper {
 		return result;
 	}
 
-}
+	private static final String defaultSystemName = generateDefaultSystemName();
+
+	public static String getDefaultSystemName() {
+		return defaultSystemName;
+	}
+	
+	private static String generateDefaultSystemName() {
+		String hostName;
+		try {
+			hostName = InetAddress.getLocalHost().getHostName();
+		} catch (UnknownHostException uhe) {
+			hostName = "localhost";
+		}
+		return hostName + "_" + buildHashCodeForCWD();
+	}
+	
+	private static int buildHashCodeForCWD() {
+		String path = null;
+		try {
+			path = new File(".").getCanonicalPath();
+		} catch (IOException ioe) {
+			path = new File(".").getAbsolutePath();
+		}
+		final int prime = 31;
+		int result = prime * 997;
+		int len = path.length();
+		for (int i = 0; i < len; i++) {
+			result = prime
+				* result
+				+ (int)path.charAt(i);
+		}
+		return Math.abs(result);
+	}
+} 

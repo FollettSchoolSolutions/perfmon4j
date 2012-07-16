@@ -108,7 +108,7 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
         private long stopTime = -1;
         
         private final Object mapToken = new Object();
-        private final Map<UserAgentVO, Counter> userAgentMap = new HashMap();
+        private final Map<UserAgentVO, Counter> userAgentMap = new HashMap<UserAgentVO, Counter>();
      
         
         public static UserAgentData newUserAgentData_TEST_ONLY(long startTime, long endTime, String userAgentStrings[]) {
@@ -188,13 +188,14 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
         }
 
         private void addOrUpdateOccuranceRow(Connection conn, String schema, Timestamp myTime, 
-        	Long browserID, Long browserVersionID, Long osID, Long osVersionID, 
-        	int count) throws SQLException {
+        	long browserID, long browserVersionID, long osID, long osVersionID, 
+        	int count, long systemID) throws SQLException {
         	
         	final String tableName = schema + "P4JUserAgentOccurance";
         	
         	final String sqlCount = "SELECT * FROM " + tableName +
-        			" WHERE CollectionDate=? " +
+        			" WHERE SystemID=? " +
+        			" AND CollectionDate=? " +
         			" AND BrowserID=? " +
         			" AND BrowserVersionID=? " +
         			" AND OSID=? " +
@@ -204,11 +205,13 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
         	ResultSet rs = null;
         	try {
         		ps = conn.prepareStatement(sqlCount);
-        		ps.setTimestamp(1, myTime);
-        		ps.setLong(2, browserID);
-        		ps.setLong(3, browserVersionID);
-        		ps.setLong(4, osID);
-        		ps.setLong(5, osVersionID);
+        		int index = 1;
+        		ps.setLong(index++, systemID);
+        		ps.setTimestamp(index++, myTime);
+        		ps.setLong(index++, browserID);
+        		ps.setLong(index++, browserVersionID);
+        		ps.setLong(index++, osID);
+        		ps.setLong(index++, osVersionID);
         		
         		rs = ps.executeQuery();
         		if (!rs.next()) {
@@ -218,14 +221,17 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
         			// Record does not exist... need to insert it.
         			
         			final String sqlInsert = "INSERT INTO " + tableName +
-        				" (CollectionDate, BrowserID, BrowserVersionID, OSID, OSVersionID) " +
-        				" VALUES(?, ?, ?, ?, ?)";
+        				" (SystemID, CollectionDate, BrowserID, BrowserVersionID, OSID, OSVersionID) " +
+        				" VALUES(?, ?, ?, ?, ?, ?)";
         			ps = conn.prepareStatement(sqlInsert);
-        			ps.setTimestamp(1, myTime);
-        			ps.setLong(2, browserID);
-        			ps.setLong(3, browserVersionID);
-        			ps.setLong(4, osID);
-        			ps.setLong(5, osVersionID);
+        			
+        			index = 1;
+        			ps.setLong(index++, systemID);
+        			ps.setTimestamp(index++, myTime);
+        			ps.setLong(index++, browserID);
+        			ps.setLong(index++, browserVersionID);
+        			ps.setLong(index++, osID);
+        			ps.setLong(index++, osVersionID);
         			ps.executeUpdate();
         		}
     			JDBCHelper.closeNoThrow(rs);
@@ -235,18 +241,22 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
         		// Update it;
         		final String sqlUpdate = "UPDATE " + tableName +
 					" SET RequestCount=RequestCount+"  + count +
-					" WHERE CollectionDate=? " +
+					" WHERE SystemID=? " +
+					" AND CollectionDate=? " +
         			" AND BrowserID=? " +
         			" AND BrowserVersionID=? " +
         			" AND OSID=? " +
         			" AND OSVersionID=?";
         		
         		ps = conn.prepareStatement(sqlUpdate);
-        		ps.setTimestamp(1, myTime);
-        		ps.setLong(2, browserID);
-        		ps.setLong(3, browserVersionID);
-        		ps.setLong(4, osID);
-        		ps.setLong(5, osVersionID);
+        		
+        		index = 1;
+        		ps.setLong(index++, systemID);
+        		ps.setTimestamp(index++, myTime);
+        		ps.setLong(index++, browserID);
+        		ps.setLong(index++, browserVersionID);
+        		ps.setLong(index++, osID);
+        		ps.setLong(index++, osVersionID);
         		ps.executeUpdate();
         	} finally {
         		JDBCHelper.closeNoThrow(rs);
@@ -259,7 +269,7 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
         	return v != null ? v : "[UNKNOWN]";
         }
         
-		public void writeToSQL(Connection conn, String schema) throws SQLException {
+		public void writeToSQL(Connection conn, String schema, long systemID) throws SQLException {
 			String s = (schema == null) ? "" : (schema + ".");
 			
 			
@@ -274,16 +284,16 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
 				
 				Timestamp now = new Timestamp(MiscHelper.calcDateOnlyFromMillis(stopTime > 0 ? stopTime : startTime));
 
-				Long browserID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentBrowser", "BrowserID", 
+				long browserID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentBrowser", "BrowserID", 
 						"BrowserName", browserName);
-				Long browserVersionID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentBrowserVersion", "BrowserVersionID", 
+				long browserVersionID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentBrowserVersion", "BrowserVersionID", 
 						"BrowserVersion", browserVersion);
-				Long osID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentOS", "OSID", 
+				long osID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentOS", "OSID", 
 						"OSName", osName);
-				Long osVersionID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentOSVersion", "OSVersionID", 
+				long osVersionID = JDBCHelper.simpleGetOrCreate(conn, s + "P4JUserAgentOSVersion", "OSVersionID", 
 						"OSVersion", osVersion);
 				addOrUpdateOccuranceRow(conn, s, now, browserID, browserVersionID, osID, 
-						osVersionID, count);
+						osVersionID, count, systemID);
 			}
 		}
     }

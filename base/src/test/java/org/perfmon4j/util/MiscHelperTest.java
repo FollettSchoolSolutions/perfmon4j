@@ -22,8 +22,6 @@
 package org.perfmon4j.util;
 
 import java.io.File;
-import java.sql.Array;
-import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -35,6 +33,7 @@ import java.util.jar.Manifest;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -329,6 +328,12 @@ public class MiscHelperTest extends TestCase {
 		assertNull(MiscHelper.tokenizeCSVString(null));
 	}
 	
+
+	public void testGenerateDefaultSystemName() {
+		String systemName = MiscHelper.getDefaultSystemName();
+		assertNotNull("systemName", systemName);
+		assertTrue("length <= 200 chars", systemName.length() <= 200);
+	}
 	
 	
 /*----------------------------------------------------------------------------*/    

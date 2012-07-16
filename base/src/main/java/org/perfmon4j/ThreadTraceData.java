@@ -149,7 +149,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 
 	private void writeToSQL(Long parentRowID, ThreadTraceData data, 
 			Connection conn, String schema,
-			Map categoryNameCache) throws SQLException {
+			Map categoryNameCache, long systemID) throws SQLException {
 		Long myRowID = null;
 		String s = (schema == null) ? "" : (schema + ".");
 		final boolean oracleConnection = JDBCHelper.isOracleConnection(conn);
@@ -166,24 +166,27 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		ResultSet rs = null;
 		try {
 			final String sql = "INSERT INTO " + s + "P4JThreadTrace\r\n" +
-				"	(ParentRowID, CategoryID, StartTime, EndTime, Duration, SQLDuration)\r\n" +
-				"	VALUES(?, ?, ?, ?, ?, ?)";
+				"	(SystemID, ParentRowID, CategoryID, StartTime, EndTime, Duration, SQLDuration)\r\n" +
+				"	VALUES(?, ?, ?, ?, ?, ?, ?)";
 			
 			if (oracleConnection) {
 				stmtInsert = conn.prepareStatement(sql, new int[]{1});
 			} else {
 				stmtInsert = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			}
-			stmtInsert.setObject(1, parentRowID, Types.INTEGER);
-			stmtInsert.setLong(2, categoryID.longValue());
-			stmtInsert.setTimestamp(3, new Timestamp(data.getStartTime()));
-			stmtInsert.setTimestamp(4, new Timestamp(data.getEndTime()));
-			stmtInsert.setLong(5, data.getEndTime() - data.getStartTime());
+			
+			int index = 1;
+			stmtInsert.setLong(index++, systemID);
+			stmtInsert.setObject(index++, parentRowID, Types.INTEGER);
+			stmtInsert.setLong(index++, categoryID.longValue());
+			stmtInsert.setTimestamp(index++, new Timestamp(data.getStartTime()));
+			stmtInsert.setTimestamp(index++, new Timestamp(data.getEndTime()));
+			stmtInsert.setLong(index++, data.getEndTime() - data.getStartTime());
 			Long sqlTimeVal = null;
 			if (SQLTime.isEnabled()) {
 				sqlTimeVal = new Long(Math.max(0, sqlEndTime - sqlStartTime));
 			}
-			stmtInsert.setObject(6, sqlTimeVal, Types.INTEGER);
+			stmtInsert.setObject(index++, sqlTimeVal, Types.INTEGER);
 
 			stmtInsert.execute();
 			rs = stmtInsert.getGeneratedKeys();
@@ -196,7 +199,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		
 		ThreadTraceData children[] = data.getChildren();
 		for (int i = 0; i < children.length; i++) {
-			writeToSQL(myRowID, children[i], conn, schema, categoryNameCache);
+			writeToSQL(myRowID, children[i], conn, schema, categoryNameCache, systemID);
 		}
 	}    
     
@@ -204,7 +207,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		this.overflow = overflow;
 	}
 	
-	public void writeToSQL(Connection conn, String dbSchema)
+	public void writeToSQL(Connection conn, String dbSchema, long systemID)
 		throws SQLException {
 
 		boolean originalAutoCommit = conn.getAutoCommit();
@@ -213,7 +216,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 		try {
 			conn.setAutoCommit(false);
 			try {
-				writeToSQL(null, this, conn, dbSchema, new HashMap());
+				writeToSQL(null, this, conn, dbSchema, new HashMap(), systemID);
 				success = true;
 			} finally {
 				if (!success) {
