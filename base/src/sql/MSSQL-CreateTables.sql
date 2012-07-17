@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008, 2009, 2010 Follett Software Company 
+ *	Copyright 2008-2012 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -83,11 +83,21 @@ GO
 /** Start added in Perfmon4j 1.2.0 **/
 CREATE TABLE dbo.P4JSystem (
 	SystemID INT IDENTITY(1,1) NOT NULL,
-	SystemName NCHAR(450) NOT NULL,
+	SystemName NCHAR(200) NOT NULL,
 	CONSTRAINT P4JSystem_pk PRIMARY KEY CLUSTERED (
 		SystemID
 	)
 )
+GO
+
+CREATE UNIQUE INDEX P4JSystem_SystemName_idx 
+	ON dbo.P4JSystem (
+		SystemName
+)
+GO
+
+
+INSERT INTO dbo.P4JSystem (SystemName) VALUES ('Default');
 GO
 /** End added in Perfmon4j 1.2.0 **/
 
@@ -109,7 +119,7 @@ GO
 
 CREATE TABLE dbo.P4JIntervalData (
 /** Start added in Perfmon4j 1.2.0 **/
-	SystemID INT NOT NULL,
+	SystemID INT NOT NULL DEFAULT 1,
 /** End added in Perfmon4j 1.2.0 **/
 	IntervalID INT IDENTITY(1,1) NOT NULL,
 	CategoryID INT NOT NULL,
@@ -248,7 +258,7 @@ GO
 
 CREATE TABLE dbo.P4JUserAgentOccurance (
 /** Start added in Perfmon4j 1.2.0 **/
-	SystemID INT NOT NULL,
+	SystemID INT NOT NULL DEFAULT 1,
 /** End added in Perfmon4j 1.2.0 **/
 	CollectionDate DATETIME NOT NULL,
 	BrowserID INT NOT NULL,
@@ -314,7 +324,7 @@ GO
 
 CREATE TABLE dbo.P4JGarbageCollection(
 /** Start added in Perfmon4j 1.2.0 **/
-	SystemID INT NOT NULL,
+	SystemID INT NOT NULL DEFAULT 1,
 /** End added in Perfmon4j 1.2.0 **/
 	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
@@ -341,7 +351,7 @@ GO
 
 CREATE TABLE dbo.P4JVMSnapShot(
 /** Start added in Perfmon4j 1.2.0 **/
-	SystemID INT NOT NULL,
+	SystemID INT NOT NULL DEFAULT 1,
 /** End added in Perfmon4j 1.2.0 **/
 	StartTime DATETIME NOT NULL,
 	EndTime DATETIME NOT NULL,
@@ -382,7 +392,7 @@ GO
 
 CREATE TABLE dbo.P4JMemoryPool(
 /** Start added in Perfmon4j 1.2.0 **/
-	SystemID INT NOT NULL,
+	SystemID INT NOT NULL DEFAULT 1,
 /** End added in Perfmon4j 1.2.0 **/
 	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
@@ -411,7 +421,7 @@ GO
 
 CREATE TABLE dbo.P4JGlobalRequestProcessor(
 /** Start added in Perfmon4j 1.2.0 **/
-	SystemID INT NOT NULL,
+	SystemID INT NOT NULL DEFAULT 1,
 /** End added in Perfmon4j 1.2.0 **/
 	InstanceName NVARCHAR(200) NOT NULL,
 	StartTime DATETIME NOT NULL,
@@ -444,7 +454,7 @@ GO
 
 CREATE TABLE dbo.P4JThreadPoolMonitor(
 /** Start added in Perfmon4j 1.2.0 **/
-	SystemID INT NOT NULL,
+	SystemID INT NOT NULL DEFAULT 1,
 /** End added in Perfmon4j 1.2.0 **/
 	ThreadPoolOwner NVARCHAR(50) NOT NULL,
 	InstanceName NVARCHAR(200) NOT NULL,
@@ -471,7 +481,7 @@ GO
 
 CREATE TABLE dbo.P4JThreadTrace(
 /** Start added in Perfmon4j 1.2.0 **/
-	SystemID INT NOT NULL,
+	SystemID INT NOT NULL DEFAULT 1,
 /** End added in Perfmon4j 1.2.0 **/
 	TraceRowID INT IDENTITY NOT NULL,
 	ParentRowID INT NULL,
