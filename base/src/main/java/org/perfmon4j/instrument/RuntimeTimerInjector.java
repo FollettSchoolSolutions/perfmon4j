@@ -123,8 +123,6 @@ public class RuntimeTimerInjector {
     	gcMethod.insertBefore("if (1==1) {return;}\r\n");
     }
     
-    private static SerialVersionUIDHelper serialVersionHelper = null;
-    
     public static int injectPerfMonTimers(CtClass clazz, boolean beingRedefined, TransformerParams params) throws ClassNotFoundException, NotFoundException, CannotCompileException {
         int mode = TransformerParams.MODE_ANNOTATE;
         TransformerParams.TransformOptions transformOptions = TransformerParams.TransformOptions.DEFAULT;
@@ -158,15 +156,13 @@ public class RuntimeTimerInjector {
             }
             
             if ((mode != TransformerParams.MODE_NONE) || extremeSQLClass) {
+            	SerialVersionUIDHelper serialVersionHelper = SerialVersionUIDHelper.getHelper();
+            	
                 /**
                  * Make sure we do not change the serial version ID of the class
                  * by inserting our instrumentation...
                  */
                 if (!beingRedefined) {
-                	if (serialVersionHelper == null) {
-                		serialVersionHelper = new SerialVersionUIDHelper();
-                	}
-                	
                 	if (serialVersionHelper.requiresSerialVesionUID(clazz)) {
                 		if (serialVersionHelper.isSkipGenerationOfSerialVersionUID()) {
                             logger.logInfo("Skipping instrumentation of serializable class: " + clazz.getName() +
@@ -174,11 +170,7 @@ public class RuntimeTimerInjector {
                             return 0;
                 		}
                 		
-                		if (!serialVersionHelper.setSerialVersionUID(clazz)) {
-                            logger.logError("Unable to instrument serializable class: " + clazz.getName() +
-                            " unable to calculate proper serialVersionUID - You must add explicit serialVersionUID field to class.");
-                            return 0;
-                		}
+                		serialVersionHelper.setSerialVersionUID(clazz);
                 	}
                 }
                 

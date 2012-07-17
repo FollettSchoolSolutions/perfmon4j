@@ -23,13 +23,12 @@ package org.perfmon4j.instrument.javassist;
 
 import java.io.ObjectStreamClass;
 import java.io.Serializable;
-import java.lang.reflect.Modifier;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
-import javassist.CtField;
 import javassist.NotFoundException;
+import javassist.SerialVersionUID;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -62,8 +61,17 @@ public class SerialVersionUIDHelper {
 	private boolean use382 = false;
 	private boolean use584 = false;
 	public static final String REQUIRE_EXPLICIT_SERIAL_VERSION_UID = "Perfmon4j.RequireExplicitSerialVersionUID";
+
+	private static SerialVersionUIDHelper helper = null;
 	
-	public SerialVersionUIDHelper() {
+	public static SerialVersionUIDHelper getHelper() {
+		if (helper == null) {
+			helper = new SerialVersionUIDHelper();
+		}
+		return helper;
+	}
+
+	private SerialVersionUIDHelper() {
 		if (isSkipGenerationOfSerialVersionUID()) {
 			logger.logInfo("Found System Property \"Perfmon4j.RequireExplicitSerialVersionUID=TRUE\", " +
 					"Perfmon4j will NOT instrument Serializable classes unless they declare " +
@@ -77,23 +85,45 @@ public class SerialVersionUIDHelper {
 	        long id = ObjectStreamClass.lookup(SerialVersionUIDHelper.TestSerializationGenerator.class).getSerialVersionUID();
 	        CtClass clazz = ClassPool.getDefault().get(SerialVersionUIDHelper.TestSerializationGenerator.class.getName());
 	
-	        if (SerialVersionUID382.calculateDefault(clazz) == id) {
-	        	use382 = true;
-	        	verboseLogger.logInfo("*** Perfmon4j will use SerialVersionUID382 to calculate default serialVersionUID");
-	        } else if (SerialVersionUID584.calculateDefault(clazz) == id) {
-	        	use584 = true;
-	        	verboseLogger.logInfo("*** Perfmon4j will use SerialVersionUID584 to calculate default serialVersionUID");
-	        } else {
-	        	if (!isSkipGenerationOfSerialVersionUID()) {
-					logger.logWarn("Unable to determine algorithm to calculate default serialVersionUID, " +
-							"Perfmon4j will NOT instrument Serializable classes unless they declare " +
-							"an explicit SerialVersionUID.");
+	        // In the event that the user wants us to calculate serial versionUUIDs 
+	        // make an attempt to determine the best algorithm for this JVM.
+	        // If all else fails we will simply use the algorithm shipped with the current version
+	        // of javassist.  This is difficult and error prone because different version of the JVM appear
+	        // to calculate the serialVersionUID differently.
+	        
+	        try {
+	        	use382 = SerialVersionUID382.calculateDefault(clazz) == id;
+	        	if (use382) { 
+	        		logDetermineUUIDGeneratorMessage("*** Perfmon4j will use SerialVersionUID382 to calculate default serialVersionUID");
+	        	}
+	        } catch (Exception ex) {
+	        	verboseLogger.logDebug("Unable to determine if SerialVersionUID382 is preferred", ex);
+	        }
+	        
+	        if (!use382) {
+	        	try {
+		        	use584 = SerialVersionUID584.calculateDefault(clazz) == id;
+		        	if (use584) { 
+		        		logDetermineUUIDGeneratorMessage("*** Perfmon4j will use SerialVersionUID584 to calculate default serialVersionUID");
+		        	}
+	        	} catch (Exception ex) {
+		        	verboseLogger.logDebug("Unable to determine if SerialVersionUID584 is preferred", ex);
 	        	}
 	        }
 		} catch (Exception ex) {
-			if (!isSkipGenerationOfSerialVersionUID()) {
-				logger.logError("Unable to determine correct defaultSerialUID algorithim", ex);
-			}
+			verboseLogger.logDebug("Unable to determine correct defaultSerialUID algorithim", ex);
+		}
+		
+        if (!use382 && !use584) {
+        	logDetermineUUIDGeneratorMessage("*** Perfmon4j will use Javassist SerialVersionUID to calculate default serialVersionUID");
+        }
+	}
+	
+	private void logDetermineUUIDGeneratorMessage(String msg) {
+		if (isSkipGenerationOfSerialVersionUID()) {
+			verboseLogger.logDebug(msg);
+		} else {
+			logger.logInfo(msg);
 		}
 	}
 	
@@ -111,22 +141,13 @@ public class SerialVersionUIDHelper {
 	    return SerialVersionUID382.isSerializable(clazz);
 	}
 	
-	public boolean setSerialVersionUID(CtClass clazz) throws CannotCompileException {
-		Long serialVersionUID = null;
-		
+	public void setSerialVersionUID(CtClass clazz) throws CannotCompileException, NotFoundException {
 		if (use382) {
-			serialVersionUID = Long.valueOf(SerialVersionUID382.calculateDefault(clazz));
+			SerialVersionUID382.setSerialVersionUID(clazz);
 		} else if (use584) {
-			serialVersionUID = Long.valueOf(SerialVersionUID584.calculateDefault(clazz));
-		} 
-		
-		if (serialVersionUID != null) {
-			CtField field = new CtField(CtClass.longType, "serialVersionUID", clazz);
-			field.setModifiers(Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL);
-			clazz.addField(field, serialVersionUID.toString() + "L");			
-			return true;
+			SerialVersionUID584.setSerialVersionUID(clazz);
 		} else {
-			return false;
+			SerialVersionUID.setSerialVersionUID(clazz);
 		}
 	}
 	
