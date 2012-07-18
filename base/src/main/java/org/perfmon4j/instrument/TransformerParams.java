@@ -52,7 +52,7 @@ public class TransformerParams {
     
  
     /**
-     * Some classes are problematic for instrumentation...  As we find the
+     * Some classes are problematic for instrumentation...  As we find them
      * add it to the BLACKLIST...
      * Note: As a workaround the user can exclude them via the -i
      * parameter.
@@ -64,7 +64,10 @@ public class TransformerParams {
     		"org.apache.log4j",  	// Skip logging classes... Good way to end up in an infinite loop...
 			"java.util.logging",  	// Skip logging classes... Good way to end up in an infinite loop...
     		"org.jboss.security",  	// Instrumenting these classes fail on JBoss 5.1.x
-    		"org.jboss.aop" 	 	// Instrumenting another instrumentation framework seems like a bad idea
+    		"org.jboss.aop", 	 	// Instrumenting another instrumentation framework seems like a bad idea
+    		"org.jboss.marshalling", // Problems with jboss 6.1
+    		"org.jboss.bootstrap",
+    		"org.jboss.logging"
     };
     
     
