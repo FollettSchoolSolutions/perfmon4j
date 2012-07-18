@@ -32,6 +32,7 @@ import java.rmi.RemoteException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TimerTask;
 
 import javassist.ClassPool;
 import javassist.CtClass;
@@ -50,6 +51,8 @@ import org.perfmon4j.util.MiscHelper;
 public class PerfMonTimerTransformer implements ClassFileTransformer {
     private final TransformerParams params; 
     private final static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
+	private final static String REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY="Perfmon4j.RemoteInterfaceDelaySeconds"; 
+	private final static int REMOTE_INTERFACE_DEFAULT_DELAY_SECONDS=30; 
     
     private PerfMonTimerTransformer(String paramsString) {
         params = new TransformerParams(paramsString);
@@ -376,6 +379,36 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         
         if (t.params.isRemoteManagementEnabled()) {
         	int port = t.params.getRemoteManagementPort();
+        	new LazyLoadRemoteListener(port).schedule(Integer.getInteger(REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY, REMOTE_INTERFACE_DEFAULT_DELAY_SECONDS).intValue());
+        }
+    }
+    
+    private static class LazyLoadRemoteListener extends TimerTask {
+    	final int port;
+    	
+    	LazyLoadRemoteListener(int port) {
+    		this.port = port;
+    	}
+    	
+    	public void schedule(int delaySeconds) {
+    		String delayMessage = "To override delay duration add \"-D" + REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY + "=<number of seconds>\" to your command line.";
+    		if (delaySeconds > 0) {
+    			PerfMon.utilityTimer.schedule(this, delaySeconds * 1000);
+    			logger.logInfo("*** PerfMon4j remote management interface is scheduled to be instantiated in " + delaySeconds + " seconds. " 
+    					+ delayMessage);
+    		} else {
+    			logger.logInfo("*** PerfMon4j remote management will be instantiated immediately. " 
+    					+ delayMessage);
+    			run();
+    		}
+    	}
+    	
+		@Override
+		public void run() {
+			/**
+			 * For an application server, give services a chance to aquire their ports
+			 * before we tie up a port for the remote monitor interface.
+			 */
         	try {
         		RemoteImpl.registerRMIListener(port);
 			} catch (RemoteException e) {
@@ -387,8 +420,9 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 					logger.logError("Error starting management listener on port: " + port, e);
 				}
 			}
-        }
+		}
     }
+    
     
     private static String getDisplayablePath(File file) {
     	String result = file.getAbsolutePath();

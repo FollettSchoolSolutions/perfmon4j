@@ -55,9 +55,11 @@ public class LoggerFactory {
 	public static boolean isInstrumetationCategory(String category) {
 		return (category.startsWith("org.perfmon4j.instrument")
 			|| category.startsWith("org.perfmon4j.PerfMon")
-			|| category.startsWith("org.perfmon4j.XMLConfigurator")) &&
-			!category.endsWith("Test");
+			|| category.startsWith("org.perfmon4j.remotemanagement")
+			|| category.startsWith("org.perfmon4j.XMLConfigurator")) 
+			&& !category.endsWith("Test");
 	}
+	
 	
 	/**
 	 * This default wrapper is used by LoggerWrapper.getActiveWrapper();
