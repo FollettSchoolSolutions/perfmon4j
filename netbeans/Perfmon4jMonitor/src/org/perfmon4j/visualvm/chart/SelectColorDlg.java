@@ -1,5 +1,5 @@
 /*
- *	Copyright 2011 Follett Software Company 
+ *	Copyright 2011-2012 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -28,7 +28,6 @@ import org.perfmon4j.visualvm.MainWindow;
  * @author ddeucher
  */
 public class SelectColorDlg extends javax.swing.JDialog {
-
     private Color selectedColor = null;
 
     /** Creates new form SelectColorDlg */

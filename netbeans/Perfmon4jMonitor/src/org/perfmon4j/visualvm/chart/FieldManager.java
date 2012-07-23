@@ -1,5 +1,5 @@
 /*
- *	Copyright 2011 Follett Software Company 
+ *	Copyright 2011-2012 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -178,6 +178,8 @@ public class FieldManager implements PreferenceChangeListener {
 
         boolean loading = true;
         int i = -1;
+        
+        List<FieldElement> elementsToAdd = new ArrayList<FieldElement>();
         while (loading) {
             i++;
             String key = props.getProperty("field[" + i + "].fieldKey");
@@ -200,11 +202,19 @@ public class FieldManager implements PreferenceChangeListener {
                     
                     FieldElement element = new FieldElement(fieldKey, factor, color);
                     element.setVisibleInChart(visible);
-                    addOrUpdateField(element);
+                    elementsToAdd.add(element);
                 }
             } else {
                 loading = false;
             }
+        }
+        
+        // Add elements in reverse order, this will result keep
+        // the list in the same order it was when it was written 
+        // out.
+        int count = elementsToAdd.size();
+        while (count > 0) {
+            addOrUpdateField(elementsToAdd.remove(--count));
         }
         
         // Now remove any fields that are no longer being monitored.
@@ -241,7 +251,7 @@ public class FieldManager implements PreferenceChangeListener {
     public void scheduleThreadTrace(MonitorKey key, Map<String,String> map) {
         if (!MonitorKey.INTERVAL_TYPE.equals(key.getType())) {
             // Reset it back to an interval type key...
-            key = new MonitorKey(MonitorKey.INTERVAL_TYPE, key.getName());
+            key = MonitorKey.newIntervalKey(key.getName());
         }
         FieldKey threadTraceKey = FieldKey.buildThreadTraceKeyFromInterval(key, 
                 map);
@@ -265,7 +275,7 @@ public class FieldManager implements PreferenceChangeListener {
 
     public void unScheduleThreadTrace(FieldKey sourceFieldKey) {
         MonitorKey sourceKey = sourceFieldKey.getMonitorKey();
-        FieldKey threadTraceKey = new FieldKey(new MonitorKey(MonitorKey.THREADTRACE_TYPE, sourceKey.getName()), "stack", FieldKey.STRING_TYPE);
+        FieldKey threadTraceKey = new FieldKey(MonitorKey.newThreadTraceKey(sourceKey.getName()), "stack", FieldKey.STRING_TYPE);
 
         if (threadTraceList.hasPendingRequest(threadTraceKey)) {
             try {

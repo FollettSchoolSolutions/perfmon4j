@@ -1,5 +1,5 @@
 /*
- *	Copyright 2011 Follett Software Company 
+ *	Copyright 2011-2012 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -34,6 +34,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.Map;
 import java.util.Properties;
 import javax.swing.BorderFactory;
@@ -76,7 +77,14 @@ public class Perfmon4jMonitorView extends DataSourceView {
         String buildVersion = info.getBuildVersion();
         String specVersion = info.getSpecificationVersion().toString();
         
-        pluginInfo = name + " " + specVersion + " (" + buildVersion + ")";
+        String tmp = name + " " + specVersion + " (" + buildVersion + ")";
+        
+        try {
+            tmp +=  " -- Attached to Perfmon4j Agent Version: " + wrapper.getServerManagementVersion();
+        } catch (RemoteException ex) {
+            ex.printStackTrace();
+        }
+        pluginInfo = tmp;
     }
 
     public static JFrame getParentFrame(Component c) {
@@ -160,17 +168,32 @@ public class Perfmon4jMonitorView extends DataSourceView {
                 }
             });
         }
+        
+        
+        private File appendExtensionIfMissing(File file) {
+            File result = file;
+            
+            if (file != null) {
+                String path = file.getPath();
+                if (!path.endsWith(CONFIG_FILE_SUFFIX)) {
+                    result = new File(path + CONFIG_FILE_SUFFIX);
+                }
+            }
+            
+            return result;
+        }
 
         private void doSaveButton(ActionEvent e) {
             JFileChooser fc = new JFileChooser();
 
             fc.setSelectedFile(currentFile != null ? currentFile : DEFAULT_FILE);
             fc.setFileFilter(new P4JFileFilter());
+           
 
             int result = fc.showSaveDialog(Perfmon4jMonitorView.getParentFrame((Component) e.getSource()));
 
             if (result == JFileChooser.APPROVE_OPTION) {
-                File selectedFile = fc.getSelectedFile();
+                File selectedFile = appendExtensionIfMissing(fc.getSelectedFile());
                 if (selectedFile.exists() && !selectedFile.equals(currentFile)) {
                     int response = JOptionPane.showConfirmDialog(null,
                             "Overwrite file?", "Confirm Overwrite",

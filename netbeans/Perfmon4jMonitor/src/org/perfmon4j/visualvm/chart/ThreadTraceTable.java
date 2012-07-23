@@ -1,5 +1,5 @@
 /*
- *	Copyright 2011 Follett Software Company 
+ *	Copyright 2011-2012 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -177,8 +177,7 @@ public class ThreadTraceTable extends JPanel implements
                         ThreadTraceList.ThreadTraceElement element = list.get(row);
                         MonitorKey snapShotKey = element.getFieldKey().getMonitorKey();
                         
-                        MonitorKey intervalKey = new MonitorKey(MonitorKey.INTERVAL_TYPE, 
-                                snapShotKey.getName());
+                        MonitorKey intervalKey = MonitorKey.newIntervalKey(snapShotKey.getName());
                         SelectFieldDlg.doSelectFieldForChart(mainWindow, intervalKey);
                     }
                 });

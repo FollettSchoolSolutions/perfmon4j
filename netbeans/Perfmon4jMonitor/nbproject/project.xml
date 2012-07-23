@@ -111,8 +111,8 @@
                 <binary-origin>release/modules/ext/jfreechart-1.0.14.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
-                <runtime-relative-path>ext/perfmon4j-1.2.0-SNAPSHOT-monitor-agent.jar</runtime-relative-path>
-                <binary-origin>release/modules/ext/perfmon4j-1.2.0-SNAPSHOT-monitor-agent.jar</binary-origin>
+                <runtime-relative-path>ext/perfmon4j-1.2.0-ALPHA_5-SNAPSHOT-monitor-agent.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/perfmon4j-1.2.0-ALPHA_5-SNAPSHOT-monitor-agent.jar</binary-origin>
             </class-path-extension>
         </data>
     </configuration>

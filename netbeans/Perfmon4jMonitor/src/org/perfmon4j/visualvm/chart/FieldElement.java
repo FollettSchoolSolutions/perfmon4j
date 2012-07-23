@@ -1,5 +1,5 @@
 /*
- *	Copyright 2011 Follett Software Company 
+ *	Copyright 2011-2012 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -18,7 +18,6 @@
  * 	McHenry, IL 60050
  * 
 */
-
 package org.perfmon4j.visualvm.chart;
 
 import java.awt.Color;

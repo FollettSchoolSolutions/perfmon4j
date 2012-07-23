@@ -1,12 +1,22 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/*
- * MainWindow.java
+ *	Copyright 2011-2012 Follett Software Company 
  *
- * Created on Nov 11, 2011, 4:02:24 PM
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ * 	Follett Software Company
+ * 	1391 Corporate Drive
+ * 	McHenry, IL 60050
+ * 
  */
 package org.perfmon4j.visualvm;
 
@@ -23,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
@@ -32,13 +43,11 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import org.openide.awt.MouseUtils.PopupMouseAdapter;
 import org.openide.util.Exceptions;
-import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.RemoteManagementWrapper;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 import org.perfmon4j.visualvm.chart.ChartElementsTable;
 import org.perfmon4j.visualvm.chart.DynamicTimeSeriesChart;
-import org.perfmon4j.visualvm.chart.FieldElement;
 import org.perfmon4j.visualvm.chart.FieldManager;
 import org.perfmon4j.visualvm.chart.SelectColorDlg;
 import org.perfmon4j.visualvm.chart.SelectFieldDlg;
@@ -82,6 +91,8 @@ public class MainWindow extends javax.swing.JPanel {
 
         initComponents();
 
+        final String toolTipOptions = "Right click for options....";
+        
         chart = new DynamicTimeSeriesChart(secondsToDisplay);
         fieldManager.addDataHandler(chart);
         topRightPanel.add(chart);
@@ -102,12 +113,14 @@ public class MainWindow extends javax.swing.JPanel {
         model.setRoot(rootIntervalMonitors);
 
         intervalMonitorFieldTree.addMouseListener(new MonitorTreeMouseAdapter(this, true));
+        intervalMonitorFieldTree.setToolTipText(toolTipOptions);
 
         model = (DefaultTreeModel) snapShotMonitorTreeField.getModel();
         rootSnapShotMonitors = new MonitorKeyWrapper(model, null, "Snapshot Monitors");
         model.setRoot(rootSnapShotMonitors);
         
         snapShotMonitorTreeField.addMouseListener(new MonitorTreeMouseAdapter(this, false));
+        snapShotMonitorTreeField.setToolTipText(toolTipOptions);
         refreshMonitors();
         
         int numRootChildren = rootIntervalMonitors.getChildCount();
@@ -185,7 +198,34 @@ public class MainWindow extends javax.swing.JPanel {
                 final MonitorKeyWrapper wrapper = (MonitorKeyWrapper) path.getLastPathComponent();
                 if (wrapper.getMonitorKey() != null) {
                     JPopupMenu popup = new JPopupMenu();
+                    
+                    if (MonitorKey.INTERVAL_TYPE.equals(wrapper.getMonitorKey().getType())) {
+                        final boolean setOn = !wrapper.isForceDynamicMonitorCreation();
+                        JCheckBoxMenuItem dynamicChildren = new JCheckBoxMenuItem("Force dynamic monitor creation");
+                        dynamicChildren.setSelected(!setOn);
 
+                        if (!mainWindow.getManagementWrapper().isForceDynamicChildCreation()) {
+                            dynamicChildren.setEnabled(false);
+                        }
+                        dynamicChildren.addActionListener(new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                try {
+                                   if (setOn) {
+                                       mainWindow.getManagementWrapper().forceDynamicChildCreation(wrapper.getMonitorKey());
+                                   } else {
+                                       mainWindow.getManagementWrapper().unForceDynamicChildCreation(wrapper.getMonitorKey());
+                                   }
+                                   wrapper.setForceDynamicMonitorCreation(setOn);
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                        });
+                        popup.add(dynamicChildren);
+                        popup.add(new JPopupMenu.Separator());
+                    }
+                    
                     JMenuItem addFieldToChart = new JMenuItem("Add Field to Chart...");
                     addFieldToChart.addActionListener(new ActionListener() {
 
@@ -260,6 +300,7 @@ public class MainWindow extends javax.swing.JPanel {
         private final List<String> childNames = new ArrayList<String>();
         private final Map<String, MonitorKeyWrapper> children = new HashMap<String, MonitorKeyWrapper>();
         private MonitorKey monitorKey;
+        private boolean forceDynamicMonitorCreation = false;
 
         MonitorKeyWrapper(DefaultTreeModel model, MonitorKeyWrapper parent, String name) {
             this.parent = parent;
@@ -337,7 +378,16 @@ public class MainWindow extends javax.swing.JPanel {
         public Enumeration children() {
             return new WrapperEnumeration(this);
         }
+        
+        public boolean isForceDynamicMonitorCreation() {
+            return this.forceDynamicMonitorCreation;
+        }
 
+        public void setForceDynamicMonitorCreation(boolean forceDynamicMonitorCreation) {
+            this.forceDynamicMonitorCreation = forceDynamicMonitorCreation;
+        }
+        
+        
         static class WrapperEnumeration implements Enumeration<TreeNode> {
 
             int currentOffset = 0;

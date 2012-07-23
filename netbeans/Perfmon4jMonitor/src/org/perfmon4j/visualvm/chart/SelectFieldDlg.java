@@ -1,5 +1,5 @@
 /*
- *	Copyright 2011 Follett Software Company 
+ *	Copyright 2011-2012 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -18,16 +18,9 @@
  * 	McHenry, IL 60050
  * 
  */
-
-/*
- * AEDMonitor.java
- *
- * Created on Oct 31, 2011, 9:03:21 AM
- */
 package org.perfmon4j.visualvm.chart;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.rmi.RemoteException;
@@ -43,7 +36,23 @@ import org.perfmon4j.visualvm.MainWindow;
  * @author ddeucher
  */
 public class SelectFieldDlg extends javax.swing.JDialog {
-
+    private static final Color DEFAULT_COLOR_AWAY[] = {
+        Color.BLUE,
+        Color.GREEN,
+        Color.RED,
+        Color.CYAN,
+        Color.MAGENTA,
+        Color.DARK_GRAY,
+        Color.ORANGE,
+        Color.PINK,
+        Color.BLACK,
+    };
+    
+    private static int nextColor = 0;
+    
+    private static Color getNextColor() {
+        return DEFAULT_COLOR_AWAY[nextColor++ % DEFAULT_COLOR_AWAY.length];
+    }
     private FieldKey selectedField = null;
     private final MainWindow mainWindow;
 
@@ -101,9 +110,9 @@ public class SelectFieldDlg extends javax.swing.JDialog {
         final SelectFieldDlg dlg = mainWindow.selectFieldDlg;
 
 
+        dlg.colorPanel.setBackground(getNextColor());
         dlg.fieldsCombo.removeAllItems();;
         dlg.fieldsCombo.addActionListener(new ActionListener() {
-
             @Override
             public void actionPerformed(ActionEvent e) {
                 FieldWrapper wrapper = (FieldWrapper) dlg.fieldsCombo.getSelectedItem();
