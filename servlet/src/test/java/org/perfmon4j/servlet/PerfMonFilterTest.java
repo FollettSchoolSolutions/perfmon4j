@@ -367,10 +367,10 @@ public class PerfMonFilterTest extends TestCase {
 		
 		f.doFilter(request, Mockito.mock(HttpServletResponse.class), Mockito.mock(FilterChain.class));
 		assertNull("Should not create default category", 
-				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest"));
+				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest"));
 		
 		assertNull("Should not create monitor without an attatched appender", 
-				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation"));
+				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation"));
 		
 		// Now configure a CHILD based appender on WebRequest.  We should now
 		// create the WebRequest.circulation monitor.
@@ -382,10 +382,10 @@ public class PerfMonFilterTest extends TestCase {
 		
 		f.doFilter(request, Mockito.mock(HttpServletResponse.class), Mockito.mock(FilterChain.class));
 		assertNotNull("Now we should have created the child monitor", 
-				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation"));
+				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation"));
 		
 		assertNull("Should NOT have created GRAND child monitor", 
-				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation.getstat"));
+				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation.getstat"));
 		
 		// Now configure a CHILD and ALL Descendentsbased appender on WebRequest.  
 		// We should now create the WebRequest.circulation monitor.
@@ -398,8 +398,8 @@ public class PerfMonFilterTest extends TestCase {
 		f.doFilter(request, Mockito.mock(HttpServletResponse.class), Mockito.mock(FilterChain.class));
 		
 		assertNotNull("Should have created GREAT GRAND child monitor", 
-				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation.getstat"));
+				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation.getstat"));
 		assertNotNull("Should have created GREAT GREAT GRAND child monitor", 
-				PerfMon.getMonitorNoCreate_TESTONLY("WebRequest.circulation.getstat.444"));
+				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation.getstat.444"));
 	}
 }
