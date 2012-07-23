@@ -30,8 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
+import java.util.WeakHashMap;
 
 import org.perfmon4j.Appender.AppenderID;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.FailSafeTimerTask;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
@@ -85,7 +87,11 @@ public class PerfMon {
     private static long nextMonitorID;
     private static final PerfMon rootMonitor;
     private static ClassLoader classLoader = GlobalClassLoader.getClassLoader();
-    
+
+    // If this map is NON-Empty, we will create children of this
+    // monitor even if the children are specified as a dynamic path.
+    private final Map<Object, String> forceDynamicPathWeakMap = Collections.synchronizedMap(new WeakHashMap<Object, String>());
+  
     static {
         // Order of these is important....
         nextMonitorID = 0;
@@ -225,6 +231,20 @@ public class PerfMon {
         return result;
     }
     
+    /*----------------------------------------------------------------------------*/    
+    public static List<MonitorKey> getMonitorKeys() {
+        List<MonitorKey> result = new ArrayList<MonitorKey>(getNumMonitors());
+ 
+        List<PerfMon> monitors = new ArrayList<PerfMon>(getNumMonitors());
+        synchronized (mapMonitorLockToken) {
+        	monitors.addAll(mapMonitors.values());
+        }
+        for (PerfMon mon : monitors) {
+        	result.add(MonitorKey.newIntervalKey(mon.getName()));
+        }
+        return result;
+    }
+    
 /*----------------------------------------------------------------------------*/    
     private static boolean isAppenderInUseByAnyMonitor(Appender appender) {
         boolean result = false;
@@ -267,7 +287,7 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/
-    public static PerfMon getMonitorNoCreate_TESTONLY(String key) {
+    public static PerfMon getMonitorNoCreate_PERFMON_USE_ONLY(String key) {
     	synchronized (mapMonitorLockToken) {
 			return mapMonitors.get(key);
 		}
@@ -279,7 +299,7 @@ public class PerfMon {
     
     /**
      * The isDynamicPath is used to limit the number of monitors
-     * that are created and maintiained in memory.
+     * that are created and maintained in memory.
      * 
      * For most purposed you want to call this with a value of false
      * however if you are calling with a "dynamically" generated key
@@ -676,7 +696,7 @@ public class PerfMon {
 
 /*----------------------------------------------------------------------------*/    
     private boolean shouldChildBeDynamicallyCreated() {
-    	return !appendersAssociatedWithChildren.isEmpty();
+    	return !appendersAssociatedWithChildren.isEmpty() || !forceDynamicPathWeakMap.isEmpty();
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -1283,6 +1303,14 @@ public class PerfMon {
     
     public ThreadTraceConfig getInternalThreadTraceConfig() {
         return internalThreadTraceConfig;
+    }
+
+    public void forceDynamicChildCreation(Object externalMonitorInstance) {
+		forceDynamicPathWeakMap.put(externalMonitorInstance, "");
+    }
+    
+    public void unForceDynamicChildCreation(Object externalMonitorInstance) {
+		forceDynamicPathWeakMap.remove(externalMonitorInstance);
     }
 
     public String toHTMLString() {

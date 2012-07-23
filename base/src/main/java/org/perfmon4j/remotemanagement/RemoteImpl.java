@@ -46,6 +46,7 @@ import org.perfmon4j.remotemanagement.intf.ManagementVersion;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.RemoteInterface;
+import org.perfmon4j.remotemanagement.intf.RemoteInterfaceExt1;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 import org.perfmon4j.remotemanagement.intf.UnableToParseKeyException;
 import org.perfmon4j.util.Logger;
@@ -63,7 +64,8 @@ public class RemoteImpl implements RemoteInterface {
 	public static final int AUTO_RMI_PORT_RANGE_END=
 		Integer.getInteger(RemoteImpl.class.getName() + ".AUTO_RMI_PORT_RANGE_END", 5500).intValue();
 	
-	static final private RemoteImpl singleton = new RemoteImpl();
+	static final private RemoteImplExt1 singleton = new RemoteImplExt1(new RemoteImpl());
+	
 	
 	private RemoteImpl() {
 		ExternalAppender.registerSnapShotClass(InstrumentationMonitor.class.getName());
@@ -80,7 +82,7 @@ public class RemoteImpl implements RemoteInterface {
 		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.ThreadPoolMonitorImpl");
 	}
 
-	public static RemoteImpl getSingleton() {
+	public static RemoteInterfaceExt1 getSingleton() {
 		return singleton;
 	}
 
@@ -111,8 +113,17 @@ public class RemoteImpl implements RemoteInterface {
 	        		}
 	        	}
         	}
-			RemoteInterface stub = (RemoteInterface)UnicastRemoteObject.exportObject(singleton, 0);
-			registry.bind(RemoteInterface.serviceName, stub);
+        	// For backwards compatibility register both the Base "RemoteInterface" object and the
+        	// new RemoteInterfaceExt1 object.
+        	
+        	// Register the base object for backwards compatibility...
+        	RemoteImpl implBase = (RemoteImpl)singleton.getDelegate();
+			registry.bind(RemoteInterface.serviceName, UnicastRemoteObject.exportObject(implBase, 0));
+			
+			// Register the Ext1 interface.
+			RemoteImplExt1 implExt1 = singleton;
+			registry.bind(RemoteInterfaceExt1.serviceName, (RemoteInterfaceExt1)UnicastRemoteObject.exportObject(implExt1, 0));
+			
 			bound = true;
 			registeredPort = Integer.valueOf(port);
 	        System.setProperty(RemoteInterface.P4J_LISTENER_PORT, registeredPort.toString());
@@ -123,6 +134,7 @@ public class RemoteImpl implements RemoteInterface {
 			logger.logError("Unexpected exception", e);
 		} finally {
 			if (!bound) {
+				unregisterRMIListener();
 				registry = null;
 			}
 		}
@@ -130,13 +142,15 @@ public class RemoteImpl implements RemoteInterface {
 	
 	public static void unregisterRMIListener() {
 		if (registry != null) {
-		    try {
-				registry.unbind(RemoteInterface.serviceName);
-				UnicastRemoteObject.unexportObject(singleton, true);
-				UnicastRemoteObject.unexportObject(registry, true);
-			} catch (Exception e) {
-				logger.logWarn("Unable to unbind", e);
-			} 
+			// Unregister ext1 implementation.
+			try {registry.unbind(RemoteInterfaceExt1.serviceName);} catch (Exception ex){logger.logInfo("unregisterRMIListener", ex);}
+			try {UnicastRemoteObject.unexportObject(singleton, true);} catch (Exception ex){logger.logInfo("unregisterRMIListener", ex);}
+
+			// Unregister base implementation.
+			try {registry.unbind(RemoteInterface.serviceName);} catch (Exception ex){logger.logInfo("unregisterRMIListener", ex);}
+			try {UnicastRemoteObject.unexportObject(singleton.getDelegate(), true);} catch (Exception ex){logger.logInfo("unregisterRMIListener", ex);}
+			
+			try { UnicastRemoteObject.unexportObject(registry, true);} catch (Exception ex){logger.logInfo("unregisterRMIListener", ex);}
 		    registry = null;
 		    registeredPort = null;
 	        System.getProperties().remove(RemoteInterface.P4J_LISTENER_PORT);
@@ -202,7 +216,7 @@ public class RemoteImpl implements RemoteInterface {
 		try {
 			MonitorKey key = MonitorKey.parse(monitorKey);
 			if (MonitorKey.INTERVAL_TYPE.equals(key.getType())) {
-				FieldKey fields[] = IntervalData.getFields(key.getName()).getFields();
+				FieldKey fields[] = IntervalData.getFields(key).getFields();
 				result = FieldKey.toStringArray(fields);
 			} else if (MonitorKey.THREADTRACE_TYPE.equals(key.getType())) {
 				FieldKey fields[] = new FieldKey[]{new FieldKey(key, "stack", FieldKey.STRING_TYPE)}; 
@@ -221,10 +235,10 @@ public class RemoteImpl implements RemoteInterface {
 	public String[] getMonitors(String sessionID) throws SessionNotFoundException, RemoteException {
 		List<String> result = new ArrayList<String>();
 		ExternalAppender.validateSession(sessionID);
-
-		Iterator<String> intervalMonitors = PerfMon.getMonitorNames().iterator();
-		while (intervalMonitors.hasNext()) {
-			MonitorKey key = new MonitorKey(MonitorKey.INTERVAL_TYPE, intervalMonitors.next());
+		
+		
+		List<MonitorKey> intervalMonitors = PerfMon.getMonitorKeys();
+		for (MonitorKey key : intervalMonitors) {
 			result.add(key.toString());
 		}
 		

@@ -37,7 +37,7 @@ public class FieldKeyTest extends TestCase {
     }
 
     public void testToString() {
-    	MonitorKey monitorKey = new MonitorKey(MonitorKey.INTERVAL_TYPE, "org.perfmon4j");
+    	MonitorKey monitorKey = MonitorKey.newIntervalKey("org.perfmon4j");
     	FieldKey fieldKey = new FieldKey(monitorKey, "avgMillis", FieldKey.LONG_TYPE);
     	
     	assertEquals("INTERVAL(name=org.perfmon4j):FIELD(name=avgMillis;type=LONG)", fieldKey.toString()); 
@@ -47,7 +47,7 @@ public class FieldKeyTest extends TestCase {
     	FieldKey fieldKey = FieldKey.parseNoThrow("INTERVAL(name=org.perfmon4j):FIELD(name=avgMillis;type=LONG)");
     	
     	assertNotNull("fieldKey should not be null", fieldKey);
-    	assertEquals("monitor key", new MonitorKey(MonitorKey.INTERVAL_TYPE, "org.perfmon4j"), fieldKey.getMonitorKey());
+    	assertEquals("monitor key", MonitorKey.newIntervalKey("org.perfmon4j"), fieldKey.getMonitorKey());
     	assertEquals("field name", "avgMillis", fieldKey.getFieldName());
     	assertEquals("field type", FieldKey.LONG_TYPE, fieldKey.getFieldType());
     }

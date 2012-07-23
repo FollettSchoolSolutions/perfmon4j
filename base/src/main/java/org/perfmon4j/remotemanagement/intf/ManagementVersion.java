@@ -52,7 +52,7 @@ public final class ManagementVersion {
 	public static final int RMI_VERSION = 1;
 	
 	public static final int MAJOR_VERSION = 1;
-	public static final int MINOR_VERSION = 0;
+	public static final int MINOR_VERSION = 1; // Updated to support RemoteInterfaceExt1
 	public static final String VERSION;
 	
 	static {

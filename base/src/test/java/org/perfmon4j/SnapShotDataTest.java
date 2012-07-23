@@ -45,7 +45,7 @@ public class SnapShotDataTest extends TestCase {
 	}
 	
 	public void testGetFieldDataForDelta() throws Exception {
-		MonitorKey monitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, "dave");
+		MonitorKey monitorKey = MonitorKey.newSnapShotKey("dave");
 		FieldKey deltaKey = new FieldKey(monitorKey, "valuePerSecond", FieldKey.DOUBLE_TYPE);
 		FieldKey doubleKey = new FieldKey(monitorKey, "otherValuePerSecond", FieldKey.DOUBLE_TYPE);
 		
@@ -83,7 +83,7 @@ public class SnapShotDataTest extends TestCase {
 	}
 	
 	public void testGetFieldDataForRatio() throws Exception {
-		MonitorKey monitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, "dave");
+		MonitorKey monitorKey = MonitorKey.newSnapShotKey("dave");
 		FieldKey ratioKey = new FieldKey(monitorKey, "value", FieldKey.DOUBLE_TYPE);
 		FieldKey doubleKey = new FieldKey(monitorKey, "otherValuePercent", FieldKey.DOUBLE_TYPE);
 		

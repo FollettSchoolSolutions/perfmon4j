@@ -141,7 +141,15 @@ public class RemoteManagementWrapper implements Closeable {
 	 * @return
 	 * @throws RemoteException
 	 */
-	static RemoteInterface getRemoteInterface(String host, int port) throws RemoteException {
+    static RemoteInterface getRemoteInterface(String host, int port) throws RemoteException {
+    	try {
+			return getRemoteInterfaceExt1(host, port);
+		} catch (RemoteException e) {
+			return getRemoteInterfaceBase(host, port);
+		} 
+	}
+
+    static private RemoteInterface getRemoteInterfaceBase(String host, int port) throws RemoteException {
 		try {
 			return (RemoteInterface)Naming.lookup("rmi://" + host + ":" + port + "/" +  RemoteInterface.serviceName);
 		} catch (MalformedURLException e) {
@@ -151,5 +159,51 @@ public class RemoteManagementWrapper implements Closeable {
 		} catch (NotBoundException e) {
 			throw new RemoteException("NotBound", e);
 		}
+	}
+    
+    static private RemoteInterfaceExt1 getRemoteInterfaceExt1(String host, int port) throws RemoteException {
+		try {
+			return (RemoteInterfaceExt1)Naming.lookup("rmi://" + host + ":" + port + "/" +  RemoteInterfaceExt1.serviceName);
+		} catch (MalformedURLException e) {
+			throw new RemoteException("Bad URL", e);
+		} catch (RemoteException e) {
+			throw e;
+		} catch (NotBoundException e) {
+			throw new RemoteException("NotBound", e);
+		}
+	}
+    
+    public void forceDynamicChildCreation(MonitorKey key) throws SessionNotFoundException, RemoteException {
+    	if (!isForceDynamicChildCreation()) {
+    		throw new UnsupportedOperationException("Server does not support this operation");
+    	}
+    	
+    	((RemoteInterfaceExt1)remoteInterface).forceDynamicChildCreation(sessionID, key.toString());
+    }
+    
+    public void unForceDynamicChildCreation(MonitorKey key) throws SessionNotFoundException, RemoteException {
+    	if (!isForceDynamicChildCreation()) {
+    		throw new UnsupportedOperationException("Server does not support this operation");
+    	}
+    	
+    	((RemoteInterfaceExt1)remoteInterface).unForceDynamicChildCreation(sessionID, key.toString());
+    }
+    
+    public String getServerManagementVersion() throws RemoteException {
+    	String result = "1.000";  // Default version... 
+
+    	if (isExt1Supported()) {
+    		result = ((RemoteInterfaceExt1)remoteInterface).getServerManagementVersion();
+    	}
+    	
+    	return result;
+    }
+	
+    public boolean isExt1Supported() {
+		return remoteInterface instanceof RemoteInterfaceExt1;
+    }
+    
+	public boolean isForceDynamicChildCreation() {
+		return isExt1Supported();
 	}
 }

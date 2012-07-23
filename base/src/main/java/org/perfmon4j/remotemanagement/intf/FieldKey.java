@@ -147,7 +147,7 @@ public class FieldKey implements Comparable<FieldKey>{
 			}
 		}
 		if (intervalKey.getType().equals(MonitorKey.INTERVAL_TYPE)) {
-			monitorKey = new MonitorKey(MonitorKey.THREADTRACE_TYPE, intervalKey.getName(), 
+			monitorKey = MonitorKey.newThreadTraceKey(intervalKey.getName(), 
 					"".equals(instance) ? null : instance);
 			
 		} else if (intervalKey.getType().equals(MonitorKey.THREADTRACE_TYPE)) {

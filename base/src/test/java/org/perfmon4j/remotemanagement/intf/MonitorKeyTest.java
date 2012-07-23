@@ -43,15 +43,18 @@ public class MonitorKeyTest extends TestCase {
     }
 
     public void testToStringX() {
-    	MonitorKey key = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, "org.perfmon4j");
+    	MonitorKey key = MonitorKey.newSnapShotKey("org.perfmon4j");
     	assertEquals("SNAPSHOT(name=org.perfmon4j)", key.toString());
 
-    	key = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, "org.perfmon4j", "http-80");
+    	key = MonitorKey.newSnapShotKey("org.perfmon4j", "http-80");
     	assertEquals("SNAPSHOT(name=org.perfmon4j;instance=http-80)", key.toString());
+
+    	key = MonitorKey.newIntervalKey("org.perfmon4j");
+    	assertEquals("INTERVAL(name=org.perfmon4j)", key.toString());
     }
 
     public void testFromStringNoInstance() {
-    	MonitorKey key = new MonitorKey(MonitorKey.INTERVAL_TYPE, "org.perfmon4j");
+    	MonitorKey key = MonitorKey.newIntervalKey("org.perfmon4j");
     	
     	MonitorKey compare = MonitorKey.parseNoThrow(key.toString());
     	assertTrue(compare.equals(key));
@@ -61,7 +64,7 @@ public class MonitorKeyTest extends TestCase {
     }
     
     public void testFromStringWithInstance() {
-    	MonitorKey key = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, "org.perfmon4j", "http-80");
+    	MonitorKey key = MonitorKey.newSnapShotKey("org.perfmon4j", "http-80");
     	
     	MonitorKey compare = MonitorKey.parseNoThrow(key.toString());
     	assertTrue(compare.equals(key));
@@ -69,7 +72,7 @@ public class MonitorKeyTest extends TestCase {
     	compare = MonitorKey.parseNoThrow(key.toString() + "asdfasf");
     	assertTrue("Any trailing characters should be ignored", compare.equals(key));
     }
-    
+
 //    public void testGenerateThreadTraceKey() {
 //    	// First verify you can not convert a snapshot key into a threadtrace key
 //    	MonitorKey key = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, "org.perfmon4j", "http-80");

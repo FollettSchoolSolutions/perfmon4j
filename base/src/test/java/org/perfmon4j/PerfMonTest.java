@@ -193,7 +193,7 @@ public class PerfMonTest extends TestCase {
     
 
     private static void validateMonitorExistsAndCompletion(String key) {
-    	PerfMon mon = PerfMon.getMonitorNoCreate_TESTONLY(key);
+    	PerfMon mon = PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY(key);
     	
         assertNotNull(key + " expected to exist", mon);
         assertEquals(key + " should have 1 completion", 1, mon.getTotalCompletions());

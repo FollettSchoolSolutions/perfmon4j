@@ -69,7 +69,7 @@ public class ExternalAppenderTest extends TestCase {
     public void testExternalMonitor() throws Exception {
         final String MONITOR = "aa.b.c";
 
-        MonitorKeyWithFields m = IntervalData.getFields(MONITOR);
+        MonitorKeyWithFields m = IntervalData.getFields(MonitorKey.newIntervalKey(MONITOR));
         ExternalAppender.subscribe(sessionID, m);
 		
         for (int i = 0; i < 10; i++) {
@@ -96,7 +96,7 @@ public class ExternalAppenderTest extends TestCase {
     /*----------------------------------------------------------------------------*/    
     public void testGetSubscribedMonitors() throws Exception {
         final String MONITOR = "aa.b.c";
-        MonitorKeyWithFields monitorKey = IntervalData.getFields(MONITOR);
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MonitorKey.newIntervalKey(MONITOR));
         
 		assertEquals("None subscribed should return empty array", 0,
 				ExternalAppender.getSubscribedMonitors(sessionID).length);
@@ -125,7 +125,7 @@ public class ExternalAppenderTest extends TestCase {
     public void testMonitorResetsWhenMadeInactive() throws Exception {
         final String MON_NAME = "aaa.b.ccc";
         
-        MonitorKeyWithFields monitorKey = IntervalData.getFields(MON_NAME);
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MonitorKey.newIntervalKey(MON_NAME));
         PerfMon mon = PerfMon.getMonitor(MON_NAME);
         
         assertFalse("Monitor is not active", mon.isActive());
@@ -176,7 +176,7 @@ public class ExternalAppenderTest extends TestCase {
     public void testScheduleThreadTrace() throws Exception {
         final String MON_NAME = "aaa.b.ccc";
         
-        MonitorKeyWithFields monitorKey = IntervalData.getFields(MON_NAME);
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MonitorKey.newIntervalKey(MON_NAME));
         FieldKey threadTraceKey = FieldKey.buildThreadTraceKeyFromInterval(monitorKey);
         
         ExternalAppender.scheduleThreadTrace(sessionID, threadTraceKey);
@@ -210,7 +210,7 @@ public class ExternalAppenderTest extends TestCase {
     public void testScheduleThreadTraceWithMinDurationToCapture() throws Exception {
         final String MON_NAME = "aaa.b.ccc";
         
-        MonitorKeyWithFields monitorKey = IntervalData.getFields(MON_NAME);
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MonitorKey.newIntervalKey(MON_NAME));
         Map<String, String> params = new HashMap<String, String>();
         params.put(FieldKey.THREAD_TRACE_MIN_DURATION_ARG, "10");
 
@@ -243,7 +243,7 @@ public class ExternalAppenderTest extends TestCase {
     public void testScheduleThreadTraceWithMaxDepth() throws Exception {
         final String MON_NAME = "aaa.b.ccc";
         
-        MonitorKeyWithFields monitorKey = IntervalData.getFields(MON_NAME);
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MonitorKey.newIntervalKey(MON_NAME));
         Map<String, String> params = new HashMap<String, String>();
         params.put(FieldKey.THREAD_TRACE_MAX_DEPTH_ARG, "2");
 
@@ -284,7 +284,7 @@ public class ExternalAppenderTest extends TestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testRegisterInstancePerMonitorSnapShot() throws Exception {
-    	final MonitorKey expectedMonitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, SimpleInstancePerMonitorSnapShot.class.getName());
+    	final MonitorKey expectedMonitorKey = MonitorKey.newSnapShotKey(SimpleInstancePerMonitorSnapShot.class.getName());
     	final FieldKey expectedFieldKey = new FieldKey(expectedMonitorKey, "currentMillisPerSecond", FieldKey.DOUBLE_TYPE);
     	
     	ExternalAppender.registerSnapShotClass(SimpleInstancePerMonitorSnapShot.class.getName());
@@ -301,7 +301,7 @@ public class ExternalAppenderTest extends TestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testSubscribeToSnapShot() throws Exception {
-    	final MonitorKey expectedMonitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE, SimpleInstancePerMonitorSnapShot.class.getName());
+    	final MonitorKey expectedMonitorKey = MonitorKey.newSnapShotKey(SimpleInstancePerMonitorSnapShot.class.getName());
     	ExternalAppender.registerSnapShotClass(SimpleInstancePerMonitorSnapShot.class.getName());
     	
     	
@@ -321,6 +321,36 @@ public class ExternalAppenderTest extends TestCase {
     	System.out.println(data.get(millisPerSecond));
     }
     
+    
+    /*----------------------------------------------------------------------------*/    
+    public void testForceDynamicChildCreation() throws Exception {
+    	final String baseMonitor = "BASE";
+    	final String child1 = baseMonitor + ".1";
+    	final String child2 = baseMonitor + ".2";
+    	
+    	MonitorKey baseKey = MonitorKey.newIntervalKey(baseMonitor);
+    	PerfMon.getMonitor(baseMonitor);
+    	
+    	PerfMon mon = PerfMon.getMonitor(child1, true);
+    	assertEquals("Should not create child since dynamicPath = true",
+    			baseMonitor, mon.getName());
+    	
+    	ExternalAppender.forceDynamicChildCreation(sessionID, baseKey);
+    	
+    	mon = PerfMon.getMonitor(child1, true);
+    	assertEquals("Should create child since monitor specified base should create children",
+    			child1, mon.getName());
+    	
+    	ExternalAppender.unForceDynamicChildCreation(sessionID, baseKey);
+    	
+    	mon = PerfMon.getMonitor(child2, true);
+    	assertEquals("Should no longer create child since dynamicPath = true",
+    			baseMonitor, mon.getName());
+    }
+        
+    
+    
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
@@ -338,7 +368,7 @@ public class ExternalAppenderTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-        newSuite.addTest(new ExternalAppenderTest("testExternalMonitor"));
+//        newSuite.addTest(new ExternalAppenderTest("testExternalMonitor"));
         
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

@@ -35,15 +35,6 @@ public class MonitorKeyWithFields extends MonitorKey {
 	private final Set<FieldKey> fields;
 	
 	
-	public MonitorKeyWithFields(String keyType, String name, Collection<FieldKey> fields) {
-		super(keyType, name);
-		this.fields = new HashSet<FieldKey>(fields);
-	}
-
-	public MonitorKeyWithFields(String keyType, String name, String instanceName, Collection<FieldKey> fields) {
-		super(keyType, name, instanceName);
-		this.fields = new HashSet<FieldKey>(fields);
-	}
 	
 	public MonitorKeyWithFields(MonitorKey key, Collection<FieldKey> fields) {
 		super(key.getType(), key.getName(), key.getInstance());

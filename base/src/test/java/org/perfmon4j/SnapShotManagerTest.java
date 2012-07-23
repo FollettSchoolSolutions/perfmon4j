@@ -333,7 +333,7 @@ public class SnapShotManagerTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-        newSuite.addTest(new SnapShotManagerTest("testSimpleGetMonitorKeyWithFieldsFromMonitorWithInstances"));
+//        newSuite.addTest(new SnapShotManagerTest("testSimpleGetMonitorKeyWithFieldsFromMonitorWithInstances"));
 //        newSuite.addTest(new SnapShotManagerTest("testSimpleGetMonitorKeyWithStringField"));
         
         // Here we test if we are running testunit or testacceptance (testType will

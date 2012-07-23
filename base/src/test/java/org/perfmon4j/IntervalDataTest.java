@@ -29,6 +29,7 @@ import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.remotemanagement.intf.MonitorKey;
 
 public class IntervalDataTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -68,7 +69,7 @@ public class IntervalDataTest extends TestCase {
          final long FIVE_MINUTES = (5 * 60 * 1000);
          final long FIVE_MINUTES_AGO = NOW - FIVE_MINUTES;
          
-    	 FieldKey[] fields = IntervalData.getFields("a.b.c").getFields();
+    	 FieldKey[] fields = IntervalData.getFields(MonitorKey.newIntervalKey("a.b.c")).getFields();
     	 assertTrue("Should have at least 1 field...", fields.length > 0);
 
     	 Set<FieldKey> set = FieldKey.toSet(fields);
@@ -86,7 +87,7 @@ public class IntervalDataTest extends TestCase {
     	 IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), FIVE_MINUTES_AGO, null, null, NOW);
     	 data.setTotalHits(5);
     	 
-    	 FieldKey[] fields = IntervalData.getFields("a.b.c").getFields();
+    	 FieldKey[] fields = IntervalData.getFields(MonitorKey.newIntervalKey("a.b.c")).getFields();
     	 Map<FieldKey, Object> d = data.getFieldData(fields);
     	 
     	 FieldKey fieldTotalHits = FieldKey.parse("INTERVAL(name=a.b.c):FIELD(name=TotalHits;type=INTEGER)");

@@ -724,11 +724,9 @@ public class IntervalData implements PerfMonData {
     	return result;
     }
 
-    public static MonitorKeyWithFields getFields(String monitorName) {
+    public static MonitorKeyWithFields getFields(MonitorKey monitorKey) {
     	Set<FieldKey> fields = new HashSet<FieldKey>();
 
-    	MonitorKey monitorKey = new MonitorKey(MonitorKey.INTERVAL_TYPE, monitorName);
-    	
     	fields.add(new FieldKey(monitorKey, "AverageDuration", FieldKey.LONG_TYPE));
     	fields.add(new FieldKey(monitorKey, "ThroughputPerSecond", FieldKey.DOUBLE_TYPE));
     	fields.add(new FieldKey(monitorKey, "MaxActiveThreadCount", FieldKey.INTEGER_TYPE));

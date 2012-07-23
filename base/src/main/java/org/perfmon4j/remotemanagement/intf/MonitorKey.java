@@ -36,9 +36,26 @@ public class MonitorKey implements Comparable<MonitorKey> {
 	private final String name;
 	private final String instance;
 
-	public MonitorKey(String type, String name) {
-		this(type, name, null);
+	public static MonitorKey newIntervalKey(String name) {
+		return new MonitorKey(INTERVAL_TYPE, name, null);
 	}
+
+	public static MonitorKey newSnapShotKey(String name) {
+		return new MonitorKey(SNAPSHOT_TYPE, name, null);
+	}
+
+	public static MonitorKey newSnapShotKey(String name, String instance) {
+		return new MonitorKey(SNAPSHOT_TYPE, name, instance);
+	}
+	
+	public static MonitorKey newThreadTraceKey(String name) {
+		return new MonitorKey(THREADTRACE_TYPE, name, null);
+	}
+
+	public static MonitorKey newThreadTraceKey(String name, String instance) {
+		return new MonitorKey(THREADTRACE_TYPE, name, instance);
+	}
+	
 	
 	public MonitorKey(String type, String name, String instance) {
 		this.type = type;
@@ -57,26 +74,25 @@ public class MonitorKey implements Comparable<MonitorKey> {
 	public String getInstance() {
 		return instance;
 	}
-
+	
 	/**
 	 * Returns the MonitorKey parsed out of the string
 	 * or null if it could not be parsed.
 	 */
 	public static MonitorKey parseNoThrow(String value) {
-		MonitorKey result = null; 
-		
 		Matcher m = pattern_with_instance.matcher(value);
-		if  (m.matches()) {
-			result = new MonitorKey(m.group(1), m.group(2), m.group(3));
-		} else {
-			m = pattern_no_instance.matcher(value);
-			if (m.matches()) {
-				result = new MonitorKey(m.group(1), m.group(2));
-			}
+		if (m.matches()) {
+			return new MonitorKey(m.group(1), m.group(2), m.group(3));
 		}
-		return result;
+		
+		m = pattern_no_instance.matcher(value);
+		if (m.matches()) {
+			return new MonitorKey(m.group(1), m.group(2), null);
+		}
+		
+		return null;
 	}
-	
+
 	public static MonitorKey parse(String value) throws UnableToParseKeyException {
 		MonitorKey result = parseNoThrow(value);
 		if (result == null) {
@@ -90,11 +106,11 @@ public class MonitorKey implements Comparable<MonitorKey> {
 	public String toString() {
 		String result =	type + "(name=" + name;	
 		
-		if (instance == null) {
-			result +=  ")";	
-		} else {
-			return result += ";instance=" + instance + ")";	
+		if (instance != null) {
+			result += ";instance=" + instance;	
 		}
+		result +=  ")";	
+		
 		return result;
 	}
 

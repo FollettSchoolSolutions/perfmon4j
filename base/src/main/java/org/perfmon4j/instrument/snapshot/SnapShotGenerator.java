@@ -589,7 +589,7 @@ public class SnapShotGenerator {
 				try {
 					String instances[] = (String[])method.invoke(null, new Object[]{});
 					for (int j = 0; j < instances.length; j++) {
-						result.add(new MonitorKey(MonitorKey.SNAPSHOT_TYPE, clazz.getName(), instances[j]));
+						result.add(MonitorKey.newSnapShotKey(clazz.getName(), instances[j]));
 					}
 					break;
 				} catch (Exception e) {
@@ -599,7 +599,7 @@ public class SnapShotGenerator {
 			}
 		}
 		if (result.isEmpty()) {
-			result.add(new MonitorKey(MonitorKey.SNAPSHOT_TYPE, clazz.getName()));
+			result.add(MonitorKey.newSnapShotKey(clazz.getName()));
 		}
 		
 		return result.toArray(new MonitorKey[result.size()]);

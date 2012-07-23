@@ -120,6 +120,33 @@ public class ExternalAppender {
 		map.subscribe(monitorKey);
 		logger.logInfo("External appender (sessionID:" + sessionID + ") subscribed to monitor: " + monitorKey);
 	}
+	
+	public static void forceDynamicChildCreation(String sessionID, MonitorKey monitorKey) throws SessionNotFoundException {
+		MonitorMap map = sessionManager.getSession(sessionID);
+		if (map == null) {
+			throw new SessionNotFoundException(sessionID);
+		}
+		if (MonitorKey.INTERVAL_TYPE.equals(monitorKey.getType())) {
+			PerfMon mon = PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY(monitorKey.getName());
+			if (mon != null) {
+				mon.forceDynamicChildCreation(map);
+			}
+		}
+	}
+	
+    public static void unForceDynamicChildCreation(String sessionID, MonitorKey dynamicPathMonitorKey) throws SessionNotFoundException {
+		MonitorMap map = sessionManager.getSession(sessionID);
+		if (map == null) {
+			throw new SessionNotFoundException(sessionID);
+		}
+
+		if (MonitorKey.INTERVAL_TYPE.equals(dynamicPathMonitorKey.getType())) {
+			PerfMon mon = PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY(dynamicPathMonitorKey.getName());
+			if (mon != null) {
+				mon.unForceDynamicChildCreation(map);
+			}
+		}
+    }
 
 	public static MonitorKeyWithFields[] getSubscribedMonitors(String sessionID) throws SessionNotFoundException {
 		MonitorMap map = sessionManager.getSession(sessionID);

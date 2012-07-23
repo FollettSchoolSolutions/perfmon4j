@@ -197,7 +197,7 @@ public class RemoteImplTest extends TestCase {
      * @throws Exception
      */
     public void testSubscribeReSubscribeToSnapShotMonitor() throws Exception {
-    	RemoteImpl impl = RemoteImpl.getSingleton();
+    	RemoteInterface impl = RemoteImpl.getSingleton();
     	
     	String sessionID = impl.connect(ManagementVersion.VERSION);
 
@@ -219,8 +219,7 @@ public class RemoteImplTest extends TestCase {
     public void testGetFieldsForMultiInstanceSnapShotMonitor() throws Exception {
     	String sessionID = RemoteImpl.getSingleton().connect(ManagementVersion.VERSION);
     	
-    	MonitorKey monitorKey = new MonitorKey(MonitorKey.SNAPSHOT_TYPE,
-    			GarbageCollectorSnapShot.class.getName(),
+    	MonitorKey monitorKey = MonitorKey.newSnapShotKey(GarbageCollectorSnapShot.class.getName(),
     			GarbageCollectorSnapShot.getInstanceNames()[0]);
     	
     	String fields[] = RemoteImpl.getSingleton().getFieldsForMonitor(sessionID, monitorKey.toString());
@@ -231,9 +230,9 @@ public class RemoteImplTest extends TestCase {
     }
 
     public void testGetFieldsForThreadTraceMonitor() throws Exception {
-    	MonitorKey threadTraceKey = new MonitorKey(MonitorKey.THREADTRACE_TYPE, "org.apache");
+    	MonitorKey threadTraceKey = MonitorKey.newThreadTraceKey("org.apache");
     	
-    	RemoteImpl i = RemoteImpl.getSingleton();
+    	RemoteInterface i = RemoteImpl.getSingleton();
     	String sessionID = i.connect(ManagementVersion.VERSION);
     	try {
     		String fields[] = i.getFieldsForMonitor(sessionID, threadTraceKey.toString());
@@ -248,8 +247,8 @@ public class RemoteImplTest extends TestCase {
     }
     
     public void testScheduleThreadTrace() throws Exception {
-		FieldKey key = new FieldKey(new MonitorKey(MonitorKey.THREADTRACE_TYPE, "my.monitor"), "stack", FieldKey.STRING_TYPE); 
-    	RemoteImpl i = RemoteImpl.getSingleton();
+		FieldKey key = new FieldKey(MonitorKey.newThreadTraceKey("my.monitor"), "stack", FieldKey.STRING_TYPE); 
+    	RemoteInterface i = RemoteImpl.getSingleton();
     	String sessionID = i.connect(ManagementVersion.VERSION);
     	try {
     		i.scheduleThreadTrace(sessionID, key.toString());
@@ -288,7 +287,7 @@ System.err.println(traceData);
     	String keyY = "INTERVAL(name=y):FIELD(name=AverageDuration;type=LONG)";
     	String keyZ = "INTERVAL(name=z):FIELD(name=AverageDuration;type=LONG)";
 
-    	RemoteImpl i = RemoteImpl.getSingleton();
+    	RemoteInterface i = RemoteImpl.getSingleton();
     	
     	String sessionID = i.connect(ManagementVersion.VERSION);
     	try {
@@ -398,7 +397,7 @@ System.err.println(traceData);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-		newSuite.addTest(new RemoteImplTest("testSubscribeReSubscribeToSnapShotMonitor"));
+//		newSuite.addTest(new RemoteImplTest("testSubscribeReSubscribeToSnapShotMonitor"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
