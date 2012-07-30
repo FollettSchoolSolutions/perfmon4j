@@ -281,6 +281,18 @@ public class PerfMonFilterTest extends TestCase {
 		assertEquals("", "/default/something.do?site=description%3Dthis+is+my+site", result);
 	}	
 	
+	public void testBuildRequestDescriptionIncludesPathInfo() {
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		
+		Mockito.when(request.getContextPath()).thenReturn("/dap");
+		Mockito.when(request.getServletPath()).thenReturn("/rest");
+		Mockito.when(request.getPathInfo()).thenReturn("/ebook/new");
+		
+		String result = PerfMonFilter.buildRequestDescription(request);
+		assertEquals("", "/dap/rest/ebook/new", result);
+	}	
+	
+	
 	public void testValueContainingPasswordIsBlocked() {
 		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
 		

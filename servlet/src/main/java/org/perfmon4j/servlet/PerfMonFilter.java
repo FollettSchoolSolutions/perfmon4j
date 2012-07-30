@@ -248,9 +248,14 @@ public class PerfMonFilter implements Filter {
 			}
 			result.append(request.getServletPath());
 
+			String pathInfo = request.getPathInfo();
+			if (pathInfo != null) {
+				result.append(pathInfo);
+			}
+			
 			Enumeration<String> names = request.getParameterNames();
 			boolean firstParam = true;
-			while (names.hasMoreElements()) {
+			while (names != null && names.hasMoreElements()) {
 				String paramName = names.nextElement();
 				final boolean isPassword = paramName.contains("password");
 				String params[] = request.getParameterValues(paramName);
@@ -289,6 +294,12 @@ public class PerfMonFilter implements Filter {
         if (servletPath != null) {
             result += servletPath.replaceAll("\\.", "_").replaceAll("/", "\\.");
         } 
+        
+        String pathInfo = h.getPathInfo();
+        if (pathInfo != null) {
+            result += pathInfo.replaceAll("\\.", "_").replaceAll("/", "\\.");
+        }
+      
         return result;
     }
 
@@ -431,7 +442,11 @@ public class PerfMonFilter implements Filter {
 	// Package level for testing....
     boolean matchesURLPattern(HttpServletRequest request, Pattern pattern) {
 		String path = request.getServletPath();
-        
+		
+		String pathInfo = request.getPathInfo();
+		if (pathInfo != null) {
+			path+= pathInfo;
+		}
 		if (childOfPerfMonValve) {
 			String contextPath = request.getContextPath();
 			if (contextPath != null) {
