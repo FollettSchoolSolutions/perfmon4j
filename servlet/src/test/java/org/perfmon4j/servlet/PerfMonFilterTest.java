@@ -377,9 +377,12 @@ public class PerfMonFilterTest extends TestCase {
 		PerfMonFilter f = new PerfMonFilter();
 		f.init(Mockito.mock(FilterConfig.class));
 		
-		f.doFilter(request, Mockito.mock(HttpServletResponse.class), Mockito.mock(FilterChain.class));
-		assertNull("Should not create default category", 
+		assertNotNull("When the filter is initialized the root monitor for web requests should be created", 
 				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest"));
+
+		
+		
+		f.doFilter(request, Mockito.mock(HttpServletResponse.class), Mockito.mock(FilterChain.class));
 		
 		assertNull("Should not create monitor without an attatched appender", 
 				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation"));

@@ -100,6 +100,9 @@ public class PerfMonFilter implements Filter {
         outputRequestAndDuration = Boolean.parseBoolean(getInitParameter(filterConfig, PROPERTY_OUTPUT_REQUEST_AND_DURATION, Boolean.toString(outputRequestAndDuration)));
         
         
+        // Since all WEBREQEST children are by default dynamically created, create the base category by default.
+        PerfMon.getMonitor(baseFilterCategory, false);
+        
         String pattern= getInitParameter(filterConfig, PROPERTY_ABORT_TIMER_ON_URL_PATTERN, null);
         if (pattern != null) {
             try {
