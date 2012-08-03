@@ -8,9 +8,7 @@
 		CHILD POM!!!  AT LEAST UNTIL MAVEN
 		ADDS FUNCTIOANLITY THAT MAKES MORE SENSE!
 	-->
-	<version>1.2.0-ALPHA_5-SNAPSHOT</version>
-
-
+	<version>1.2.0-RC_2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>perfmon4j-project</name>
