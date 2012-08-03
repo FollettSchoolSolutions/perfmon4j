@@ -44,7 +44,9 @@ public abstract class SQLAppender extends Appender {
 	private String selectCategoryPS = null;
 	private String insertIntervalPS = null;
 	private String insertThresholdPS = null;
-	private String systemName = MiscHelper.getDefaultSystemName();
+	private String systemNamePrefix = null;
+	private String systemNameBody = MiscHelper.getDefaultSystemName();
+	private String systemNameSuffix = null;
 	private Long systemID = null;
 	
 	public SQLAppender(AppenderID id) {
@@ -321,13 +323,10 @@ public abstract class SQLAppender extends Appender {
 		this.selectCategoryPS = null;
 	}
 	
-	public void setSystemName(String systemName) {
-		this.systemName = systemName;
-		this.systemID = null;
-	}
-	
 	public String getSystemName() {
-		return systemName;
+		return (systemNamePrefix == null ? "" : systemNamePrefix)
+			+ systemNameBody
+			+ (systemNameSuffix == null ? "" : systemNameSuffix);
 	}
 	
 	public long getSystemID() throws SQLException {
@@ -338,10 +337,37 @@ public abstract class SQLAppender extends Appender {
 		} else {
 			String s = (dbSchema == null) ? "" : (dbSchema + ".");
 			result = JDBCHelper.simpleGetOrCreate(this.getConnection(), s + "P4JSystem", 
-					"SystemID", "SystemName", systemName);
+					"SystemID", "SystemName", getSystemName());
 			systemID = new Long(result);
 		}
 		
 		return result;
+	}
+	
+	public void setSystemNameBody(String systemName) {
+		this.systemNameBody = systemName;
+		this.systemID = null;
+	}
+	
+	public String getSystemNameBody() {
+		return systemNameBody;
+	}
+
+	public String getSystemNamePrefix() {
+		return systemNamePrefix;
+	}
+
+	public void setSystemNamePrefix(String systemNamePrefix) {
+		this.systemNamePrefix = systemNamePrefix;
+		this.systemID = null;
+	}
+
+	public String getSystemNameSuffix() {
+		return systemNameSuffix;
+	}
+
+	public void setSystemNameSuffix(String systemNameSuffix) {
+		this.systemNameSuffix = systemNameSuffix;
+		this.systemID = null;
 	}	
 }

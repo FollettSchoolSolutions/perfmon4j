@@ -262,7 +262,7 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalDat
     	Connection conn = appender.getConnection();
     	String systemName = "My System -- testOverrideSystemName";
     	
-    	appender.setSystemName(systemName);
+    	appender.setSystemNameBody(systemName);
     	
     	long id = appender.getSystemID();
     	assertEquals("Should be the second systemID", 2, id);
@@ -272,6 +272,32 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalDat
     	assertEquals("Should have added system row", 1, count);
     }    
 
+    public void testPrefixAppendedToSystemName() throws Exception {
+    	Connection conn = appender.getConnection();
+    	
+    	appender.setSystemNamePrefix("dave");
+    	
+    	long id = appender.getSystemID();
+    	assertEquals("Should be the second systemID", 2, id);
+    	
+    	final String SQL_COUNT = "SELECT COUNT(*) FROM mydb.P4JSystem WHERE SystemName = 'dave" + appender.getSystemNameBody() + "'";
+    	long count = JDBCHelper.getQueryCount(conn, SQL_COUNT);
+    	assertEquals("Should have added system row", 1, count);
+    }    
+    
+    public void testSuffexAddedToSystemName() throws Exception {
+    	Connection conn = appender.getConnection();
+    	
+    	appender.setSystemNameSuffix("dave");
+    	
+    	long id = appender.getSystemID();
+    	assertEquals("Should be the second systemID", 2, id);
+    	
+    	final String SQL_COUNT = "SELECT COUNT(*) FROM mydb.P4JSystem WHERE SystemName = '" + appender.getSystemNameBody() + "dave'";
+    	long count = JDBCHelper.getQueryCount(conn, SQL_COUNT);
+    	assertEquals("Should have added system row", 1, count);
+    }    
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

@@ -1136,7 +1136,7 @@ public class PerfMonTest extends TestCase {
     }
     
 /*----------------------------------------------------------------------------*/
-    private static class TestAppender extends Appender {
+    static public class TestAppender extends Appender {
         private List<PerfMonData> output = new Vector<PerfMonData>();
 
         public static AppenderID getAppenderID(long intervalMillis) {
