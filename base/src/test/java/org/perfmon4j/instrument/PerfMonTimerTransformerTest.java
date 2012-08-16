@@ -581,7 +581,7 @@ System.out.println(output);
     	
     	
     	
-    	String output = LaunchRunnableInVM.run(ValveInstaller.class, "-vtrue", "", props, perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(ValveInstaller.class, "-eVALVE", "", props, perfmon4jJar);
 //    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(ValveInstaller.class, "", perfmon4jJar);
 System.out.println(output);    	
 		assertTrue("Should have installed valve hook",
