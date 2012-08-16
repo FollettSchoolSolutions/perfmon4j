@@ -539,7 +539,54 @@ System.out.println(output);
     			output.contains("Adding extreme monitor: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DoSomethingElseTest.doSomethingWithVarArgs"));
     }
     
+	public final static class ValveClass {
+	}
+	
+	public final static class EngineClass {
+		String hostName = null;
+		ValveClass valve = null;
+		
+		public void setDefaultHost(String host) {
+			this.hostName = host;
+		}
+		
+		public void addValve(ValveClass valve) {
+			this.valve = valve;
+		}
+		
+		public Object getFirst() {
+			return valve;
+		}
+	}
 
+    public static class ValveInstaller implements Runnable {
+		public void run() {
+			EngineClass engine = new EngineClass();
+			engine.setDefaultHost("myhost");
+			
+			if (engine.valve != null) {
+				System.out.println("Valve hook has been installed");
+			} else {
+				System.out.println("Valve hook has NOT been installed");
+			}
+			
+		}
+    }    
+    
+    public void testValveInstalledInCatalinaEngine() throws Exception {
+    	Properties props = new Properties();
+    	
+    	props.setProperty("Perfmon4j.catalinaEngine", EngineClass.class.getName());
+    	props.setProperty("Perfmon4j.webValve", ValveClass.class.getName());
+    	
+    	
+    	
+    	String output = LaunchRunnableInVM.run(ValveInstaller.class, "-vtrue", "", props, perfmon4jJar);
+//    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(ValveInstaller.class, "", perfmon4jJar);
+System.out.println(output);    	
+		assertTrue("Should have installed valve hook",
+				output.contains("Valve hook has been installed"));
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
@@ -566,7 +613,7 @@ System.out.println(output);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-		newSuite.addTest(new PerfMonTimerTransformerTest("testPerfmon4jLoggerUsesLog4jWhenInitialized"));
+		newSuite.addTest(new PerfMonTimerTransformerTest("testValveInstalledInCatalinaEngine"));
 //        newSuite.addTest(new PerfMonTimerTransformerTest("testInterfacesAreInstrumented"));
 //        newSuite.addTest(new PerfMonTimerTransformerTest("testVarArgsMethodIsInstrumented"));
 

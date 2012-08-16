@@ -28,6 +28,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
 
 import org.perfmon4j.PerfMon;
 
@@ -81,8 +84,11 @@ public class LaunchRunnableInVM {
 		return result;
 	}
 	
-	
 	public static String run(Class<?> clazz, String javaAgentParams, String args, File perfmonJar) throws Exception {
+		return run(clazz, javaAgentParams, args, null, perfmonJar);
+	}
+	
+	public static String run(Class<?> clazz, String javaAgentParams, String args, Properties systemProperties, File perfmonJar) throws Exception {
 		StringBuffer output = new StringBuffer();
     	
     	final String javaCmd = System.getProperty("java.home") + "/bin/java";
@@ -134,7 +140,15 @@ public class LaunchRunnableInVM {
     	final String pathSeparator = System.getProperty("path.separator");
 
 		cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath() + pathSeparator + javassistJar.getParentFile().getCanonicalPath());
-    	
+
+		if (systemProperties != null) {
+			Iterator<Map.Entry<Object,Object>> itr = systemProperties.entrySet().iterator();
+			while (itr.hasNext()) {
+				Map.Entry<Object, Object> v = itr.next();
+				cmdString += " -D" + v.getKey() + "=" + v.getValue();
+			}
+		}
+		
     	cmdString +=  " " + LaunchRunnableInVM.class.getName();
     	cmdString +=  " " + runnableName;
     	if (args != null) {

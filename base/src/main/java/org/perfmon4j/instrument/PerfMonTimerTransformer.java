@@ -28,15 +28,19 @@ import java.io.InputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Method;
 import java.rmi.RemoteException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TimerTask;
 
+import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.CtMethod;
 import javassist.LoaderClassPath;
+import javassist.NotFoundException;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
@@ -53,7 +57,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     private final static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
 	private final static String REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY="Perfmon4j.RemoteInterfaceDelaySeconds"; 
 	private final static int REMOTE_INTERFACE_DEFAULT_DELAY_SECONDS=30; 
-    
+	
     private PerfMonTimerTransformer(String paramsString) {
         params = new TransformerParams(paramsString);
     }
@@ -166,6 +170,112 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 
         return result;
     }
+
+    public static class ValveHookInserter implements ClassFileTransformer {
+    	static private String engineClassName =  System.getProperty("Perfmon4j.catalinaEngine", "org.apache.catalina.core.StandardEngine").replaceAll("\\.", "/");
+    	static private String valveClassName =  System.getProperty("Perfmon4j.webValve");
+    	
+        public byte[] transform(ClassLoader loader, String className, 
+                Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
+                byte[] classfileBuffer) {
+            byte[] result = null;
+            
+            if (engineClassName.equals(className)) {
+	            try {
+	            	ClassPool classPool;
+		            
+		            if (loader == null) {
+		                classPool = new ClassPool(true);
+		            } else {
+		                classPool = new ClassPool(false);
+		                classPool.appendClassPath(new LoaderClassPath(loader));
+		            }
+		            
+		            ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+		            CtClass clazz = classPool.makeClass(inStream);
+		            if (clazz.isFrozen()) {
+		                clazz.defrost();
+		            }
+		            addSetValveHook(clazz);
+		            result = clazz.toBytecode();
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to insert addValveHook", ex);
+	            }
+            }
+			return result;
+		}
+        
+        
+        private static Object buildValve(String valveClassName, ClassLoader loader) {
+        	Object result = null;
+
+			try {
+				Class<?> clazz = Class.forName(valveClassName, true, loader);
+	    		result = clazz.newInstance();
+			} catch (ClassNotFoundException e) {
+				// Nothing todo
+			} catch (InstantiationException e) {
+				// Nothing todo
+			} catch (IllegalAccessException e) {
+				// Nothing todo
+			}
+        	
+        	return result;
+        }
+        
+        public static void installValve(Object engine) {
+        	try {
+        		Object valve = null;
+        		ClassLoader loader = engine.getClass().getClassLoader();
+        		if (valveClassName != null) {
+        			valve = buildValve(valveClassName, loader);
+        			if (valve == null) {
+            			logger.logError("Perfmon4j -- Unable to instantiate valve class: " + valveClassName);
+            			return;
+        			}
+        		} else {
+        			valve = buildValve("org.perfmon4j.extras.tomcat55.PerfMonValve", loader);
+        			if (valve == null) {
+        				valve = buildValve("org.perfmon4j.extras.tomcat7.PerfMonValve", loader);
+        			}
+        			if (valve == null) {
+        				valve = buildValve("web.org.perfmon4j.extras.jbossweb7.PerfMonValve", loader);
+        			}
+        			if (valve == null) {
+            			logger.logError("Perfmon4j -- Unable to instantiate tomcat55, tomcat7 OR jbossweb7 valve class");
+            			return;
+        			}
+        		}
+        		
+        		Class<?> engineClass = engine.getClass();
+        		Method addValve = null;
+        		Method[] methods = engineClass.getMethods();
+        		for (int i = 0 ; (i < methods.length) && (addValve == null); i++) {
+        			if (methods[i].getName().equals("addValve")) {
+        				addValve = methods[i];
+        			}
+        		}
+        		if (addValve != null) {
+        			addValve.invoke(engine, valve);
+        			logger.logInfo("Perfmon4j valve installed in Catalina Engine Class: "  + engine.getClass().getName());
+        		} else {
+        			logger.logError("Perfmon4j -- Error installing valve in Catalina Engine Class: " + engine.getClass().getName() + " -- addValve method not found.");
+        		}
+        		
+        	} catch (Exception ex) {
+    			logger.logError("Perfmon4j -- Error installing valve in Catalina Engine Class: " + engine.getClass().getName(), ex);
+        	}
+        }
+        
+        public static void addSetValveHook(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
+        	logger.logInfo("Perfmon4j found Catalina Engine Class: " + clazz.getName());
+        	
+        	CtMethod m = clazz.getDeclaredMethod("setDefaultHost");
+        	String insert = ValveHookInserter.class.getName() + ".installValve(this);";
+			m.insertAfter(insert);
+        }
+    }
+
     
     private static class SystemGCDisabler implements ClassFileTransformer {
         public byte[] transform(ClassLoader loader, String className, 
@@ -200,7 +310,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			
 			return result;
 		}
-    	
     }
     
     
@@ -225,7 +334,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	logger.logInfo("Perfmon4j found Javassist bytcode instrumentation library version: " + javassistVersion);
         }
     	logger.logInfo(MiscHelper.getHighResolutionTimerEnabledDisabledMessage());
-        
+    	
         PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
 
         LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled());
@@ -254,6 +363,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     			logger.logError("Perfmon4j can not disable java.lang.System.gc() JVM does not support redefining classes");
     		}
         }
+
+        inst.addTransformer(new ValveHookInserter());
         
         // Check for all the preloaded classes and try to instrument any that might
         // match our perfmon4j javaagent configuration

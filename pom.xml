@@ -19,6 +19,7 @@
 		<module>servlet</module>
 		<module>tomcat55</module>
 		<module>tomcat7</module>
+		<module>jbossweb7</module>
 		<module>sunjava6</module>
 		<module>reportconsole</module>
 <!--		<module>perfmon4jweb</module> -->
