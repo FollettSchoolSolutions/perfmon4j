@@ -620,7 +620,18 @@ public class TransformerParamsTest extends TestCase {
             assertTrue("java.sql.Connection", params.isExtremeSQLInterface(java.sql.Connection.class.getName()));
         }
         
-
+        /*----------------------------------------------------------------------------*/    
+        public void testValidateInstallValve() throws Exception {
+            TransformerParams params = new TransformerParams();
+            assertFalse("Install servlet valve should be false by default", params.isInstallServletValve());
+            
+            params = new TransformerParams("-eVALVE");
+            assertTrue("Parameter alone", params.isInstallServletValve());
+            
+            params = new TransformerParams("-ecom.follett.fsc,-eVALVE");
+            assertTrue("Combined with anyting else...", params.isInstallServletValve());
+        }
+        
         private void assertPossibleJDBCDriver(boolean jtdsEnabled, boolean postgresEnabled, 
         	boolean mySQLEnabled, boolean derbyEnabled, boolean oracleEnabled, boolean otherEnabled,
         	TransformerParams params) {

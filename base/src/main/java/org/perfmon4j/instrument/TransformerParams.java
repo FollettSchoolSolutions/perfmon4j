@@ -81,6 +81,7 @@ public class TransformerParams {
     private final List<String> extremeSQLPackages = new Vector<String>();
 	private boolean remoteManagementEnabled = false;
 	private int remoteManagementPort = REMOTE_PORT_DISABLED;
+	private boolean installServletValve = false;
 	
 	public static final int REMOTE_PORT_DISABLED = -1;
 	public static final int REMOTE_PORT_AUTO = 0;
@@ -141,7 +142,9 @@ public class TransformerParams {
                     nextParam = getNextParam(params);
                     Matcher m = sqlParams.matcher(nextParam.parameter);
                     
-                    if ("SQL".equals(nextParam.parameter)) {
+                    if ("VALVE".equals(nextParam.parameter)) {
+                    	installServletValve = true;
+                    } else if ("SQL".equals(nextParam.parameter)) {
                     	extremeSQLMonitorEnabled = true;
                     } else if (m.matches()) {
                     	extremeSQLMonitorEnabled = true;
@@ -510,4 +513,10 @@ public class TransformerParams {
 	public int getRemoteManagementPort() {
 		return remoteManagementPort;
 	}
+
+	public boolean isInstallServletValve() {
+		return installServletValve;
+	}
+	
+	
 }

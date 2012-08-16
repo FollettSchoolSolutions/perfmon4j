@@ -312,8 +312,23 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		}
     }
     
+    private static void addPerfmon4jToJBoss7SystemPackageList() {
+    	// For the JBoss 7 package list, we must set include org.perfmon4j in the
+    	// jboss.modules.system.pkgs system property...  If we are not 
+    	// running on jboss7 this property will have no impact.
+    	final String PROP_KEY = "jboss.modules.system.pkgs";
+    	
+    	String existing = System.getProperty(PROP_KEY);
+    	if (existing == null) {
+    		System.setProperty(PROP_KEY, "org.perfmon4j");
+    	} else {
+    		System.setProperty(PROP_KEY, existing + ",org.perfmon4j");
+    	}
+    }
     
     public static void premain(String packageName,  Instrumentation inst)  {
+    	addPerfmon4jToJBoss7SystemPackageList();
+    	
     	final String hideBannerProperty="Perfmon4j.HideBanner";
     	
     	if (!Boolean.getBoolean(hideBannerProperty)) {
@@ -364,7 +379,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     		}
         }
 
-        inst.addTransformer(new ValveHookInserter());
+        if (t.params.isInstallServletValve()) {
+            inst.addTransformer(new ValveHookInserter());
+        	logger.logInfo("Perfmon4j will attempt to install a Servlet Valve");
+        } else {
+        	logger.logInfo("Perfmon4j will NOT attempt to install a Servlet Valve.  If this is a tomcat or jbossweb based application, " +
+        			"add -eVALVE to javaAgent parameters to enable.");
+        }
         
         // Check for all the preloaded classes and try to instrument any that might
         // match our perfmon4j javaagent configuration
