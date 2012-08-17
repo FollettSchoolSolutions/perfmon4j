@@ -80,7 +80,9 @@ public class ThinRunnableInVM {
     	
     	String cmdString = quoteIfNeeded(javaCmd);
     	
-    	String myClassPath = perfmon4jManagementInterface.getCanonicalPath();
+    	String myClassPath = quoteIfNeeded(perfmon4jManagementInterface.getCanonicalPath());
+    	
+    	
     	System.out.println("CLASSPATH=" + myClassPath); 
     	
 		cmdString += " -classpath " + myClassPath;
