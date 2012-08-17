@@ -109,6 +109,7 @@ class XMLConfigurationParser extends DefaultHandler {
     private final static String HTTP_COOKIE_TRIGGER_NAME = "HTTPCookieTrigger";
     private final static String THREAD_NAME_TRIGGER_NAME = "ThreadNameTrigger";
     private final static String THREAD_PROPERTY_TRIGGER_NAME = "ThreadPropertyTrigger";
+    private final static String BOOT_NAME = "boot";
     
     private final int STATE_UNDEFINED                           = 0;
     private final int STATE_IN_ROOT                             = 1;
@@ -120,6 +121,7 @@ class XMLConfigurationParser extends DefaultHandler {
     private final int STATE_IN_THREAD_TRACE                     = 7;
     private final int STATE_IN_THREAD_TRACE_TRIGGERS          	= 8;
     private final int STATE_DONE                                = 9;
+    private final int STATE_IN_BOOT /* Ignored */				= 10;
     
     private int currentState = STATE_UNDEFINED;
     private String currentMonitorName = null;
@@ -211,7 +213,9 @@ class XMLConfigurationParser extends DefaultHandler {
 
                     config.addThreadTraceConfig(currentThreadTraceMonitorName, currentThreadTraceConfig);
                     currentState = STATE_IN_THREAD_TRACE;
-                } else {
+                } else if (BOOT_NAME.equalsIgnoreCase(name)) {
+                	currentState = STATE_IN_BOOT;
+        		} else {
                     throw new SAXException("Unexpected element: " + name);
                 }
                 break;
@@ -404,6 +408,11 @@ class XMLConfigurationParser extends DefaultHandler {
             
             currentState = STATE_IN_SNAP_SHOT_MONITOR;
         }
+
+        if (BOOT_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_BOOT) {
+            currentState = STATE_IN_ROOT;
+        }
+    
     }
     
     public void characters (char ch[], int start, int length) throws SAXException {

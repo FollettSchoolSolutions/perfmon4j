@@ -522,6 +522,22 @@ public class XMLConfigurationParserTest extends TestCase {
         assertEquals("Default should be a TextAppender", TextAppender.class.getName(), appenderID.getClassName());
     }    
     
+    public void testIgnoreBootSection() throws Exception {
+        final String XML_WITH_BOOT =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<servletValve outputRequestAndDuration='true'/>" +
+            "	</boot>" +
+            "   <appender name='5 minute' className='org.perfmon4j.TextAppender' interval='5 min'/>" +
+            "   <monitor name='KeywordBean.performSearch'>" +
+            "       <appender name='5 minute'/>" +
+            "   </monitor>" +
+            "</Perfmon4JConfig>";
+
+    	XMLPerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_WITH_BOOT));
+    	assertNotNull("Should not have recieved default configuration",config.getAppenderForName("5 minute"));
+    }
+
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
@@ -540,12 +556,12 @@ public class XMLConfigurationParserTest extends TestCase {
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_intervalMonitor"));
-        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_snapShotMonitor"));
-        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_intervalMonitor"));
-        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_snapShotMonitor"));
-        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_threadTraceMonitor"));
-        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_threadTraceMonitor"));
+//        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_intervalMonitor"));
+//        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_snapShotMonitor"));
+//        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_intervalMonitor"));
+//        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_snapShotMonitor"));
+//        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreatedWhenMissing_threadTraceMonitor"));
+//        newSuite.addTest(new XMLConfigurationParserTest("testDefaultAppenderCreated_threadTraceMonitor"));
         
         
 //        
