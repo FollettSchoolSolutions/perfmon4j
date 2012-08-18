@@ -23,6 +23,8 @@ package org.perfmon4j.instrument;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.ClassDefinition;
@@ -42,8 +44,10 @@ import javassist.CtMethod;
 import javassist.LoaderClassPath;
 import javassist.NotFoundException;
 
+import org.perfmon4j.BootConfiguration;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
+import org.perfmon4j.XMLBootParser;
 import org.perfmon4j.XMLConfigurator;
 import org.perfmon4j.remotemanagement.RemoteImpl;
 import org.perfmon4j.util.GlobalClassLoader;
@@ -57,6 +61,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     private final static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
 	private final static String REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY="Perfmon4j.RemoteInterfaceDelaySeconds"; 
 	private final static int REMOTE_INTERFACE_DEFAULT_DELAY_SECONDS=30; 
+	private static ValveHookInserter valveHookInserter = null;
 	
     private PerfMonTimerTransformer(String paramsString) {
         params = new TransformerParams(paramsString);
@@ -171,9 +176,18 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         return result;
     }
 
+    public static ValveHookInserter getValveHookInserter() {
+    	return valveHookInserter;
+    }
+    
     public static class ValveHookInserter implements ClassFileTransformer {
-    	static private String engineClassName =  System.getProperty("Perfmon4j.catalinaEngine", "org.apache.catalina.core.StandardEngine").replaceAll("\\.", "/");
-    	static private String valveClassName =  System.getProperty("Perfmon4j.webValve");
+    	final private String engineClassName =  System.getProperty("Perfmon4j.catalinaEngine", "org.apache.catalina.core.StandardEngine").replaceAll("\\.", "/");
+    	final private String valveClassName =  System.getProperty("Perfmon4j.webValve");
+    	final private BootConfiguration.ServletValveConfig valveConfig;
+    	
+    	public ValveHookInserter(BootConfiguration.ServletValveConfig valveConfig) {
+    		this.valveConfig = valveConfig;
+    	}
     	
         public byte[] transform(ClassLoader loader, String className, 
                 Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
@@ -206,7 +220,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		}
         
         
-        private static Object buildValve(String valveClassName, ClassLoader loader) {
+        private Object buildValve(String valveClassName, ClassLoader loader) {
         	Object result = null;
 
 			try {
@@ -223,7 +237,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	return result;
         }
         
-        public static void installValve(Object engine) {
+        public void installValve(Object engine) {
         	try {
         		Object valve = null;
         		ClassLoader loader = engine.getClass().getClassLoader();
@@ -246,6 +260,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             			return;
         			}
         		}
+
+        		if (valveConfig != null) {
+        			valveConfig.copyProperties(valve);
+        		}
         		
         		Class<?> engineClass = engine.getClass();
         		Method addValve = null;
@@ -267,11 +285,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	}
         }
         
-        public static void addSetValveHook(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
+        public void addSetValveHook(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
         	logger.logInfo("Perfmon4j found Catalina Engine Class: " + clazz.getName());
         	
         	CtMethod m = clazz.getDeclaredMethod("setDefaultHost");
-        	String insert = ValveHookInserter.class.getName() + ".installValve(this);";
+        	String insert = PerfMonTimerTransformer.class.getName() + ".getValveHookInserter().installValve(this);";
 			m.insertAfter(insert);
         }
     }
@@ -380,7 +398,23 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         }
 
         if (t.params.isInstallServletValve()) {
-            inst.addTransformer(new ValveHookInserter());
+        	BootConfiguration.ServletValveConfig valveConfig = null;
+        	String configFile = t.params.getXmlFileToConfig();
+        	if (configFile != null) {
+        		FileReader reader = null;
+        		try {
+        			reader = new FileReader(configFile);
+					valveConfig = XMLBootParser.parseXML(reader).getServletValveConfig();
+				} catch (FileNotFoundException e) {
+					logger.logError("Perfmon4j unable to load boot configuration", e);
+				} finally {
+					if (reader != null) {
+						try {reader.close();} catch (Exception ex) {}
+					}
+				}
+        	}
+        	valveHookInserter = new ValveHookInserter(valveConfig);
+            inst.addTransformer(valveHookInserter);
         	logger.logInfo("Perfmon4j will attempt to install a Servlet Valve");
         } else {
         	logger.logInfo("Perfmon4j will NOT attempt to install a Servlet Valve.  If this is a tomcat or jbossweb based application, " +

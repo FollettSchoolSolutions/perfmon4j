@@ -21,6 +21,9 @@
 
 package org.perfmon4j;
 
+import org.perfmon4j.util.BeanHelper;
+import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
+
 
 public class BootConfiguration {
 	private ServletValveConfig servletValveConfig = null;
@@ -97,6 +100,32 @@ public class BootConfiguration {
 		}
 		public void setPushClientInfoOnNDC(boolean pushClientInfoOnNDC) {
 			this.pushClientInfoOnNDC = pushClientInfoOnNDC;
+		}
+		
+		
+		private void setValue(Object valve, String attributeName, Object value ) {
+			try {
+				if (value != null) {
+					BeanHelper.setValue(valve, attributeName, value);
+				}
+			} catch (UnableToSetAttributeException e) {
+				// Nothing todo...
+			}
+			
+		}
+		
+		
+		public void copyProperties(Object valve) throws UnableToSetAttributeException {
+			setValue(valve, "baseFilterCategory", getBaseFilterCategory());
+			setValue(valve, "abortTimerOnURLPattern", getAbortTimerOnURLPattern());
+			setValue(valve, "skipTimerOnURLPattern", getSkipTimerOnURLPattern());
+			setValue(valve, "pushCookiesOnNDC", getPushCookiesOnNDC());
+			setValue(valve, "pushSessionAttributesOnNDC", getPushSessionAttributesOnNDC());
+			
+			setValue(valve, "abortTimerOnRedirect", Boolean.valueOf(isAbortTimerOnRedirect()));
+			setValue(valve, "abortTimerOnImageResponse", Boolean.valueOf(isAbortTimerOnImageResponse()));
+			setValue(valve, "outputRequestAndDuration", Boolean.valueOf(isOutputRequestAndDuration()));
+			setValue(valve, "pushClientInfoOnNDC", Boolean.valueOf(isPushClientInfoOnNDC()));
 		}	    
 	}
 }

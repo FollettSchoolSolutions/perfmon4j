@@ -613,7 +613,7 @@ System.out.println(output);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-		newSuite.addTest(new PerfMonTimerTransformerTest("testValveInstalledInCatalinaEngine"));
+//		newSuite.addTest(new PerfMonTimerTransformerTest("testValveInstalledInCatalinaEngine"));
 //        newSuite.addTest(new PerfMonTimerTransformerTest("testInterfacesAreInstrumented"));
 //        newSuite.addTest(new PerfMonTimerTransformerTest("testVarArgsMethodIsInstrumented"));
 

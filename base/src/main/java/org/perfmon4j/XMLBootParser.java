@@ -34,8 +34,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
 
-// Only package level
-class XMLBootParser extends DefaultHandler {
+public class XMLBootParser extends DefaultHandler {
     private static final Logger logger = LoggerFactory.initLogger(XMLBootParser.class);
     
     private final BootConfiguration config = new BootConfiguration();
