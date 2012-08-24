@@ -129,7 +129,10 @@ public class PerfMonTimerTransformerTest extends TestCase {
     
     /*----------------------------------------------------------------------------*/    
     public void testTemplatedClassIsAnnotated() throws Exception {
-    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(TemplatedClassTest.class, "-dtrue,-btrue,-eorg.perfmon4j", perfmon4jJar);
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "true");
+    	
+    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(TemplatedClassTest.class, "-dtrue,-btrue,-eorg.perfmon4j", props, perfmon4jJar);
 
     	assertTrue("Should have an $impl method indicating class was annotated" + output,
     			output.contains("thisMethodShouldBeAnnotated$1$Impl()"));
@@ -252,9 +255,11 @@ System.out.println(output);
 		final String VERBOSE_ISSER_MSG = "** Skipping extreme monitor (getter method): " + CLASS_NAME + ".isXPositive";
 		final String VERBOSE_ANOTATION_MSG = "** Adding annotation monitor (MyTimer) to method: " + CLASS_NAME + ".doSomething";
 		
-		
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "true");
+    	
 		// Messages should appear when verbose is enabled "-vtrue"
-		String output = LaunchRunnableInVM.loadClassAndPrintMethods(VerboseClassTest.class, VERBOSE_PARAMS, perfmon4jJar);
+		String output = LaunchRunnableInVM.loadClassAndPrintMethods(VerboseClassTest.class, VERBOSE_PARAMS, props, perfmon4jJar);
     	validateOutput(output, VERBOSE_CLASS_MSG, true);
     	validateOutput(output, VERBOSE_METHOD_MSG, true);
     	validateOutput(output, VERBOSE_SETTER_MSG, true);
@@ -263,7 +268,7 @@ System.out.println(output);
     	validateOutput(output, VERBOSE_ANOTATION_MSG, true);
     	
 		// Messages should appear when debug is enabled "-dtrue"
-		output = LaunchRunnableInVM.loadClassAndPrintMethods(VerboseClassTest.class, DEBUG_PARAMS, perfmon4jJar);
+		output = LaunchRunnableInVM.loadClassAndPrintMethods(VerboseClassTest.class, DEBUG_PARAMS, props, perfmon4jJar);
     	validateOutput(output, VERBOSE_CLASS_MSG, true);
     	validateOutput(output, VERBOSE_METHOD_MSG, true);
     	validateOutput(output, VERBOSE_SETTER_MSG, true);
@@ -272,7 +277,7 @@ System.out.println(output);
     	validateOutput(output, VERBOSE_ANOTATION_MSG, true);
 
 		// Messages should NOT appear unless debug OR verbose is enabled!
-    	output = LaunchRunnableInVM.loadClassAndPrintMethods(VerboseClassTest.class, BASE_PARAMS, perfmon4jJar);
+    	output = LaunchRunnableInVM.loadClassAndPrintMethods(VerboseClassTest.class, BASE_PARAMS, props, perfmon4jJar);
     	validateOutput(output, VERBOSE_CLASS_MSG, false);
     	validateOutput(output, VERBOSE_METHOD_MSG, false);
     	validateOutput(output, VERBOSE_SETTER_MSG, false);
@@ -395,44 +400,122 @@ System.out.println(output);
     	assertTrue("Should NOT have included SQL time specification", m.find());
     }
 	
-    
-	public static class MoveParameterAnnotationTest implements Runnable {
+	    
+	public static class FixupAnnotationsTest implements Runnable {
 		@Retention(RetentionPolicy.RUNTIME)
 		@Target(ElementType.PARAMETER)
-		public @interface BogusAnnotation {
+		public @interface BogusParameterAnnotation {
 		}
 
-		public void doSomethingCool(@BogusAnnotation int a) {
+		@Retention(RetentionPolicy.RUNTIME)
+		@Target(ElementType.METHOD)
+		public @interface BogusMethodAnnotation {
 		}
+		
+		@Retention(RetentionPolicy.RUNTIME)
+		@Target(ElementType.METHOD)
+		public @interface XmlElementDecl {
+			// simulate javax.xml.bind.annotation.XmlElementDecl
+		}
+		
+		
+		@BogusMethodAnnotation
+		public  String doSomethingCool(@BogusParameterAnnotation int a) {
+			return "This is cool!";
+		}
+		
+		@XmlElementDecl
+		public Object testOfJaxBMethod(int a) {
+			return "";
+		}
+		
 		
 		public void run() {
 			try {
-				Method methods[] = MoveParameterAnnotationTest.class.getDeclaredMethods();
+				Method methodRenamed = null;
+				Method jaxbMethodRenamed = null;
+				Method methods[] = FixupAnnotationsTest.class.getDeclaredMethods();
 				for (int i = 0; i < methods.length; i++) {
 					System.out.println("Found Method: " + methods[i].getName());
+					if (methods[i].getName().startsWith("doSomethingCool$")) { // method should have been renamed doSomethingCool$1$Impl
+						methodRenamed = methods[i];
+					}
+					if (methods[i].getName().startsWith("testOfJaxBMethod$")) { 
+						jaxbMethodRenamed = methods[i];
+					}
 				}
 				
-				Method method = MoveParameterAnnotationTest.class.getMethod("doSomethingCool", new Class<?>[]{int.class});
+				Method method = FixupAnnotationsTest.class.getMethod("doSomethingCool", new Class<?>[]{int.class});
+				
 
 				// Get the number of annotations on the first parameter....
 				int numParameterAnnotations  = method.getParameterAnnotations()[0].length;
+				int numParameterAnnotationsRenamed  = methodRenamed.getParameterAnnotations()[0].length;
+				
 				
 				System.out.println("numParameterAnnotations: " + numParameterAnnotations);
-				if (numParameterAnnotations == 1) {
-					System.out.println("Parameter annotation FOUND");
+				System.out.println("numParameterAnnotationsRenamed: " + numParameterAnnotationsRenamed);
+				if (numParameterAnnotations == 1 && numParameterAnnotationsRenamed == 0)  {
+					System.out.println("Parameter annotation Moved");
 				}
+				
+				int numMethodAnnotations = method.getAnnotations().length;
+				int numMethodAnnotationsRenamed = methodRenamed.getAnnotations().length;
+				
+				System.out.println("numMethodAnnotations: " + numMethodAnnotations);
+				System.out.println("numMethodAnnotationsRenamed: " + numMethodAnnotationsRenamed);
+				if (numMethodAnnotations == 1 && numMethodAnnotationsRenamed == 0) {
+					System.out.println("Method annotation Moved");
+				}
+				
+				Method jaxbMethod = FixupAnnotationsTest.class.getMethod("testOfJaxBMethod", new Class<?>[]{int.class});
+				int numJaxbMethodAnnotations = jaxbMethod.getAnnotations().length;
+				int numJaxbMethodAnnotationsRenamed = jaxbMethodRenamed.getAnnotations().length;
+				
+				System.out.println("numJaxbMethodAnnotations: " + numJaxbMethodAnnotations);
+				System.out.println("numJaxbMethodAnnotationsRenamed: " + numJaxbMethodAnnotationsRenamed);
+				if (numJaxbMethodAnnotations == 0 && numJaxbMethodAnnotationsRenamed == 1) {
+					System.out.println("XmlElementDecl annotation was NOT moved");
+				}
+				
+				
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}
 		}
 	}
 	
-    public void testMoveAnnotation() throws Exception {
-    	String output = LaunchRunnableInVM.run(MoveParameterAnnotationTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", perfmon4jJar);
+    
+	/**
+	 * When the transformer instruments a method it does the following:
+	 * 	1) renames the existing method methodName$123$Impl
+	 * 	2) Creates a new method: methodName that wraps the previous method.
+	 * 	3) We need to ensure that any anotation associated with the original method 
+	 * 		are moved to the method associated with the original method name.
+	 */
+	public void testMoveParameterAnnotation() throws Exception {
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "true");
+    	
+    	String output = LaunchRunnableInVM.run(FixupAnnotationsTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", props, perfmon4jJar);
     	System.out.println(output);   	
-    	assertTrue("Annotation should have moved parameter annotation", output.contains("Parameter annotation FOUND"));
+    	assertTrue("Parameter annotation should have moved", output.contains("Parameter annotation Moved"));
     }
 	
+    public void testMoveMethodAnnotation() throws Exception {
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "true");
+    	
+    	String output = LaunchRunnableInVM.run(FixupAnnotationsTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", props, perfmon4jJar);
+    	System.out.println(output);   	
+    	assertTrue("Method annotation should have moved", output.contains("Method annotation Moved"));
+    }
+    
+//    public void testXmlElementDeclMethodAnnotationIsNOTMoved() throws Exception {
+//    	String output = LaunchRunnableInVM.run(FixupAnnotationsTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", perfmon4jJar);
+//    	System.out.println(output);   	
+//    	assertTrue("XmlElementDecl should NOT be moved!", output.contains("XmlElementDecl annotation was NOT moved"));
+//    }
 	
     public static class SystemGCDisablerTester implements Runnable {
 		public void run() {
@@ -587,6 +670,187 @@ System.out.println(output);
 		assertTrue("Should have installed valve hook",
 				output.contains("Valve hook has been installed"));
     }
+
+    
+    
+    public static class NoWrapperMethodTest implements Runnable {
+		public static final class BogusAppender extends Appender {
+			public BogusAppender(AppenderID id) {
+				super(id);
+			}
+			
+			@Override
+			public void outputData(PerfMonData data) {
+				if (data instanceof IntervalData) {
+					IntervalData d = (IntervalData)data;
+					System.out.println("Monitor: " + d.getOwner().getName() + " Completions:" + d.getTotalCompletions());
+				} else {
+					System.out.println(data.toAppenderString());
+				}
+			}
+		}
+		
+    	@DeclarePerfMonTimer("PerfmonTest")
+    	public void thisMethodShouldInstrumented() {
+    	}
+    	
+    	public void thisMethodShouldHandleException() throws Throwable {
+    		throw new ThreadDeath();
+    	}
+    	
+
+		public void run() {
+			try {
+				
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorName = "org.perfmon4j.instrument.PerfMonTimerTransformerTest$NoWrapperMethodTest";
+				final String monitorNameAnnotation = "PerfmonTest";
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorName);
+				config.defineMonitor(monitorNameAnnotation);
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToMonitor(monitorName, appenderName, "/*");
+				config.attachAppenderToMonitor(monitorNameAnnotation, appenderName, ".");
+				
+				PerfMon.configure(config);
+				
+				Method methods[] = NoWrapperMethodTest.class.getDeclaredMethods();
+				for (int i = 0; i < methods.length; i++) {
+					System.out.println("Found Method: " + methods[i].getName());
+				}
+				
+				thisMethodShouldInstrumented();
+				try {
+					thisMethodShouldHandleException();
+				} catch (Throwable th) {
+					// nothing todo... 
+				}
+				
+				// Give time for the appender to write it's output...
+				Thread.sleep(5000);
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+    	
+    }
+
+    
+    /*----------------------------------------------------------------------------*/    
+    public void testForceNoWrapperMethod() throws Exception {
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "false");
+    	
+    	String output = LaunchRunnableInVM.run(NoWrapperMethodTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", props, perfmon4jJar);
+    	System.out.println(output);   	
+    	
+    	assertFalse("Should not have added a wrapper method", output.contains("Found Method: thisMethodShouldInstrumented$"));
+    	
+    	assertTrue("Should have an extreme monitor active", output.contains("org.perfmon4j.instrument.PerfMonTimerTransformerTest$NoWrapperMethodTest.thisMethodShouldInstrumented Completions:1"));
+    }
+    
+    public void testValidateNoWrapperMethodInstrumentationHandlesException() throws Exception {
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "false");
+    	
+    	String output = LaunchRunnableInVM.run(NoWrapperMethodTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", props, perfmon4jJar);
+    	System.out.println(output);   	
+    	
+    	assertTrue("Should have an extreme monitor active", output.contains("org.perfmon4j.instrument.PerfMonTimerTransformerTest$NoWrapperMethodTest.thisMethodShouldHandleException Completions:1"));
+    }
+
+    public void testValidateNoWrapperMethodAnnotation() throws Exception {
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "false");
+    	
+    	String output = LaunchRunnableInVM.run(NoWrapperMethodTest.class, "-vtrue,-btrue,-eorg.perfmon4j,-aorg.perfmon4j", "", props, perfmon4jJar);
+    	System.out.println(output);   	
+    	
+    	assertTrue("Should have an annotation monitor", output.contains("PerfmonTest Completions:1"));
+    }
+
+    
+    public static class PerformanceTest implements Runnable {
+		public static final class BogusAppender extends Appender {
+			public BogusAppender(AppenderID id) {
+				super(id);
+			}
+			
+			@Override
+			public void outputData(PerfMonData data) {
+				if (data instanceof IntervalData) {
+					IntervalData d = (IntervalData)data;
+					System.out.println("Monitor: " + d.getOwner().getName() + " Completions:" + d.getTotalCompletions());
+				} else {
+					System.out.println(data.toAppenderString());
+				}
+			}
+		}
+		
+    	@DeclarePerfMonTimer("PerfmonTest")
+    	public void thisMethodShouldInstrumented() {
+    		call1();
+    	}
+    	
+    	public void call1() {
+    		call2();
+    	}
+    	
+    	public void call2() {
+    		call3();
+    	}
+    	
+    	public void call4() {
+    		call5();
+    	}
+    	
+    	public void call5() {
+    	}
+    	
+
+    	public void call3() {
+    	}
+    	
+		public void run() {
+			long start = System.currentTimeMillis();
+			for (int x = 0; x < 1000; x++) {
+				thisMethodShouldInstrumented();
+			}
+			System.out.println("Total Duration: " + (System.currentTimeMillis() - start));
+		}
+    }
+
+    
+//    public void testComparePerformanceWrapperVsNoWrapper() throws Exception {
+//    	Properties props = new Properties();
+//    	props.setProperty("Perfmon4j.NoWrapperMethod", "false");
+//    	
+//    	String output = LaunchRunnableInVM.run(PerformanceTest.class, "-eorg.perfmon4j,-aorg.perfmon4j", "", props, perfmon4jJar);
+//System.out.println(output);
+//
+//		props.setProperty("Perfmon4j.NoWrapperMethod", "true");
+//		output = LaunchRunnableInVM.run(PerformanceTest.class, "-eorg.perfmon4j,-aorg.perfmon4j", "", props, perfmon4jJar);
+//System.out.println(output);
+//    }
+        
+    public void testThreadTraceWithSQLTimeWithNoWrapperMethod() throws Exception {
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "false");
+    	
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL(DERBY)", "", props, perfmon4jJar);
+//System.out.println(output);    
+    	// Running with extreme SQL instrumentation enabled...
+    	// Looking for a line like:
+    	// +-14:37:29:653 (5436)(SQL:3211) MyManualTimer
+    	Pattern p = Pattern.compile("\\d{1,2}:\\d{2}:\\d{2}:\\d{3} \\(\\d{4,8}\\)\\(SQL:\\d{1,8}\\) MyManualTimer");
+    	Matcher m = p.matcher(output);
+    	assertTrue("Should have included SQL time specification", m.find());
+     }
+    
+    
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
@@ -601,6 +865,7 @@ System.out.println(output);
     }
 
     
+
 /*----------------------------------------------------------------------------*/
     public static junit.framework.Test suite() {
     	String testType = System.getProperty("UNIT");
@@ -613,10 +878,13 @@ System.out.println(output);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-//		newSuite.addTest(new PerfMonTimerTransformerTest("testValveInstalledInCatalinaEngine"));
-//        newSuite.addTest(new PerfMonTimerTransformerTest("testInterfacesAreInstrumented"));
-//        newSuite.addTest(new PerfMonTimerTransformerTest("testVarArgsMethodIsInstrumented"));
-
+//		newSuite.addTest(new PerfMonTimerTransformerTest("testForceNoWrapperMethod"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testValidateNoWrapperMethodInstrumentationHandlesException"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testValidateNoWrapperMethodAnnotation"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testThreadTraceWithSQLTimeWithNoWrapperMethod"));
+//        newSuite.addTest(new PerfMonTimerTransformerTest("testComparePerformanceWrapperVsNoWrapper"));
+        
+        
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
         // we run the full suite of tests.

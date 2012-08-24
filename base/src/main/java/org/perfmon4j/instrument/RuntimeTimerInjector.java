@@ -156,21 +156,32 @@ public class RuntimeTimerInjector {
             }
             
             if ((mode != TransformerParams.MODE_NONE) || extremeSQLClass) {
-            	SerialVersionUIDHelper serialVersionHelper = SerialVersionUIDHelper.getHelper();
-            	
+            	boolean mustMaintainSerialVersion = false;
+            
+             	SerialVersionUIDHelper serialVersionHelper = SerialVersionUIDHelper.getHelper();
                 /**
-                 * Make sure we do not change the serial version ID of the class
+                 * if we are using the legacy instrumentation method, make sure we do not change the serialVersionUID
                  * by inserting our instrumentation...
                  */
                 if (!beingRedefined) {
                 	if (serialVersionHelper.requiresSerialVesionUID(clazz)) {
-                		if (serialVersionHelper.isSkipGenerationOfSerialVersionUID()) {
-                            logger.logInfo("Skipping instrumentation of serializable class: " + clazz.getName() +
-                            " because the class does not contain an explicit serialVesionUID.");
-                            return 0;
-                		}
                 		
-                		serialVersionHelper.setSerialVersionUID(clazz);
+                		if (PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER) {
+                    		if (serialVersionHelper.isSkipGenerationOfSerialVersionUID()) {
+                                logger.logInfo("Skipping instrumentation of serializable class: " + clazz.getName() +
+                                " because the class does not contain an explicit serialVesionUID.");
+                                return 0;
+                    		}
+                			// If we are using the legacy instrumentation (which adds wrapper methods), we 
+                			// just have to byte the bullet and have javassist attempt
+                			// to calculate and insert a serialVersionUID 
+                			serialVersionHelper.setSerialVersionUID(clazz);
+                		} else {
+                			// If we are using the new instrumentation 
+                			// we will use a slower method, that will not alter the 
+                			// serial version of the class.
+                			mustMaintainSerialVersion = true;  // Do NOT alter the signature of the class (i.e add methods or member data),  
+                		}
                 	}
                 }
                 
@@ -236,10 +247,12 @@ public class RuntimeTimerInjector {
                 if (numTimers > 0) {
                     Integer offsetInStaticMonitorArray = null;
                     if (!beingRedefined) {
-                        String timerArray = "static final private org.perfmon4j.PerfMon[] pm$MonitorArray" + 
-                            " = new org.perfmon4j.PerfMon[" + numTimers + "];";
-                        CtField field = CtField.make(timerArray, clazz);
-                        clazz.addField(field);
+                    	if (!mustMaintainSerialVersion) {
+	                        String timerArray = "static final private org.perfmon4j.PerfMon[] pm$MonitorArray" + 
+	                            " = new org.perfmon4j.PerfMon[" + numTimers + "];";
+	                        CtField field = CtField.make(timerArray, clazz);
+	                        clazz.addField(field);
+                    	}
                     } else {
                         // When a class is being redefined we are unable to add any data members to it.
                         // Find an empty offset to store this classes timer array... If you can not find one
@@ -268,7 +281,11 @@ public class RuntimeTimerInjector {
                             offset = insertPerfMonTimerIntoRedefinedClass(clazz, t.method, t.timerKeyAnnotation, 
                                 t.timerKeyExtreme, offset, offsetInStaticMonitorArray);
                         } else {
-                            offset = insertPerfMonTimer(clazz, t.method, t.timerKeyAnnotation, t.timerKeyExtreme, t.extremeSQLKey, offset);
+                        	if (PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER) {
+	                            offset = insertPerfMonTimerWithLegacyWrapper(clazz, t.method, t.timerKeyAnnotation, t.timerKeyExtreme, t.extremeSQLKey, offset);
+                        	} else {
+	                            offset = insertPerfMonTimer(clazz, t.method, t.timerKeyAnnotation, t.timerKeyExtreme, t.extremeSQLKey, offset, mustMaintainSerialVersion);
+                        	}
                         }
                         if (verboseMessages != null) {
                         	if (t.timerKeyAnnotation != null) {
@@ -320,6 +337,27 @@ public class RuntimeTimerInjector {
     }
     
     
+    private static boolean isVoidReturnType(CtMethod method) {
+    	boolean result = false;
+    	try {
+    		result = method.getReturnType().getName().equals("void");
+    	} catch (NotFoundException nfe) {
+    		// Nothing to do... If we can't load the class it must not be a void return type!
+    	}
+    	return result;
+    }
+
+    private static int getNumParameters(CtMethod method) {
+    	int result = -1; // Don't unable to determine...
+    	try {
+    		result = method.getParameterTypes().length;
+    	} catch (NotFoundException nfe) {
+    		// Unable to determine!
+    	}
+    	return result;
+    }
+    
+    
     /**
      * Check to see if this method is a getter or setter.  The options can override if setters/getters are 
      * instrumented.
@@ -329,20 +367,21 @@ public class RuntimeTimerInjector {
      * @throws NotFoundException
      */
     private static boolean isGetterOrSetter(CtMethod method, TransformerParams.TransformOptions options, 
-    		VerboseMessages messages, String extremeMonitorName) throws NotFoundException {
+    		VerboseMessages messages, String extremeMonitorName) {
         boolean result = false;
         String name = method.getName();
         
+        
         if (!options.isInstrumentGetters() && (methodStartsWith("is", name) || methodStartsWith("get", name))) {
-            if (method.getParameterTypes().length == 0 && 
-                !method.getReturnType().getName().equals("void")) {
+            if (getNumParameters(method) == 0 && 
+                !isVoidReturnType(method)) {
                 result = true;
                 if (messages != null) {
                 	messages.addSkipMessage(extremeMonitorName, "getter method");
                 }
             }
         } else if (!options.isInstrumentSetters() && methodStartsWith("set", name)) {
-            if (method.getParameterTypes().length == 1 && (method.getReturnType().getName().equals("void"))) {
+            if (getNumParameters(method) == 1 && isVoidReturnType(method)) {
                 result = true;
                 if (messages != null) {
                 	messages.addSkipMessage(extremeMonitorName, "setter method");
@@ -355,11 +394,17 @@ public class RuntimeTimerInjector {
     
     private static DeclarePerfMonTimer getRuntimeAnnotation(CtMethod method) throws ClassNotFoundException {
         DeclarePerfMonTimer result = null;
-        Object annotations[] = method.getAnnotations();
-        for (int i = 0; (i < annotations.length) && (result == null); i++) {
-            if (annotations[i] instanceof DeclarePerfMonTimer) {
-                result = (DeclarePerfMonTimer)annotations[i];
-            }
+        try {
+	        Object annotations[] = method.getAnnotations();
+	        for (int i = 0; (i < annotations.length) && (result == null); i++) {
+	            if (annotations[i] instanceof DeclarePerfMonTimer) {
+	                result = (DeclarePerfMonTimer)annotations[i];
+	            }
+	        }
+        } catch (Exception ex) {
+        	if (logger.isDebugEnabled()) {
+        		logger.logDebug("Unable to determine if method: " + method.getLongName() + " has DeclarePerfMonTimer annotation.", ex);
+        	}
         }
         return result;
     }
@@ -374,7 +419,7 @@ public class RuntimeTimerInjector {
     }
     
     @SuppressWarnings("unchecked")
-	private static void moveAnnotations(CtMethod src, CtMethod dest) {
+	private static void moveAnnotations(CtMethod src, CtMethod dest) throws CannotCompileException {
         // Move over all of the annotations....
         List sAttributes = src.getMethodInfo().getAttributes();
         List dAttributes = dest.getMethodInfo().getAttributes();
@@ -391,8 +436,108 @@ public class RuntimeTimerInjector {
         return Modifier.setPrivate(modifier) | Modifier.FINAL;
     }
     
+    private static String buildMonitorJavaSource(int offset, String timerKey, String timerType, boolean mustMaintainSerialVersion) {
+    	String result = null;
+    	 
+    	if (mustMaintainSerialVersion) {
+    		// Slower..  But it does not require modification of the serial version of the class.
+    		result = "\tperfmon4j$ContainerBefore." + timerType + " = org.perfmon4j.PerfMonTimer.start(\"" + timerKey + "\");\n";
+    	} else {
+        	String monitorArrayName = "pm$MonitorArray";
+        	StringBuilder builder = new StringBuilder();
+        	
+	        builder.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
+	    		.append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + timerKey + "\");\n")
+	    		.append("\t}\n")
+	    		.append("\tperfmon4j$ContainerBefore." + timerType + " = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n");
+	        result = builder.toString();
+    	}
+        
+        return result;
+    }
     
     private static int insertPerfMonTimer(CtClass clazz, CtMethod method, String timerKeyAnnotation, 
+            String timerKeyExtreme, String extremeSQLKey, int offset, boolean mustMaintainSerialVersion) throws NotFoundException {
+        try {
+	        // Create the body of the code for the new method...
+	        StringBuilder before = new StringBuilder();
+	        before.append("{\n");
+	        before.append("\torg.perfmon4j.NoWrapTimerContainer perfmon4j$ContainerBefore = new org.perfmon4j.NoWrapTimerContainer();\n");
+//	        String monitorArrayName = "pm$MonitorArray";
+	        
+	        if (timerKeyAnnotation != null) {
+	        	before.append(buildMonitorJavaSource(offset, timerKeyAnnotation, "annotationTimer", mustMaintainSerialVersion));
+	        	
+//	            before.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
+//                	.append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + timerKeyAnnotation + "\");\n")
+//                	.append("\t}\n")
+//                	.append("\tperfmon4j$ContainerBefore.annotationTimer = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n");
+	            offset++;
+	        }	        
+	        if (timerKeyExtreme != null) {
+	        	before.append(buildMonitorJavaSource(offset, timerKeyExtreme, "extremeTimer", mustMaintainSerialVersion));
+	        	
+//	        	
+//	            before.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
+//	                .append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + timerKeyExtreme + "\");\n")
+//	                .append("\t}\n")
+//	                .append("\tperfmon4j$ContainerBefore.extremeTimer = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n");
+	            offset++;
+	        }
+	        if (extremeSQLKey != null) {
+	        	before.append(buildMonitorJavaSource(offset, extremeSQLKey, "extremeSQLTimer", mustMaintainSerialVersion))
+	        		.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
+
+//	            before.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
+//                	.append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + extremeSQLKey + "\");\n")
+//                	.append("\t}\n")
+//                	.append("\tperfmon4j$ContainerBefore.extremeSQLTimer = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n")
+//	            	.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
+	            offset++;
+	        }	        
+	        
+	        before.append("\t((org.perfmon4j.NoWrapTimerContainer.ArrayStack)org.perfmon4j.NoWrapTimerContainer.callStack.get()).push(perfmon4j$ContainerBefore);\n");
+	        before.append("}\n");
+	        
+//System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+//System.err.println(before);	        
+//System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+	        
+	        method.insertBefore(before.toString());
+	        
+	        StringBuilder after = new StringBuilder();
+	        after.append("{\n");
+	        after.append("\torg.perfmon4j.NoWrapTimerContainer perfmon4j$ContainerFinally = ((org.perfmon4j.NoWrapTimerContainer.ArrayStack)org.perfmon4j.NoWrapTimerContainer.callStack.get()).pop();\n");
+	        if (extremeSQLKey != null) {
+	        	after.append("\torg.perfmon4j.PerfMonTimer.stop(perfmon4j$ContainerFinally.extremeSQLTimer);\n")
+	        		.append("\torg.perfmon4j.SQLTime.stopTimerForThread();\n");
+	        }
+	        if (timerKeyExtreme != null) {
+	        	after.append("\torg.perfmon4j.PerfMonTimer.stop(perfmon4j$ContainerFinally.extremeTimer);\n");
+	        }
+	        if (timerKeyAnnotation != null) {
+	        	after.append("\torg.perfmon4j.PerfMonTimer.stop(perfmon4j$ContainerFinally.annotationTimer);\n");
+	        }
+	        after.append("}\n");
+
+//System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+//System.err.println(after);	        
+//System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+	        
+	        method.insertAfter(after.toString(), true);
+        } catch (Throwable th) {
+        	String msg = "Error inserting timer into class: " + clazz.getName() 
+	    	+ " method: " + method.getName();
+        	if (logger.isDebugEnabled()) {
+        		logger.logWarn(msg, th);
+        	} else {
+        		logger.logWarn(msg + " Throwable: " + th.getMessage());
+        	}
+        }
+        return offset;
+    }
+    
+    private static int insertPerfMonTimerWithLegacyWrapper(CtClass clazz, CtMethod method, String timerKeyAnnotation, 
         String timerKeyExtreme, String extremeSQLKey, int offset) throws NotFoundException {
     	
         final String originalMethodName = method.getName();

@@ -72,6 +72,10 @@ public class LaunchRunnableInVM {
 		return run(LoadClassAndPrintMethods.class, jvmParams, clazzToLoad.getName(), perfmonJar);
 	}
 	
+	public static String loadClassAndPrintMethods(Class<?> clazzToLoad, String jvmParams, Properties systemProperties, File perfmonJar) throws Exception {
+		return run(LoadClassAndPrintMethods.class, jvmParams, clazzToLoad.getName(), systemProperties, perfmonJar);
+	}
+	
 	private static String quoteIfNeeded(String src) {
 		String result;
 		

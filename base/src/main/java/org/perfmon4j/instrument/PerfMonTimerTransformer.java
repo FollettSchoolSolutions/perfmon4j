@@ -59,8 +59,14 @@ import org.perfmon4j.util.MiscHelper;
 public class PerfMonTimerTransformer implements ClassFileTransformer {
     private final TransformerParams params; 
     private final static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
-	private final static String REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY="Perfmon4j.RemoteInterfaceDelaySeconds"; 
-	private final static int REMOTE_INTERFACE_DEFAULT_DELAY_SECONDS=30; 
+	
+    private final static String REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY="Perfmon4j.RemoteInterfaceDelaySeconds"; 
+	private final static int REMOTE_INTERFACE_DEFAULT_DELAY_SECONDS=30;
+
+    public final static String USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY="Perfmon4j.UseLegacyInstrumentationWrapper"; 
+	public final static boolean USE_LEGACY_INSTRUMENTATION_WRAPPER=Boolean.getBoolean(USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY);
+	
+	
 	private static ValveHookInserter valveHookInserter = null;
 	
     private PerfMonTimerTransformer(String paramsString) {
@@ -160,7 +166,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             	InstrumentationMonitor.incClassInstFailures();
                 final String msg = "Unable to inject PerfMonTimers into class: " + className;
                 if (logger.isDebugEnabled()) {
-                    logger.logDebug("Unable to inject PerfMonTimers into class: " + className, ex);
+                    logger.logInfo("Unable to inject PerfMonTimers into class: " + className, ex);
                 } else {
                     logger.logInfo(msg + " Throwable: " + ex.getMessage());
                 }
