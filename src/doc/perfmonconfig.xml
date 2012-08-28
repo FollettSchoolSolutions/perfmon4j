@@ -1,4 +1,11 @@
 <Perfmon4JConfig enabled='true'>
+	<boot>
+		<!-- Boot section is only read when the VM is launched -->
+		
+		<!-- servletValve must be actvated with -eVALVE as a perfmon4j agent parameter -->
+		<servletValve outputRequestAndDuration='true' />
+	</boot>
+
 	<appender name='webrequest-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
 		<attribute name='medianCalculator'>factor=10</attribute>		
 		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
