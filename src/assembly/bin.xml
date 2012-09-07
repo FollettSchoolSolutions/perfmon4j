@@ -60,6 +60,10 @@
 			<destName>perfmon4j-tomcat7.jar</destName>
 		</file>
 		<file>
+			<source>${basedir}/jbossweb7/target/perfmon4j-jbossweb7-${project.version}.jar</source>
+			<destName>perfmon4j-jbossweb7.jar</destName>
+		</file>		
+		<file>
 			<source>${basedir}/sunjava6/target/perfmon4j-sunjava6-${project.version}.jar</source>
 			<destName>perfmon4j-sunjava6.jar</destName>
 		</file>
