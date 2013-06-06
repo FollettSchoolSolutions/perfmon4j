@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009,2011 Follett Software Company 
+ *	Copyright 2008-2013 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -114,7 +114,7 @@ public class TransformerParamsTest extends TestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testBlackList() {
-        TransformerParams params = new TransformerParams("-eorg.apache");
+        TransformerParams params = new TransformerParams("-eorg.apache,-ecom.follett");
         
         assertEquals("log4j is blacklisted... Should not allow any logging regardless of the parameters", 
         		TransformerParams.MODE_NONE, 
@@ -122,7 +122,15 @@ public class TransformerParamsTest extends TestCase {
         
         assertEquals("catalina is an org.apache package that is NOT blacklisted", 
         		TransformerParams.MODE_EXTREME, 
-            params.getTransformMode("org.apache.catalina.RequestProcessor"));        
+            params.getTransformMode("org.apache.catalina.RequestProcessor"));
+        
+        
+        assertEquals("Should be included",
+        		TransformerParams.MODE_EXTREME, params.getTransformMode("com.follett.yukon.session.PerfWorkerview"));
+    
+        assertEquals("Jboss's weld creates class files that include the pattern $Proxy$_$$.  When attempting to" +
+        		"instrument these classes we get a Verify error - Inconsistent stack height 1 != 0.",
+        		TransformerParams.MODE_NONE, params.getTransformMode("com.follett.yukon.util.HibernateHelper$Proxy$_$$_WeldClientProxy"));
     }
 
 
@@ -138,8 +146,43 @@ public class TransformerParamsTest extends TestCase {
             params.getTransformMode(this.getClass()));        
     }
     
-    
+    public void testPatternBasedAnnotation() {
+    	// Perform annotation monitor on any class that ends with "Buffer"
+        TransformerParams params = new TransformerParams("\"-aP(Buffer$)\"");
+        
+        assertEquals("String should NOT annotate", TransformerParams.MODE_NONE, 
+            params.getTransformMode(String.class));
+        
+        assertEquals("String buffer should annotate", TransformerParams.MODE_ANNOTATE, 
+            params.getTransformMode(StringBuffer.class));        
 
+        assertEquals("Must END in Buffer based on the RegEx", TransformerParams.MODE_NONE, 
+                params.getTransformMode("StringBufferWithSomethingElse"));        
+    
+    }
+    
+    public void testPatternBasedExtreme() {
+    	// Perform extreme monitor on any class that ends with "Buffer"
+        TransformerParams params = new TransformerParams("\"-eP(Buffer$)\"");
+        
+        assertEquals("String should NOT annotate", TransformerParams.MODE_NONE, 
+            params.getTransformMode(String.class));
+        assertEquals("String buffer should annotate", TransformerParams.MODE_EXTREME, 
+            params.getTransformMode(StringBuffer.class));        
+    }
+
+    public void testPatternBasedIgnore() {
+    	// Extreme monitor all classe in "com.acme" package, but ignore any
+    	// classes in the com.acme.utils sub package
+        TransformerParams params = new TransformerParams("\"-ecom,-iP(\\.acme\\.utils\\.)\"");
+        
+        assertEquals("This class should be included", TransformerParams.MODE_EXTREME, 
+            params.getTransformMode("com.acme.MyClass"));
+        assertEquals("This class should be NOT be included since it is in the utils package", TransformerParams.MODE_NONE, 
+                params.getTransformMode("com.acme.utils.MyClass"));
+    }
+    
+    
     /*----------------------------------------------------------------------------*/    
     public void testGetterSetterDisabledByDefault() {
         TransformerParams params = new TransformerParams("-ejava.lang.String");
