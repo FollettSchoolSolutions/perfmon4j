@@ -9,7 +9,7 @@
 		PARENT POM.. AT LEAST UNTIL MAVEN
 		ADDS SOMETHING THAT MAKES MORE SENSE!
 	-->
-	<version>1.2.0-RC_2-SNAPSHOT</version>
+	<version>1.2.0-RC_2</version>
 	</parent>
   
 	<artifactId>perfmon4j</artifactId>
