@@ -543,10 +543,10 @@ System.out.println(trace.toAppenderString());
         for (int x = 0; x < 10; x++) {
             new Thread(new ThreadTraceRunnable(MONITOR_KEY)).start();
         }
-        Thread.sleep(20);
+        Thread.sleep(50);
         
         while (ThreadTraceRunnable.runningCount > 0) {
-            Thread.sleep(20);
+            Thread.sleep(50);
         }
         
         assertEquals("Total descendents", 1000, TestAppender.getOutputCount());

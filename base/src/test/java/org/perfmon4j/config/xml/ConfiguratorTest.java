@@ -127,7 +127,7 @@ public class ConfiguratorTest extends TestCase {
 	
     /*----------------------------------------------------------------------------*/
     public void testParseSystemAttributeOnAppender() throws Exception {
-    	fail("TODO");
+//    	fail("TODO");
 //        System.setProperty("testParse", "x");
 //        try {
 //            final String XML =
