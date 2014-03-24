@@ -30,6 +30,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import javax.management.ObjectName;
+
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -333,6 +335,28 @@ public class MiscHelperTest extends TestCase {
 		String systemName = MiscHelper.getDefaultSystemName();
 		assertNotNull("systemName", systemName);
 		assertTrue("length <= 200 chars", systemName.length() <= 200);
+	}
+	
+	
+	private void assertMatches(boolean shouldMatch, String strA, String strB) throws Exception {
+		ObjectName a = new ObjectName(strA);
+		ObjectName b = new ObjectName(strB);
+		
+		String debug = "Object names " + strA + " and " + strB + " ";
+		if (shouldMatch) {
+			assertTrue(debug + "should match", MiscHelper.objectNameAttributeKeysMatch(a, b));
+		} else {
+			assertFalse(debug + "should NOT match", MiscHelper.objectNameAttributeKeysMatch(a, b));
+		}
+	}
+	
+
+	public void testObjectNameAttributeKeysMatch() throws Exception {
+		assertMatches(true, "myobject:a=b,c=d", "myobject:a=b,c=d");
+		assertMatches(true, "myobject:a=Z,c=Y", "myobject:a=b,c=d");
+		assertMatches(true, "myobject:a=*,c=*", "myobject:a=b,c=d");
+		
+		assertMatches(false, "myobject:a=*,c=*", "myobject:a=b,c=d,d=f");
 	}
 	
 	

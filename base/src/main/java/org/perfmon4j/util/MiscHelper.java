@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -370,13 +371,19 @@ public class MiscHelper {
 		return result;
 	}
 	
+	public static long sumMBeanAttributes(MBeanServer server, ObjectName queryName, String attrName) {
+		return sumMBeanAttributes(server, queryName, attrName, false);
+	}
 	
 	// Will iterator over the MBeans that match query name and sum the attributes.
-	public static long sumMBeanAttributes(MBeanServer server, ObjectName queryName, String attrName) {
+	public static long sumMBeanAttributes(MBeanServer server, ObjectName queryName, String attrName, boolean strict) {
 		long result = 0;
 		Iterator<ObjectName> itr = server.queryNames(appendWildCard(queryName), null).iterator();
 		while (itr.hasNext()) {
 			ObjectName objName = itr.next();
+			if (strict && !objectNameAttributeKeysMatch(queryName, objName)) {
+				continue;
+			}
 			try {
 				Object obj = server.getAttribute(objName, attrName);
 				if (obj instanceof Number) {
@@ -388,8 +395,31 @@ public class MiscHelper {
 		}
 		return result;
 	}
+	
+	static private String getCanonicalKeyNames(ObjectName a) {
+		Set<String> sortedSet = new TreeSet<String>();
+		
+		sortedSet.addAll(a.getKeyPropertyList().keySet());
+		StringBuilder result = new StringBuilder();
+		
+		for(String value : sortedSet) {
+			result.append(value)
+				.append(",");
+		}
+		
+		return  result.toString();
+	}
+	
+	// Package level for unit testing.
+	static boolean objectNameAttributeKeysMatch(ObjectName a, ObjectName b) {
+		return getCanonicalKeyNames(a).equals(getCanonicalKeyNames(b));
+	}
 
 	public static String getInstanceNames(MBeanServer server, ObjectName queryName, String keyName) {
+		return getInstanceNames(server, queryName, keyName, false);
+	}
+	
+	public static String getInstanceNames(MBeanServer server, ObjectName queryName, String keyName, boolean strictMatch) {
 		String result = "";
 		
 		String prop = queryName.getKeyProperty(keyName);
@@ -399,6 +429,10 @@ public class MiscHelper {
 			Iterator<ObjectName> itr = server.queryNames(appendWildCard(queryName), null).iterator();
 			while (itr.hasNext()) {
 				ObjectName objName = itr.next();
+				if (strictMatch && !objectNameAttributeKeysMatch(queryName, objName)) {
+					continue;
+				}
+				
 				if (!firstElement) {
 					result += ", ";
 				}
@@ -412,14 +446,21 @@ public class MiscHelper {
 		return result;
 	}
 
-	
 	public static String[] getAllObjectName(MBeanServer server, ObjectName baseObjectName, 
 			String propertyName) {
+		return getAllObjectName(server, baseObjectName, propertyName);
+	}
+
+	public static String[] getAllObjectName(MBeanServer server, ObjectName baseObjectName, 
+			String propertyName, boolean strict) {
 		Set<String> result = new HashSet<String>();
 		
 		Iterator<ObjectName> itr = server.queryNames(appendWildCard(baseObjectName), null).iterator();
 		while (itr.hasNext()) {
 			ObjectName objName = itr.next();
+			if (strict && !objectNameAttributeKeysMatch(baseObjectName, objName)) {
+				continue;
+			}
 			String val = objName.getKeyProperty(propertyName);
 			if (val != null) {
 				result.add(val);

@@ -289,7 +289,7 @@ public class PerfMonConfiguration {
     	return classNotFoundInfo;
     }
 
-    AppenderID getOrCreateDefaultAppender() {
+    public AppenderID getOrCreateDefaultAppender() {
     	AppenderID appenderID = appenderMap.get(DEFAULT_APPENDER_NAME);
 		if (appenderID == null) {
         	// Get or create a default text appender...

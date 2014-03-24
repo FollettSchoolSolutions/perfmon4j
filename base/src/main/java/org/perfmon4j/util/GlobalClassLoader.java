@@ -21,6 +21,7 @@
 
 package org.perfmon4j.util;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -40,9 +41,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class GlobalClassLoader extends ClassLoader {
     private static final GlobalClassLoader classLoader;
+    private static final Set ignoreClassLoaders = new HashSet<String>();
     
     static {
     	classLoader = new GlobalClassLoader();
+    	ignoreClassLoaders.add("org.jboss.as.jpa.classloader.TempClassLoader");
     }
     
     private static ThreadLocal<RecursionPreventor> recursionPreventor = new ThreadLocal() {
@@ -137,7 +140,7 @@ public class GlobalClassLoader extends ClassLoader {
     	LOCK.writeLock().lock();
 //System.err.println("GlobalClassLoader - Waiting for WriteLock");
         try {
-            if (!loaders.containsKey(loader)) {
+            if (!loaders.containsKey(loader) && !ignoreClassLoaders.contains(loader.getClass().getName())) {
             	if (inCoreClassLoader) {
                 	String className =  loader.getClass().getName();
             		inCoreClassLoader = className.startsWith("sun.misc.Launcher");
