@@ -9,7 +9,7 @@
 		PARENT POM.. AT LEAST UNTIL MAVEN
 		ADDS SOMETHING THAT MAKES MORE SENSE!
 	-->
-	<version>1.2.0-RC_3-SNAPSHOT</version>
+	<version>1.2.0-RC_4-SNAPSHOT</version>
 	</parent>
   
 	<artifactId>perfmon4j-jbossweb7</artifactId>
