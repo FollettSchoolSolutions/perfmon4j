@@ -123,6 +123,21 @@ public class RuntimeTimerInjector {
     	gcMethod.insertBefore("if (1==1) {return;}\r\n");
     }
     
+    private static boolean classHaveSkipIndicator(CtClass clazz) {
+    	boolean result = false;
+
+    	try {
+			CtField field = clazz.getDeclaredField(TransformerParams.PERFMON_SKIP_FIELD_NAME);
+			if (field != null) {
+				result = Modifier.isStatic(field.getModifiers());
+			}
+		} catch (NotFoundException e) {
+			// Nothing to do..
+		}
+    	return result;
+    }
+    
+    
     public static int injectPerfMonTimers(CtClass clazz, boolean beingRedefined, TransformerParams params) throws ClassNotFoundException, NotFoundException, CannotCompileException {
         int mode = TransformerParams.MODE_ANNOTATE;
         TransformerParams.TransformOptions transformOptions = TransformerParams.TransformOptions.DEFAULT;
@@ -153,6 +168,16 @@ public class RuntimeTimerInjector {
 						logger.logInfo("PerfMon4j found SQL/JDBC class: (" + n + ") With interfaces: " + interfaces);
 					}
 				}
+            }
+
+            if (mode != TransformerParams.MODE_NONE) {
+            	if (classHaveSkipIndicator(clazz)) {
+            		if (LoggerFactory.isVerboseInstrumentationEnabled()) {
+            			Logger verbose = LoggerFactory.getVerboseInstrumentationLogger();
+            			verbose.logDebug("** Skipping class (found " + TransformerParams.PERFMON_SKIP_FIELD_NAME  + " static field) : " + clazz.getName());
+            		}
+            		mode = TransformerParams.MODE_NONE;
+            	}
             }
             
             if ((mode != TransformerParams.MODE_NONE) || extremeSQLClass) {

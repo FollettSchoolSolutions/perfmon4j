@@ -501,6 +501,22 @@ System.out.println(output);
     	System.out.println(output);   	
     	assertTrue("Parameter annotation should have moved", output.contains("Parameter annotation Moved"));
     }
+
+	public static class DontInstrumentMeTest implements Runnable{
+		private static final String NO_PERFMON4J_INSTRUMENTATION = "";
+		
+		public void run() {
+		}
+	}
+	
+	public void testNoPerfmonInstrumentationStaticFlag() throws Exception {
+    	String output = LaunchRunnableInVM.run(DontInstrumentMeTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", perfmon4jJar);
+    	System.out.println(output);
+    	
+    	assertFalse("Should have skipped file because it contained the static NO_PERFMON4J_INSTRUMENTATION flag",
+    			output.contains("Instrumenting class: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DontInstrumentMeTest"));
+    	assertTrue("Should contain verbose skip indicator", output.contains("Skipping class (found NO_PERFMON4J_INSTRUMENTATION static field)"));
+    }
 	
     public void testMoveMethodAnnotation() throws Exception {
     	Properties props = new Properties();

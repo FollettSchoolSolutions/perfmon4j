@@ -52,8 +52,8 @@ public class TransformerParams {
     List<String> annotateList = new ArrayList<String>();
     List<ExtremeListElement> extremeList = new ArrayList<ExtremeListElement>();
     List<String> ignoreList = new ArrayList<String>();
-	
     
+	public static final String PERFMON_SKIP_FIELD_NAME = "NO_PERFMON4J_INSTRUMENTATION";
  
     /**
      * Some classes are problematic for instrumentation...  As we find them
