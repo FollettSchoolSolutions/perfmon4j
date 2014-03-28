@@ -108,8 +108,65 @@ public class XMLConfigurationParser2Test extends TestCase {
         assertEquals("MyExtraString",  appenderConfig.getAttributes().get("extraString"));
         assertEquals("10",  appenderConfig.getAttributes().get("extraInt"));
     }
-    
 
+  ///*----------------------------------------------------------------------------*/
+    public void testDisableAppender() throws Exception {
+    	final String XML =
+        "<Perfmon4JConfig>" +
+        "   <appender name='disabledAppender' " +
+        "     className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+        "     interval='5 min'" +
+        "		enabled='false'/>" +
+        "   <appender name='enabledAppender' " +
+        "     className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+        "     interval='5 min'" +
+        "		enabled='true'/>" +
+        "</Perfmon4JConfig>";
+
+    	ConfigElement config = XMLConfigurationParser2.parseXML(new StringReader(XML));
+    	assertFalse(config.getAppender("disabledAppender").isEnabled());
+    	assertTrue(config.getAppender("enabledAppender").isEnabled());
+	}
+
+  ///*----------------------------------------------------------------------------*/
+    public void testDisableMonitor() throws Exception {
+      	final String XML =
+          "<Perfmon4JConfig>" +
+          "   <monitor name='disabledMonitor' enabled='false'/>" +
+          "   <monitor name='enabledMonitor' enabled='true'/>" +
+          "</Perfmon4JConfig>";
+
+      	ConfigElement config = XMLConfigurationParser2.parseXML(new StringReader(XML));
+      	assertTrue(config.getMonitor("enabledMonitor").isEnabled());
+      	assertFalse(config.getMonitor("disabledMonitor").isEnabled());
+  	}
+
+    ///*----------------------------------------------------------------------------*/
+    public void testDisableSnapShot() throws Exception {
+      	final String XML =
+          "<Perfmon4JConfig>" +
+          "   <snapShotMonitor name='disabledSnapShot' className='class1' enabled='false'/>" +
+          "   <snapShotMonitor name='enabledSnapShot' className='class2' enabled='true'/>" +
+          "</Perfmon4JConfig>";
+
+      	ConfigElement config = XMLConfigurationParser2.parseXML(new StringReader(XML));
+      	assertTrue(config.getSnapShot("enabledSnapShot").isEnabled());
+      	assertFalse(config.getSnapShot("disabledSnapShot").isEnabled());
+  	}
+
+    ///*----------------------------------------------------------------------------*/
+    public void testDisableThreadTrace() throws Exception {
+    	final String XML =
+          "<Perfmon4JConfig>" +
+          "   <threadTrace monitorName='disabledThreadTrace' enabled='false'/>" +
+          "   <threadTrace monitorName='enabledThreadTrace' enabled='true'/>" +
+          "</Perfmon4JConfig>";
+
+      	ConfigElement config = XMLConfigurationParser2.parseXML(new StringReader(XML));
+      	assertTrue(config.getThreadTrace("enabledThreadTrace").isEnabled());
+      	assertFalse(config.getThreadTrace("disabledThreadTrace").isEnabled());
+  	}
+  	
 ///*----------------------------------------------------------------------------*/
 //    public void testParseSystemAttributeOnAppender() throws Exception {
 //        System.setProperty("testParse", "x");

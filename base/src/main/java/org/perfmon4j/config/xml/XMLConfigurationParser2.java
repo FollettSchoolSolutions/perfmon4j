@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008, 2009, 2010 Follett Software Company 
+ *	Copyright 2008-2014 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -111,17 +111,29 @@ class XMLConfigurationParser2 extends DefaultHandler {
     private SnapShotConfigElement currentSnapShotElement = null;
     private ThreadTraceConfigElement currentThreadTraceElement = null;
     
-    private boolean isActiveBasedOnProperty(Attributes atts) {
-        boolean result = true;
-        
-    	String systemProperty = atts.getValue("ifSystemProperty");
-    	if (systemProperty != null) {
-    		result = Boolean.parseBoolean(systemProperty);
-    		configElement.getSystemPropertyState().put(systemProperty, Boolean.valueOf(result));
-    	}
+//    private boolean isActiveBasedOnProperty(Attributes atts) {
+//        boolean result = true;
+//        
+//    	String systemProperty = atts.getValue("ifSystemProperty");
+//    	if (systemProperty != null) {
+//    		result = Boolean.parseBoolean(systemProperty);
+//    		configElement.getSystemPropertyState().put(systemProperty, Boolean.valueOf(result));
+//    	}
+//    	
+//    	return result;
+//    }
+    
+    private boolean isEnabled(Attributes atts) {
+    	boolean result = true;
     	
-    	return result;
+        String value = atts.getValue("enabled");
+        if (value != null && !Boolean.parseBoolean(value)) {
+            result = false;
+        }
+
+        return result;
     }
+    
     
     @Override() public void startElement(String uri, String name, String qName,
         Attributes atts) throws SAXException {
@@ -130,10 +142,7 @@ class XMLConfigurationParser2 extends DefaultHandler {
                 if (!ROOT_ELEMENT_NAME.equalsIgnoreCase(name)) {
                     throw new SAXException("Did not find root element: " + ROOT_ELEMENT_NAME);
                 }
-                String value = atts.getValue("enabled");
-                if (value != null && !Boolean.parseBoolean(value)) {
-                    configElement.setEnabled(false);
-                }
+                configElement.setEnabled(isEnabled(atts));
                 currentState = STATE_IN_ROOT;
                 break;
                 
@@ -145,7 +154,6 @@ class XMLConfigurationParser2 extends DefaultHandler {
                     String attrName = atts.getValue("name");
                     String attrClassName = atts.getValue("className");
                     String attrInterval = atts.getValue("interval");
-                    boolean attrActive = isActiveBasedOnProperty(atts);
 
                     validateArg(APPENDER_NAME, "name", attrName);
                     validateArg(APPENDER_NAME, "className", attrClassName);
@@ -155,7 +163,7 @@ class XMLConfigurationParser2 extends DefaultHandler {
                     currentAppenderElement.setName(attrName);
                     currentAppenderElement.setClassName(attrClassName);
                     currentAppenderElement.setInterval(attrInterval);
-                    currentAppenderElement.setActive(attrActive);
+                    currentAppenderElement.setEnabled(isEnabled(atts));
                     
                     currentState = STATE_IN_APPENDER;
                 } else if (MONITOR_NAME.equalsIgnoreCase(name)) {
@@ -165,6 +173,7 @@ class XMLConfigurationParser2 extends DefaultHandler {
               
                     currentMonitorElement = new MonitorConfigElement();
                     currentMonitorElement.setName(attrName);
+                    currentMonitorElement.setEnabled(isEnabled(atts));
                     
                     currentState = STATE_IN_MONITOR;
                 } else if (ALIAS_NAME.equalsIgnoreCase(name)) {
@@ -179,6 +188,7 @@ class XMLConfigurationParser2 extends DefaultHandler {
                     currentSnapShotElement = new SnapShotConfigElement();
                     currentSnapShotElement.setName(attrName);
                     currentSnapShotElement.setClassName(attrClassName);
+                    currentSnapShotElement.setEnabled(isEnabled(atts));
                     
                     currentState = STATE_IN_SNAP_SHOT_MONITOR;
                 } else if (THREAD_TRACE_NAME.equalsIgnoreCase(name)  ){
@@ -194,7 +204,7 @@ class XMLConfigurationParser2 extends DefaultHandler {
                     currentThreadTraceElement.setMaxDepth(maxDepth);
                     currentThreadTraceElement.setMinDurationToCapture(minDurationToCapture);
                     currentThreadTraceElement.setRandomSamplingFactor(randomSamplingFactor);
-                    
+                    currentThreadTraceElement.setEnabled(isEnabled(atts));
 
                     currentState = STATE_IN_THREAD_TRACE;
                 } else if (BOOT_NAME.equalsIgnoreCase(name)) {
