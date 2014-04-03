@@ -8,7 +8,7 @@
 		CHILD POM!!!  AT LEAST UNTIL MAVEN
 		ADDS FUNCTIOANLITY THAT MAKES MORE SENSE!
 	-->
-	<version>1.2.0-RC_4-SNAPSHOT</version>
+	<version>1.2.0-RC_5-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>perfmon4j-project</name>
@@ -35,6 +35,20 @@
 					<source>1.5</source>
 					<target>1.5</target>
 				</configuration>
+			</plugin>
+			
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<!--  Unable to get this working to build the "*.nbm" plugin module: 11/21/11 -->
 			<!--
