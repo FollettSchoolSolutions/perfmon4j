@@ -1,0 +1,202 @@
+<Perfmon4JConfig enabled='true'>
+	<boot>
+		<!-- Boot section is only read when the VM is launched -->
+		
+		<!-- servletValve must be actvated with -eVALVE as a perfmon4j agent parameter -->
+		<servletValve outputRequestAndDuration='true' />
+	</boot>
+
+	<appender name='webrequest-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+		<!--
+			Uncomment if you want to exclude SQL logging information
+			if using "-SQL" java agent parameter.
+			<attribute name='includeSQL'>false</attribute>
+		-->
+	</appender>
+	
+	<appender name='skip-sql-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
+		<!--
+			Use the includeSQL attribute if you want to have a text appender
+			that does not display the SQL attributes.  This can be useful to reduce
+			'noise' in the log when using an interval monitor on methods that do not 
+			include SQL processing.
+		-->
+		<attribute name='includeSQL'>false</attribute>
+	</appender>
+
+	<appender name='snapshot-appender' className='org.perfmon4j.TextAppender' interval='1 minute'>
+	</appender>
+
+
+<!--  JDBC Based Appender - Option 1 (Raw JDBC Connection)-
+	This appender will log timing data to a SQL database using
+	the specified jdbcDriver and connection information.
+	Note: The tables must be manually configured.  See:
+	MSSQL-CreateTables.sql and MySQL-CreateTables.sql for examples 
+	of the required tables 
+
+	MySQL Example:
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
+		<attribute name='driverClass'>com.mysql.jdbc.Driver</attribute>		
+		<attribute name='driverPath'>c:/drivers/mysql-connector-java-5.1.12-bin.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:mysql://192.168.42.100/perfmon4j</attribute>		
+		<attribute name='dbSchema'>perfmon4j</attribute>		
+		<attribute name='userName'>perfmon4j</attribute>		
+		<attribute name='password'>p4jpassword</attribute>		
+
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+
+
+	Microsoft SQL Server W/JTDS Driver example:
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
+		<attribute name='driverClass'>net.sourceforge.jtds.jdbc.Driver</attribute>		
+		<attribute name='driverPath'>c:/drivers/jtds.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:jtds:sqlserver:/localhost/perfmon4j</attribute>		
+		<attribute name='dbSchema'>myschema</attribute>		
+		<attribute name='userName'>myusername</attribute>		
+		<attribute name='password'>mypassword</attribute>		
+
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+	
+
+	PostgresSQL example:
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
+		<attribute name='driverClass'>org.postgresql.Driver</attribute>		
+		<attribute name='driverPath'>c:/drivers/postgresql-8.4-701.jdbc4.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:postgresql://192.168.42.100/perfmon4j</attribute>		
+		<attribute name='dbSchema'>perfmon4j</attribute>		
+		<attribute name='userName'>perfmon4j</attribute>		
+		<attribute name='password'>p4jpassword</attribute>		
+
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+	
+	Oracle Example:
+	<appender name='jdbc' className='org.perfmon4j.JDBCSQLAppender' interval='1 minute'>
+		<attribute name='driverClass'>oracle.jdbc.driver.OracleDriver</attribute>		
+		<attribute name='driverPath'>c:/Data/jdbcDrivers/ojdbc14.jar</attribute>		
+		<attribute name='jdbcURL'>jdbc:oracle:thin:@192.168.42.101/XE</attribute>		
+		<attribute name='userName'>perfmon4j</attribute>		
+		<attribute name='password'>p4jpassword</attribute>		
+
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+	
+-->
+
+<!--  JDBC Based Appender - Option 2 (JDBCDataSource via JNDI)-
+	This appender will log timing data to a SQL database.  This
+	configuration is used within application servers where a
+	connection can be retrieved friom a JNDI based pool.
+	Note: The tables must be manually configured.  See:
+	MSSQL-CreateP4JIntervalSchema.sql for an example of the
+	required tables 
+	
+	<appender name='jdbc' className='org.perfmon4j.PooledSQLAppender' interval='1 minute'>
+		<attribute name='poolName'>java:/MSSQLDS</attribute>		
+		<attribute name='dbSchema'>myschema</attribute>		
+		
+		<attribute name='medianCalculator'>factor=10</attribute>		
+		<attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>
+	</appender>
+-->
+
+	<!-- WebRequest appender is only valid for a web based application server.  
+		Requires the PerfMonFilter or PerfMonValve to be installed -->
+	<monitor name='WebRequest'> 
+		<appender name='webrequest-appender' pattern="."/> 
+
+		<!-- 	Uncomment if you want to use a jdbc appender... 
+			JDBCAppender must be configured using Option 1 (Direct JDBC connection)
+			or Option 2 (JDBC Pool) defined above.
+		-->	
+		<!--
+			<appender name='jdbc' pattern="."/> 
+		-->
+	</monitor>
+	
+	<!-- UserAgent monitoring can be useful for a web based application to collect data
+		regarding the browser hitting your application
+		
+		In order to collect the data in a usable format you should configure a
+		JDBCAppender  using Option 1 (Direct JDBC connection)
+		or Option 2 (JDBC Pool) defined above.
+		
+		Requires the PerfMonFilter or PerfMonValve to be installed
+		
+		to see the output 
+			"select * from P4JUserAgentView"
+	-->
+	<!--
+	<snapShotMonitor name='UserAgent' className='org.perfmon4j.UserAgentSnapShotMonitor'>
+		<appender name='jdbc'/> 
+	</snapShotMonitor>
+	-->
+
+	<snapShotMonitor name='JVMSnapShot' className='org.perfmon4j.java.management.JVMSnapShot'>
+			<appender name='snapshot-appender'/>
+		<!-- 	Uncomment if you want to use a jdbc appender... 
+			JDBCAppender must be configured using Option 1 (Direct JDBC connection)
+			or Option 2 (JDBC Pool) defined above.
+			
+			
+		-->	
+		<!--
+			<appender name='jdbc' pattern="."/> 
+		-->
+	</snapShotMonitor>
+	
+	<snapShotMonitor name='Composite Garbage Collector' className='org.perfmon4j.java.management.GarbageCollectorSnapShot'>
+			<appender name='snapshot-appender'/>
+			
+	</snapShotMonitor>
+
+	<snapShotMonitor name='Composite Memory Pool' 
+		className='org.perfmon4j.java.management.MemoryPoolSnapShot'>
+			<appender name='snapshot-appender'/>
+	</snapShotMonitor>
+
+	<snapShotMonitor name='TomcatRequestProcessor' 
+		className='org.perfmon4j.extras.tomcat55.GlobalRequestProcessorMonitorImpl'>
+			<appender name='snapshot-appender'/>
+<!--	Uncomment if you want to monitor a single tomcat thread pool			
+			<attribute name='instanceName'>http-8080</attribute>
+-->
+	</snapShotMonitor>
+
+	<snapShotMonitor name='TomcatThreadPool' 
+		className='org.perfmon4j.extras.tomcat55.ThreadPoolMonitorImpl'>
+			<appender name='snapshot-appender'/>
+<!--	Uncomment if you want to monitor a single tomcat thread pool			
+			<attribute name='instanceName'>http-8080</attribute>
+-->
+	</snapShotMonitor>
+
+	<!--
+	<snapShotMonitor name='UserAgent' className='org.perfmon4j.UserAgentSnapShotMonitor'>
+		<appender name='snapshot-appender'/>
+	</snapShotMonitor>
+
+	<snapShotMonitor name='PerfmonInstrumentation' className='org.perfmon4j.instrument.InstrumentationMonitor'>
+			<appender name='snapshot-appender'/>
+	</snapShotMonitor>
+
+	<threadTrace monitorName="WebRequest">
+		<appender name='webrequest-appender'/> 
+	</threadTrace>
+	-->
+	
+<!--
+	jdbc appender examples.  To use these examples you must define a jdb appender using either Option 1 (direct 
+	jdbc connection) or Option 2 (connection pool) defined above.
+-->	
+	
+</Perfmon4JConfig>

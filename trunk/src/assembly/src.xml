@@ -1,0 +1,87 @@
+<!-- execute "mvn pacakage assembly:assembly" to build source assembly --> 
+<assembly>
+	<id>source</id>
+	<formats>
+		<format>zip</format>
+		<format>tar.gz</format>
+	</formats>
+	
+	<includeSiteDirectory>false</includeSiteDirectory>
+	<fileSets>
+		<fileSet>
+			<includes>
+				<include>**/*</include>
+			</includes>
+			<excludes>
+				<exclude>target/**</exclude>
+				<exclude>website/**</exclude>
+				<exclude>*/target/**</exclude>
+				<exclude>**/.settings/**</exclude>
+				<exclude>**/.classpath</exclude>
+				<exclude>**/.project</exclude>
+				<exclude>**/*.tmp</exclude>
+			</excludes>
+		</fileSet>
+		<fileSet>
+			<directory>website/doc</directory>
+			<includes>
+				<include>**/*.pdf</include>
+			</includes>
+			<outputDirectory>doc</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>src/doc</directory>
+			<includes>
+				<include>**/*.xml</include>
+			</includes>
+			<outputDirectory>doc</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${basedir}/base/src/sql</directory>
+			<includes>
+				<include>**/*.sql</include>
+			</includes>
+			<outputDirectory>doc</outputDirectory>
+		</fileSet>
+	</fileSets>
+	
+	
+	<files>
+		<file>
+			<source>${basedir}/base/target/perfmon4j-${project.version}.jar</source>
+			<destName>perfmon4j.jar</destName>
+		</file>
+		<file>
+			<source>${basedir}/base/target/perfmon4j-${project.version}-monitor-agent.jar</source>
+			<destName>remote/perfmon4j-monitor-agent.jar</destName>
+		</file>
+		<file>
+			<source>${basedir}/servlet/target/perfmon4j-servlet-${project.version}.jar</source>
+			<destName>perfmon4j-servlet.jar</destName>
+		</file>
+		<file>
+			<source>${basedir}/tomcat55/target/perfmon4j-tomcat55-${project.version}.jar</source>
+			<destName>perfmon4j-tomcat55.jar</destName>
+		</file>
+		<file>
+			<source>${basedir}/tomcat7/target/perfmon4j-tomcat7-${project.version}.jar</source>
+			<destName>perfmon4j-tomcat7.jar</destName>
+		</file>
+		<file>
+			<source>${basedir}/jbossweb7/target/perfmon4j-jbossweb7-${project.version}.jar</source>
+			<destName>perfmon4j-jbossweb7.jar</destName>
+		</file>		
+		<file>
+			<source>${basedir}/sunjava6/target/perfmon4j-sunjava6-${project.version}.jar</source>
+			<destName>perfmon4j-sunjava6.jar</destName>
+		</file>
+        </files>tar
+	
+	<dependencySets>
+		<dependencySet>
+			<useProjectArtifact>false</useProjectArtifact>
+			<outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+		<!--	<excludes>log4j.jar</excludes> -->
+		</dependencySet>
+	</dependencySets>
+</assembly>
