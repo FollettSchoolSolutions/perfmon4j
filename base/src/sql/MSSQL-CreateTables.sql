@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008-2012 Follett Software Company 
+ *	Copyright 2008-2014 Follett Software Company 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -29,6 +29,9 @@ easily modified for other databases.
 /** Uncomment the following to drop existing tables **/
 -- DROP Tables
 /*
+DROP TABLE dbo.P4JCache
+GO
+
 DROP TABLE dbo.P4JThreadTrace
 GO
 
@@ -527,4 +530,29 @@ CREATE INDEX P4JThreadTrace_ParentRowID_idx
 		ParentRowID
 	)
 GO
-
+/** Start added in Perfmon4j 1.2.0 **/
+CREATE TABLE dbo.P4JCache(
+	SystemID INT NOT NULL DEFAULT 1,
+	InstanceName NVARCHAR(200) NOT NULL,
+	CacheType NVARCHAR(100) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	HitRatio DECIMAL(18,2) NOT NULL,
+	HitCount INT NOT NULL,
+	MissCount INT NOT NULL,
+	PutCount INT NOT NULL,
+	CONSTRAINT P4JCache_pk PRIMARY KEY CLUSTERED (
+		InstanceName,
+		CacheType,
+		StartTime,
+		EndTime 
+	),
+	CONSTRAINT P4JJCache_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
+	) ON DELETE CASCADE
+)
+/** End added in Perfmon4j 1.2.0 **/
+GO

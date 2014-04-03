@@ -24,6 +24,32 @@ Notes - This script contains the SQL required to update the Perfmon4j SQL
 tables to 1.2.0 FROM 1.1.0
 ****************************************************************************** */
 
+CREATE TABLE dbo.P4JCache(
+	SystemID INT NOT NULL DEFAULT 1,
+	InstanceName NVARCHAR(200) NOT NULL,
+	CacheType NVARCHAR(100) NOT NULL,
+	StartTime DATETIME NOT NULL,
+	EndTime DATETIME NOT NULL,
+	Duration INT NOT NULL,
+	HitRatio DECIMAL(18,2) NOT NULL,
+	HitCount INT NOT NULL,
+	MissCount INT NOT NULL,
+	PutCount INT NOT NULL,
+	CONSTRAINT P4JCache_pk PRIMARY KEY CLUSTERED (
+		InstanceName,
+		CacheType,
+		StartTime,
+		EndTime 
+	),
+	CONSTRAINT P4JJCache_SystemID_fk FOREIGN KEY (
+		SystemID
+	) REFERENCES dbo.P4JSystem (
+		SystemID
+	) ON DELETE CASCADE
+)
+GO
+
+
 CREATE TABLE dbo.P4JSystem (
 	SystemID INT IDENTITY(1,1) NOT NULL,
 	SystemName NCHAR(200) NOT NULL,
