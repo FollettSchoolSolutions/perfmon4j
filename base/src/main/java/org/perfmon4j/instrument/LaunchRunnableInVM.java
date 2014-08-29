@@ -91,6 +91,17 @@ public class LaunchRunnableInVM {
 	public static String run(Class<?> clazz, String javaAgentParams, String args, File perfmonJar) throws Exception {
 		return run(clazz, javaAgentParams, args, null, perfmonJar);
 	}
+
+	private static String fixupLinuxHomeFolder(String path) {
+		if (path != null) {
+			// Java does not always deal with the ~ substitution for home folder.
+			if (path.startsWith("~")) {
+				path = path.replace("~", System.getProperty("user.home"));
+			}
+		}
+		return path;
+	}
+
 	
 	public static String run(Class<?> clazz, String javaAgentParams, String args, Properties systemProperties, File perfmonJar) throws Exception {
 		StringBuffer output = new StringBuffer();
@@ -106,7 +117,7 @@ public class LaunchRunnableInVM {
     	myClassPath = myClassPath.replaceAll("\\\\", "/");
     	// The location of the Derby Embedded Driver Jar should be set as a maven-surefire-plugin
     	// property in perfom4j/base/pom.xml
-    	String derbyDriver = System.getProperty("DERBY_EMBEDDED_DRIVER");
+    	String derbyDriver = fixupLinuxHomeFolder(System.getProperty("DERBY_EMBEDDED_DRIVER"));
     	if (derbyDriver != null) {
     		File driver = new File(derbyDriver);
     		if (!driver.exists()) {
@@ -117,7 +128,7 @@ public class LaunchRunnableInVM {
 
     	// The location of the LOG4J Jar should be set as a maven-surefire-plugin
     	// property in perfom4j/base/pom.xml
-    	String log4jJar = System.getProperty("LOG4J_JAR");
+    	String log4jJar = fixupLinuxHomeFolder(System.getProperty("LOG4J_JAR"));
     	if (log4jJar != null) {
     		myClassPath += System.getProperty("path.separator") + log4jJar;
     	}
@@ -135,7 +146,7 @@ public class LaunchRunnableInVM {
 
     	// The location of the JavaAssist Jar should be set as a maven-surefire-plugin
     	// property in perfom4j/base/pom.xml
-    	String javaAssistProp = System.getProperty("JAVASSIST_JAR");
+    	String javaAssistProp = fixupLinuxHomeFolder(System.getProperty("JAVASSIST_JAR"));
     	if (javaAssistProp == null) {
     		throw new RuntimeException("JAVASSIST_JAR system property must be set");
     	}

@@ -120,8 +120,8 @@ public class PerfMonTimerTransformerTest extends TestCase {
     private void initJavaAssistJar() {
     	String javaAssistProp = System.getProperty("JAVASSIST_JAR");
     	if (javaAssistProp == null) {
-    		String filePath = System.getProperty("user.home") + 
-    			"/.m2/repository/javassist/javassist/3.11.0.GA/javassist-3.11.0.GA.jar";
+    		String filePath = System.getenv("M2_REPO") + 
+    			"/javassist/javassist/3.10.0.GA/javassist-3.10.0.GA.jar";
         	logger.logWarn("JAVASSSIST_JAR system property NOT set...  Trying default location: " + filePath);
         	System.setProperty("JAVASSIST_JAR", filePath);
     	}
