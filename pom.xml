@@ -15,6 +15,7 @@
 	<url>http://perfmon4j.org</url>
 
 	<modules>
+		<module>dbupgrader</module>
 		<module>base</module>
 		<module>servlet</module>
 		<module>tomcat55</module>

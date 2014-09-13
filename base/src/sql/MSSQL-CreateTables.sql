@@ -178,6 +178,16 @@ CREATE INDEX P4JIntervalData_Category_idx
 	)
 GO
 
+-- TODO!!! Must fix name of this index on production DB.. Missing _idx!
+CREATE INDEX P4JIntervalData_SystemCatEndTime_idx
+	ON dbo.P4JIntervalData (
+		SystemID,
+		CategoryID,
+		EndTime
+	)
+GO
+
+
 CREATE TABLE dbo.P4JIntervalThreshold (
 	IntervalID INT NOT NULL,
 	ThresholdMillis INT NOT NULL,
@@ -338,6 +348,7 @@ CREATE TABLE dbo.P4JGarbageCollection(
 	NumCollectionsPerMinute DECIMAL(18,2) NOT NULL,
 	CollectionMillisPerMinute DECIMAL(18,2) NOT NULL,
 	CONSTRAINT P4JGarbageCollection_pk PRIMARY KEY CLUSTERED (
+		SystemID,
 		InstanceName,
 		StartTime,
 		EndTime 
@@ -379,6 +390,7 @@ CREATE TABLE dbo.P4JVMSnapShot(
 	CompilationMillisInPeriod  INT NULL,
 	CompilationMillisPerMinute DECIMAL(18,2) NULL,
 	CONSTRAINT P4JVMSnapShot_pk PRIMARY KEY CLUSTERED (
+		SystemID,
 		StartTime,
 		EndTime 
 	),
@@ -407,6 +419,7 @@ CREATE TABLE dbo.P4JMemoryPool(
 	MaxMB DECIMAL(18,2) NOT NULL,
 	MemoryType NVARCHAR(50) NULL,
 	CONSTRAINT P4JMemoryPool_pk PRIMARY KEY CLUSTERED (
+		SystemID,
 		InstanceName,
 		StartTime,
 		EndTime 
@@ -441,6 +454,7 @@ CREATE TABLE dbo.P4JGlobalRequestProcessor(
 	ErrorCountInPeriod INT NOT NULL,
 	ErrorCountPerMinute DECIMAL(18, 2) NOT NULL,
 	CONSTRAINT P4JGlobalRequestProcessor_pk PRIMARY KEY CLUSTERED (
+		SystemID,
 		InstanceName,
 		StartTime,
 		EndTime 
@@ -467,6 +481,7 @@ CREATE TABLE dbo.P4JThreadPoolMonitor(
 	CurrentThreadsBusy INT NOT NULL,
 	CurrentThreadCount INT NOT NULL,
 	CONSTRAINT P4JThredPoolMonitor_pk PRIMARY KEY CLUSTERED (
+		SystemID,
 		ThreadPoolOwner,
 		InstanceName,
 		StartTime,
