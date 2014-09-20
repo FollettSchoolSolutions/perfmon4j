@@ -1,3 +1,23 @@
+/*
+ *	Copyright 2008-2011 Follett Software Company 
+ *
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ * 	Follett Software Company
+ * 	1391 Corporate Drive
+ * 	McHenry, IL 60050
+ * 
+*/
 package org.perfmon4j.dbupgrader;
 
 import java.io.File;
@@ -7,12 +27,13 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.Driver;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Properties;
+import java.util.Enumeration;
 
-class UpgraderUtil {
+class UpdaterUtil {
 	static void closeNoThrow(Connection conn) {
 		try {
 			if (conn != null) {
@@ -42,20 +63,26 @@ class UpgraderUtil {
 			// Nothing todo.
 		}
 	}
+
+	
+	static private boolean isDriverLoaded(String driverClassName) {
+		boolean result = false;
+		
+		Enumeration<Driver> drivers = DriverManager.getDrivers();
+		while (drivers.hasMoreElements() && !result) {
+			result = drivers.nextElement().getClass().getClass().equals(driverClassName);
+		}
+		
+		return result;
+	}
 	
 	static Connection createConnection(String driverClassName, String jarFileName, String jdbcURL, String userName, String password) throws Exception {
-		Driver driver = loadDriver(driverClassName, jarFileName);
-		
-		Properties credentials = new Properties();
-		if (userName != null) {
-			credentials.setProperty("user", userName);
+		if (!isDriverLoaded(driverClassName)) {
+			Driver driver = loadDriver(driverClassName, jarFileName);
+			DriverManager.registerDriver(driver);
 		}
 		
-		if (password != null) {
-			credentials.setProperty("password", password);
-		}
-		
-		return driver.connect(jdbcURL, credentials);
+		return DriverManager.getConnection(jdbcURL, userName, password);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -82,15 +109,19 @@ class UpgraderUtil {
 		} else {
 			driverClazz = (Class<Driver>) Class.forName(driverClassName, true, Thread.currentThread().getContextClassLoader());
 		}
-
+		
 		return driverClazz.newInstance();
 	}
 	
-	static boolean doesTableExists(Connection conn, String tableName) {
+	static boolean doesTableExist(Connection conn, String schema, String tableName) {
 		boolean result = false;
 		
 		Statement stmt = null;
 		ResultSet rs = null;
+		if (schema != null) {
+			tableName = schema + "." + tableName;
+		}
+		
 		try {
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("SELECT * FROM " + tableName);
