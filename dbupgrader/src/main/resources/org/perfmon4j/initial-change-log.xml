@@ -270,7 +270,6 @@
 			constraintName="P4JMemoryPool_pk" tableName="P4JMemoryPool" />
 	</changeSet>
 
-
 	<changeSet author="ddeucher" id="P4JSystem-tableCreate">
 		<createTable tableName="P4JSystem">
 			<column autoIncrement="true" name="SystemID" type="INT">
@@ -284,7 +283,6 @@
 			tableName="P4JSystem" unique="true">
 			<column name="SystemName" />
 		</createIndex>
-
 	</changeSet>
 
 	<changeSet author="ddeucher" id="P4JThreadPoolMonitor-tableCreate">
@@ -353,10 +351,7 @@
 			<column name="StartTime" />
 			<column name="CategoryID" />
 		</createIndex>
-
 	</changeSet>
-
-
 
 	<changeSet author="ddeucher" id="P4JUserAgentBrowser-tableCreate">
 		<createTable tableName="P4JUserAgentBrowser">
@@ -374,7 +369,6 @@
 		</createIndex>
 	</changeSet>
 
-
 	<changeSet author="ddeucher" id="P4JUserAgentBrowserVersion-tableCreate">
 		<createTable tableName="P4JUserAgentBrowserVersion">
 			<column autoIncrement="true" name="BrowserVersionID" type="INT">
@@ -388,8 +382,8 @@
 			tableName="P4JUserAgentBrowserVersion" unique="true">
 			<column name="BrowserVersion" />
 		</createIndex>
-
 	</changeSet>
+	
 	<changeSet author="ddeucher" id="P4JUserAgentOS-tableCreate">
 		<createTable tableName="P4JUserAgentOS">
 			<column autoIncrement="true" name="OSID" type="INT">
@@ -519,37 +513,47 @@
 			constraintName="P4JVMSnapShot_pk" tableName="P4JVMSnapShot" />
 	</changeSet>
 
-	<changeSet author="ddeucher" id="initialForeignKeyConstraints">
+	<changeSet author="ddeucher" id="P4JIntervalThreshold-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="IntervalID"
 			baseTableName="P4JIntervalThreshold" constraintName="P4JIntervalThreshold_IntervalID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="IntervalID"
 			referencedTableName="P4JIntervalData" />
+	</changeSet>
 
+	<changeSet author="ddeucher" id="P4JCache-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JCache" constraintName="P4JJCache_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
+	</changeSet>
 
+	<changeSet author="ddeucher" id="P4JGarbageCollection-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JGarbageCollection" constraintName="P4JJGarbageCollection_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
-
+	</changeSet>
+	
+	<changeSet author="ddeucher" id="P4JMemoryPool-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JMemoryPool" constraintName="P4JMemoryPool_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
-
+	</changeSet>
+	
+	<changeSet author="ddeucher" id="P4JThreadPoolMonitor-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JThreadPoolMonitor" constraintName="P4JThredPoolMonitor_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
-
+	</changeSet>
+	
+	<changeSet author="ddeucher" id="P4JUserAgentOccurance-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="BrowserID"
 			baseTableName="P4JUserAgentOccurance" constraintName="P4JUserAgentOccurance_BrowserID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
@@ -579,13 +583,17 @@
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
-			
+	</changeSet>
+	
+	<changeSet author="ddeucher" id="P4JVMSnapShot-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JVMSnapShot" constraintName="P4JVMSnapShot_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
-			
+	</changeSet>
+	
+	<changeSet author="ddeucher" id="P4JIntervalData-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="CategoryID"
 			baseTableName="P4JIntervalData" constraintName="P4JIntervalData_CategoryID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
@@ -597,7 +605,9 @@
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
-			
+	</changeSet>
+	
+	<changeSet author="ddeucher" id="P4JThreadTrace-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="ParentRowID"
 			baseTableName="P4JThreadTrace" constraintName="P4JParentRowID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="NO ACTION"
@@ -616,7 +626,5 @@
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
 	</changeSet>
-
-
 
 </databaseChangeLog>

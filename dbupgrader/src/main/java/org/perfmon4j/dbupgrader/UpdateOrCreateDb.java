@@ -69,8 +69,9 @@ public class UpdateOrCreateDb {
 				closeNoThrow(conn);
 			}
 		} else {
-			System.err.println("Usage: UpdateOrCreateDb driverClass=my.jdbc.Driver jdbcURL=jdbc://myurl driverJarFile=./myjdbc.jar userName=[dbuser] password=[dbpassword] schema=[myschema]");
-			if (params.insufficentParameters && args.length > 1) {
+			System.err.println("Usage: java -jar perfmon4j-dbupgrader.jar driverClass=my.jdbc.Driver jdbcURL=jdbc://myurl driverJarFile=./myjdbc.jar [userName=dbuser] [password=dbpassword] [schema=myschema]");
+			System.err.println("\tNote: [] indicates optional parameters.");
+			if (params.insufficentParameters && args.length > 0) {
 				System.err.println("\tError: Insufficient parameters");
 			}
 			for (String param : params.badParameters) {

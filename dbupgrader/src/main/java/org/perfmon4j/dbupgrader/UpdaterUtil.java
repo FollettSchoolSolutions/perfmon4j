@@ -27,11 +27,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.Driver;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Enumeration;
+import java.util.Properties;
 
 class UpdaterUtil {
 	static void closeNoThrow(Connection conn) {
@@ -65,24 +64,30 @@ class UpdaterUtil {
 	}
 
 	
-	static private boolean isDriverLoaded(String driverClassName) {
-		boolean result = false;
-		
-		Enumeration<Driver> drivers = DriverManager.getDrivers();
-		while (drivers.hasMoreElements() && !result) {
-			result = drivers.nextElement().getClass().getClass().equals(driverClassName);
-		}
-		
-		return result;
-	}
+//	static private boolean isDriverLoaded(String driverClassName) {
+//		boolean result = false;
+//		
+//		Enumeration<Driver> drivers = DriverManager.getDrivers();
+//		while (drivers.hasMoreElements() && !result) {
+//			result = drivers.nextElement().getClass().getClass().equals(driverClassName);
+//		}
+//		
+//		return result;
+//	}
 	
 	static Connection createConnection(String driverClassName, String jarFileName, String jdbcURL, String userName, String password) throws Exception {
-		if (!isDriverLoaded(driverClassName)) {
-			Driver driver = loadDriver(driverClassName, jarFileName);
-			DriverManager.registerDriver(driver);
+		Driver driver = loadDriver(driverClassName, jarFileName);
+		
+		Properties credentials = new Properties();
+		if (userName != null) {
+			credentials.setProperty("user", userName);
 		}
 		
-		return DriverManager.getConnection(jdbcURL, userName, password);
+		if (password != null) {
+			credentials.setProperty("password", password);
+		}
+		
+		return driver.connect(jdbcURL, credentials);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -109,9 +114,46 @@ class UpdaterUtil {
 		} else {
 			driverClazz = (Class<Driver>) Class.forName(driverClassName, true, Thread.currentThread().getContextClassLoader());
 		}
-		
+
 		return driverClazz.newInstance();
-	}
+	}	
+	
+//	static Connection createConnection(String driverClassName, String jarFileName, String jdbcURL, String userName, String password) throws Exception {
+//		if (!isDriverLoaded(driverClassName)) {
+//			Driver driver = loadDriver(driverClassName, jarFileName);
+//			DriverManager.registerDriver(driver);
+//		}
+//		
+//		return DriverManager.getConnection(jdbcURL, userName, password);
+//	}
+//	
+//	@SuppressWarnings("unchecked")
+//	private static Driver loadDriver(String driverClassName, String jarFileName)
+//			throws Exception {
+//		Class<Driver> driverClazz;
+//
+//		if (jarFileName != null) {
+//			File driverFile = new File(jarFileName);
+//			if (!driverFile.exists()) {
+//				throw new FileNotFoundException("File: " + jarFileName
+//						+ " NOT FOUND");
+//			}
+//			URL url;
+//			try {
+//				url = driverFile.toURI().toURL();
+//			} catch (MalformedURLException e) {
+//				throw new Exception("Unable to convert to URL - file: "
+//						+ jarFileName, e);
+//			}
+//			ClassLoader loader = new URLClassLoader(new URL[] { url }, Thread
+//					.currentThread().getContextClassLoader());
+//			driverClazz = (Class<Driver>) Class.forName(driverClassName, true, loader);
+//		} else {
+//			driverClazz = (Class<Driver>) Class.forName(driverClassName, true, Thread.currentThread().getContextClassLoader());
+//		}
+//		
+//		return driverClazz.newInstance();
+//	}
 	
 	static boolean doesTableExist(Connection conn, String schema, String tableName) {
 		boolean result = false;
