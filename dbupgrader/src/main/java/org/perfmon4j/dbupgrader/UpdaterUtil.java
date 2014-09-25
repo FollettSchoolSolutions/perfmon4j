@@ -118,44 +118,11 @@ class UpdaterUtil {
 		return driverClazz.newInstance();
 	}	
 	
-//	static Connection createConnection(String driverClassName, String jarFileName, String jdbcURL, String userName, String password) throws Exception {
-//		if (!isDriverLoaded(driverClassName)) {
-//			Driver driver = loadDriver(driverClassName, jarFileName);
-//			DriverManager.registerDriver(driver);
-//		}
-//		
-//		return DriverManager.getConnection(jdbcURL, userName, password);
-//	}
-//	
-//	@SuppressWarnings("unchecked")
-//	private static Driver loadDriver(String driverClassName, String jarFileName)
-//			throws Exception {
-//		Class<Driver> driverClazz;
-//
-//		if (jarFileName != null) {
-//			File driverFile = new File(jarFileName);
-//			if (!driverFile.exists()) {
-//				throw new FileNotFoundException("File: " + jarFileName
-//						+ " NOT FOUND");
-//			}
-//			URL url;
-//			try {
-//				url = driverFile.toURI().toURL();
-//			} catch (MalformedURLException e) {
-//				throw new Exception("Unable to convert to URL - file: "
-//						+ jarFileName, e);
-//			}
-//			ClassLoader loader = new URLClassLoader(new URL[] { url }, Thread
-//					.currentThread().getContextClassLoader());
-//			driverClazz = (Class<Driver>) Class.forName(driverClassName, true, loader);
-//		} else {
-//			driverClazz = (Class<Driver>) Class.forName(driverClassName, true, Thread.currentThread().getContextClassLoader());
-//		}
-//		
-//		return driverClazz.newInstance();
-//	}
-	
 	static boolean doesTableExist(Connection conn, String schema, String tableName) {
+		return doesColumnExist(conn, schema, tableName, "*");
+	}
+	
+	static boolean doesColumnExist(Connection conn, String schema, String tableName, String column) {
 		boolean result = false;
 		
 		Statement stmt = null;
@@ -166,7 +133,7 @@ class UpdaterUtil {
 		
 		try {
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("SELECT * FROM " + tableName);
+			rs = stmt.executeQuery("SELECT " + column + " FROM " + tableName);
 			result = true;
 		} catch (SQLException se) {
 			// Assume table does not exist.
@@ -177,6 +144,5 @@ class UpdaterUtil {
 		
 		return result;
 	}
-	
 
 }

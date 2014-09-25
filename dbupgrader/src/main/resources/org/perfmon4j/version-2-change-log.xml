@@ -1,0 +1,27 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
+
+	<changeSet author="ddeucher" id="addSQLIntervalColumns">
+		<addColumn tableName="P4JIntervalData">
+			<column name="SQLMaxDuration" type="INT" />
+			<column name="SQLMaxDurationSet" type="datetime" />
+			<column name="SQLMinDuration" type="INT" />
+			<column name="SQLMinDurationSet" type="datetime" />
+			<column name="SQLAverageDuration" type="DECIMAL(18, 2)" />
+			<column name="SQLStandardDeviation" type="DECIMAL(18, 2)" />
+			<column name="SQLDurationSum" type="BIGINT" />
+			<column name="SQLDurationSumOfSquares" type="BIGINT" />
+		</addColumn>
+	</changeSet>
+
+	<changeSet author="ddeucher" id="addSQLThreadTraceColumn">
+		<addColumn tableName="P4JThreadTrace">
+			<column name="SQLDuration" type="INT" />
+		</addColumn>
+	</changeSet>
+
+	<changeSet author="databaseLabel" id="0002.0"/>
+
+</databaseChangeLog>

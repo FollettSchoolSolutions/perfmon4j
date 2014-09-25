@@ -27,10 +27,16 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import junit.framework.TestCase;
+import liquibase.Liquibase;
+import liquibase.database.Database;
+import liquibase.database.DatabaseFactory;
+import liquibase.database.jvm.JdbcConnection;
+import liquibase.resource.ClassLoaderResourceAccessor;
 
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb.Parameters;
 
 public class UpdateOrCreateDbTest extends TestCase {
+	private static String SCHEMA = "TEST";
 	public static final String JDBC_URL = "jdbc:derby:memory:mydb"; 
 	public static final String JDBC_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
 	private Connection conn = null;
@@ -41,6 +47,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	protected void setUp() throws Exception {
 		conn = UpdaterUtil.createConnection(JDBC_DRIVER, null, JDBC_URL + ";create=true", null, null);
+		conn.setAutoCommit(true);
 		
 		super.setUp();
 	}
@@ -49,7 +56,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 		UpdaterUtil.closeNoThrow(conn);
 		
 		try {
-			UpdaterUtil.createConnection(JDBC_DRIVER, null, "jdbc:derby:;shutdown=true", null, null);
+			UpdaterUtil.createConnection(JDBC_DRIVER, null, JDBC_URL + ";drop=true", null, null);
 		} catch (SQLException sn) {
 		}
 		
@@ -88,16 +95,22 @@ public class UpdateOrCreateDbTest extends TestCase {
 		
 		return result;
 	}	
+	
 	public void testPopulateDatabase() throws Exception { 
 		// Start with an empty database...
 		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
 				"jdbcURL=" + JDBC_URL,
 				"driverJarFile=EMBEDDED",
-				"schema=test1"});
+				"schema=" + SCHEMA});
 		
-		assertTrue("Should have a P4JSystem table", UpdaterUtil.doesTableExist(conn, "test1", "P4JSystem"));
+		assertTrue("Should have a P4JSystem table", UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JSystem"));
 		
-		System.out.println(dumpQuery(conn, "SELECT * FROM test1.DATABASECHANGELOG"));
+		System.out.println(dumpQuery(conn, "SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG"));
+		assertTrue("Database change log should reflect databaseLabel 0002.0 applied", databaseLabelExistsInChangeLog("0002.0"));
+		
+		int systemRows = getQueryCount("SELECT count(*) FROM " + SCHEMA 
+			+ ".P4JSystem WHERE SystemID=1 AND SystemName='Default'");
+		assertEquals("Should have populated default system row", 1, systemRows);
 	}
 	
 	public void testParseParameters() throws Exception {
@@ -147,27 +160,153 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertFalse(params.isValid());
 	}
 
-	
-	public void testInstallBaseChangeLogs() throws Exception {
-		// Create a P4JIntervalData table...  We will use the existence of this table 
-		// to indicate that this database was initialized prior to the change over to
-		// Liquibase.
+	/**
+	 * This test verifies we can upgrade a database that was created with
+	 * SQL Scripts.  These types of test will NOT be required post
+	 * database version 3.0 since the database will be populated with Liquibase
+	 * and contain the appropriate change log.
+	 * @throws Exception
+	 */
+	public void testInstallBaseChangeLogsVersion1Db() throws Exception {
 		Statement stmt = null;
 		try {
-			stmt = conn.createStatement();
-			stmt.execute("CREATE TABLE test2.P4JIntervalData(id INT)");
+			// Simulate a database that was created with the Perfmon4j Version 1.0.2
+			// Database scripts.
+			applyChangeLog("org/perfmon4j/initial-change-log.xml");
+			dropLiquibaseTables();
+			assertFalse("Make sure version 2.0 changes have not been applied", UpdaterUtil.doesColumnExist(conn, SCHEMA, "P4JIntervalData", "SQLMaxDuration"));
+			
 			// Start with a database that contain the base tables,
 			// but does not contain the liquibase change logs.. 
 			// Should install change.logs and any additional upgrades.
 			UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
 					"jdbcURL=" + JDBC_URL,
 					"driverJarFile=EMBEDDED",
-					"schema=test2"});
+					"schema=" + SCHEMA});
 		} finally {
 			UpdaterUtil.closeNoThrow(stmt);
 		}
-		assertTrue("Should have a changelog", UpdaterUtil.doesTableExist(conn, "test2", "DATABASECHANGELOG"));
+		assertTrue("Should have a changelog", UpdaterUtil.doesTableExist(conn, SCHEMA, "DATABASECHANGELOG"));
+		assertTrue("Should have applied version 2.0 changes", UpdaterUtil.doesColumnExist(conn, SCHEMA, "P4JIntervalData", "SQLMaxDuration"));
+		assertTrue("Database change log should reflect databaseLabel 0002.0 applied", databaseLabelExistsInChangeLog("0002.0"));
+	}
+
+	/**
+	 * This test verifies we can upgrade a database that was created with
+	 * SQL Scripts.  These types of test will NOT be required post
+	 * database version 3.0 since the database will be populated with Liquibase
+	 * and contain the appropriate change log.
+	 * @throws Exception
+	 */
+	public void testInstallBaseChangeLogsVersion2Db() throws Exception {
+		Statement stmt = null;
+		try {
+			// Simulate a database that was created with the Perfmon4j Version 1.1.0
+			// Database scripts.
+			applyChangeLog("org/perfmon4j/initial-change-log.xml");
+			applyChangeLog("org/perfmon4j/version-2-change-log.xml");
+			dropLiquibaseTables();
+			
+			// Start with a database that contain the base tables,
+			// but does not contain the liquibase change logs.. 
+			// Should install change.logs and any additional upgrades.
+			UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+					"jdbcURL=" + JDBC_URL,
+					"driverJarFile=EMBEDDED",
+					"schema=" + SCHEMA});
+		} finally {
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+		assertTrue("Should have a changelog", UpdaterUtil.doesTableExist(conn, SCHEMA, "DATABASECHANGELOG"));
+		System.out.println(dumpQuery(conn, "SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG"));
+
+		assertTrue("Database change log should reflect databaseLabel 0002.0 applied", databaseLabelExistsInChangeLog("0002.0"));
+	}
+
+	
+	/**
+	 * This test verifies we can upgrade a database that was created with
+	 * SQL Scripts.  These types of test will NOT be required post
+	 * database version 3.0 since the database will be populated with Liquibase
+	 * and contain the appropriate change log.
+	 * @throws Exception
+	 */
+	public void testInstallBaseChangeLogsVersion3Db() throws Exception {
+		Statement stmt = null;
+		try {
+			// Simulate a database that was created with the Perfmon4j Version 1.2.0
+			// Database scripts.
+			applyChangeLog("org/perfmon4j/initial-change-log.xml");
+			applyChangeLog("org/perfmon4j/version-2-change-log.xml");
+			applyChangeLog("org/perfmon4j/version-3-change-log.xml");
+			dropLiquibaseTables();
+			
+			// Start with a database that contain the base tables,
+			// but does not contain the liquibase change logs.. 
+			// Should install change.logs and any additional upgrades.
+			UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+					"jdbcURL=" + JDBC_URL,
+					"driverJarFile=EMBEDDED",
+					"schema=" + SCHEMA});
+		} finally {
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+		assertTrue("Should have a changelog", UpdaterUtil.doesTableExist(conn, SCHEMA, "DATABASECHANGELOG"));
+		System.out.println(dumpQuery(conn, "SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG"));
+
+		assertTrue("Database change log should reflect databaseLabel 0003.0 applied", databaseLabelExistsInChangeLog("0003.0"));
 	}
 	
-
+	private boolean databaseLabelExistsInChangeLog(String label) throws Exception {
+		boolean result = false;
+		Statement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery("SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG "
+					+ "WHERE ID='" + label + "' AND AUTHOR='databaseLabel'");
+			result = rs.next();
+		} finally {
+			UpdaterUtil.closeNoThrow(rs);
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+		
+		return result;
+	}
+	
+	private int getQueryCount(String query) throws Exception {
+		int result = 0;
+		Statement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+			rs.next();
+			result = rs.getInt(1);
+		} finally {
+			UpdaterUtil.closeNoThrow(rs);
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+		return result;
+	}
+	
+	private void applyChangeLog(String changeLog) throws Exception {
+		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
+		db.setDefaultSchemaName(SCHEMA);
+		
+		Liquibase updater = new Liquibase(changeLog, new ClassLoaderResourceAccessor(), db);
+		updater.update((String)null);
+	}
+	
+	private void dropLiquibaseTables() throws Exception {
+		Statement stmt = null;
+		
+		try {
+			stmt = conn.createStatement();
+			stmt.execute("DROP TABLE " + SCHEMA + ".DATABASECHANGELOG");
+			conn.commit();
+		} finally {
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+	}
 }

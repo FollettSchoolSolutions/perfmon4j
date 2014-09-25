@@ -55,11 +55,23 @@ public class UpdateOrCreateDb {
 				
 				boolean hasLiquibaseChangeLogs =  UpdaterUtil.doesTableExist(conn, schema, "DATABASECHANGELOG"); 
 				boolean hasPerfmon4jTables = UpdaterUtil.doesTableExist(conn, schema, "P4JIntervalData");
+			
 				if (hasPerfmon4jTables && !hasLiquibaseChangeLogs) {
-					// Install the change logs..
-				
+					// Install the base change logs...
 					Liquibase initializer = new Liquibase("org/perfmon4j/initial-change-log.xml", new ClassLoaderResourceAccessor(), db);
 					initializer.changeLogSync((String)null);
+					
+					boolean hasLegacyVersion2Update = UpdaterUtil.doesColumnExist(conn, schema, "P4JIntervalData", "SQLMaxDuration");
+					if (hasLegacyVersion2Update) {
+						initializer = new Liquibase("org/perfmon4j/version-2-change-log.xml", new ClassLoaderResourceAccessor(), db);
+						initializer.changeLogSync((String)null);
+
+						boolean hasLegacyVersion3Tables = UpdaterUtil.doesTableExist(conn, schema, "P4JSystem");
+						if (hasLegacyVersion3Tables) {
+							initializer = new Liquibase("org/perfmon4j/version-3-change-log.xml", new ClassLoaderResourceAccessor(), db);
+							initializer.changeLogSync((String)null);
+						}
+					}
 				}
 				Liquibase updater = new Liquibase("org/perfmon4j/update-change-master-log.xml", new ClassLoaderResourceAccessor(), db);
 				updater.update((String)null);

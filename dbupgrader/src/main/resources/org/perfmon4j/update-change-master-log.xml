@@ -4,6 +4,12 @@
          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
          
 	<include file="org/perfmon4j/initial-change-log.xml" />
-	
-	
+	<include file="org/perfmon4j/version-2-change-log.xml" />
+	<include file="org/perfmon4j/version-3-change-log.xml" />
+	<!-- 
+		Important!  When creating a new database update make sure the last line of
+		your changel-log.xml contains a version change log as follows:
+			
+				<changeSet author="databaseLabel" id="0002.0"/>
+	 -->
 </databaseChangeLog>

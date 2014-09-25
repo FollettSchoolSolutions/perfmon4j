@@ -3,42 +3,6 @@
 	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
 
-	<changeSet author="ddeucher" id="P4JCache-tableCreate">
-		<createTable tableName="P4JCache">
-			<column defaultValueNumeric="1" name="SystemID" type="INT">
-				<constraints nullable="false" />
-			</column>
-			<column name="InstanceName" type="VARCHAR(200)">
-				<constraints nullable="false" />
-			</column>
-			<column name="CacheType" type="VARCHAR(100)">
-				<constraints nullable="false" />
-			</column>
-			<column name="StartTime" type="datetime">
-				<constraints nullable="false" />
-			</column>
-			<column name="EndTime" type="datetime">
-				<constraints nullable="false" />
-			</column>
-			<column name="Duration" type="INT">
-				<constraints nullable="false" />
-			</column>
-			<column name="HitRatio" type="DECIMAL(18, 2)">
-				<constraints nullable="false" />
-			</column>
-			<column name="HitCount" type="INT">
-				<constraints nullable="false" />
-			</column>
-			<column name="MissCount" type="INT">
-				<constraints nullable="false" />
-			</column>
-			<column name="PutCount" type="INT">
-				<constraints nullable="false" />
-			</column>
-		</createTable>
-		<addPrimaryKey columnNames="SystemID, InstanceName, CacheType, StartTime, EndTime"
-			constraintName="P4JCache_pk" tableName="P4JCache" />
-	</changeSet>
 
 	<changeSet author="ddeucher" id="P4JCategory-tableCreate">
 		<createTable tableName="P4JCategory">
@@ -57,9 +21,11 @@
 
 	<changeSet author="ddeucher" id="P4JGarbageCollection-tableCreate">
 		<createTable tableName="P4JGarbageCollection">
+	<!--  
 			<column defaultValueNumeric="1" name="SystemID" type="INT">
 				<constraints nullable="false" />
 			</column>
+	-->		
 			<column name="InstanceName" type="VARCHAR(200)">
 				<constraints nullable="false" />
 			</column>
@@ -85,15 +51,17 @@
 				<constraints nullable="false" />
 			</column>
 		</createTable>
-		<addPrimaryKey columnNames="SystemID, InstanceName, StartTime, EndTime"
+		<addPrimaryKey columnNames="InstanceName, StartTime, EndTime"
 			constraintName="P4JGarbageCollection_pk" tableName="P4JGarbageCollection" />
 	</changeSet>
 
 	<changeSet author="ddeucher" id="P4JGlobalRequestProcessor-tableCreate">
 		<createTable tableName="P4JGlobalRequestProcessor">
+		<!--  
 			<column defaultValueNumeric="1" name="SystemID" type="INT">
 				<constraints nullable="false" />
 			</column>
+		-->	
 			<column name="InstanceName" type="VARCHAR(200)">
 				<constraints nullable="false" />
 			</column>
@@ -137,15 +105,17 @@
 				<constraints nullable="false" />
 			</column>
 		</createTable>
-		<addPrimaryKey columnNames="SystemID, InstanceName, StartTime, EndTime"
+		<addPrimaryKey columnNames="InstanceName, StartTime, EndTime"
 			constraintName="P4JGlobalRequestProcessor_pk" tableName="P4JGlobalRequestProcessor" />
 	</changeSet>
 
 	<changeSet author="ddeucher" id="P4JIntervalData-tableCreate">
 		<createTable tableName="P4JIntervalData">
+		<!--  
 			<column defaultValueNumeric="1" name="SystemID" type="INT">
 				<constraints nullable="false" />
 			</column>
+		-->
 			<column autoIncrement="true" name="IntervalID" type="INT">
 				<constraints primaryKey="true" primaryKeyName="P4JIntervalData_pk" />
 			</column>
@@ -192,14 +162,6 @@
 			<column name="DurationSumOfSquares" type="BIGINT">
 				<constraints nullable="false" />
 			</column>
-			<column name="SQLMaxDuration" type="INT" />
-			<column name="SQLMaxDurationSet" type="datetime" />
-			<column name="SQLMinDuration" type="INT" />
-			<column name="SQLMinDurationSet" type="datetime" />
-			<column name="SQLAverageDuration" type="DECIMAL(18, 2)" />
-			<column name="SQLStandardDeviation" type="DECIMAL(18, 2)" />
-			<column name="SQLDurationSum" type="BIGINT" />
-			<column name="SQLDurationSumOfSquares" type="BIGINT" />
 		</createTable>
 		<createIndex indexName="P4JIntervalData_Category_idx"
 			tableName="P4JIntervalData" unique="false">
@@ -207,13 +169,14 @@
 			<column name="StartTime" />
 			<column name="EndTime" />
 		</createIndex>
-
+<!--  
 		<createIndex indexName="P4JIntervalData_SystemCatEndTime_idx"
 			tableName="P4JIntervalData" unique="false">
 			<column name="SystemID" />
 			<column name="CategoryID" />
 			<column name="EndTime" />
 		</createIndex>
+-->
 	</changeSet>
 
 	<changeSet author="ddeucher" id="P4JIntervalThreshold-tableCreate">
@@ -237,9 +200,11 @@
 
 	<changeSet author="ddeucher" id="P4JMemoryPool-tableCreate">
 		<createTable tableName="P4JMemoryPool">
+<!--  		
 			<column defaultValueNumeric="1" name="SystemID" type="INT">
 				<constraints nullable="false" />
 			</column>
+-->			
 			<column name="InstanceName" type="VARCHAR(200)">
 				<constraints nullable="false" />
 			</column>
@@ -266,10 +231,11 @@
 			</column>
 			<column name="MemoryType" type="VARCHAR(50)" />
 		</createTable>
-		<addPrimaryKey columnNames="SystemID, InstanceName, StartTime, EndTime"
+		<addPrimaryKey columnNames="InstanceName, StartTime, EndTime"
 			constraintName="P4JMemoryPool_pk" tableName="P4JMemoryPool" />
 	</changeSet>
 
+<!-- 
 	<changeSet author="ddeucher" id="P4JSystem-tableCreate">
 		<createTable tableName="P4JSystem">
 			<column autoIncrement="true" name="SystemID" type="INT">
@@ -284,12 +250,15 @@
 			<column name="SystemName" />
 		</createIndex>
 	</changeSet>
+ -->
 
 	<changeSet author="ddeucher" id="P4JThreadPoolMonitor-tableCreate">
 		<createTable tableName="P4JThreadPoolMonitor">
+			<!--  
 			<column defaultValueNumeric="1" name="SystemID" type="INT">
 				<constraints nullable="false" />
 			</column>
+			-->
 			<column name="ThreadPoolOwner" type="VARCHAR(50)">
 				<constraints nullable="false" />
 			</column>
@@ -313,15 +282,17 @@
 			</column>
 		</createTable>
 		<addPrimaryKey
-			columnNames="SystemID, ThreadPoolOwner, InstanceName, StartTime, EndTime"
+			columnNames="ThreadPoolOwner, InstanceName, StartTime, EndTime"
 			constraintName="P4JThredPoolMonitor_pk" tableName="P4JThreadPoolMonitor" />
 	</changeSet>
 
 	<changeSet author="ddeucher" id="P4JThreadTrace-tableCreate">
 		<createTable tableName="P4JThreadTrace">
+		<!--  
 			<column defaultValueNumeric="1" name="SystemID" type="INT">
 				<constraints nullable="false" />
 			</column>
+		-->	
 			<column autoIncrement="true" name="TraceRowID" type="INT">
 				<constraints primaryKey="true" primaryKeyName="P4JThreadTrace_pk" />
 			</column>
@@ -338,7 +309,6 @@
 			<column name="Duration" type="INT">
 				<constraints nullable="false" />
 			</column>
-			<column name="SQLDuration" type="INT" />
 		</createTable>
 
 		<createIndex indexName="P4JThreadTrace_ParentRowID_idx"
@@ -416,9 +386,11 @@
 
 	<changeSet author="ddeucher" id="P4JUserAgentOccurance-tableCreate">
 		<createTable tableName="P4JUserAgentOccurance">
+		<!--  
 			<column defaultValueNumeric="1" name="SystemID" type="INT">
 				<constraints nullable="false" />
 			</column>
+		-->	
 			<column name="CollectionDate" type="datetime">
 				<constraints nullable="false" />
 			</column>
@@ -445,9 +417,11 @@
 
 	<changeSet author="ddeucher" id="P4JVMSnapShot-tableCreate">
 		<createTable tableName="P4JVMSnapShot">
+		<!--  
 			<column defaultValueNumeric="1" name="SystemID" type="INT">
 				<constraints nullable="false" />
 			</column>
+		-->	
 			<column name="StartTime" type="datetime">
 				<constraints nullable="false" />
 			</column>
@@ -509,7 +483,7 @@
 			<column name="CompilationMillisInPeriod" type="INT" />
 			<column name="CompilationMillisPerMinute" type="DECIMAL(18, 2)" />
 		</createTable>
-		<addPrimaryKey columnNames="SystemID, StartTime, EndTime"
+		<addPrimaryKey columnNames="StartTime, EndTime"
 			constraintName="P4JVMSnapShot_pk" tableName="P4JVMSnapShot" />
 	</changeSet>
 
@@ -521,6 +495,7 @@
 			referencedTableName="P4JIntervalData" />
 	</changeSet>
 
+<!--  
 	<changeSet author="ddeucher" id="P4JCache-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JCache" constraintName="P4JJCache_SystemID_fk"
@@ -552,6 +527,7 @@
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
 	</changeSet>
+-->
 	
 	<changeSet author="ddeucher" id="P4JUserAgentOccurance-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="BrowserID"
@@ -577,14 +553,16 @@
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="OSVersionID"
 			referencedTableName="P4JUserAgentOSVersion" />
-			
+<!--  			
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JUserAgentOccurance" constraintName="P4JUserAgentOccurance_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
+-->			
 	</changeSet>
 	
+	<!--  
 	<changeSet author="ddeucher" id="P4JVMSnapShot-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JVMSnapShot" constraintName="P4JVMSnapShot_SystemID_fk"
@@ -592,6 +570,7 @@
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
 	</changeSet>
+	-->
 	
 	<changeSet author="ddeucher" id="P4JIntervalData-InitialForeignKeys">
 		<addForeignKeyConstraint baseColumnNames="CategoryID"
@@ -599,12 +578,13 @@
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="CategoryID"
 			referencedTableName="P4JCategory" />
-			
+<!-- 			
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JIntervalData" constraintName="P4JIntervalData_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
+ -->			
 	</changeSet>
 	
 	<changeSet author="ddeucher" id="P4JThreadTrace-InitialForeignKeys">
@@ -619,12 +599,15 @@
 			deferrable="false" initiallyDeferred="false" onDelete="NO ACTION"
 			onUpdate="NO ACTION" referencedColumnNames="CategoryID"
 			referencedTableName="P4JCategory" />
-			
+<!--  			
 		<addForeignKeyConstraint baseColumnNames="SystemID"
 			baseTableName="P4JThreadTrace" constraintName="P4JThreadTrace_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="NO ACTION"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
+-->			
 	</changeSet>
 
+	<changeSet author="databaseLabel" id="0001.0"/>
+	
 </databaseChangeLog>
