@@ -74,6 +74,9 @@ public class UpdateOrCreateDb {
 					}
 				}
 				Liquibase updater = new Liquibase("org/perfmon4j/update-change-master-log.xml", new ClassLoaderResourceAccessor(), db);
+				if (params.isClearChecksums()) {
+					updater.clearCheckSums();
+				}
 				updater.update((String)null);
 			} catch (Exception ex) {
 				ex.printStackTrace();
@@ -123,6 +126,8 @@ public class UpdateOrCreateDb {
 					result.setPassword(split[1]);
 				} else if ("schema".equals(split[0])) {
 					result.setSchema(split[1]);
+				} else if ("clearChecksums".equals(split[0])) {
+					result.setClearChecksums(split[1]);
 				} else {
 					badArg = true;
 				}
@@ -155,6 +160,7 @@ public class UpdateOrCreateDb {
 		private String driverClass;
 		private String driverJarFile;
 		private String schema;
+		private boolean clearChecksums = false;
 		private final List<String> badParameters = new ArrayList<String>();
 		private boolean insufficentParameters = false;
 	
@@ -210,6 +216,14 @@ public class UpdateOrCreateDb {
 		}
 		public void setSchema(String schema) {
 			this.schema = schema;
+		}
+		
+		public void setClearChecksums(String value) {
+			this.clearChecksums = Boolean.valueOf(value).booleanValue();
+		}
+		
+		public boolean isClearChecksums() {
+			return clearChecksums;
 		}
 	}
 	
