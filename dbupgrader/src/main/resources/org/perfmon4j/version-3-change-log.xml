@@ -68,7 +68,7 @@
 			</column>
 		</addColumn>
 		<dropPrimaryKey tableName="P4JThreadPoolMonitor"
-			constraintName="P4JThreadPoolMonitor_pk"/>	
+			constraintName="P4JThredPoolMonitor_pk"/>	<!--  Note the typo that existed in the original sql scripts -->
 		<addPrimaryKey columnNames="SystemID, ThreadPoolOwner, InstanceName, StartTime, EndTime"
 			constraintName="P4JThreadPoolMonitor_pk" tableName="P4JThreadPoolMonitor" />
 	</changeSet>	
