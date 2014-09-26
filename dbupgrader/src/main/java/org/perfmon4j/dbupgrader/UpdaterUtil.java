@@ -26,11 +26,17 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
+
+import liquibase.database.Database;
+import liquibase.database.DatabaseFactory;
+import liquibase.database.jvm.JdbcConnection;
 
 class UpdaterUtil {
 	static void closeNoThrow(Connection conn) {
@@ -62,18 +68,6 @@ class UpdaterUtil {
 			// Nothing todo.
 		}
 	}
-
-	
-//	static private boolean isDriverLoaded(String driverClassName) {
-//		boolean result = false;
-//		
-//		Enumeration<Driver> drivers = DriverManager.getDrivers();
-//		while (drivers.hasMoreElements() && !result) {
-//			result = drivers.nextElement().getClass().getClass().equals(driverClassName);
-//		}
-//		
-//		return result;
-//	}
 	
 	static Connection createConnection(String driverClassName, String jarFileName, String jdbcURL, String userName, String password) throws Exception {
 		Driver driver = loadDriver(driverClassName, jarFileName);
@@ -118,30 +112,51 @@ class UpdaterUtil {
 		return driverClazz.newInstance();
 	}	
 	
-	static boolean doesTableExist(Connection conn, String schema, String tableName) {
-		return doesColumnExist(conn, schema, tableName, "*");
-	}
-	
-	static boolean doesColumnExist(Connection conn, String schema, String tableName, String column) {
+	static boolean doesTableExist(Connection conn, String schema, String tableName) throws Exception {
+		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
+		schema = (schema == null) ? db.getDefaultSchemaName() : schema; 
+		
 		boolean result = false;
-		
-		Statement stmt = null;
+		DatabaseMetaData dbMetaData = null;
 		ResultSet rs = null;
-		if (schema != null) {
-			tableName = schema + "." + tableName;
-		}
-		
 		try {
-			stmt = conn.createStatement();
-			rs = stmt.executeQuery("SELECT " + column + " FROM " + tableName);
-			result = true;
-		} catch (SQLException se) {
-			// Assume table does not exist.
+			dbMetaData = conn.getMetaData();
+			rs = dbMetaData.getTables(null, "%", "%", new String[]{"TABLE"});
+			while (rs.next() && !result) {
+				final String n = rs.getString("TABLE_NAME");
+				final String s = rs.getString("TABLE_SCHEM");
+				result = schema.equalsIgnoreCase(s)  && tableName.equalsIgnoreCase(n);
+			}
 		} finally {
-			closeNoThrow(stmt);
 			closeNoThrow(rs);
 		}
 		
+		return result;
+	}
+
+	static boolean doesColumnExist(Connection conn, String schema, String tableName, String column) throws Exception {
+		boolean result = doesTableExist(conn, schema, tableName);
+		
+		if (result) {
+			Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
+			tableName = db.escapeTableName(null, schema, tableName);
+			Statement stmt = null;
+			ResultSet rs = null;
+			try {
+				stmt = conn.createStatement();
+				rs = stmt.executeQuery("SELECT  * FROM " + tableName + " WHERE 1=0");
+				ResultSetMetaData md = rs.getMetaData();
+				for (int i = 0; i < md.getColumnCount(); i++) {
+					result = column.equalsIgnoreCase(md.getColumnName(i+1));
+					if (result) {
+						break;
+					}
+				}
+			} finally {
+				closeNoThrow(rs);
+				closeNoThrow(stmt);
+			}
+		}
 		return result;
 	}
 

@@ -78,8 +78,12 @@ public class UpdateOrCreateDb {
 					updater.clearCheckSums();
 				}
 				updater.update((String)null);
+				System.out.println();
+				System.out.println("Success: Database upgraded or installed.");
 			} catch (Exception ex) {
 				ex.printStackTrace();
+				System.err.println();
+				System.err.println("Failure: Database upgrade or install failed.");
 			} finally {
 				closeNoThrow(conn);
 			}
