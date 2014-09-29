@@ -257,6 +257,56 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertTrue("Database change log should reflect databaseLabel 0003.0 applied", databaseLabelExistsInChangeLog("0003.0"));
 	}
 	
+	
+	public void DontRunAutomatically_testLivePostgres() {
+		String [] args = new String[] {
+			"driverJarFile=/home/perfmon/host/tools/common/JDBCDrivers/postgresql-9.3-1102.jdbc4.jar", 
+			"driverClass=org.postgresql.Driver", 
+			"jdbcURL=jdbc:postgresql://10.0.2.2:15432/TestUpgrade", 
+			"userName=perfmonwriter", 
+			"password=perfmon"
+			};
+		UpdateOrCreateDb.main(args);
+	}
+	
+	public void X_testLiveSQLServer() {
+		String [] args = new String[] {
+			"driverJarFile=/home/perfmon/host/tools/common/JDBCDrivers/sqljdbc4.jar", 
+			"driverClass=com.microsoft.sqlserver.jdbc.SQLServerDriver", 
+			"jdbcURL=jdbc:sqlserver://10.0.2.2:1433;databaseName=TestUpgrade", 
+			"userName=perfmonwriter", 
+			"password=perfmon"
+			};
+		
+		UpdateOrCreateDb.main(args);
+	}
+
+	public void X_testLiveMySQL() {
+		String [] args = new String[] {
+			"driverJarFile=/home/perfmon/jdbc-drivers/mysql-connector-java-5.1.32-bin.jar", 
+			"driverClass=com.mysql.jdbc.Driver", 
+			"jdbcURL=jdbc:mysql://localhost:3306/TestUpgrade", 
+			"userName=perfmonwriter", 
+			"password=perfmon"
+			};
+		
+		UpdateOrCreateDb.main(args);
+	}
+	
+	public void ORACLE_NOT_SUPPORTED_testLiveOracle() {
+		String [] args = new String[] {
+			"driverJarFile=/home/perfmon/host/tools/common/JDBCDrivers/ojdbc6.jar", 
+			"driverClass=oracle.jdbc.driver.OracleDriver", 
+			"jdbcURL=jdbc:oracle:thin:@10.0.2.2:1521/xe", 
+			"userName=perfmonwriter", 
+			"password=perfmon",
+			"clearChecksums=true"
+			};
+		
+		UpdateOrCreateDb.main(args);
+	}
+	
+	
 	private boolean databaseLabelExistsInChangeLog(String label) throws Exception {
 		boolean result = false;
 		Statement stmt = null;

@@ -80,8 +80,12 @@ class UpdaterUtil {
 		if (password != null) {
 			credentials.setProperty("password", password);
 		}
+		Connection conn = driver.connect(jdbcURL, credentials); 
+		if (conn == null) {
+			throw new SQLException("Unabled to connect with jdbcURL: " + jdbcURL);
+		} 
 		
-		return driver.connect(jdbcURL, credentials);
+		return conn;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -114,6 +118,7 @@ class UpdaterUtil {
 	
 	static boolean doesTableExist(Connection conn, String schema, String tableName) throws Exception {
 		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
+		boolean nullSchema = (schema == null);
 		schema = (schema == null) ? db.getDefaultSchemaName() : schema; 
 		
 		boolean result = false;
@@ -125,7 +130,10 @@ class UpdaterUtil {
 			while (rs.next() && !result) {
 				final String n = rs.getString("TABLE_NAME");
 				final String s = rs.getString("TABLE_SCHEM");
-				result = schema.equalsIgnoreCase(s)  && tableName.equalsIgnoreCase(n);
+				
+				boolean schemaMatches = ((s == null) && nullSchema)
+						|| schema.equalsIgnoreCase(s);
+				result = schemaMatches && tableName.equalsIgnoreCase(n);
 			}
 		} finally {
 			closeNoThrow(rs);

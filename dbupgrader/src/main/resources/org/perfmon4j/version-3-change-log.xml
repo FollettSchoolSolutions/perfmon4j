@@ -1,7 +1,7 @@
-<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
-         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
 
 	<changeSet author="ddeucher" id="P4JSystem-tableCreate">
 		<createTable tableName="P4JSystem">
@@ -16,6 +16,25 @@
 			tableName="P4JSystem" unique="true">
 			<column name="SystemName" />
 		</createIndex>
+	</changeSet>
+
+<!--  Oracle Not Supported... 
+	<changeSet author="ddeucher" id="P4JSystem-addOracleSequence">
+	    <sql dbms="oracle">CREATE SEQUENCE P4JSystem_seq</sql>
+		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JSystem_trg
+BEFORE INSERT ON P4JSystem
+FOR EACH ROW
+BEGIN
+    IF :new.SystemID IS null
+    THEN
+        SELECT P4JSystem_seq.nextval INTO :new.SystemID FROM DUAL;
+    END IF;
+END
+/</sql>		
+	</changeSet>
+-->
+	
+	<changeSet author="ddeucher" id="P4JSystem-createDefaultRow">
 		<insert tableName="P4JSystem">
 		 	<column name="SystemName">Default</column>
 		</insert>

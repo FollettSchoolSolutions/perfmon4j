@@ -46,6 +46,7 @@ public class UpdateOrCreateDb {
 				if (EMBEDDED_JAR_FILE.equals(params.getDriverJarFile())) {
 					params.setDriverJarFile(null);
 				}
+				
 				conn = UpdaterUtil.createConnection(params.getDriverClass(), params.getDriverJarFile(), params.getJdbcURL(), params.getUserName(), params.getPassword());
 				Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
 				String schema = params.getSchema();

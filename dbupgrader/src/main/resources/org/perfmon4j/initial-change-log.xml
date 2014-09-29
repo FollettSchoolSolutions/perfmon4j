@@ -17,7 +17,25 @@
 			tableName="P4JCategory" unique="true">
 			<column name="CategoryName" />
 		</createIndex>
+		<modifySql dbms="mysql">
+			<replace replace="VARCHAR(450)" with="VARCHAR(255)"/>
+		</modifySql>
 	</changeSet>
+
+<!--  Oracle Not Supported... 
+	<changeSet author="ddeucher" id="P4JCategory-addOracleSequence">
+		<sql dbms="oracle">CREATE SEQUENCE P4JCategory_seq</sql>
+		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JCategory_trg
+BEFORE INSERT ON P4JCategory
+FOR EACH ROW
+BEGIN
+  		IF :new.CategoryID IS null
+  		THEN
+      		SELECT P4JCategory_seq.nextval INTO :new.CategoryID FROM DUAL;
+  		END IF;
+END</sql>
+	</changeSet>
+-->
 
 	<changeSet author="ddeucher" id="P4JGarbageCollection-tableCreate">
 		<createTable tableName="P4JGarbageCollection">
@@ -155,6 +173,21 @@
 			<column name="EndTime" />
 		</createIndex>
 	</changeSet>
+	
+<!--  Oracle Not Supported... 
+	<changeSet author="ddeucher" id="P4JIntervalData-addOracleSequence">
+	    <sql dbms="oracle">CREATE SEQUENCE P4JIntervalData_seq</sql>
+		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JIntervalData_trg
+BEFORE INSERT ON P4JIntervalData
+FOR EACH ROW
+BEGIN
+    IF :new.IntervalID IS null
+    THEN
+        SELECT P4JIntervalData_seq.nextval INTO :new.IntervalID FROM DUAL;
+    END IF;
+END</sql>		
+	</changeSet>
+-->
 
 	<changeSet author="ddeucher" id="P4JIntervalThreshold-tableCreate">
 		<createTable tableName="P4JIntervalThreshold">
@@ -268,6 +301,20 @@
 		</createIndex>
 	</changeSet>
 
+<!--  Oracle Not Supported... 
+	<changeSet author="ddeucher" id="P4JThreadTrace-addOracleSequence">
+	    <sql dbms="oracle">CREATE SEQUENCE P4JThreadTrace_seq</sql>
+		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JThreadTrace_trg
+BEFORE INSERT ON P4JThreadTrace
+FOR EACH ROW
+BEGIN
+    IF :new.TraceRowID IS null
+    THEN
+        SELECT P4JThreadTrace_seq.nextval INTO :new.TraceRowID FROM DUAL;
+    END IF;
+END</sql>		
+	</changeSet>
+-->
 	<changeSet author="ddeucher" id="P4JUserAgentBrowser-tableCreate">
 		<createTable tableName="P4JUserAgentBrowser">
 			<column autoIncrement="true" name="BrowserID" type="INT">
@@ -282,7 +329,27 @@
 			tableName="P4JUserAgentBrowser" unique="true">
 			<column name="BrowserName" />
 		</createIndex>
+<!--  Oracle Not Supported... 
+		<modifySql dbms="oracle">
+			<replace replace="P4JUserAgentBrowser_BrowserName_idx" with="P4JUAB_BrowserName_idx"/>
+		</modifySql>
+-->		
 	</changeSet>
+
+<!--  Oracle Not Supported... 
+	<changeSet author="ddeucher" id="P4JUserAgentBrowser-addOracleSequence">
+	    <sql dbms="oracle">CREATE SEQUENCE P4JUserAgentBrowser_seq</sql>
+		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JUserAgentBrowser_trg
+BEFORE INSERT ON P4JUserAgentBrowser
+FOR EACH ROW
+BEGIN
+    IF :new.BrowserID IS null
+    THEN
+        SELECT P4JUserAgentBrowser_seq.nextval INTO :new.BrowserID FROM DUAL;
+    END IF;
+END</sql>		
+	</changeSet>
+-->
 
 	<changeSet author="ddeucher" id="P4JUserAgentBrowserVersion-tableCreate">
 		<createTable tableName="P4JUserAgentBrowserVersion">
@@ -297,8 +364,27 @@
 			tableName="P4JUserAgentBrowserVersion" unique="true">
 			<column name="BrowserVersion" />
 		</createIndex>
+<!--  Oracle Not Supported... 
+		<modifySql dbms="oracle">
+			<replace replace="P4JUserAgentBrowserVersion_BrowserName_idx" with="P4JUABV_BrowserName_idx"/>
+		</modifySql>
+-->		
 	</changeSet>
 	
+<!--  Oracle Not Supported... 
+	<changeSet author="ddeucher" id="P4JUserAgentBrowserVersion-addOracleSequence">
+	    <sql dbms="oracle">CREATE SEQUENCE P4JUserAgentBrowserVersion_seq</sql>
+		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JUserAgentBrowserVersion_trg
+BEFORE INSERT ON P4JUserAgentBrowserVersion
+FOR EACH ROW
+BEGIN
+    IF :new.BrowserVersionID IS null
+    THEN
+        SELECT P4JUserAgentBrowserVersion_seq.nextval INTO :new.BrowserVersionID FROM DUAL;
+    END IF;
+END</sql>		
+	</changeSet>
+-->	
 	<changeSet author="ddeucher" id="P4JUserAgentOS-tableCreate">
 		<createTable tableName="P4JUserAgentOS">
 			<column autoIncrement="true" name="OSID" type="INT">
@@ -313,6 +399,21 @@
 			<column name="OSName" />
 		</createIndex>
 	</changeSet>
+	
+<!--  Oracle Not Supported... 
+	<changeSet author="ddeucher" id="P4JUserAgentOS-addOracleSequence">
+	    <sql dbms="oracle">CREATE SEQUENCE P4JUserAgentOS_seq</sql>
+		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JUserAgentOS_trg
+BEFORE INSERT ON P4JUserAgentOS
+FOR EACH ROW
+BEGIN
+    IF :new.OSID IS null
+    THEN
+        SELECT P4JUserAgentOS_seq.nextval INTO :new.OSID FROM DUAL;
+    END IF;
+END</sql>		
+	</changeSet>
+-->
 
 	<changeSet author="ddeucher" id="P4JUserAgentOSVersion-tableCreate">
 		<createTable tableName="P4JUserAgentOSVersion">
@@ -327,7 +428,28 @@
 			tableName="P4JUserAgentOSVersion" unique="true">
 			<column name="OSVersion" />
 		</createIndex>
+<!--  Oracle Not Supported... 
+		<modifySql dbms="oracle">
+			<replace replace="P4JUserAgentOSVersion_OSVersion_idx" with="P4JUAOSV_OSVersion_idx"/>
+		</modifySql>
+-->		
 	</changeSet>
+	
+
+<!--  Oracle Not Supported... 
+	<changeSet author="ddeucher" id="P4JUserAgentOSVersion-addOracleSequence">
+	    <sql dbms="oracle">CREATE SEQUENCE P4JUserAgentOSVersion_seq</sql>
+		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JUserAgentOSVersion_trg
+BEFORE INSERT ON P4JUserAgentOSVersion
+FOR EACH ROW
+BEGIN
+    IF :new.OSVersionID IS null
+    THEN
+        SELECT P4JUserAgentOSVersion_seq.nextval INTO :new.OSVersionID FROM DUAL;
+    END IF;
+END</sql>		
+	</changeSet>
+-->
 
 	<changeSet author="ddeucher" id="P4JUserAgentOccurance-tableCreate">
 		<createTable tableName="P4JUserAgentOccurance">
@@ -428,6 +550,11 @@
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="IntervalID"
 			referencedTableName="P4JIntervalData" />
+<!--  Oracle Not Supported... 
+		<modifySql dbms="oracle">
+			<replace replace="P4JIntervalThreshold_IntervalID_fk" with="P4JIT_IntervalID_fk"/>
+		</modifySql>			
+-->		
 	</changeSet>
 	
 	<changeSet author="ddeucher" id="P4JUserAgentOccurance-InitialForeignKeys">
@@ -454,6 +581,15 @@
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="OSVersionID"
 			referencedTableName="P4JUserAgentOSVersion" />
+
+<!--  Oracle Not Supported... 
+		<modifySql dbms="oracle">
+			<replace replace="P4JUserAgentOccurance_BrowserID_fk" with="P4JUAO_BrowserID_fk"/>
+			<replace replace="P4JUserAgentOccurance_BrowserVersionID_fk" with="P4JUAO_BrowserVersionID_fk"/>
+			<replace replace="P4JUserAgentOccurance_OSID_fk" with="P4JUAO_OSID_fk"/>
+			<replace replace="P4JUserAgentOccurance_OSVersionID_fk" with="P4JUAO_OSVersionID_fk"/>
+		</modifySql>			
+-->		
 	</changeSet>
 	
 	<changeSet author="ddeucher" id="P4JIntervalData-InitialForeignKeys">
@@ -479,5 +615,4 @@
 	</changeSet>
 
 	<changeSet author="databaseLabel" id="0001.0"/>
-	
 </databaseChangeLog>
