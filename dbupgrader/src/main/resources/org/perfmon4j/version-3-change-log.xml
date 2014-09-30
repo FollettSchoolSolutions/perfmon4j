@@ -18,7 +18,6 @@
 		</createIndex>
 	</changeSet>
 
-<!--  Oracle Not Supported... 
 	<changeSet author="ddeucher" id="P4JSystem-addOracleSequence">
 	    <sql dbms="oracle">CREATE SEQUENCE P4JSystem_seq</sql>
 		<sql dbms="oracle" splitStatements="false">CREATE OR REPLACE TRIGGER P4JSystem_trg
@@ -29,10 +28,8 @@ BEGIN
     THEN
         SELECT P4JSystem_seq.nextval INTO :new.SystemID FROM DUAL;
     END IF;
-END
-/</sql>		
+END;</sql>		
 	</changeSet>
--->
 	
 	<changeSet author="ddeucher" id="P4JSystem-createDefaultRow">
 		<insert tableName="P4JSystem">
@@ -58,6 +55,9 @@ END
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
+		<modifySql dbms="oracle">
+			<replace replace="P4JJGarbageCollection_SystemID_fk" with="P4JJGC_SystemID_fk"/>
+		</modifySql>			
 	</changeSet>
 
 	<changeSet author="ddeucher" id="addSystemReferenceMemoryPool">
@@ -98,6 +98,9 @@ END
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
+		<modifySql dbms="oracle">
+			<replace replace="P4JThredPoolMonitor_SystemID_fk" with="P4JTPM_SystemID_fk"/>
+		</modifySql>			
 	</changeSet>
 
 	<changeSet author="ddeucher" id="addSystemReferenceGlobalRequestProcessor">
@@ -118,6 +121,9 @@ END
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
+		<modifySql dbms="oracle">
+			<replace replace="P4JGlobalRequestProcessor_SystemID_fk" with="P4JGRP_SystemID_fk"/>
+		</modifySql>			
 	</changeSet>
 
 	<changeSet author="ddeucher" id="addSystemReferenceP4JIntervalData">
@@ -132,6 +138,9 @@ END
 			<column name="CategoryID" />
 			<column name="EndTime" />
 		</createIndex>
+		<modifySql dbms="oracle">
+			<replace replace="P4JIntervalData_SystemCatEndTime_idx" with="P4JID_SystemCatEndTime_idx"/>
+		</modifySql>			
 	</changeSet>	
 
 	<changeSet author="ddeucher" id="P4JIntervalData-ToSystemForeignKey">
@@ -172,6 +181,9 @@ END
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
+		<modifySql dbms="oracle">
+			<replace replace="P4JUserAgentOccurance_SystemID_fk" with="P4JUAO_SystemID_fk"/>
+		</modifySql>			
 	</changeSet>
 	
 	<changeSet author="ddeucher" id="addSystemReferenceGlobalJVMSnapShot">

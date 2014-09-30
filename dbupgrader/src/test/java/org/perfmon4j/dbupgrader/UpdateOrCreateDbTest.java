@@ -257,8 +257,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertTrue("Database change log should reflect databaseLabel 0003.0 applied", databaseLabelExistsInChangeLog("0003.0"));
 	}
 	
-	
-	public void DontRunAutomatically_testLivePostgres() {
+	public void X_testLivePostgres() {
 		String [] args = new String[] {
 			"driverJarFile=/home/perfmon/host/tools/common/JDBCDrivers/postgresql-9.3-1102.jdbc4.jar", 
 			"driverClass=org.postgresql.Driver", 
@@ -293,7 +292,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 		UpdateOrCreateDb.main(args);
 	}
 	
-	public void ORACLE_NOT_SUPPORTED_testLiveOracle() {
+	public void X_testLiveOracle() {
 		String [] args = new String[] {
 			"driverJarFile=/home/perfmon/host/tools/common/JDBCDrivers/ojdbc6.jar", 
 			"driverClass=oracle.jdbc.driver.OracleDriver", 
@@ -305,7 +304,6 @@ public class UpdateOrCreateDbTest extends TestCase {
 		
 		UpdateOrCreateDb.main(args);
 	}
-	
 	
 	private boolean databaseLabelExistsInChangeLog(String label) throws Exception {
 		boolean result = false;
