@@ -1,0 +1,58 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.perfmon4j</groupId>
+		<artifactId>perfmon4j-project</artifactId>
+		<!-- THIS VERSION NUMBER MUST BE SYNCED WITH THE PARENT POM.. AT LEAST 
+			UNTIL MAVEN ADDS SOMETHING THAT MAKES MORE SENSE! -->
+		<version>1.2.0-RC_6-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>perfmon4j-utils</artifactId>
+	<name>perfmon4j-utils</name>
+	<packaging>jar</packaging>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.2</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.4.2</version>
+			</plugin>
+
+<!--
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.3</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<finalName>${artifactId}-${version}.run</finalName>
+					<transformers>
+						<transformer
+							implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+							<mainClass>org.perfmon4j.dbupgrader.UpdateOrCreateDb</mainClass>
+						</transformer>
+					</transformers>
+				</configuration>
+			</plugin>
+-->
+		</plugins>
+	</build>
+	<dependencies>
+	</dependencies>
+</project>

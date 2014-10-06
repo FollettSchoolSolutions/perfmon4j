@@ -23,6 +23,7 @@
 		<module>jbossweb7</module>
 		<module>sunjava6</module>
 		<module>reportconsole</module>
+		<module>utils</module>
 <!--		<module>perfmon4jweb</module> -->
 	</modules>
 
