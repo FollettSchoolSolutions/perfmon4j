@@ -8,7 +8,7 @@
 		CHILD POM!!!  AT LEAST UNTIL MAVEN
 		ADDS FUNCTIOANLITY THAT MAKES MORE SENSE!
 	-->
-	<version>1.2.0-RC_6</version>
+	<version>1.2.0-RC_6-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>perfmon4j-project</name>
@@ -28,7 +28,7 @@
 	</modules>
 
 	<scm>
-		<developerConnection>scm:svn:scm:svn:svn+ssh://ddeucher@svn.code.sf.net/p/perfmon4j/code/tags/perfmon4j-project-1.2.0-RC_6</developerConnection>
+		<developerConnection>scm:svn:svn+ssh://ddeucher@svn.code.sf.net/p/perfmon4j/code/trunk</developerConnection>
 	</scm>
 
 	<build>
