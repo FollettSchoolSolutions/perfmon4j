@@ -221,7 +221,7 @@ class XMLConfigurationParser2 extends DefaultHandler {
                     
                     validateArg(MONITOR_NAME + "." + APPENDER_NAME, "name", attrName);
                     if (attrPattern == null) {
-                        attrPattern = PerfMon.APPENDER_PATTERN_PARENT_AND_CHILDREN_ONLY;
+                        attrPattern = PerfMon.APPENDER_PATTERN_PARENT_ONLY;
                     }
                     
                     AppenderMappingElement mapping = new AppenderMappingElement();

@@ -22,12 +22,13 @@
 package org.perfmon4j;
 
 import java.io.StringReader;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -459,6 +460,40 @@ public class XMLConfigurationParserTest extends TestCase {
         assertEquals("By default the appender will be applied to the parent monitor only!", 
         		PerfMon.APPENDER_PATTERN_PARENT_ONLY, p[0].getAppenderPattern());
     }
+    
+
+    
+    /**
+     * If you don't supply an appender pattern for a monitor, or if you define a bad appender pattern, the pattern should default to 
+     * the parent only appender pattern.
+     * 
+     * @throws Exception
+     */
+    public void testDefaultAppenderPattern() throws Exception {
+        final String XML_DEFAULT =
+                "<Perfmon4JConfig enabled='true'>" +
+                "   <appender name='5 minute' className='org.perfmon4j.TextAppender' interval='5 min'/>" +
+                "   <monitor name='mon'>" +
+                "    	<appender name='5 minute'/>" +
+                "	</monitor>" +
+                "   <monitor name='mon2'>" +
+                "    	<appender name='5 minute' pattern='garbage'/>" +
+                "	</monitor>" +
+                "</Perfmon4JConfig>";        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+ 
+        AppenderAndPattern p[] = config.getAppendersForMonitor("mon");
+        assertEquals(1, p.length);
+        assertEquals("If you dont provide a pattern it should default to parent only", 
+        		PerfMon.APPENDER_PATTERN_PARENT_ONLY, p[0].getAppenderPattern());
+        
+        p = config.getAppendersForMonitor("mon2");
+        assertEquals(1, p.length);
+        assertEquals("If you provide an unrecognized pattern it will default to parent only", 
+        		PerfMon.APPENDER_PATTERN_PARENT_ONLY, p[0].getAppenderPattern());
+    }
+    
+    
     
     
     /*----------------------------------------------------------------------------*/

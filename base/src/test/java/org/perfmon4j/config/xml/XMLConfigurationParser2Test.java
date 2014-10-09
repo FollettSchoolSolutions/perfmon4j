@@ -323,6 +323,8 @@ public class XMLConfigurationParser2Test extends TestCase {
         assertEquals(1, ssConfig.getAttributes().size());
         assertEquals("value1", ssConfig.getAttributes().get("param1"));
     }
+
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

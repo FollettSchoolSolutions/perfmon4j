@@ -110,4 +110,9 @@ public class JDBCSQLAppender extends SQLAppender {
 	public void setDriverPath(String driverPath) {
 		this.driverPath = driverPath;
 	}
+
+	@Override
+	protected void logNullConnectionWarning() {
+		logger.logWarn("Failed to obtain JDBCConnection for URL: " + jdbcURL);
+	}
 }

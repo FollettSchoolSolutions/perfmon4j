@@ -227,7 +227,7 @@ class XMLConfigurationParser extends DefaultHandler {
                     
                     validateArg(MONITOR_NAME + "." + APPENDER_NAME, "name", nameAttr);
                     if (patternAttr == null) {
-                        patternAttr = PerfMon.APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS;
+                        patternAttr = PerfMon.APPENDER_PATTERN_PARENT_ONLY;
                     }
                     try {
                         config.attachAppenderToMonitor(currentMonitorName, nameAttr, patternAttr);

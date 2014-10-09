@@ -27,8 +27,21 @@
 <!--		<module>perfmon4jweb</module> -->
 	</modules>
 
+	<scm>
+		<developerConnection>scm:svn:svn+ssh://ddeucher@svn.code.sf.net/p/perfmon4j/code/trunk</developerConnection>
+	</scm>
+
 	<build>
 		<plugins>
+		      <plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-release-plugin</artifactId>
+			<version>2.5.1</version>
+			<configuration>
+			  <tagBase>scm:svn:svn+ssh://ddeucher@svn.code.sf.net/p/perfmon4j/code/tags</tagBase>
+			</configuration>
+		      </plugin>
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>

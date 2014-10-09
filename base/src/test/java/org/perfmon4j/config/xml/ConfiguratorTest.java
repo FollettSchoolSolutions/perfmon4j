@@ -22,19 +22,19 @@
 package org.perfmon4j.config.xml;
 
 import java.io.StringReader;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
 import org.perfmon4j.Appender;
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
+import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.XMLPerfMonConfiguration;
-import org.perfmon4j.Appender.AppenderID;
-import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 
@@ -81,7 +81,7 @@ public class ConfiguratorTest extends TestCase {
         assertEquals(1, appenders.length);
         
         assertEquals(org.perfmon4j.TextAppender.class, appenders[0].getAppender().getClass());
-        assertEquals(PerfMon.APPENDER_PATTERN_PARENT_AND_CHILDREN_ONLY, appenders[0].getAppenderPattern());
+        assertEquals(PerfMon.APPENDER_PATTERN_PARENT_ONLY, appenders[0].getAppenderPattern());
 	}
 	
 	public void testParseDisabled() throws Exception {
@@ -146,9 +146,37 @@ public class ConfiguratorTest extends TestCase {
         assertEquals("extraInt", 10, ((MyAppender)appender).extraInt);
     }
 	
+    public void testDefaultAppenderPattern() throws Exception {
+        final String XML_DEFAULT =
+                "<Perfmon4JConfig enabled='true'>" +
+                "   <appender name='5 minute' className='org.perfmon4j.TextAppender' interval='5 min'/>" +
+                "   <monitor name='mon'>" +
+                "    	<appender name='5 minute'/>" +
+                "	</monitor>" +
+                "   <monitor name='mon2'>" +
+                "    	<appender name='5 minute' pattern='garbage'/>" +
+                "	</monitor>" +
+                "</Perfmon4JConfig>";        
+        PerfMonConfiguration config = Configurator.processConfig(new StringReader(XML_DEFAULT));
+ 
+        AppenderAndPattern p[] = config.getAppendersForMonitor("mon");
+        assertEquals(1, p.length);
+        assertEquals("If you dont provide a pattern it should default to parent only", 
+        		PerfMon.APPENDER_PATTERN_PARENT_ONLY, p[0].getAppenderPattern());
+        
+        p = config.getAppendersForMonitor("mon2");
+        assertEquals(1, p.length);
+        assertEquals("If you provide an unrecognized pattern it will default to parent only", 
+        		PerfMon.APPENDER_PATTERN_PARENT_ONLY, p[0].getAppenderPattern());
+    }
+    
+         
+    
     /*----------------------------------------------------------------------------*/
     public void testParseSystemAttributeOnAppender() throws Exception {
-    	
+    	/*
+    	fail("Must implement to match XMLConfigurationParserTests");
+    	*/
     	
 //    	fail("TODO");
 //        System.setProperty("testParse", "x");
@@ -422,6 +450,10 @@ public class ConfiguratorTest extends TestCase {
 
     /*----------------------------------------------------------------------------*/
     public void testDefaultConfiguration() throws Exception {
+    	/*
+    	fail("Must implement to match XMLConfigurationParserTests");
+    	*/
+    	
 //        final String INVALID_XML = "GARBAGE";
 //        
 //        PerfMonConfiguration config = Configurator.processConfig(new StringReader(INVALID_XML));

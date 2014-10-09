@@ -32,9 +32,9 @@ import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MedianCalculator;
+import org.perfmon4j.util.MedianCalculator.MedianResult;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
-import org.perfmon4j.util.MedianCalculator.MedianResult;
 import org.perfmon4j.util.ThresholdCalculator.ThresholdResult;
 
 public abstract class SQLAppender extends Appender {
@@ -48,6 +48,7 @@ public abstract class SQLAppender extends Appender {
 	private String systemNameBody = MiscHelper.getDefaultSystemName();
 	private String systemNameSuffix = null;
 	private Long systemID = null;
+	private boolean loggedNullConnectionWarning = false;
 	
 	public SQLAppender(AppenderID id) {
 		super(id);
@@ -56,6 +57,7 @@ public abstract class SQLAppender extends Appender {
 	protected abstract Connection getConnection() throws SQLException;
 	protected abstract void releaseConnection(Connection conn);
 	protected abstract void resetConnection();
+	protected abstract void logNullConnectionWarning();
    
 	
 	@Override
@@ -63,17 +65,23 @@ public abstract class SQLAppender extends Appender {
 		Connection conn = null;
 		try {
 			conn = getConnection();
-			if (data instanceof IntervalData) {
-				outputIntervalData(conn, (IntervalData)data);
-			} else if (data instanceof SQLWriteable){
-				((SQLWriteable)data).writeToSQL(conn, dbSchema, getSystemID());
+			if (conn == null) {
+				if (!loggedNullConnectionWarning || LoggerFactory.isDefaultDebugEnabled()) {
+					loggedNullConnectionWarning = true;
+					logNullConnectionWarning();
+				}
 			} else {
-				logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
+				if (data instanceof IntervalData) {
+					outputIntervalData(conn, (IntervalData)data);
+				} else if (data instanceof SQLWriteable){
+					((SQLWriteable)data).writeToSQL(conn, dbSchema, getSystemID());
+				} else {
+					logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
+				}
 			}
 		} catch(SQLException ex) { 
 			resetConnection();
 			logger.logError("Error in output data", ex);
-			ex.printStackTrace();
 		} finally {
 			if (conn != null) {
 				releaseConnection(conn);

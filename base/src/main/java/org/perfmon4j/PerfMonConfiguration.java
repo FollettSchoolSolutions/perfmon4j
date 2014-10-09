@@ -26,10 +26,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
-import java.util.Map.Entry;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
@@ -174,6 +174,26 @@ public class PerfMonConfiguration {
         
     }
     
+    private static String cleanAppenderPattern(String pattern) {
+    	String result = PerfMon.APPENDER_PATTERN_PARENT_ONLY;
+    	
+    	if (PerfMon.APPENDER_PATTERN_PARENT_ONLY.equals(pattern) ||
+    			PerfMon.APPENDER_PATTERN_PARENT_AND_CHILDREN_ONLY.equals(pattern) ||
+    			PerfMon.APPENDER_PATTERN_CHILDREN_ONLY.equals(pattern) ||
+    			PerfMon.APPENDER_PATTERN_ALL_DESCENDENTS.equals(pattern) ||
+    			PerfMon.APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS.equals(pattern)) {
+    		result = pattern;
+    	} else {
+    		if (!".".equals(pattern)) {
+    			// Don't warn if we are simply replacing '.' with './', '.' can be considered a synonym for './' 
+    			logger.logWarn("Invalid appender pattern found: '" + pattern + "' Replacing with default: '" + result + "'");
+    		}
+    	}
+    	
+    	return result;
+    }
+    
+    
 /*----------------------------------------------------------------------------*/
     private static class MonitorConfig {
         private final Set<Appender.AppenderID> appenderSet = new HashSet<Appender.AppenderID>();
@@ -186,7 +206,7 @@ public class PerfMonConfiguration {
         
         private void addAppender(Appender.AppenderID appenderID, String appenderPattern) {
             appenderSet.add(appenderID);
-            patternMap.put(appenderID, appenderPattern);
+            patternMap.put(appenderID, cleanAppenderPattern(appenderPattern));
         }
         
         private void setAttribute(String key, String value) {
