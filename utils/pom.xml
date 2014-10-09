@@ -53,6 +53,13 @@
 -->
 		</plugins>
 	</build>
+	
 	<dependencies>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<version>${project.version}</version>
+			<artifactId>perfmon4j</artifactId>
+			<scope>provided</scope>
+		</dependency>
 	</dependencies>
 </project>
