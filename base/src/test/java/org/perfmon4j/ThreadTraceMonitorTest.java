@@ -548,8 +548,9 @@ System.out.println(trace.toAppenderString());
         while (ThreadTraceRunnable.runningCount > 0) {
             Thread.sleep(50);
         }
+        Thread.sleep(50);
         
-        assertEquals("Total descendents", 900, TestAppender.getOutputCount());
+        assertEquals("Total descendents", 1000, TestAppender.getOutputCount());
     }
     
     private static class ThreadTraceRunnable implements Runnable {
