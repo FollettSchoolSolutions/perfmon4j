@@ -48,7 +48,6 @@ public abstract class SQLAppender extends Appender {
 	private String systemNameBody = MiscHelper.getDefaultSystemName();
 	private String systemNameSuffix = null;
 	private Long systemID = null;
-	private boolean loggedNullConnectionWarning = false;
 	
 	public SQLAppender(AppenderID id) {
 		super(id);
@@ -57,7 +56,6 @@ public abstract class SQLAppender extends Appender {
 	protected abstract Connection getConnection() throws SQLException;
 	protected abstract void releaseConnection(Connection conn);
 	protected abstract void resetConnection();
-	protected abstract void logNullConnectionWarning();
    
 	
 	@Override
@@ -65,12 +63,7 @@ public abstract class SQLAppender extends Appender {
 		Connection conn = null;
 		try {
 			conn = getConnection();
-			if (conn == null) {
-				if (!loggedNullConnectionWarning || LoggerFactory.isDefaultDebugEnabled()) {
-					loggedNullConnectionWarning = true;
-					logNullConnectionWarning();
-				}
-			} else {
+			if (conn != null) {
 				if (data instanceof IntervalData) {
 					outputIntervalData(conn, (IntervalData)data);
 				} else if (data instanceof SQLWriteable){

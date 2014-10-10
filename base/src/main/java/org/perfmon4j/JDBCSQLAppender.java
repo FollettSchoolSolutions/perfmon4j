@@ -35,6 +35,8 @@ public class JDBCSQLAppender extends SQLAppender {
 	private String jdbcURL = null;
 	private String userName = null;
 	private String password = null;
+    private Long retryConnectionTime = null;
+    private final long RETRY_CONNECTION_TIMEOUT_MINUTES = Long.getLong(this.getClass().getName() +".RETRY_CONNECTION_TIMEOUT_MINUTES", 5);
 	private final static JDBCHelper.DriverCache driverCache = new JDBCHelper.DriverCache();
 
 	public JDBCSQLAppender(AppenderID id) {
@@ -53,11 +55,27 @@ public class JDBCSQLAppender extends SQLAppender {
     	}
     	super.deInit();
     }
+
+    
+    private boolean canRetryConnection() {
+    	return (retryConnectionTime == null || retryConnectionTime.longValue() <= System.currentTimeMillis());
+    }
     
     public synchronized Connection getConnection() throws SQLException {
-    	if (conn == null) {
-    		conn = JDBCHelper.createJDBCConnection(driverCache, this.getDriverClass(), this.getDriverPath(), 
-    				this.getJdbcURL(), this.getUserName(), this.getPassword());
+    	if (conn == null && canRetryConnection()) {
+    		try {
+        		conn = JDBCHelper.createJDBCConnection(driverCache, this.getDriverClass(), this.getDriverPath(), 
+        				this.getJdbcURL(), this.getUserName(), this.getPassword());
+        		retryConnectionTime = null;
+    		} catch (SQLException ex) {
+    			retryConnectionTime = Long.valueOf(System.currentTimeMillis() + (RETRY_CONNECTION_TIMEOUT_MINUTES * 60 * 1000));
+    			String logMessage = "Unable to connect to JDBC URL: " + getJdbcURL() + " -- Will try again in " + RETRY_CONNECTION_TIMEOUT_MINUTES + " Minutes";
+    			if (LoggerFactory.isDefaultDebugEnabled()) {
+    				logger.logWarn(logMessage, ex);
+    			} else {
+        			logger.logWarn(logMessage);
+    			}
+    		}
     	}
     	return conn;
     }
@@ -109,10 +127,5 @@ public class JDBCSQLAppender extends SQLAppender {
 
 	public void setDriverPath(String driverPath) {
 		this.driverPath = driverPath;
-	}
-
-	@Override
-	protected void logNullConnectionWarning() {
-		logger.logWarn("Failed to obtain JDBCConnection for URL: " + jdbcURL);
 	}
 }

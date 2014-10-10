@@ -84,9 +84,4 @@ public class PooledSQLAppender extends SQLAppender {
 	public void setUrlPkgs(String urlPkgs) {
 		this.urlPkgs = urlPkgs;
 	}
-
-	@Override
-	protected void logNullConnectionWarning() {
-		logger.logWarn("Failed to obtain JDBCConnection for PoolName: " + poolName);
-	}
 }
