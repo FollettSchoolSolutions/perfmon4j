@@ -71,7 +71,7 @@
 			<source>${basedir}/dbupgrader/target/perfmon4j-dbupgrader-${project.version}.run.jar</source>
 			<destName>perfmon4j-dbupgrader.jar</destName>
 		</file>
-        </files>tar
+        </files>
 	
 	<dependencySets>
 		<dependencySet>
