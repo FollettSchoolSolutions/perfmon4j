@@ -39,6 +39,7 @@ import javassist.CtMethod;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLWriteable;
+import org.perfmon4j.SQLWriteableWithDatabaseVersion;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
@@ -255,13 +256,15 @@ public class SnapShotGenerator {
 	public static Class<?> generateSnapShotDataImpl(Class<?> dataProvider) throws GenerateSnapShotException {
 		return generateSnapShotDataImpl(dataProvider, null, null);
 	}
+
 	
 	public static Class<?> generateSnapShotDataImpl(Class<?> dataProvider, JMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean useJMXConfig = jmxConfig != null;
 		boolean isStatic = false;
 		Class<?> dataInterface = null;
 		Class<?> sqlWriter = null;
-		
+		boolean writerIncludesDatabaseVersion = false;
+
 		if (!useJMXConfig) {
 			SnapShotProvider provider =  (SnapShotProvider)dataProvider.getAnnotation(SnapShotProvider.class);
 			isStatic = SnapShotProvider.Type.STATIC.equals(provider.type());
@@ -270,6 +273,8 @@ public class SnapShotGenerator {
 			sqlWriter = provider.sqlWriter();
 			if (SnapShotSQLWriter.class.equals(sqlWriter)) {
 				sqlWriter = null;
+			} else {
+				writerIncludesDatabaseVersion = SQLWriteableWithDatabaseVersion.class.equals(sqlWriter);
 			}
 			
 			if (void.class.equals(dataInterface)) {
@@ -299,8 +304,14 @@ public class SnapShotGenerator {
 				ctClass.addInterface(ctInterface);
 			}
 
+		
 			if (sqlWriter != null) {
-				CtClass ctSqlWriteableIntf = classPool.get(SQLWriteable.class.getName());
+				CtClass ctSqlWriteableIntf = null;
+				if (writerIncludesDatabaseVersion) {
+					ctSqlWriteableIntf = classPool.get(SQLWriteableWithDatabaseVersion.class.getName());
+				} else {
+					ctSqlWriteableIntf = classPool.get(SQLWriteable.class.getName());
+				}
 				ctClass.addInterface(ctSqlWriteableIntf);
 			}
 			
@@ -313,14 +324,25 @@ public class SnapShotGenerator {
 
 			// Add static instance of our SQLWriter 
 			if (sqlWriter != null) {
-				final String s = "private static final org.perfmon4j.SnapShotSQLWriter sqlWriter = " +
-						" new " + sqlWriter.getName() + "();";
-				ctClass.addField(CtField.make(s, ctClass));
-				
-				final String m = "public void writeToSQL(java.sql.Connection conn, String dbSchema, long systemID) throws java.sql.SQLException {" +
-						" sqlWriter.writeToSQL(conn, dbSchema, this, systemID);" +
-						"}";
-				addMethod(ctClass, m);
+				if (writerIncludesDatabaseVersion) {
+					final String s = "private static final org.perfmon4j.SnapShotSQLWriterWithDatabaseVersion sqlWriter = " +
+							" new " + sqlWriter.getName() + "();";
+					ctClass.addField(CtField.make(s, ctClass));
+					
+					final String m = "public void writeToSQL(java.sql.Connection conn, String dbSchema, long systemID, double databaseVersion) throws java.sql.SQLException {" +
+							" sqlWriter.writeToSQL(conn, dbSchema, this, systemID, databaseVersion);" +
+							"}";
+					addMethod(ctClass, m);
+				} else {
+					final String s = "private static final org.perfmon4j.SnapShotSQLWriter sqlWriter = " +
+							" new " + sqlWriter.getName() + "();";
+					ctClass.addField(CtField.make(s, ctClass));
+					
+					final String m = "public void writeToSQL(java.sql.Connection conn, String dbSchema, long systemID) throws java.sql.SQLException {" +
+							" sqlWriter.writeToSQL(conn, dbSchema, this, systemID);" +
+							"}";
+					addMethod(ctClass, m);
+				}
 			}
 			
 			// Add startTime, endTime and duration fields.

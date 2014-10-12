@@ -21,6 +21,7 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -61,6 +62,13 @@ public abstract class SQLAppender extends Appender {
 	@Override
 	public void outputData(PerfMonData data) {
 		Connection conn = null;
+		double databaseVersion = 0.0;
+		boolean needDatabaseVersion = (data instanceof SQLWriteableWithDatabaseVersion);
+				
+		if (needDatabaseVersion) {
+			databaseVersion = getDatabaseVersion();
+		}
+		
 		try {
 			conn = getConnection();
 			if (conn != null) {
@@ -68,6 +76,8 @@ public abstract class SQLAppender extends Appender {
 					outputIntervalData(conn, (IntervalData)data);
 				} else if (data instanceof SQLWriteable){
 					((SQLWriteable)data).writeToSQL(conn, dbSchema, getSystemID());
+				} else if (data instanceof SQLWriteableWithDatabaseVersion){
+					((SQLWriteableWithDatabaseVersion)data).writeToSQL(conn, dbSchema, getSystemID(), databaseVersion);
 				} else {
 					logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
 				}
@@ -163,27 +173,77 @@ public abstract class SQLAppender extends Appender {
 	private Timestamp buildTimestampOrNull(long time) {
 		return time > 0 ? new Timestamp(time) : null;
 	}
-
-	public static double getDatabaseVersion(Connection conn, String dbSchema) {
+	
+	private static long CACHED_DATABASE_VERISON_MINUTES = Long.getLong(SQLAppender.class.getName() + ".CACHED_DATABASE_VERISON_MINUTES", 10).longValue();
+	private long lastDatabaseVersionCheck = 0;
+	private double cachedDatabaseVersion = 0.0;
+	
+	public double getDatabaseVersion() {
+		return getDatabaseVersion_TestOnly(CACHED_DATABASE_VERISON_MINUTES * 60 * 1000); 
+	}
+	
+	public double getDatabaseVersion_TestOnly(long cacheDuration) {
+		if (lastDatabaseVersionCheck + cacheDuration < System.currentTimeMillis()) {
+			Connection conn = null;
+			try {
+				conn = getConnection();
+				cachedDatabaseVersion = getDatabaseVersionWorker(conn, dbSchema);
+			} catch(SQLException se) { 
+				resetConnection();
+			} finally {
+				if (conn != null) {
+					releaseConnection(conn);
+				}
+			}
+			lastDatabaseVersionCheck = System.currentTimeMillis();
+		}
+		return cachedDatabaseVersion;
+	}
+	
+	static private boolean doesVersionTableExists(Connection conn, String schema) throws SQLException {
+		boolean nullSchema = (schema == null);
+		
+		boolean result = false;
+		DatabaseMetaData dbMetaData = null;
+		ResultSet rs = null;
+		try {
+			dbMetaData = conn.getMetaData();
+			rs = dbMetaData.getTables(null, "%", "%", new String[]{"TABLE"});
+			while (rs.next() && !result) {
+				final String n = rs.getString("TABLE_NAME");
+				final String s = rs.getString("TABLE_SCHEM");
+				
+				boolean schemaMatches = ((s == null) && nullSchema)
+						|| schema.equalsIgnoreCase(s);
+				result = schemaMatches && "DATABASECHANGELOG".equalsIgnoreCase(n);
+			}
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+		}
+		
+		return result;
+	}
+	
+	private static double getDatabaseVersionWorker(Connection conn, String dbSchema) throws SQLException {
 		double result = 0.0;
 		
 		if (conn != null) {
 			Statement stmt = null;
 			ResultSet rs = null;
 			try {
-				String s = (dbSchema == null) ? "" : (dbSchema + ".");
-				String sql = "SELECT ID FROM " + s + "DATABASECHANGELOG WHERE author = 'databaseLabel' ORDER BY ID DESC";
-				stmt = conn.createStatement();
-				rs = stmt.executeQuery(sql);
-				if (rs.next()) {
-					try {
-						result = Double.parseDouble(rs.getString(1));
-					} catch (NumberFormatException nfe) {
-						// Nothing to do... Just return default version..
+				if (doesVersionTableExists(conn, dbSchema)) {
+					String s = (dbSchema == null) ? "" : (dbSchema + ".");
+					String sql = "SELECT ID FROM " + s + "DATABASECHANGELOG WHERE author = 'databaseLabel' ORDER BY ID DESC";
+					stmt = conn.createStatement();
+					rs = stmt.executeQuery(sql);
+					if (rs.next()) {
+						try {
+							result = Double.parseDouble(rs.getString(1));
+						} catch (NumberFormatException nfe) {
+							// Nothing to do... Just return default version..
+						}
 					}
 				}
-			} catch (SQLException se) {
-				// Nothing todo.. Just return default result.
 			} finally {
 				JDBCHelper.closeNoThrow(rs);
 				JDBCHelper.closeNoThrow(stmt);

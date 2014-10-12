@@ -161,7 +161,7 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
     	JVMData data = createMockJVMData();
     	
-    	writer.writeToSQL(conn, "mydb", data, 1);
+    	writer.writeToSQLInternal(conn, "mydb", data, 1, 0.0);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
@@ -231,13 +231,13 @@ public class JVMSnapShotTest extends SQLTest {
         	JDBCHelper.closeNoThrow(stmt);
         }
     }    
-
+    
     public void testSnapShotInfoCompilationMillisActive() throws Exception {
     	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
     	JVMData data = createMockJVMData();
     	
        	Mockito.when(data.getCompilationTimeActive()).thenReturn(Boolean.FALSE);
-    	writer.writeToSQL(conn, "mydb", data, 1);
+    	writer.writeToSQLInternal(conn, "mydb", data, 1, 0.0);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
@@ -255,7 +255,7 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMData data = createMockJVMData();
     	
        	Mockito.when(data.getSystemLoadAverage()).thenReturn(new Double(-1));
-    	writer.writeToSQL(conn, "mydb", data, 1);
+    	writer.writeToSQLInternal(conn, "mydb", data, 1, 0.0);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
@@ -270,10 +270,9 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
     	JVMData data = createMockJVMData();
     	
-    	addVersionLabel(conn, "0001.00", true);
     	
        	Mockito.when(data.getCompilationTimeActive()).thenReturn(Boolean.FALSE);
-    	writer.writeToSQL(conn, "mydb", data, 1);
+    	writer.writeToSQLInternal(conn, "mydb", data, 1, 1.0);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
@@ -289,9 +288,7 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
     	JVMData data = createMockJVMData();
     	
-    	addVersionLabel(conn, "0004.00", false);
-    	
-    	writer.writeToSQL(conn, "mydb", data, 1);
+    	writer.writeToSQLInternal(conn, "mydb", data, 1, 4.0);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +

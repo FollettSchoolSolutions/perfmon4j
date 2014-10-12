@@ -46,9 +46,8 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
-import org.perfmon4j.SQLAppender;
 import org.perfmon4j.SnapShotData;
-import org.perfmon4j.SnapShotSQLWriter;
+import org.perfmon4j.SnapShotSQLWriterWithDatabaseVersion;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
@@ -287,16 +286,24 @@ public class JVMSnapShot {
 		return new JVMManagementObjects();
 	}
 
-	public static class SQLWriter implements SnapShotSQLWriter {
+	public static class SQLWriter implements SnapShotSQLWriterWithDatabaseVersion {
+		
+		public void writeToSQL(Connection conn, String schema,
+				SnapShotData data, long systemID, double databaseVersion)
+				throws SQLException {
+			writeToSQLInternal(conn, schema, (JVMData)data, systemID, databaseVersion);
+		}
+
+		
 		public void writeToSQL(Connection conn, String schema, SnapShotData data, long systemID)
 			throws SQLException {
-			writeToSQL(conn, schema, (JVMData)data, systemID);
+			writeToSQLInternal(conn, schema, (JVMData)data, systemID, 0.0);
 		}
 		
-		public void writeToSQL(Connection conn, String schema, JVMData data, long systemID)
+		public void writeToSQLInternal(Connection conn, String schema, JVMData data, long systemID, double databaseVersion)
 			throws SQLException {
 			
-			boolean hasCpuColumns = SQLAppender.getDatabaseVersion(conn, schema) >= 4.0;
+			boolean hasCpuColumns = databaseVersion >= 4.0;
 			schema = (schema == null) ? "" : (schema + ".");
 			
 			String sql = "INSERT INTO " + schema + "P4JVMSnapShot " +
@@ -373,6 +380,7 @@ public class JVMSnapShot {
 			}
 		}
 	}
+	
     public static void main(String args[]) throws Exception {
     	System.setProperty("PERFMON_APPENDER_ASYNC_TIMER_MILLIS", "500");
     	
