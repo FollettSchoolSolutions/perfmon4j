@@ -31,6 +31,7 @@ import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.TextAppender;
+import org.perfmon4j.java.management.JVMSnapShot;
 
 
 /**
@@ -107,6 +108,11 @@ public class Example1 extends Thread {
 		BasicConfigurator.configure();
 		Logger.getRootLogger().setLevel(Level.INFO);
 		
+		System.out.println(System.getProperty("java.vm.version"));
+		System.out.println(System.getProperty("java.vm.vendor"));
+		System.out.println(System.getProperty("java.runtime.version"));
+		
+		
 		PerfMonConfiguration config = new PerfMonConfiguration();
 		final String MONITOR_NAME = "calcSquareRoot";
 		final String APPENDER_NAME = "default";
@@ -126,6 +132,8 @@ public class Example1 extends Thread {
 		
 		// Now attach your monitor to the appender..
 		config.attachAppenderToMonitor(MONITOR_NAME, APPENDER_NAME);
+		config.defineSnapShotMonitor("JVMSnapShot", JVMSnapShot.class.getName());
+		config.attachAppenderToSnapShotMonitor("JVMSnapShot", APPENDER_NAME);
 		
 		// Initialize Perfmon4j with your configuration The perfered initializing method, using the 
 		//XMLConfigurator will be displayed in subsequent examples.

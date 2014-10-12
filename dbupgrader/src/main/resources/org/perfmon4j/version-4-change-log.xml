@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+	
+	<changeSet author="ddeucher" id="addCpuLoadToJVMSnapShot">
+		<addColumn tableName="P4JVMSnapShot">
+			<column defaultValueNumeric='-1.0' name="systemCpuLoad" type="DECIMAL(5, 3)">
+				<constraints nullable="false" />
+			</column>
+			<column defaultValueNumeric='-1.0' name="processCpuLoad" type="DECIMAL(5, 3)">
+				<constraints nullable="false" />
+			</column>
+		</addColumn>
+	</changeSet>	
+
+	<changeSet author="databaseLabel" id="0004.0"/>
+</databaseChangeLog>

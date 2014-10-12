@@ -112,6 +112,26 @@ public class UpdateOrCreateDbTest extends TestCase {
 			+ ".P4JSystem WHERE SystemID=1 AND SystemName='Default'");
 		assertEquals("Should have populated default system row", 1, systemRows);
 	}
+
+	public void testVersion4Update() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA});
+		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
+				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0004.0'");
+		assertEquals("should have installed 4.0 label", 1, count);
+		
+		try {
+			// Select new columns...
+			getQueryCount("SELECT count(*) FROM " + SCHEMA  
+				+ ".P4JVMSnapshot WHERE systemCpuLoad > 1.0 AND processCpuLoad > 1.0");
+		} catch (Exception ex) {
+			fail("Should have added systemCpuLoad and processCpuLoad columns to the P4JVMSnapshot table");
+		}
+				
+	}
 	
 	public void testParseParameters() throws Exception {
 		String args[] = {

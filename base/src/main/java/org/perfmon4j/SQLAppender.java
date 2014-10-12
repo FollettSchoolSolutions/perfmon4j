@@ -163,6 +163,36 @@ public abstract class SQLAppender extends Appender {
 	private Timestamp buildTimestampOrNull(long time) {
 		return time > 0 ? new Timestamp(time) : null;
 	}
+
+	public static double getDatabaseVersion(Connection conn, String dbSchema) {
+		double result = 0.0;
+		
+		if (conn != null) {
+			Statement stmt = null;
+			ResultSet rs = null;
+			try {
+				String s = (dbSchema == null) ? "" : (dbSchema + ".");
+				String sql = "SELECT ID FROM " + s + "DATABASECHANGELOG WHERE author = 'databaseLabel' ORDER BY ID DESC";
+				stmt = conn.createStatement();
+				rs = stmt.executeQuery(sql);
+				if (rs.next()) {
+					try {
+						result = Double.parseDouble(rs.getString(1));
+					} catch (NumberFormatException nfe) {
+						// Nothing to do... Just return default version..
+					}
+				}
+			} catch (SQLException se) {
+				// Nothing todo.. Just return default result.
+			} finally {
+				JDBCHelper.closeNoThrow(rs);
+				JDBCHelper.closeNoThrow(stmt);
+			}
+		}
+		
+		return result;
+	}
+	
 	
 	private void outputIntervalData(Connection conn, IntervalData data) throws SQLException {
 		if (data.getTimeStart() <= 0 || data.getTimeStop() <= 0) {

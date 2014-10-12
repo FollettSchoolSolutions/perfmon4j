@@ -1,6 +1,7 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import junit.framework.TestCase;
@@ -81,6 +82,10 @@ public abstract class SQLTest extends TestCase {
 		")";
     
 
+    final String DERBY_CREATE_STUB_CHANGELOG = "CREATE TABLE mydb.DATABASECHANGELOG (id varchar(150) not null, author varchar(150) not null)";
+    final String DERBY_DROP_STUB_CHANGELOG = "DROP TABLE mydb.DATABASECHANGELOG ";
+    
+    
 	protected void setUp() throws Exception {
 		super.setUp();
 
@@ -104,11 +109,13 @@ public abstract class SQLTest extends TestCase {
 			stmt.execute(DERBY_CREATE_CATEGORY);
 			stmt.execute(DERBY_CREATE_INTERVAL_DATA);
 			stmt.execute(DERBY_CREATE_THRESHOLD);
+			stmt.execute(DERBY_CREATE_STUB_CHANGELOG);
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 			stmt = null;
 		}
     }
+    
 
     private void dropTables() throws Exception {
 		Connection conn = appender.getConnection();
@@ -119,7 +126,8 @@ public abstract class SQLTest extends TestCase {
 			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_INTERVAL_DATA);
 			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_CATEGORY);
 			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_SYSTEM);
-		} finally {
+			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_STUB_CHANGELOG);
+				} finally {
 			JDBCHelper.closeNoThrow(stmt);
 			stmt = null;
 		}
@@ -145,4 +153,24 @@ public abstract class SQLTest extends TestCase {
     	}
     	return ret;
     }	
+    
+    public void addVersionLabel(Connection conn, String label, boolean removeOtherLabels) throws SQLException {
+    	Statement stmt = null;
+    	if (removeOtherLabels) {
+    		try {
+    			stmt = conn.createStatement();
+    			stmt.execute("DELETE FROM mydb.DATABASECHANGELOG");
+    		} finally {
+    			JDBCHelper.closeNoThrow(stmt);
+    		}
+    	}
+    	try {
+    		stmt = conn.createStatement();
+    		stmt.execute("INSERT INTO mydb.DATABASECHANGELOG (id, author) VALUES('" 
+    				+ label + "' , 'databaseLabel')");
+    	} finally {
+			JDBCHelper.closeNoThrow(stmt);
+    	}
+    	conn.commit();
+    }
 }

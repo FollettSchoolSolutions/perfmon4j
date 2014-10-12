@@ -33,8 +33,23 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonConfiguration;
+import org.perfmon4j.SQLAppender;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
+import org.perfmon4j.TextAppender;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -77,6 +92,8 @@ public class JVMSnapShot {
 		public int getThreadCount();
 		public int getDaemonThreadCount();
 		public Delta getThreadsStarted();
+		public double getSystemCpuLoad();
+		public double getProcessCpuLoad();
 	}
 
 	private final static int LOOKUP_VM_CACHE_MILLIS = 60000; // 60 Seconds 
@@ -103,6 +120,59 @@ public class JVMSnapShot {
 		JVMManagementObjects o = getMonitoredBeans();
 		return o.classLoadingMXBean.getLoadedClassCount();
 	}
+
+	private Object getAttributeNoThrow(String objectName, String attributeName) {
+		Object result = null;
+		
+		try {
+			ObjectName name = new ObjectName(objectName);
+			result = getMonitoredBeans().mBeanServer.getAttribute(name, attributeName);
+		} catch (MalformedObjectNameException e) {
+		} catch (AttributeNotFoundException e) {
+		} catch (InstanceNotFoundException e) {
+		} catch (MBeanException e) {
+		} catch (ReflectionException e) {
+		}
+		return result;
+	}
+	
+	private boolean jvmSupportSystemCpuLoad = true; 
+	private boolean jvmSupportProcessCpuLoad = true; 
+	
+	@SnapShotGauge()
+	public double getProcessCpuLoad() {
+		double result = -1.0;
+	
+		if (jvmSupportProcessCpuLoad) {
+			Object attr = getAttributeNoThrow(ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, "ProcessCpuLoad");
+			if (attr != null && attr instanceof Number) {
+				result = ((Number)attr).doubleValue();
+				jvmSupportProcessCpuLoad = result > -1.0;
+			} else {
+				jvmSupportProcessCpuLoad = false;
+			}
+		}
+				
+		return result > 0 ? result * 100 : result;		
+	}
+	
+	@SnapShotGauge()
+	public double getSystemCpuLoad() {
+		double result = -1.0;
+		
+		if (jvmSupportSystemCpuLoad) {
+			Object attr = getAttributeNoThrow(ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, "SystemCpuLoad");
+			if (attr != null && attr instanceof Number) {
+				result = ((Number)attr).doubleValue();
+				jvmSupportSystemCpuLoad = result > -1.0;
+			} else {
+				jvmSupportSystemCpuLoad = false;
+			}
+		}
+				
+		return result > 0 ? result * 100 : result;		
+	}
+	
 	
 	@SnapShotCounter(preferredDisplay=SnapShotCounter.Display.DELTA_PER_MIN) 
 	public long getTotalLoadedClassCount() {
@@ -205,6 +275,7 @@ public class JVMSnapShot {
 	}
 	
 	private static class JVMManagementObjects {
+		private final MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
 		private final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean(); 
 		private final ClassLoadingMXBean classLoadingMXBean = ManagementFactory.getClassLoadingMXBean(); 
 		private final CompilationMXBean compilationMXBean = ManagementFactory.getCompilationMXBean();
@@ -224,9 +295,11 @@ public class JVMSnapShot {
 		
 		public void writeToSQL(Connection conn, String schema, JVMData data, long systemID)
 			throws SQLException {
+			
+			boolean hasCpuColumns = SQLAppender.getDatabaseVersion(conn, schema) >= 4.0;
 			schema = (schema == null) ? "" : (schema + ".");
 			
-			final String SQL = "INSERT INTO " + schema + "P4JVMSnapShot " +
+			String sql = "INSERT INTO " + schema + "P4JVMSnapShot " +
 				"(SystemID, StartTime, EndTime, Duration, CurrentClassLoadCount, " +
 		    	" ClassLoadCountInPeriod, ClassLoadCountPerMinute, ClassUnloadCountInPeriod, " +
 		    	" ClassUnloadCountPerMinute, PendingClassFinalizationCount, " +  
@@ -234,11 +307,21 @@ public class JVMSnapShot {
 		    	" ThreadStartCountInPeriod, ThreadStartCountPerMinute, " +
 		    	" HeapMemUsedMB,  HeapMemCommitedMB,  HeapMemMaxMB, " +
 		    	" NonHeapMemUsedMB, NonHeapMemCommittedUsedMB, NonHeapMemMaxUsedMB, " +  
-		    	" SystemLoadAverage, CompilationMillisInPeriod, CompilationMillisPerMinute) " +
-				" VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+		    	" SystemLoadAverage, CompilationMillisInPeriod, CompilationMillisPerMinute ";
+			
+			if (hasCpuColumns) {
+				sql += ", systemCpuLoad, processCpuLoad ";
+			}
+			sql +=  ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?";
+			if (hasCpuColumns) {
+				sql += ", ?, ?";
+			}
+			sql += ")";
+			
+			
 			PreparedStatement stmt = null;
 			try {
-				stmt = conn.prepareStatement(SQL);
+				stmt = conn.prepareStatement(sql);
 				
 				int index = 1;
 	        	stmt.setLong(index++, systemID);
@@ -276,6 +359,11 @@ public class JVMSnapShot {
 		        	stmt.setNull(index++, Types.DECIMAL);
 	        	}
 				
+	        	if (hasCpuColumns) {
+	        		stmt.setDouble(index++, data.getSystemCpuLoad());
+	        		stmt.setDouble(index++, data.getProcessCpuLoad());
+	        	}
+	        	
 				int count = stmt.executeUpdate();
 				if (count != 1) {
 					throw new SQLException("JVMSnapShot failed to insert row");
@@ -285,24 +373,33 @@ public class JVMSnapShot {
 			}
 		}
 	}
-//    public static void main(String args[]) throws Exception {
-//    	System.setProperty("PERFMON_APPENDER_ASYNC_TIMER_MILLIS", "500");
-//    	
-//    	BasicConfigurator.configure();
-//        Logger.getRootLogger().setLevel(Level.INFO);
-//        Logger.getLogger("org.perfmon4j").setLevel(Level.DEBUG);
-//   	
-//    	
-//        PerfMonConfiguration config = new PerfMonConfiguration();
-//        config.defineAppender("SimpleAppender", TextAppender.class.getName(), "2 seconds");
-//
-//        config.defineSnapShotMonitor("JVM Monitor", org.perfmon4j.java.management.JVMSnapShot.class.getName());
-//        config.attachAppenderToSnapShotMonitor("JVM Monitor", "SimpleAppender");
-//        
-//        
-//        PerfMon.configure(config);
-//        System.out.println("Sleeping for 5 seconds -- Will take a JVM SnapShot every 2 second");
-//        Thread.sleep(5000);
-//        System.out.println("DONE");
-//    }
+    public static void main(String args[]) throws Exception {
+    	System.setProperty("PERFMON_APPENDER_ASYNC_TIMER_MILLIS", "500");
+    	
+    	BasicConfigurator.configure();
+        Logger.getRootLogger().setLevel(Level.INFO);
+        Logger.getLogger("org.perfmon4j").setLevel(Level.DEBUG);
+   	
+    	
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineAppender("SimpleAppender", TextAppender.class.getName(), "2 seconds");
+
+        config.defineSnapShotMonitor("JVM Monitor", org.perfmon4j.java.management.JVMSnapShot.class.getName());
+        config.attachAppenderToSnapShotMonitor("JVM Monitor", "SimpleAppender");
+        
+        
+        PerfMon.configure(config);
+        System.out.println("Sleeping for 5 seconds -- Will take a JVM SnapShot every 2 second");
+      
+        // Do a CPU intensive "sleep" for 10 seconds.
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() - start < 10000) {
+        }
+        
+        
+        // Do a non-CPU intensive sleep for 10 seconds.
+        Thread.sleep(10000);
+        
+        System.out.println("DONE");
+    }
 }

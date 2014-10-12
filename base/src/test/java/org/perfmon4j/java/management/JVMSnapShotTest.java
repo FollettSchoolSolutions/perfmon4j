@@ -44,7 +44,7 @@ import org.perfmon4j.java.management.JVMSnapShot.JVMData;
 import org.perfmon4j.util.JDBCHelper;
 
 public class JVMSnapShotTest extends SQLTest {
-    final String DERBY_CREATE_1 = "CREATE TABLE p4j.P4JVMSnapShot(\r\n" +
+    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JVMSnapShot(\r\n" +
 	"	SystemID INT NOT NULL,\r\n" +
 	"	StartTime TIMESTAMP NOT NULL,\r\n" +
 	"	EndTime TIMESTAMP NOT NULL,\r\n" +
@@ -67,10 +67,12 @@ public class JVMSnapShotTest extends SQLTest {
 	" 	NonHeapMemMaxUsedMB  DECIMAL(18,2) NOT NULL,\r\n" +  
 	"  	SystemLoadAverage DECIMAL(5, 2),\r\n" +
 	" 	CompilationMillisInPeriod  INT,\r\n" + // (Can be null based on getCompilationTimeActive())
-	" 	CompilationMillisPerMinute DECIMAL(18,2)\r\n" + // (Can be null based on getCompilationTimeActive())
+	" 	CompilationMillisPerMinute DECIMAL(18,2),\r\n" + // (Can be null based on getCompilationTimeActive())
+	" 	systemCpuLoad Decimal(5,3) NOT NULL WITH DEFAULT -1.0,\r\n" + // (Can be null based on getCompilationTimeActive())
+	" 	processCpuLoad Decimal(5,3) NOT NULL WITH DEFAULT -1.0\r\n" + // (Can be null based on getCompilationTimeActive())
 	")\r\n";
 
-    final String DERBY_DROP_1 = "DROP TABLE p4j.P4JVMSnapShot";
+    final String DERBY_DROP_1 = "DROP TABLE mydb.P4JVMSnapShot";
     private Connection conn;
 
 	
@@ -149,6 +151,8 @@ public class JVMSnapShotTest extends SQLTest {
        	Mockito.when(data.getThreadCount()).thenReturn(new Integer(712));
        	Mockito.when(data.getDaemonThreadCount()).thenReturn(new Integer(212));
        	Mockito.when(data.getThreadsStarted()).thenReturn(new Delta(654, 712, 60000));
+       	Mockito.when(data.getProcessCpuLoad()).thenReturn(4.0);
+       	Mockito.when(data.getSystemCpuLoad()).thenReturn(5.0);
        	
     	return data;
     }
@@ -157,11 +161,11 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
     	JVMData data = createMockJVMData();
     	
-    	writer.writeToSQL(conn, "p4j", data, 1);
+    	writer.writeToSQL(conn, "mydb", data, 1);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
-    		" FROM p4j.P4JVMSnapShot\r\n" +
+    		" FROM mydb.P4JVMSnapShot\r\n" +
     		" WHERE SystemID=1\r\n" +
     		" AND StartTime=?\r\n" +
     		" AND EndTime=?\r\n" +
@@ -233,11 +237,11 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMData data = createMockJVMData();
     	
        	Mockito.when(data.getCompilationTimeActive()).thenReturn(Boolean.FALSE);
-    	writer.writeToSQL(conn, "p4j", data, 1);
+    	writer.writeToSQL(conn, "mydb", data, 1);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
-    		" FROM p4j.P4JVMSnapShot\r\n" +
+    		" FROM mydb.P4JVMSnapShot\r\n" +
 	    	" WHERE CompilationMillisInPeriod IS NULL\r\n" +
 	    	" AND CompilationMillisPerMinute IS NULL\r\n" + 
 	    	"";
@@ -251,17 +255,54 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMData data = createMockJVMData();
     	
        	Mockito.when(data.getSystemLoadAverage()).thenReturn(new Double(-1));
-    	writer.writeToSQL(conn, "p4j", data, 1);
+    	writer.writeToSQL(conn, "mydb", data, 1);
 
         final String VALIDATE_SQL = "SELECT " +
     		" COUNT(*) " +
-    		" FROM p4j.P4JVMSnapShot\r\n" +
+    		" FROM mydb.P4JVMSnapShot\r\n" +
 	    	" WHERE SystemLoadAverage IS NULL\r\n" +
 	    	"";
     	long resultCount = JDBCHelper.getQueryCount(conn, VALIDATE_SQL);
     	assertEquals("Should have inserted row", 1, resultCount);
     }    
     
+    public void testSnapShotOnDbBeforeCPULoadVersion() throws Exception {
+    	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
+    	JVMData data = createMockJVMData();
+    	
+    	addVersionLabel(conn, "0001.00", true);
+    	
+       	Mockito.when(data.getCompilationTimeActive()).thenReturn(Boolean.FALSE);
+    	writer.writeToSQL(conn, "mydb", data, 1);
+
+        final String VALIDATE_SQL = "SELECT " +
+    		" COUNT(*) " +
+    		" FROM mydb.P4JVMSnapShot\r\n" +
+	    	" WHERE systemCpuLoad = -1.0\r\n" +
+	    	" AND processCpuLoad = -1.0\r\n" + 
+	    	"";
+    	long resultCount = JDBCHelper.getQueryCount(conn, VALIDATE_SQL);
+    	assertEquals("Should have used default value for cpuLoad", 1, resultCount);
+    }    
+
+    public void testSnapShotOnDbAfterCPULoadVersion() throws Exception {
+    	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
+    	JVMData data = createMockJVMData();
+    	
+    	addVersionLabel(conn, "0004.00", false);
+    	
+    	writer.writeToSQL(conn, "mydb", data, 1);
+
+        final String VALIDATE_SQL = "SELECT " +
+    		" COUNT(*) " +
+    		" FROM mydb.P4JVMSnapShot\r\n" +
+	    	" WHERE systemCpuLoad = 5.0\r\n" +
+	    	" AND processCpuLoad = 4.0\r\n" + 
+	    	"";
+    	long resultCount = JDBCHelper.getQueryCount(conn, VALIDATE_SQL);
+    	assertEquals("Should have written values for cpuLoad", 1, resultCount);
+    }    
+
     
 /*----------------------------------------------------------------------------*/    
     
