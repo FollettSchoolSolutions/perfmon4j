@@ -21,15 +21,18 @@
 package org.perfmon4j.demo.quickstart;
 
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Vector;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.JDBCSQLAppender;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.SQLAppender;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.java.management.JVMSnapShot;
 
@@ -112,10 +115,12 @@ public class Example1 extends Thread {
 		System.out.println(System.getProperty("java.vm.vendor"));
 		System.out.println(System.getProperty("java.runtime.version"));
 		
+		System.setProperty(SQLAppender.class.getName() + ".CACHED_DATABASE_VERISON_MINUTES", "1");
 		
 		PerfMonConfiguration config = new PerfMonConfiguration();
 		final String MONITOR_NAME = "calcSquareRoot";
 		final String APPENDER_NAME = "default";
+		final String SQL_APPENDER_NAME = "SQL_APPENDER";
 		
 		/**
 		 * First indicate the monitor you would like to track.
@@ -130,10 +135,42 @@ public class Example1 extends Thread {
 		// log.  You also define the interval the monitor will be evaluated.
 		config.defineAppender(APPENDER_NAME, TextAppender.class.getName() , "10 seconds");
 		
+		
+		// Define a SQL Appender
+		Properties sqlProps = new Properties();
+		
+		/* SQL Server Properties */
+//		sqlProps.setProperty("driverPath", "/media/sf_shared/tools/common/JDBCDrivers/sqljdbc4.jar");
+//		sqlProps.setProperty("driverClass", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+//		sqlProps.setProperty("jdbcURL", "jdbc:sqlserver://10.0.2.2:1433;databaseName=TestUpgrade");
+//		sqlProps.setProperty("userName", "perfmonwriter");
+//		sqlProps.setProperty("password", "perfmon");
+
+		/* MYSQL Properties */
+		sqlProps.setProperty("driverPath", "/home/perfmon/jdbc-drivers/mysql-connector-java-5.1.32-bin.jar");
+		sqlProps.setProperty("driverClass", "com.mysql.jdbc.Driver");
+		sqlProps.setProperty("jdbcURL", "jdbc:mysql://localhost:3306/TestUpgrade");
+		sqlProps.setProperty("userName", "perfmonwriter");
+		sqlProps.setProperty("password", "perfmon");
+		
+		
+		config.defineAppender(SQL_APPENDER_NAME, JDBCSQLAppender.class.getName(), "10 seconds", sqlProps);
+		
+//		public void X_testLiveMySQL() {Te
+//			String [] args = new String[] {
+//				"driverJarFile=/home/perfmon/jdbc-drivers/mysql-connector-java-5.1.32-bin.jar", 
+//				"driverClass=com.mysql.jdbc.Driver", 
+//				"jdbcURL=jdbc:mysql://localhost:3306/TestUpgrade", 
+//				"userName=perfmonwriter", 
+//				"password=perfmon"
+//				};
+//		
+		
 		// Now attach your monitor to the appender..
 		config.attachAppenderToMonitor(MONITOR_NAME, APPENDER_NAME);
 		config.defineSnapShotMonitor("JVMSnapShot", JVMSnapShot.class.getName());
 		config.attachAppenderToSnapShotMonitor("JVMSnapShot", APPENDER_NAME);
+		config.attachAppenderToSnapShotMonitor("JVMSnapShot", SQL_APPENDER_NAME);
 		
 		// Initialize Perfmon4j with your configuration The perfered initializing method, using the 
 		//XMLConfigurator will be displayed in subsequent examples.
@@ -149,8 +186,8 @@ public class Example1 extends Thread {
 			Thread.sleep(1000); // Sleep for 1 second
 		}
 		
-		logger.info("Fully ramped up... Running at load for 10 seconds");
-		Thread.sleep(10000);
+		logger.info("Fully ramped up... Running at load for 5 minutes");
+		Thread.sleep(5 * 60 * 1000);
 		
 		// Cool down (Remove 1 thread per second)
 		for (int i = 0; i < 50; i++) {
@@ -161,8 +198,8 @@ public class Example1 extends Thread {
 			Thread.sleep(1000); // Sleep for 1 second
 		}
 		
-		logger.info("All threads have been told to stop... Waiting 25 seconds for threads to stop");
-		Thread.sleep(25000);
+		logger.info("All threads have been told to stop... Waiting 10 seconds for threads to stop");
+		Thread.sleep(10000);
 		
 		logger.info("Done");
 	}

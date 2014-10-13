@@ -290,7 +290,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public void X_testLiveSQLServer() {
 		String [] args = new String[] {
-			"driverJarFile=/home/perfmon/host/tools/common/JDBCDrivers/sqljdbc4.jar", 
+			"driverJarFile=/media/sf_shared/tools/common/JDBCDrivers/sqljdbc4.jar", 
 			"driverClass=com.microsoft.sqlserver.jdbc.SQLServerDriver", 
 			"jdbcURL=jdbc:sqlserver://10.0.2.2:1433;databaseName=TestUpgrade", 
 			"userName=perfmonwriter", 

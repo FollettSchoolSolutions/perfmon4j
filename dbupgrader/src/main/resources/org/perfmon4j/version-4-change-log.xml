@@ -5,10 +5,10 @@
 	
 	<changeSet author="ddeucher" id="addCpuLoadToJVMSnapShot">
 		<addColumn tableName="P4JVMSnapShot">
-			<column defaultValueNumeric='-1.0' name="systemCpuLoad" type="DECIMAL(5, 3)">
+			<column defaultValueNumeric='-1.0' name="systemCpuLoad" type="DECIMAL(6, 3)">
 				<constraints nullable="false" />
 			</column>
-			<column defaultValueNumeric='-1.0' name="processCpuLoad" type="DECIMAL(5, 3)">
+			<column defaultValueNumeric='-1.0' name="processCpuLoad" type="DECIMAL(6, 3)">
 				<constraints nullable="false" />
 			</column>
 		</addColumn>

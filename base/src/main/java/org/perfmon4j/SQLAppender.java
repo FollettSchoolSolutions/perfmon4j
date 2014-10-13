@@ -21,7 +21,6 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -200,29 +199,34 @@ public abstract class SQLAppender extends Appender {
 		return cachedDatabaseVersion;
 	}
 	
-	static private boolean doesVersionTableExists(Connection conn, String schema) throws SQLException {
-		boolean nullSchema = (schema == null);
-		
-		boolean result = false;
-		DatabaseMetaData dbMetaData = null;
-		ResultSet rs = null;
-		try {
-			dbMetaData = conn.getMetaData();
-			rs = dbMetaData.getTables(null, "%", "%", new String[]{"TABLE"});
-			while (rs.next() && !result) {
-				final String n = rs.getString("TABLE_NAME");
-				final String s = rs.getString("TABLE_SCHEM");
-				
-				boolean schemaMatches = ((s == null) && nullSchema)
-						|| schema.equalsIgnoreCase(s);
-				result = schemaMatches && "DATABASECHANGELOG".equalsIgnoreCase(n);
-			}
-		} finally {
-			JDBCHelper.closeNoThrow(rs);
-		}
-		
-		return result;
-	}
+// This did NOT work wiht a default (NULL) schema on SQL server...
+//	static private boolean doesVersionTableExists(Connection conn, String schema) throws SQLException {
+//		// If we don't have an explicit schema check the schema associated with the connection.
+//		schema = (schema == null) ? conn.getSchema() : null; 
+//		
+//		boolean nullSchema = (schema == null);
+//
+//		
+//		boolean result = false;
+//		DatabaseMetaData dbMetaData = null;
+//		ResultSet rs = null;
+//		try {
+//			dbMetaData = conn.getMetaData();
+//			rs = dbMetaData.getTables(null, "%", "%", new String[]{"TABLE"});
+//			while (rs.next() && !result) {
+//				final String n = rs.getString("TABLE_NAME");
+//				final String s = rs.getString("TABLE_SCHEM");
+//				
+//				boolean schemaMatches = ((s == null) && nullSchema)
+//						|| schema.equalsIgnoreCase(s);
+//				result = schemaMatches && "DATABASECHANGELOG".equalsIgnoreCase(n);
+//			}
+//		} finally {
+//			JDBCHelper.closeNoThrow(rs);
+//		}
+//		
+//		return result;
+//	}
 	
 	private static double getDatabaseVersionWorker(Connection conn, String dbSchema) throws SQLException {
 		double result = 0.0;
@@ -231,17 +235,15 @@ public abstract class SQLAppender extends Appender {
 			Statement stmt = null;
 			ResultSet rs = null;
 			try {
-				if (doesVersionTableExists(conn, dbSchema)) {
-					String s = (dbSchema == null) ? "" : (dbSchema + ".");
-					String sql = "SELECT ID FROM " + s + "DATABASECHANGELOG WHERE author = 'databaseLabel' ORDER BY ID DESC";
-					stmt = conn.createStatement();
-					rs = stmt.executeQuery(sql);
-					if (rs.next()) {
-						try {
-							result = Double.parseDouble(rs.getString(1));
-						} catch (NumberFormatException nfe) {
-							// Nothing to do... Just return default version..
-						}
+				String s = (dbSchema == null) ? "" : (dbSchema + ".");
+				String sql = "SELECT ID FROM " + s + "DATABASECHANGELOG WHERE author = 'databaseLabel' ORDER BY ID DESC";
+				stmt = conn.createStatement();
+				rs = stmt.executeQuery(sql);
+				if (rs.next()) {
+					try {
+						result = Double.parseDouble(rs.getString(1));
+					} catch (NumberFormatException nfe) {
+						// Nothing to do... Just return default version..
 					}
 				}
 			} finally {

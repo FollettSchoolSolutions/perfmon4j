@@ -42,6 +42,7 @@ import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SQLWriteableWithDatabaseVersion;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
+import org.perfmon4j.SnapShotSQLWriterWithDatabaseVersion;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotInstanceDefinition;
@@ -274,7 +275,7 @@ public class SnapShotGenerator {
 			if (SnapShotSQLWriter.class.equals(sqlWriter)) {
 				sqlWriter = null;
 			} else {
-				writerIncludesDatabaseVersion = SQLWriteableWithDatabaseVersion.class.equals(sqlWriter);
+				writerIncludesDatabaseVersion =  SnapShotSQLWriterWithDatabaseVersion.class.isAssignableFrom(sqlWriter);
 			}
 			
 			if (void.class.equals(dataInterface)) {

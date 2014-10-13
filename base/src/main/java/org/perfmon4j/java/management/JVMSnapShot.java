@@ -41,14 +41,8 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.perfmon4j.PerfMon;
-import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriterWithDatabaseVersion;
-import org.perfmon4j.TextAppender;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -382,32 +376,32 @@ public class JVMSnapShot {
 	}
 	
     public static void main(String args[]) throws Exception {
-    	System.setProperty("PERFMON_APPENDER_ASYNC_TIMER_MILLIS", "500");
-    	
-    	BasicConfigurator.configure();
-        Logger.getRootLogger().setLevel(Level.INFO);
-        Logger.getLogger("org.perfmon4j").setLevel(Level.DEBUG);
-   	
-    	
-        PerfMonConfiguration config = new PerfMonConfiguration();
-        config.defineAppender("SimpleAppender", TextAppender.class.getName(), "2 seconds");
-
-        config.defineSnapShotMonitor("JVM Monitor", org.perfmon4j.java.management.JVMSnapShot.class.getName());
-        config.attachAppenderToSnapShotMonitor("JVM Monitor", "SimpleAppender");
-        
-        
-        PerfMon.configure(config);
-        System.out.println("Sleeping for 5 seconds -- Will take a JVM SnapShot every 2 second");
-      
-        // Do a CPU intensive "sleep" for 10 seconds.
-        long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < 10000) {
-        }
-        
-        
-        // Do a non-CPU intensive sleep for 10 seconds.
-        Thread.sleep(10000);
-        
-        System.out.println("DONE");
+//    	System.setProperty("PERFMON_APPENDER_ASYNC_TIMER_MILLIS", "500");
+//    	
+//    	BasicConfigurator.configure();
+//        Logger.getRootLogger().setLevel(Level.INFO);
+//        Logger.getLogger("org.perfmon4j").setLevel(Level.DEBUG);
+//   	
+//    	
+//        PerfMonConfiguration config = new PerfMonConfiguration();
+//        config.defineAppender("SimpleAppender", TextAppender.class.getName(), "2 seconds");
+//
+//        config.defineSnapShotMonitor("JVM Monitor", org.perfmon4j.java.management.JVMSnapShot.class.getName());
+//        config.attachAppenderToSnapShotMonitor("JVM Monitor", "SimpleAppender");
+//        
+//        
+//        PerfMon.configure(config);
+//        System.out.println("Sleeping for 5 seconds -- Will take a JVM SnapShot every 2 second");
+//      
+//        // Do a CPU intensive "sleep" for 10 seconds.
+//        long start = System.currentTimeMillis();
+//        while (System.currentTimeMillis() - start < 10000) {
+//        }
+//        
+//        
+//        // Do a non-CPU intensive sleep for 10 seconds.
+//        Thread.sleep(10000);
+//        
+//        System.out.println("DONE");
     }
 }
