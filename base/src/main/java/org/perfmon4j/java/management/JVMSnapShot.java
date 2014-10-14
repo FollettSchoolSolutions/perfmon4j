@@ -52,6 +52,7 @@ import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.instrument.snapshot.GeneratedData;
 import org.perfmon4j.util.ByteFormatter;
 import org.perfmon4j.util.JDBCHelper;
+import org.perfmon4j.util.MiscHelper;
 
 @SnapShotProvider(type = SnapShotProvider.Type.INSTANCE_PER_MONITOR, 
 		dataInterface=JVMSnapShot.JVMData.class,
@@ -96,7 +97,8 @@ public class JVMSnapShot {
 
 	private JVMManagementObjects getMonitoredBeans() {	
 		if (System.currentTimeMillis() > (lastCacheFill + LOOKUP_VM_CACHE_MILLIS)) {
-			cachedObject = new JVMManagementObjects(); 
+			cachedObject = new JVMManagementObjects();
+			lastCacheFill = System.currentTimeMillis();
 		}
 		return cachedObject;
 	}
@@ -137,9 +139,11 @@ public class JVMSnapShot {
 	
 	@SnapShotGauge()
 	public double getProcessCpuLoad() {
+		// Make sure we are through the boot up process...
+		boolean haveMBeanServer = getMonitoredBeans().getMBeanServer() != null;
 		double result = -1.0;
-	
-		if (jvmSupportProcessCpuLoad) {
+		
+		if (haveMBeanServer && jvmSupportProcessCpuLoad) {
 			Object attr = getAttributeNoThrow(ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, "ProcessCpuLoad");
 			if (attr != null && attr instanceof Number) {
 				result = ((Number)attr).doubleValue();
@@ -154,9 +158,11 @@ public class JVMSnapShot {
 	
 	@SnapShotGauge()
 	public double getSystemCpuLoad() {
+		// Make sure we are through the boot up process...
+		boolean haveMBeanServer = getMonitoredBeans().getMBeanServer() != null;
 		double result = -1.0;
 		
-		if (jvmSupportSystemCpuLoad) {
+		if (haveMBeanServer && jvmSupportSystemCpuLoad) {
 			Object attr = getAttributeNoThrow(ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, "SystemCpuLoad");
 			if (attr != null && attr instanceof Number) {
 				result = ((Number)attr).doubleValue();
@@ -271,12 +277,18 @@ public class JVMSnapShot {
 	}
 	
 	private static class JVMManagementObjects {
-		private MBeanServer mBeanServer = null; 
+		// Always go through the getter.... 
+		private MBeanServer mBeanServerDontAccessDirectly = null; 
+		
+		/**
+		 * Under JBoss this may return null under the boot up sequence.
+		 * @return
+		 */
 		private final MBeanServer getMBeanServer() {
-			if (mBeanServer == null) {
-				mBeanServer = ManagementFactory.getPlatformMBeanServer();
+			if (mBeanServerDontAccessDirectly == null){
+				mBeanServerDontAccessDirectly = MiscHelper.findMBeanServer(null);
 			}
-			return mBeanServer;
+			return mBeanServerDontAccessDirectly;
 		}
 		private final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean(); 
 		private final ClassLoadingMXBean classLoadingMXBean = ManagementFactory.getClassLoadingMXBean(); 
