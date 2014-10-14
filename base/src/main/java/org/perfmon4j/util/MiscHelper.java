@@ -26,6 +26,7 @@ import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -353,6 +354,8 @@ public class MiscHelper {
 			
 			if ((domainName == null) || domainName.equals(server.getDefaultDomain())) {
 				result = server;
+			} else if ("jboss".equalsIgnoreCase(domainName) && server.getClass().getName().startsWith("org.jboss")) {
+				result = server;
 			}
 		}
 		
@@ -368,6 +371,16 @@ public class MiscHelper {
 				logger.logDebug("Unable to Find JBoss MBean Server via org.jboss.mx.util.MBeanServerLocator.locateJBoss()", e);
 			}
 		}
+		
+		if (result == null && !isRunningInJBossAppServer()) {
+			// DO NOT USE THIS METHOD IN JBOSS.... If it gets called early in the deploy cycle JBoss might
+			// not have installed it's MBeanServer yet.
+			MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+			if ((domainName == null) || domainName.equals(server.getDefaultDomain())) {
+				result = server;
+			}
+		}
+		
 		return result;
 	}
 	

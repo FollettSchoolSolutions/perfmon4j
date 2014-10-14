@@ -241,6 +241,11 @@ public class MiscHelperTest extends TestCase {
         validateStringToMillisConversion("5 h", FIVE_HOURS);
         validateStringToMillisConversion("5 H", FIVE_HOURS);
     }
+    
+    
+    public void testGetMBeanServer() {
+    	assertNotNull("MiscHelper.findMBeanServer", MiscHelper.findMBeanServer(null));
+    }
 
 /*----------------------------------------------------------------------------*/    
     private void validateStringToMillisConversion(String value, long expectedMillis) {
