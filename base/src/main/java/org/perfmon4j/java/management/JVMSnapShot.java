@@ -119,12 +119,15 @@ public class JVMSnapShot {
 		
 		try {
 			ObjectName name = new ObjectName(objectName);
-			result = getMonitoredBeans().mBeanServer.getAttribute(name, attributeName);
+			MBeanServer server = getMonitoredBeans().getMBeanServer();
+			if (server != null) {
+				result = server.getAttribute(name, attributeName);
+			}
 		} catch (MalformedObjectNameException e) {
-		} catch (AttributeNotFoundException e) {
 		} catch (InstanceNotFoundException e) {
 		} catch (MBeanException e) {
 		} catch (ReflectionException e) {
+		} catch (AttributeNotFoundException e) {
 		}
 		return result;
 	}
@@ -268,7 +271,13 @@ public class JVMSnapShot {
 	}
 	
 	private static class JVMManagementObjects {
-		private final MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+		private MBeanServer mBeanServer = null; 
+		private final MBeanServer getMBeanServer() {
+			if (mBeanServer == null) {
+				mBeanServer = ManagementFactory.getPlatformMBeanServer();
+			}
+			return mBeanServer;
+		}
 		private final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean(); 
 		private final ClassLoadingMXBean classLoadingMXBean = ManagementFactory.getClassLoadingMXBean(); 
 		private final CompilationMXBean compilationMXBean = ManagementFactory.getCompilationMXBean();
