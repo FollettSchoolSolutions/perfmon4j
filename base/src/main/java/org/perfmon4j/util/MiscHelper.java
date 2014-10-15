@@ -347,15 +347,26 @@ public class MiscHelper {
 
 	public static MBeanServer findMBeanServer(String domainName) {
 		MBeanServer result = null;
-		
-		Iterator<MBeanServer> itr = MBeanServerFactory.findMBeanServer(null).iterator();
-		while (itr.hasNext() && result == null) {
-			MBeanServer server = itr.next();
-			
+
+		if (!isRunningInJBossAppServer()) {
+			// This is the preferred method to get the MBeanServer, but don't use it with JBoss!
+			// If it gets called early in the deploy cycle JBoss might
+			// not have installed it's MBeanServer yet.
+			MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 			if ((domainName == null) || domainName.equals(server.getDefaultDomain())) {
 				result = server;
-			} else if ("jboss".equalsIgnoreCase(domainName) && server.getClass().getName().startsWith("org.jboss")) {
-				result = server;
+			}
+		}
+		
+		if (result == null) {
+			Iterator<MBeanServer> itr = MBeanServerFactory.findMBeanServer(null).iterator();
+			while (itr.hasNext() && result == null) {
+				MBeanServer server = itr.next();
+				if ((domainName == null) || domainName.equals(server.getDefaultDomain())) {
+					result = server;
+				} else if ("jboss".equalsIgnoreCase(domainName) && server.getClass().getName().startsWith("org.jboss")) {
+					result = server;
+				}
 			}
 		}
 		
@@ -371,16 +382,7 @@ public class MiscHelper {
 				logger.logDebug("Unable to Find JBoss MBean Server via org.jboss.mx.util.MBeanServerLocator.locateJBoss()", e);
 			}
 		}
-		
-		if (result == null && !isRunningInJBossAppServer()) {
-			// DO NOT USE THIS METHOD IN JBOSS.... If it gets called early in the deploy cycle JBoss might
-			// not have installed it's MBeanServer yet.
-			MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-			if ((domainName == null) || domainName.equals(server.getDefaultDomain())) {
-				result = server;
-			}
-		}
-		
+
 		return result;
 	}
 	
