@@ -20,6 +20,7 @@
 		<module>sunjava6</module>
 		<module>reportconsole</module>
 		<module>utils</module>
+		<module>wildfly8</module>
 <!--		<module>perfmon4jweb</module> -->
 	</modules>
 

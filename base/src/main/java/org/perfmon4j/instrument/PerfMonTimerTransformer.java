@@ -187,9 +187,14 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     }
     
     public static class ValveHookInserter implements ClassFileTransformer {
+    	final private String undertowDeployInfoClassName = "io/undertow/servlet/api/DeploymentInfo";
     	final private String engineClassName =  System.getProperty("Perfmon4j.catalinaEngine", "org.apache.catalina.core.StandardEngine").replaceAll("\\.", "/");
     	final private String valveClassName =  System.getProperty("Perfmon4j.webValve");
     	final private BootConfiguration.ServletValveConfig valveConfig;
+    	
+    	// Undertow is the servlet engine used in JBoss Wildfly 8.x
+    	private Object undertowHanlderWrapperSingleton = null;
+    	private volatile boolean undertowWrapperInitialized = false;
     	
     	public ValveHookInserter(BootConfiguration.ServletValveConfig valveConfig) {
     		this.valveConfig = valveConfig;
@@ -200,7 +205,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
                 byte[] classfileBuffer) {
             byte[] result = null;
             
-            if (engineClassName.equals(className)) {
+            if (engineClassName.equals(className)  || undertowDeployInfoClassName.equals(className)) {
 	            try {
 	            	ClassPool classPool;
 		            
@@ -291,12 +296,46 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	}
         }
         
+        public synchronized Object getUndertowHandlerWrapperSingleton(Object undertowClass) {
+        	if (!undertowWrapperInitialized) {
+        		try {
+        			Class<?> clazz = Class.forName("web.org.perfmon4j.extras.wildfly8.PerfmonHandlerWrapper", true, undertowClass.getClass().getClassLoader());
+        			Object wrapper = clazz.newInstance();
+	        		if (valveConfig != null) {
+	        			valveConfig.copyProperties(wrapper);
+	        		}
+	        		undertowHanlderWrapperSingleton = wrapper;
+        		} catch (Exception ex) {
+        			logger.logError("Perfmon4j -- Error installing Undertow Valve", ex);
+        		}
+        		undertowWrapperInitialized = true;
+        	}
+        	return undertowHanlderWrapperSingleton;
+        }
+        
+        
         public void addSetValveHook(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
-        	logger.logInfo("Perfmon4j found Catalina Engine Class: " + clazz.getName());
-        	
-        	CtMethod m = clazz.getDeclaredMethod("setDefaultHost");
-        	String insert = PerfMonTimerTransformer.class.getName() + ".getValveHookInserter().installValve(this);";
-			m.insertAfter(insert);
+        	if (clazz.getName().contains("undertow")) {
+            	logger.logInfo("Perfmon4j found Undertow DeploymentInfo Class: " + clazz.getName());
+
+            	// Undertow, which includes JBoss Wildfly, no longer has Valves.  We implement similar behavior by
+            	// installing a HandlerWrapper into the innerHandlerChain.
+            	CtMethod m = clazz.getDeclaredMethod("getInnerHandlerChainWrappers");
+            	final String insertBlock = 
+            			"synchronized (innerHandlerChainWrappers) {\r\n" +
+            			"	io.undertow.server.HandlerWrapper wrapper = (io.undertow.server.HandlerWrapper)" + PerfMonTimerTransformer.class.getName() + ".getValveHookInserter().getUndertowHandlerWrapperSingleton(this);\r\n" +
+            			"	if (wrapper != null && !innerHandlerChainWrappers.contains(wrapper)) {\r\n" +
+        	    		"		innerHandlerChainWrappers.add(wrapper);\r\n" +
+        	    		"	}\r\n" +
+            			"}\r\n";            	
+    			m.insertBefore(insertBlock);
+        	} else {
+            	logger.logInfo("Perfmon4j found Catalina Engine Class: " + clazz.getName());
+            	
+            	CtMethod m = clazz.getDeclaredMethod("setDefaultHost");
+            	String insert = PerfMonTimerTransformer.class.getName() + ".getValveHookInserter().installValve(this);";
+    			m.insertAfter(insert);
+        	}
         }
     }
 
