@@ -2,15 +2,20 @@ package web.org.perfmon4j.extras.wildfly8;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 
+import java.net.InetSocketAddress;
 import java.util.Deque;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.jboss.logging.NDC;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.SQLTime;
@@ -21,10 +26,8 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
-
 class HandlerImpl implements HttpHandler {
     private static final Logger logger = LoggerFactory.initLogger(HandlerImpl.class);	
-	private final PerfmonHandlerWrapper parent;
 	private final HttpHandler next;
 	private final String baseFilterCategory;
 	private final boolean outputRequestAndDuration;
@@ -32,10 +35,17 @@ class HandlerImpl implements HttpHandler {
 	private final boolean abortTimerOnRedirect;
 	private final Pattern abortTimerOnURLPattern;
 	private final Pattern skipTimerOnURLPattern;
+	private final boolean pushNDC;
+    private final boolean pushURLOnNDC;
+    private final String[] pushCookiesOnNDC;
+    private final String[] pushSessionAttributesOnNDC;
+    private final boolean pushClientInfoOnNDC;    
+	
+	
 	private static final HttpString CONTENT_TYPE = new HttpString("Content-Type");
+    private static final Pattern passwordParamPattern = Pattern.compile("[\\?|\\&]{1}password\\=([^\\&\\;]*)");
 
 	HandlerImpl(PerfmonHandlerWrapper parent, HttpHandler next) {
-		this.parent = parent;
 		this.next = next;
 		this.baseFilterCategory = parent.getBaseFilterCategory();
 		this.outputRequestAndDuration = parent.isOutputRequestAndDuration();
@@ -43,6 +53,11 @@ class HandlerImpl implements HttpHandler {
 		this.abortTimerOnRedirect = parent.isAbortTimerOnRedirect();
 		this.abortTimerOnURLPattern = compilePattern(parent.getAbortTimerOnURLPattern());
 		this.skipTimerOnURLPattern = compilePattern(parent.getSkipTimerOnURLPattern());
+		this.pushURLOnNDC = parent.isPushURLOnNDC();
+		this.pushClientInfoOnNDC = parent.isPushClientInfoOnNDC();
+		this.pushCookiesOnNDC = MiscHelper.tokenizeCSVString(parent.getPushCookiesOnNDC());
+		this.pushSessionAttributesOnNDC = MiscHelper.tokenizeCSVString(parent.getPushSessionAttributesOnNDC());
+		this.pushNDC = pushURLOnNDC || pushClientInfoOnNDC || (pushCookiesOnNDC != null) || (pushSessionAttributesOnNDC != null);
 		
 		PerfMon.getMonitor(this.baseFilterCategory, false);  // Always create the base category monitor, all child monitors are only created when a monitor is attached.
 	}
@@ -60,7 +75,6 @@ class HandlerImpl implements HttpHandler {
 			doHandleRequest(exchange);
 		}
 	}
-
 	
 	private void doHandleRequest(HttpServerExchange exchange) throws Exception {
         Long localStartTime = null;
@@ -68,12 +82,33 @@ class HandlerImpl implements HttpHandler {
 
 		PerfMonTimer timer = null;
 		boolean pushedRequestValidator = false;
+		boolean pushedSessionValidator = false;
+		boolean pushedCookieValidator = false;
+		boolean pushedElementOnNDCStack = false;
 		try {
+			if (pushNDC) {
+				String ndc = buildNDC(exchange, pushURLOnNDC, pushClientInfoOnNDC, pushCookiesOnNDC, pushSessionAttributesOnNDC);
+				if (ndc.length() > 0) {
+					NDC.push(ndc);
+					pushedElementOnNDCStack = true;
+				}
+			}
+			
         	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
         		ThreadTraceConfig.pushValidator(new RequestValidator(exchange));
         		pushedRequestValidator = true;
         	}			
 			
+        	if (PerfMon.hasHttpSessionBasedThreadTraceTriggers()) {
+        		ThreadTraceConfig.pushValidator(new SessionValidator(exchange));
+        		pushedSessionValidator = true;
+        	}			
+
+        	if (PerfMon.hasHttpCookieBasedThreadTraceTriggers()) {
+        		ThreadTraceConfig.pushValidator(new CookieValidator(exchange));
+        		pushedCookieValidator = true;
+        	}			
+        	
 			try {
 				timer = startTimerForRequest(exchange);
 		        if (outputRequestAndDuration) {
@@ -121,6 +156,16 @@ class HandlerImpl implements HttpHandler {
 			if (pushedRequestValidator) {
 				ThreadTraceConfig.popValidator();
 			}
+			if (pushedSessionValidator) {
+				ThreadTraceConfig.popValidator();
+			}
+			if (pushedCookieValidator) {
+				ThreadTraceConfig.popValidator();
+			}
+			
+			if (pushedElementOnNDCStack) {
+				NDC.pop();
+			}
 		}
 	}
 	
@@ -141,6 +186,69 @@ class HandlerImpl implements HttpHandler {
         return result;
     }	
     
+    static String buildNDC(HttpServerExchange exchange, boolean pushURLOnNDC, boolean pushClientInfoOnNDC, String[] pushCookiesOnNDC, String[] pushSessionAttributesOnNDC) {
+    	StringBuilder result = new StringBuilder();
+    	if (exchange != null) {
+    		if (pushURLOnNDC) {
+    			result.append(buildRequestDescription(exchange));
+    		} // pushURLOnNDC
+    		
+    		if (pushClientInfoOnNDC) {
+    			if (result.length() > 0) {
+    				result.append(" ");
+    			}
+    			
+    			InetSocketAddress socket = exchange.getSourceAddress();
+    			if (socket != null) {
+    				String address = socket.getAddress().toString();
+    				if (address.startsWith("/")) {
+    					address = address.replaceFirst("/", "");
+    				}
+    				result.append(address);
+    			}
+    			String xForwarded = exchange.getRequestHeaders().getFirst("X-Forwarded-For");
+    			if (xForwarded != null) {
+    				result.append("[").append(xForwarded).append("]");
+    			}
+    		} // pushClientInfoOnNDC
+    		
+    		if (pushCookiesOnNDC != null && pushCookiesOnNDC.length > 0) {
+    			Map<String, Cookie> cookies = exchange.getRequestCookies(); 
+    			if (cookies != null) {
+	    			for (String name : pushCookiesOnNDC) {
+	    				Cookie c = cookies.get(name);
+	    				if (c != null) {
+	    	    			if (result.length() > 0) {
+	    	    				result.append(" ");
+	    	    			}
+	    	    			result.append(name).append(":").append(c.getValue());
+	    				}
+	    			}
+    			}
+    		} // pushCookiesOnNDC
+
+    		if (pushSessionAttributesOnNDC != null && pushSessionAttributesOnNDC.length > 0) {
+    			ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+    			if (context != null) {
+    				HttpSessionImpl session = context.getSession();
+    				if (session != null) {
+		    			for (String name : pushSessionAttributesOnNDC) {
+		    				Object value = session.getAttribute(name);
+		    				if (value != null) {
+		    	    			if (result.length() > 0) {
+		    	    				result.append(" ");
+		    	    			}
+		    	    			result.append(name).append(":").append(value);
+		    				}
+		    			}
+    				}
+    			}
+    		} // pushSessionAttributesOnNDC
+    	}
+    	
+    	return result.toString();
+    }
+    
     static String buildRequestDescription(HttpServerExchange exchange) {
     	StringBuilder result = new StringBuilder();
     	if (exchange != null) {
@@ -153,9 +261,6 @@ class HandlerImpl implements HttpHandler {
     	return result.toString();
     }
     
-    private static final Pattern passwordParamPattern = Pattern.compile("[\\?|\\&]{1}password\\=([^\\&\\;]*)");
-    
-    
     static String maskPassword(String queryParams) {
     	Matcher m = passwordParamPattern.matcher(queryParams);
     	StringBuilder buffer = new StringBuilder(queryParams);
@@ -163,7 +268,6 @@ class HandlerImpl implements HttpHandler {
     	while (m.find()) {
     		int start = m.start(1) + offsetAdjust;
     		int end = m.end(1) + offsetAdjust;
-    		
     		
     		int startLength = buffer.length();
     		buffer.replace(start, end, "*******");
@@ -219,6 +323,52 @@ class HandlerImpl implements HttpHandler {
 		}
     }
 
-
+    public static class SessionValidator implements ThreadTraceConfig.TriggerValidator {
+    	private final HttpServerExchange exchange;
+    	
+    	SessionValidator(HttpServerExchange exchange) {
+    		this.exchange = exchange;
+    	}
+    	
+		public boolean isValid(Trigger trigger) {
+			boolean result = false;
+			
+			if (trigger.getType() == ThreadTraceConfig.TriggerType.HTTP_SESSION_PARAM) {
+				ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+				if (context != null) {
+					HttpSessionImpl session = context.getSession();
+					if (session != null) {
+						ThreadTraceConfig.HTTPSessionTrigger t = (ThreadTraceConfig.HTTPSessionTrigger)trigger;
+						Object value = session.getAttribute(t.getName());
+						if (value != null) {
+							result = t.getValue().equals(value.toString());
+						}
+					}
+				}
+			}
+			return result;
+		}
+    }    
+    
+    public static class CookieValidator implements ThreadTraceConfig.TriggerValidator {
+    	private final HttpServerExchange exchange;
+    	
+    	CookieValidator(HttpServerExchange exchange) {
+    		this.exchange = exchange;
+    	}
+    	
+		public boolean isValid(Trigger trigger) {
+			boolean result = false;
+			
+			if (trigger.getType() == ThreadTraceConfig.TriggerType.HTTP_COOKIE_PARAM) {
+				ThreadTraceConfig.HTTPCookieTrigger t = (ThreadTraceConfig.HTTPCookieTrigger)trigger;
+				Map<String, Cookie> cookies = exchange.getRequestCookies();
+				if (cookies != null) {
+					Cookie cookie = cookies.get(t.getName());
+					result = (cookie != null && t.getValue().equals(cookie.getValue()));
+				}
+			}
+			return result;
+		}  
+    }
 }
-

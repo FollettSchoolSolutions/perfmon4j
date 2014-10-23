@@ -71,6 +71,10 @@
 			<source>${basedir}/dbupgrader/target/perfmon4j-dbupgrader-${project.version}.run.jar</source>
 			<destName>perfmon4j-dbupgrader.jar</destName>
 		</file>
+		<file>
+			<source>${basedir}/wildfly8/target/perfmon4j-wildfly8-${project.version}.jar</source>
+			<destName>perfmon4j-widlfly8.jar</destName>
+		</file>
         </files>
 	
 	<dependencySets>

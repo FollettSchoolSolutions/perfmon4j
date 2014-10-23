@@ -3,7 +3,14 @@ package web.org.perfmon4j.extras.wildfly8;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.util.HttpString;
+
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
 import junit.framework.TestCase;
 
 import org.mockito.Mockito;
@@ -14,6 +21,7 @@ import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
+import org.xnio.OptionMap;
 
 public class HandlerImplTest extends TestCase {
 
@@ -195,6 +203,101 @@ public class HandlerImplTest extends TestCase {
 		assertEquals("Should have gotten 1 thread trace", 1, SimpleAppender.threadTraces);
 	}
 	
+	private void addSessionAttribute(HttpServerExchange exchange, String name, String value) {
+		ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+		if (context == null) {
+			context = Mockito.mock(ServletRequestContext.class);
+		
+			HttpSessionImpl session = Mockito.mock(HttpSessionImpl.class);
+			Mockito.when(context.getSession()).thenReturn(session);
+			exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, context);
+		}
+		Mockito.when(context.getSession().getAttribute(name)).thenReturn(value);
+	}
+	
+	public void testThreadTraceHttpSessionTrigger() throws Exception {
+		Trigger trigger = new ThreadTraceConfig.HTTPSessionTrigger("userName", "Dave");
+		addThreadTraceTrigger(trigger);
+		
+		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
+		HttpHandler handler = buildMockHttpHandler();
+		HttpServerExchange exchange = buildMockExchange();
+		
+	
+		HandlerImpl impl = new HandlerImpl(wrapper, handler);
+		impl.handleRequest(exchange);
+		
+		// Now add Session attribute that matches the trigger.
+		addSessionAttribute(exchange, "userName", "Dave");
+		impl.handleRequest(exchange);
+		
+		SimpleAppender.flushOutput();
+		
+		assertEquals("Should have gotten 1 thread trace", 1, SimpleAppender.threadTraces);
+	}
+	
+
+	private void addCookie(HttpServerExchange exchange, String name, String value) throws Exception {
+		Cookie cookie = Mockito.mock(Cookie.class);
+		Mockito.when(cookie.getValue()).thenReturn(value);
+		
+		exchange.getRequestCookies().put(name, cookie);
+		
+	}
+	
+	public void testThreadTraceHttpCookieTrigger() throws Exception {
+		Trigger trigger = new ThreadTraceConfig.HTTPCookieTrigger("userName", "Dave");
+		addThreadTraceTrigger(trigger);
+		
+		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
+		HttpHandler handler = buildMockHttpHandler();
+		HttpServerExchange exchange = buildMockExchange();
+	
+		HandlerImpl impl = new HandlerImpl(wrapper, handler);
+		impl.handleRequest(exchange);
+		
+		// Now add Session attribute that matches the trigger.
+		addCookie(exchange, "userName", "Dave");
+		impl.handleRequest(exchange);
+		
+		SimpleAppender.flushOutput();
+		
+		assertEquals("Should have gotten 1 thread trace", 1, SimpleAppender.threadTraces);
+	}
+
+	public void testBuildNDC() throws Exception {
+		HttpServerExchange exchange = buildMockExchange("/mycontext/myservlet");
+		exchange.setQueryString("userName=dave&password=frog");
+		InetSocketAddress source = new InetSocketAddress(InetAddress.getLoopbackAddress(), 8080);
+		exchange.setSourceAddress(source);
+		exchange.getRequestHeaders().add(new HttpString("X-Forwarded-For"), "172.0.0.1");
+		addCookie(exchange, "cookieA","cA");
+		addCookie(exchange, "cookieB","cB");
+		addCookie(exchange, "cookieC","cC");
+		addSessionAttribute(exchange, "sessA", "sA");
+		addSessionAttribute(exchange, "sessB", "sB");
+		addSessionAttribute(exchange, "sessC", "sC");
+		
+		String[] cookiesToDisplay = new String[]{"cookieA", "cookieC"};
+		String[] sessionsToDisplay = new String[]{"sessA", "sessC"};
+		
+		String ndc = HandlerImpl.buildNDC(exchange, true, false, null, null);
+		assertEquals("ndc with url only", "/mycontext/myservlet?userName=dave&password=*******", ndc);
+		
+		ndc = HandlerImpl.buildNDC(exchange, false, true, null, null);
+		assertEquals("ndc with client info only", "localhost/127.0.0.1[172.0.0.1]", ndc);
+
+		ndc = HandlerImpl.buildNDC(exchange, false, false, cookiesToDisplay, null);
+		assertEquals("ndc with cookies only", "cookieA:cA cookieC:cC", ndc);
+
+		ndc = HandlerImpl.buildNDC(exchange, false, false, null, sessionsToDisplay);
+		assertEquals("ndc with session attributes only", "sessA:sA sessC:sC", ndc);
+
+		ndc = HandlerImpl.buildNDC(exchange, true, true, cookiesToDisplay, sessionsToDisplay);
+		assertEquals("ndc with all options", "/mycontext/myservlet?userName=dave&password=******* localhost/127.0.0.1[172.0.0.1] cookieA:cA cookieC:cC sessA:sA sessC:sC", ndc);
+	}
+	
+	
 	private HttpHandler buildMockHttpHandler() {
 		HttpHandler handler = Mockito.mock(HttpHandler.class);
 		
@@ -206,7 +309,11 @@ public class HandlerImplTest extends TestCase {
 	}
 	
 	private HttpServerExchange buildMockExchange(String requestPath) {
-		ServerConnection conn = Mockito.mock(ServerConnection.class); 
+		ServerConnection conn = Mockito.mock(ServerConnection.class);
+		OptionMap map = OptionMap.builder().getMap();
+		Mockito.when(conn.getUndertowOptions()).thenReturn(map);
+		
+		
 		HttpServerExchange result = new HttpServerExchange(conn);
 		result.setRequestPath(requestPath);
 		

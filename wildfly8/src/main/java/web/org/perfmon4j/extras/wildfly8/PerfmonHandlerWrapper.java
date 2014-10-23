@@ -6,8 +6,6 @@ import io.undertow.server.HttpHandler;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
-
-
 public class PerfmonHandlerWrapper implements HandlerWrapper {
 	private static final Logger logger = LoggerFactory.initLogger(PerfmonHandlerWrapper.class);
 	private String baseFilterCategory = "WebRequest";
@@ -16,11 +14,28 @@ public class PerfmonHandlerWrapper implements HandlerWrapper {
     private String abortTimerOnURLPattern = null;
     private String skipTimerOnURLPattern = null;
     private boolean outputRequestAndDuration = false;
+    private boolean pushURLOnNDC = false;
     private String pushCookiesOnNDC = null;
     private String pushSessionAttributesOnNDC = null;
     private boolean pushClientInfoOnNDC = false;	
-	
+	static boolean announced = false;
+    
+    
 	public HttpHandler wrap(HttpHandler handler) {
+		if (!announced) {
+			announced = true;
+			logger.logInfo("Perfmoh4j installing Undertow HandlerWrapper");
+			logger.logInfo("baseFilterCategory=" + baseFilterCategory);
+			logger.logInfo("abortTimerOnRedirect=" + abortTimerOnRedirect );
+			logger.logInfo("abortTimerOnImageResponse=" + abortTimerOnImageResponse);
+			logger.logInfo("abortTimerOnURLPattern=" + abortTimerOnURLPattern);
+			logger.logInfo("skipTimerOnURLPattern=" + skipTimerOnURLPattern);
+			logger.logInfo("outputRequestAndDuration=" + outputRequestAndDuration);
+			logger.logInfo("pushURLOnNDC=" + pushURLOnNDC);
+			logger.logInfo("pushCookiesOnNDC=" + pushCookiesOnNDC);
+			logger.logInfo("pushSessionAttributesOnNDC=" + pushSessionAttributesOnNDC);
+			logger.logInfo("pushClientInfoOnNDC=" + pushClientInfoOnNDC);
+		}
 		return new HandlerImpl(this, handler);
 	}
 	
@@ -94,5 +109,13 @@ public class PerfmonHandlerWrapper implements HandlerWrapper {
 
 	public void setPushClientInfoOnNDC(boolean pushClientInfoOnNDC) {
 		this.pushClientInfoOnNDC = pushClientInfoOnNDC;
+	}
+
+	public boolean isPushURLOnNDC() {
+		return pushURLOnNDC;
+	}
+
+	public void setPushURLOnNDC(boolean pushURLOnNDC) {
+		this.pushURLOnNDC = pushURLOnNDC;
 	}
 }
