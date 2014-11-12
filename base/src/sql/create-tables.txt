@@ -1,0 +1,9 @@
+To create or update the perfmon4j schmea use the perfmon4j-dbupgrader.jar executable jar file.
+
+Example usage:
+ 	java -jar perfmon4j-dbupgrade.jar driverJarFile=~/JDBCDrivers/sqljdbc4.jar /
+  		driverClass=com.microsoft.sqlserver.jdbc.SQLServerDriver /
+  		jdbcURL=jdbc:sqlserver://dbhost;DatabaseName=perfmon4j 
+ 		userName=perfmon4j / 
+  		password=mypassword
+  

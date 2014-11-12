@@ -40,7 +40,7 @@
 		<fileSet>
 			<directory>${basedir}/base/src/sql</directory>
 			<includes>
-				<include>**/*.sql</include>
+				<include>**/*.txt</include>
 			</includes>
 			<outputDirectory>doc</outputDirectory>
 		</fileSet>
