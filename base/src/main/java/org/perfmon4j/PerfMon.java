@@ -940,14 +940,15 @@ public class PerfMon {
         }
         
         public void failSafeRun() {
+        	long stopTime = MiscHelper.currentTimeWithMilliResolution();
+            priorityTimer.schedule(new PushAppenderDataTask(owner, this.appender, offset), appender.getIntervalMillis());
             try {
-                perfMonData.setTimeStop(MiscHelper.currentTimeWithMilliResolution());
+                perfMonData.setTimeStop(stopTime);
                 maxThroughputPerMinute = perfMonData.refreshMonitorsMaxThroughputPerMinute(maxThroughputPerMinute);
                 appender.appendData(perfMonData);
             } catch (Exception ex) {
                 logger.logError("Error running " + this.getClass().getSimpleName() + " task", ex);
             }
-            priorityTimer.schedule(new PushAppenderDataTask(owner, this.appender, offset), appender.getIntervalMillis());
         }
         
         

@@ -29,12 +29,12 @@ import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.BeanHelper;
+import org.perfmon4j.util.BeanHelper.UnableToGetAttributeException;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
-import org.perfmon4j.util.BeanHelper.UnableToGetAttributeException;
 import org.perfmon4j.util.ThresholdCalculator.ThresholdResult;
 
 
@@ -193,8 +193,11 @@ public class IntervalData implements PerfMonData {
         this.timeStop = timeStop;
         this.medianCalculator = medianCalculator;
         this.thresholdCalculator = thresholdCalculator;
-        
         if (owner != null) {
+            this.maxActiveThreadCount = owner.getActiveThreadCount();
+            if (this.maxActiveThreadCount > 0) {
+            	this.timeMaxActiveThreadCountSet = timeStart;
+            }
             haveLifetimeStats = true;
             
             lifetimeStartTime = owner.getStartTime();

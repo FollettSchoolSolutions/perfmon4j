@@ -436,6 +436,56 @@ public class PerfMonTest extends TestCase {
         perfMon.removeAppender(appenderID);
     }
 
+
+    /*----------------------------------------------------------------------------*/
+    /**
+     * This test exposes a defect where when no activity is recorded in an interval (no completions or hits)
+     * the max thread count remains at 0, even if there are threads currently active within the monitor.
+     * @throws Exception
+     */
+    public void testIntervalAppenderCountsMaxThreadsWithNoThroughput() throws Exception {
+        final long INTERVAL_MILLIS = 500;
+        
+        final String MONITOR_NAME = "testIntervalResults";
+        Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
+        PerfMon perfMon = PerfMon.getMonitor(MONITOR_NAME);
+        perfMon.addAppender(appenderID);
+        Thread.sleep(100);
+  
+        // First Period... 1 hit AND 0 completions
+        PerfMonTimer timer = PerfMonTimer.start(MONITOR_NAME);
+        Thread.sleep(INTERVAL_MILLIS + 100);
+        
+        // Second Period... 0 hits and 0 completions
+        Thread.sleep(INTERVAL_MILLIS + 100);
+       
+        // Third Period... 0 hits AND 1 Completion
+        PerfMonTimer.stop(timer);
+        Thread.sleep(INTERVAL_MILLIS + 100);
+        
+        TestAppender appender = (TestAppender)Appender.getOrCreateAppender(appenderID);
+        appender.flush();
+        assertEquals("Number of log events appended", 3, appender.output.size());
+        IntervalData firstPeriod = (IntervalData)appender.output.get(0);
+        IntervalData secondPeriod = (IntervalData)appender.output.get(1);
+        IntervalData thirdPeriod = (IntervalData)appender.output.get(2);
+        
+        assertEquals("Should have 1 active thread in first period", 1, firstPeriod.getMaxActiveThreadCount());
+        assertEquals("Should have 1 hit in first period", 1, firstPeriod.getTotalHits());
+        assertEquals("Should have 0 completions in first period", 0, firstPeriod.getTotalCompletions());
+        
+        assertEquals("Should have 1 active thread in second period", 1, secondPeriod.getMaxActiveThreadCount());
+        assertEquals("Should have 0 hits in second period", 0, secondPeriod.getTotalHits());
+        assertEquals("Should have 0 completions in second period", 0, secondPeriod.getTotalCompletions());
+        
+        assertEquals("Should have 1 active thread in third period", 1, thirdPeriod.getMaxActiveThreadCount());
+        assertEquals("Should have 0 hits in second period", 0, thirdPeriod.getTotalHits());
+        assertEquals("Should have 1 completions in second period", 1, thirdPeriod.getTotalCompletions());
+        
+        perfMon.removeAppender(appenderID);
+    }
+    
+    
     
     
     /**
