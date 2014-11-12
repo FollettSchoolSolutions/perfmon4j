@@ -1,4 +1,4 @@
-Copyright 2008, 2009, 2010 Follett Software Company 
+Copyright 2008, 2009, 2010, 2014 Follett Software Company 
  
 Perfmon4j(tm) is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License, version 3,
@@ -14,28 +14,11 @@ Follett Software Company
 1391 Corporate Drive
 McHenry, IL 60050
 
-****** Please Help ********************************************************************************************
-* If you like Perfmon4j, please let us know.  
-
-* If you would like to try Perfmon4j but dont know where to start, let us know.
-
-* If you try Perfmon4j and have question or problems REALLY let us know!  
-
-* Your feedback is essential to ensure future open source releases of Perfmon4j.
-
-Please direct emails to perfmon4j@fsc.follett.com
-
-OR
-
-Contact us through the SourceForge forums
-	- Open Discussion: https://sourceforge.net/projects/perfmon4j/forums/forum/809789
-	- Help: https://sourceforge.net/projects/perfmon4j/forums/forum/809790
-
-Dave
-****** Please Help ********************************************************************************************
+Version 1.2.0.GA (Released 11/11/2014)
+-  Numerous improvements and enhancements.
 
 Version 1.2.0-ALPHA-4
-- Fixed an obscure defect found under tomcat Aspen where the perfmon4j confuration file could no longer 
+- Fixed an obscure defect found under tomcat Aspen where the perfmon4j configuration file could no longer 
 be parsed after the WAR file was loaded.  The problem was the default XML parser was changed and the new
 parser was not available to the root classloader, which loaded perfmon4j.
 
@@ -46,17 +29,6 @@ matches the pattern
 - Now with the PerfMonValve a URLPattern for the "skipTimerOnURLPattern" or "abortTimerOnURLPattern"
 will match with the context name of the request included.  The match for the valve will be evaluated against
 the servlet context + servlet path.
-
-
-Version 1.2.0-ALPHA-3
-???
-
-Version 1.2.0-ALPHA-2
-???
-
-Version 1.2.0-ALPHA-1
-???
-
 
 
 Changes
@@ -90,7 +62,7 @@ the associated update scripts:
 	
 - Feature Request: Now you can monitor JDBC/SQL request durations.  This option will enable you to 
 	monitor the percentage of time your method or process spends in java vs SQL.
-	See:  Perfmon4j-ConfigSamples.pdf - Example 14 – Evaluate SQL/JDBC Duration (Version 1.1.0+) a
+	See:  Perfmon4j-ConfigSamples.pdf - Example 14 ï¿½ Evaluate SQL/JDBC Duration (Version 1.1.0+) a
 	configuration example.
 	
 - Feature Enhancement:  Reduced memory overhead associated with servlet request monitoring. This is particularly
@@ -106,8 +78,8 @@ the associated update scripts:
 - Feature Request: Added a powerfull new way to force ThreadTraceMonitoring on a specific thread (or a specific request).  
 	You can now force a thread trace based on one of the following: HTTPRequest parameter, HTTPSession parameter,
 	HTTPCookie value, thread name or thread property.
-	See: "Example 10 – Setup a ThreadTrace for detailed peformance logging", 
-		"Example 11 –Trigger ThreadTrace by request" and "Example 12 –Trigger ThreadTrace by cookie" in
+	See: "Example 10 ï¿½ Setup a ThreadTrace for detailed peformance logging", 
+		"Example 11 ï¿½Trigger ThreadTrace by request" and "Example 12 ï¿½Trigger ThreadTrace by cookie" in
 		Perfmon4j-ConfigSamples.pdf for configuration examples.
 
 - Feature Request: #2972831 - Added a SQLAppender for UserAgentData.  This enables you to configure the
@@ -115,7 +87,7 @@ the associated update scripts:
 	Perfmon4j Apache Tomcat Valve this enables tracking the total number of request broken out by browser, 
 	browserVersion, clientOS amd clientOS version.
 	
-	See: "Example 9 – Output UserAgent (Browser Summary) data to a SQL Database' in 
+	See: "Example 9 ï¿½ Output UserAgent (Browser Summary) data to a SQL Database' in 
 	Perfmon4j-ConfigSamples.pdf for configuration examples.
 
 - Feature Request: Added support for SQLAppender to the following SnapShot monitors: Tomcat GlobalRequestProcessorMonitor,
