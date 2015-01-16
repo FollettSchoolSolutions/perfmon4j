@@ -66,6 +66,21 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     public final static String USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY="Perfmon4j.UseLegacyInstrumentationWrapper"; 
 	public final static boolean USE_LEGACY_INSTRUMENTATION_WRAPPER=Boolean.getBoolean(USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY);
 	
+	/*
+	 * This property is NOT used when legacy instrumentation wrapper is used.
+	 * 
+	 * When using the non-wrapper instrumentation, setting this flag to true will
+	 * prevent the instrumentation agent from  generating dynamic classes to store
+	 * the PerfMon monitors for each instrumented method.  The dynamic class is only required
+	 * when instrumenting a serialized class that does not have a explicit 
+	 * serial version ID.
+	 * 
+	 * If this system property is set to false, the monitors will have to be 
+	 * retrieved on each method invocation, resulting in a modest performance penalty.
+	 */
+    public final static String DONT_CREATE_EXTERNAL_CLASS_ON_INSTRUMENTATION_PROPERTY  ="Perfmon4j.DontCreateExternalClassOnInstrumentation"; 
+	public final static boolean DONT_CREATE_EXTERNAL_CLASS_ON_INSTRUMENTATION=Boolean.getBoolean(DONT_CREATE_EXTERNAL_CLASS_ON_INSTRUMENTATION_PROPERTY);
+
 	
 	private static ValveHookInserter valveHookInserter = null;
 	

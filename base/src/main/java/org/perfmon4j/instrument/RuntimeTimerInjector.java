@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.Stack;
 
 import javassist.CannotCompileException;
+import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtField;
 import javassist.CtMethod;
@@ -270,13 +271,29 @@ public class RuntimeTimerInjector {
                 }
                 
                 if (numTimers > 0) {
+            		Class<?> externalClazzForMonitors = null;
                     Integer offsetInStaticMonitorArray = null;
                     if (!beingRedefined) {
                     	if (!mustMaintainSerialVersion) {
-	                        String timerArray = "static final private org.perfmon4j.PerfMon[] pm$MonitorArray" + 
-	                            " = new org.perfmon4j.PerfMon[" + numTimers + "];";
+                            String timerArray = "static final private org.perfmon4j.PerfMon[] pm$MonitorArray" + 
+    	                            " = new org.perfmon4j.PerfMon[" + numTimers + "];";
 	                        CtField field = CtField.make(timerArray, clazz);
 	                        clazz.addField(field);
+                    	} else if (!PerfMonTimerTransformer.DONT_CREATE_EXTERNAL_CLASS_ON_INSTRUMENTATION){
+                    		// If we need to maintain serial version, create another class that will
+                    		// hold the PerfMon monitors for each method.
+                    		
+                    		// Note: This method is NOT used with the legacy instrumentation method,
+                    		// since that will always alter the class with the wrapper methods.
+                            String timerArray = "static final public org.perfmon4j.PerfMon[] pm$MonitorArray" + 
+    	                            " = new org.perfmon4j.PerfMon[" + numTimers + "];";
+                    		ClassPool pool = clazz.getClassPool();
+                    		String className = clazz.getName() + "_P4J_" + Integer.toHexString(serialNumber++); 
+                    		CtClass tmpClass = pool.makeClass(className);
+                    		
+	                        CtField field = CtField.make(timerArray, tmpClass);
+	                        tmpClass.addField(field);
+	                        externalClazzForMonitors = tmpClass.toClass();
                     	}
                     } else {
                         // When a class is being redefined we are unable to add any data members to it.
@@ -309,7 +326,7 @@ public class RuntimeTimerInjector {
                         	if (PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER) {
 	                            offset = insertPerfMonTimerWithLegacyWrapper(clazz, t.method, t.timerKeyAnnotation, t.timerKeyExtreme, t.extremeSQLKey, offset);
                         	} else {
-	                            offset = insertPerfMonTimer(clazz, t.method, t.timerKeyAnnotation, t.timerKeyExtreme, t.extremeSQLKey, offset, mustMaintainSerialVersion);
+	                            offset = insertPerfMonTimer(clazz, t.method, t.timerKeyAnnotation, t.timerKeyExtreme, t.extremeSQLKey, offset, mustMaintainSerialVersion, externalClazzForMonitors);
                         	}
                         }
                         if (verboseMessages != null) {
@@ -461,16 +478,24 @@ public class RuntimeTimerInjector {
         return Modifier.setPrivate(modifier) | Modifier.FINAL;
     }
     
-    private static String buildMonitorJavaSource(int offset, String timerKey, String timerType, boolean mustMaintainSerialVersion) {
+    private static String buildMonitorJavaSource(int offset, String timerKey, String timerType, boolean mustMaintainSerialVersion, 
+    		Class<?> externalClazzForMonitors) {
     	String result = null;
-    	 
-    	if (mustMaintainSerialVersion) {
+    
+    	final boolean canNotStoreMonitors = mustMaintainSerialVersion && externalClazzForMonitors == null; 
+   
+    	if (canNotStoreMonitors) {
     		// Slower..  But it does not require modification of the serial version of the class.
     		result = "\tperfmon4j$ContainerBefore." + timerType + " = org.perfmon4j.PerfMonTimer.start(\"" + timerKey + "\");\n";
     	} else {
-        	String monitorArrayName = "pm$MonitorArray";
-        	StringBuilder builder = new StringBuilder();
-        	
+	    	String monitorArrayName = "pm$MonitorArray";
+	    	 
+	    	if (externalClazzForMonitors != null) {
+	    		monitorArrayName = externalClazzForMonitors.getName() + "." + monitorArrayName;
+	    		mustMaintainSerialVersion = false; 
+	    	} 
+	    	
+	    	StringBuilder builder = new StringBuilder();
 	        builder.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
 	    		.append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + timerKey + "\");\n")
 	    		.append("\t}\n")
@@ -482,42 +507,24 @@ public class RuntimeTimerInjector {
     }
     
     private static int insertPerfMonTimer(CtClass clazz, CtMethod method, String timerKeyAnnotation, 
-            String timerKeyExtreme, String extremeSQLKey, int offset, boolean mustMaintainSerialVersion) throws NotFoundException {
+            String timerKeyExtreme, String extremeSQLKey, int offset, boolean mustMaintainSerialVersion, Class<?> externalClazzForMonitors) throws NotFoundException {
         try {
 	        // Create the body of the code for the new method...
 	        StringBuilder before = new StringBuilder();
 	        before.append("{\n");
 	        before.append("\torg.perfmon4j.NoWrapTimerContainer perfmon4j$ContainerBefore = new org.perfmon4j.NoWrapTimerContainer();\n");
-//	        String monitorArrayName = "pm$MonitorArray";
 	        
 	        if (timerKeyAnnotation != null) {
-	        	before.append(buildMonitorJavaSource(offset, timerKeyAnnotation, "annotationTimer", mustMaintainSerialVersion));
-	        	
-//	            before.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
-//                	.append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + timerKeyAnnotation + "\");\n")
-//                	.append("\t}\n")
-//                	.append("\tperfmon4j$ContainerBefore.annotationTimer = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n");
+	        	before.append(buildMonitorJavaSource(offset, timerKeyAnnotation, "annotationTimer", mustMaintainSerialVersion, externalClazzForMonitors));
 	            offset++;
 	        }	        
 	        if (timerKeyExtreme != null) {
-	        	before.append(buildMonitorJavaSource(offset, timerKeyExtreme, "extremeTimer", mustMaintainSerialVersion));
-	        	
-//	        	
-//	            before.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
-//	                .append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + timerKeyExtreme + "\");\n")
-//	                .append("\t}\n")
-//	                .append("\tperfmon4j$ContainerBefore.extremeTimer = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n");
+	        	before.append(buildMonitorJavaSource(offset, timerKeyExtreme, "extremeTimer", mustMaintainSerialVersion, externalClazzForMonitors));
 	            offset++;
 	        }
 	        if (extremeSQLKey != null) {
-	        	before.append(buildMonitorJavaSource(offset, extremeSQLKey, "extremeSQLTimer", mustMaintainSerialVersion))
+	        	before.append(buildMonitorJavaSource(offset, extremeSQLKey, "extremeSQLTimer", mustMaintainSerialVersion, externalClazzForMonitors))
 	        		.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
-
-//	            before.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
-//                	.append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + extremeSQLKey + "\");\n")
-//                	.append("\t}\n")
-//                	.append("\tperfmon4j$ContainerBefore.extremeSQLTimer = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n")
-//	            	.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
 	            offset++;
 	        }	        
 	        
@@ -742,7 +749,7 @@ public class RuntimeTimerInjector {
         return offset;
     }
     
-    // Unfortunatly Javassist does not currently allow an inserted finally to 
+    // Unfortunately Javassist does not currently allow an inserted finally to 
     // access local variables in the method.  This is OK when we are able to add methods to the
     // class since we simply create a wrapper around the method.  This is not acceptable 
     // for boot classes (classes that are being redefined) since the javaagent instrumentation
@@ -751,6 +758,23 @@ public class RuntimeTimerInjector {
     // namely a modest performance penalty, we only do this if we have to.
     // Oh and in fairness, javassist is a great tool and I am pretty confident it can do
     // what I want, however, you have to use it to directly manipulate java byte code, ick.
+    
+    // Note: 1/16/15 
+    // There was a thought that you could implement this without thread locals.  By using an ExprEditor class
+    // as follows:  
+    //
+    // method.instrument(  
+    // new ExprEditor() {  
+    //	 public void edit(MethodCall m)  
+    //	 throws CannotCompileException  
+    //	 {  
+    //	 m.replace(beforeMethod + " try {$_ = $proceed($$); } " + afterMethod);  
+    //	 }  
+    //	 });  
+    //
+    //  This DOES NOT WORK as you might expect.  It is not replacing the body of the method you
+    //  are instrumenting, RATHER it modifies the call to each method that is called within the
+    // body of the method.
     public static class PushTimerForBootClass {
         private static ThreadLocal<Stack<PerfMonTimer>> bootClassTimers = new ThreadLocal<Stack<PerfMonTimer>>() {
              protected synchronized Stack<PerfMonTimer> initialValue() {

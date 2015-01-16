@@ -76,7 +76,6 @@ public class RuntimeTimerInjectorTest extends TestCase {
     public static class TestAnnotation {
         @DeclarePerfMonTimer("TestAnnotation.test1")
         public static void annotation() {
-            System.err.println("asdfasdf");
         }
     }
     
@@ -294,6 +293,38 @@ public class RuntimeTimerInjectorTest extends TestCase {
         
     }
 
+    @SuppressWarnings("serial")
+	public static class TestSerializedWithNoExplicitID implements Serializable {
+        @DeclarePerfMonTimer("dave")
+        public static void annotation() {
+        }
+        public static void noAnnotation() {
+        }
+    }
+    
+    public void testSerializedClassWithoutExplicitVersionIsNotModified() throws Exception {
+        CtClass clazz = cloneLoadedClass(TestSerializedWithNoExplicitID.class);
+        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+        
+        // Should have 3 timers... 1 for the annotation and a separate one for each method....
+        assertEquals("Number of inserted timers", 3, numTimersInserted);
+        try {
+            clazz.getField("pm$MonitorArray");
+            fail("Class should not have been modified");
+        } catch (NotFoundException nfe) {
+        	// Expected...
+        }
+   
+        invokeMethodOnCtClass(clazz, "annotation");
+        
+        PerfMon mon = PerfMon.getMonitor(clazz.getName());
+        assertEquals("Should have a hit on the extreme monitor", 1, mon.getTotalCompletions());
+        
+        mon = PerfMon.getMonitor("dave");
+        assertEquals("Should have a hit on the annotation", 1, mon.getTotalCompletions());
+        
+    }
+    
     
     
     /*----------------------------------------------------------------------------*/    
@@ -442,11 +473,12 @@ public class RuntimeTimerInjectorTest extends TestCase {
     public static junit.framework.Test suite() {
         String testType = System.getProperty("UNIT");
         TestSuite newSuite = new TestSuite();
+//    	System.setProperty(PerfMonTimerTransformer.DONT_CREATE_EXTERNAL_CLASS_ON_INSTRUMENTATION_PROPERTY, "true");
 
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-        newSuite.addTest(new RuntimeTimerInjectorTest("testMaintainSerialVersionIDOnClassWithNoExplicitSerialVersionID"));
+//        newSuite.addTest(new RuntimeTimerInjectorTest("testSerializedClassWithoutExplicitVersionIsNotModified"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then
