@@ -164,7 +164,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                        clazz.defrost();
 	                    }
 	                    
-	                    int count = RuntimeTimerInjector.injectPerfMonTimers(clazz, classBeingRedefined != null, params);
+	                    int count = RuntimeTimerInjector.injectPerfMonTimers(clazz, classBeingRedefined != null, params, loader, protectionDomain);
 	                    if (count > 0) {
 	                        if (classBeingRedefined != null) {
 	                        	InstrumentationMonitor.incBootstrapClassesInst();

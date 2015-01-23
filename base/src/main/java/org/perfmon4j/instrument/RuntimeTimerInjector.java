@@ -20,6 +20,7 @@
 */
 package org.perfmon4j.instrument;
 
+import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -138,8 +139,13 @@ public class RuntimeTimerInjector {
     	return result;
     }
     
-    
+    @Deprecated // Always pass in the class loader to use.  This is important if we need to generate a dynamic class.
     public static int injectPerfMonTimers(CtClass clazz, boolean beingRedefined, TransformerParams params) throws ClassNotFoundException, NotFoundException, CannotCompileException {
+    	return injectPerfMonTimers(clazz, beingRedefined, params, clazz.getClass().getClassLoader(), null);
+    }
+    
+	public static int injectPerfMonTimers(CtClass clazz, boolean beingRedefined, TransformerParams params, ClassLoader loader, 
+			ProtectionDomain protectionDomain) throws ClassNotFoundException, NotFoundException, CannotCompileException {
         int mode = TransformerParams.MODE_ANNOTATE;
         TransformerParams.TransformOptions transformOptions = TransformerParams.TransformOptions.DEFAULT;
         int numTimers = 0;
@@ -293,7 +299,7 @@ public class RuntimeTimerInjector {
                     		
 	                        CtField field = CtField.make(timerArray, tmpClass);
 	                        tmpClass.addField(field);
-	                        externalClazzForMonitors = tmpClass.toClass();
+	                        externalClazzForMonitors = tmpClass.toClass(loader, protectionDomain);
                     	}
                     } else {
                         // When a class is being redefined we are unable to add any data members to it.
@@ -513,6 +519,7 @@ public class RuntimeTimerInjector {
 	        StringBuilder before = new StringBuilder();
 	        before.append("{\n");
 	        before.append("\torg.perfmon4j.NoWrapTimerContainer perfmon4j$ContainerBefore = new org.perfmon4j.NoWrapTimerContainer();\n");
+	        before.append("\t((org.perfmon4j.NoWrapTimerContainer.ArrayStack)org.perfmon4j.NoWrapTimerContainer.callStack.get()).push(perfmon4j$ContainerBefore);\n");
 	        
 	        if (timerKeyAnnotation != null) {
 	        	before.append(buildMonitorJavaSource(offset, timerKeyAnnotation, "annotationTimer", mustMaintainSerialVersion, externalClazzForMonitors));
@@ -528,7 +535,6 @@ public class RuntimeTimerInjector {
 	            offset++;
 	        }	        
 	        
-	        before.append("\t((org.perfmon4j.NoWrapTimerContainer.ArrayStack)org.perfmon4j.NoWrapTimerContainer.callStack.get()).push(perfmon4j$ContainerBefore);\n");
 	        before.append("}\n");
 	        
 //System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        

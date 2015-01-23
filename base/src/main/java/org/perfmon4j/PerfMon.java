@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.WeakHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
@@ -72,7 +74,7 @@ public class PerfMon {
     public static final String APPENDER_PATTERN_ALL_DESCENDENTS = "/**";
     public static final String APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS = "./**";
     
-    private final Object startStopLockToken = new Object(); 
+    private final Lock startStopLock = new ReentrantLock();
 
     /** @todo Make these timers lazy initialized.... If PerfMon is never instantiated
      * we dont want to start these thread... **/
@@ -104,7 +106,8 @@ public class PerfMon {
     private final Map<Appender, String> appenderPatternMap = Collections.synchronizedMap(new HashMap<Appender, String>());
     private final Set<Appender> appendersAssociatedWithChildren = Collections.synchronizedSet(new HashSet<Appender>());
     
-    private final Object dataArrayInsertLockToken = new Object();
+    private final Lock dataArrayInsertLock = new ReentrantLock();
+    
     private final PushAppenderDataTask dataArray[] = new PushAppenderDataTask[MAX_APPENDERS_PER_MONITOR];
     
     /**
@@ -112,7 +115,7 @@ public class PerfMon {
      * tools.
      */
     private int	activeExternalElements = 0;
-    private final Object externalElementArrayLockToken = new Object();
+    private final Lock externalElementArrayLock = new ReentrantLock();
     private final IntervalData externalElementArray[] = new IntervalData[MAX_EXTERNAL_ELEMENTS_PER_MONITOR];
     
     
@@ -122,7 +125,7 @@ public class PerfMon {
      */
     private static Map<String, PerfMon> mapMonitors = new HashMap<String, PerfMon>();
     
-    private static final Object mapMonitorLockToken = new Object();
+    private static final Lock mapMonitorLock = new ReentrantLock();
     private static final Set<String> monitorsWithThreadTraceConfigAttached = Collections.synchronizedSet(new HashSet<String>());
     
     private final Long monitorID;
@@ -211,10 +214,13 @@ public class PerfMon {
     
 /*----------------------------------------------------------------------------*/    
     public static int getNumMonitors() {
-        int result = 0;
-        
-        synchronized (mapMonitorLockToken) {
+    	int result = 0;
+
+    	mapMonitorLock.lock();
+        try {
         	result = mapMonitors.size();
+        } finally {
+        	mapMonitorLock.unlock();
         }
         return result;
     }
@@ -224,8 +230,11 @@ public class PerfMon {
     public static List<String> getMonitorNames() {
         List<String> result = new ArrayList<String>(getNumMonitors());
         
-        synchronized (mapMonitorLockToken) {
+        mapMonitorLock.lock();
+        try {
         	result.addAll(mapMonitors.keySet());
+        } finally {
+        	mapMonitorLock.unlock();
         }
         
         return result;
@@ -236,8 +245,11 @@ public class PerfMon {
         List<MonitorKey> result = new ArrayList<MonitorKey>(getNumMonitors());
  
         List<PerfMon> monitors = new ArrayList<PerfMon>(getNumMonitors());
-        synchronized (mapMonitorLockToken) {
+        mapMonitorLock.lock();
+        try {
         	monitors.addAll(mapMonitors.values());
+        } finally {
+        	mapMonitorLock.unlock();
         }
         for (PerfMon mon : monitors) {
         	result.add(MonitorKey.newIntervalKey(mon.getName()));
@@ -249,11 +261,14 @@ public class PerfMon {
     private static boolean isAppenderInUseByAnyMonitor(Appender appender) {
         boolean result = false;
         
-        synchronized (mapMonitorLockToken) {
+        mapMonitorLock.lock();
+        try {
             Iterator<PerfMon> itr = mapMonitors.values().iterator();
             while (itr.hasNext() && !result) {
                 result = itr.next().appenderList.contains(appender);
             }
+        } finally {
+        	mapMonitorLock.unlock();
         }
         return result;
     }
@@ -288,8 +303,11 @@ public class PerfMon {
     
 /*----------------------------------------------------------------------------*/
     public static PerfMon getMonitorNoCreate_PERFMON_USE_ONLY(String key) {
-    	synchronized (mapMonitorLockToken) {
+    	mapMonitorLock.lock();
+    	try {
 			return mapMonitors.get(key);
+		} finally {
+			mapMonitorLock.unlock();
 		}
     }
 
@@ -307,8 +325,8 @@ public class PerfMon {
      */
     public static PerfMon getMonitor(String key, boolean isDynamicPath) {
         PerfMon result = null;
-        
-        synchronized(mapMonitorLockToken) {
+        mapMonitorLock.lock();
+        try {
             if (ROOT_MONITOR_NAME.equals(key)) {
                 result = rootMonitor;
             } else {
@@ -329,6 +347,8 @@ public class PerfMon {
                 	result = parent;
                 }
             }
+        } finally {
+        	mapMonitorLock.unlock();
         }
         return result;
     }
@@ -358,7 +378,9 @@ public class PerfMon {
                 ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
                 tOnStack.start(getName(), internalConfig.getMaxDepth(), internalConfig.getMinDurationToCapture(), systemTime);
             }
-            synchronized (startStopLockToken) {
+            
+            startStopLock.lock();
+            try {
                 activeThreadCount++;
                 if (isActive()) {
                     totalHits++;
@@ -381,6 +403,8 @@ public class PerfMon {
                         }
                     }
                 }
+            } finally {
+            	startStopLock.unlock();
             }
         }
     }
@@ -415,7 +439,9 @@ public class PerfMon {
                     }
                 }
             }
-            synchronized (startStopLockToken) {
+            
+            startStopLock.lock();
+            try {
                 long eventStartTime = count.getStartTime();
                 activeThreadCount--;
                 
@@ -495,7 +521,9 @@ public class PerfMon {
                     	}
                     }
                 }
-            } // synchronized...
+            } finally {
+            	startStopLock.unlock();
+            }
         }
     }
 
@@ -605,16 +633,22 @@ public class PerfMon {
 
 /*----------------------------------------------------------------------------*/    
     public long getAverageDuration() {
-        synchronized (startStopLockToken) {
+    	startStopLock.lock();
+        try {
             return totalCompletions > 0 ?
                 totalDuration / totalCompletions : 0;
+        } finally {
+        	startStopLock.unlock();
         }
     }
     
 /*----------------------------------------------------------------------------*/    
     public double getStdDeviation() {
-        synchronized (startStopLockToken) {
+    	startStopLock.lock();
+        try {
             return MiscHelper.calcStdDeviation(totalCompletions, totalDuration, sumOfSquares);
+        } finally {
+        	startStopLock.unlock();
         }
     }
     
@@ -728,7 +762,8 @@ public class PerfMon {
             
             if (!isRootMonitor() && !APPENDER_PATTERN_ALL_DESCENDENTS.equals(appenderPattern)
                 && !APPENDER_PATTERN_CHILDREN_ONLY.equals(appenderPattern)) {
-                synchronized(dataArrayInsertLockToken) {
+            	dataArrayInsertLock.lock();
+                try {
                     for (int i = 0; i < dataArray.length; i++) {
                         if (dataArray[i] == null) {
                             index = i;
@@ -747,6 +782,8 @@ public class PerfMon {
                         logger.logError("Unable to add appender to monitor: " + this +
                                 " - Max appenders exceeded");
                     }
+                } finally {
+                	dataArrayInsertLock.unlock();
                 }
             }
         }
@@ -800,7 +837,8 @@ public class PerfMon {
                     logger.logDebug("Removing appender " + appender + " from monitor " 
                         + this);
                 }
-                synchronized(dataArrayInsertLockToken) {
+                dataArrayInsertLock.lock();
+                try {
                     appenderPatternMap.remove(appender);
                     appenderList.remove(appender);
                     
@@ -824,6 +862,8 @@ public class PerfMon {
                             }
                         }
                     }
+                } finally {
+                	dataArrayInsertLock.unlock();
                 }
             }
             clearCachedPerfMonTimer();
@@ -853,8 +893,8 @@ public class PerfMon {
      */
     public boolean addExternalElement(IntervalData data) {
     	boolean added = false;
-    	
-    	synchronized (externalElementArrayLockToken) {
+    	externalElementArrayLock.lock();
+    	try {
     		for (int i = 0; i < externalElementArray.length && !added; i++) {
     			if (externalElementArray[i] == null) {
     				externalElementArray[i] = data;
@@ -868,6 +908,8 @@ public class PerfMon {
     			}
     			clearCachedPerfMonTimer();
     		}
+    	} finally {
+    		externalElementArrayLock.unlock();
     	}
     	
     	
@@ -884,7 +926,8 @@ public class PerfMon {
     public boolean removeExternalElement(IntervalData data) {
     	boolean removed = false;
     	
-    	synchronized (externalElementArrayLockToken) {
+    	externalElementArrayLock.lock();
+    	try {
     		for (int i = 0; i < externalElementArray.length && !removed; i++) {
     			if (externalElementArray[i] == data) {
     				externalElementArray[i] = null;
@@ -897,6 +940,8 @@ public class PerfMon {
     			makeInactiveIfNoAppenders();
     			clearCachedPerfMonTimer();
     		}
+    	} finally {
+    		externalElementArrayLock.unlock();
     	}
     	return removed;
     }
@@ -904,13 +949,16 @@ public class PerfMon {
     public IntervalData replaceExternalElement(IntervalData current, IntervalData replacement) {
     	IntervalData result = null;
     	
-    	synchronized (externalElementArrayLockToken) {
+    	externalElementArrayLock.lock();
+    	try {
     		for (int i = 0; i < externalElementArray.length && result == null; i++) {
     			if (externalElementArray[i] == current) {
     				externalElementArray[i] = replacement;
     				result = replacement;
     			}
 			}
+    	} finally {
+    		externalElementArrayLock.unlock();
     	}
     	return result;
     }
@@ -933,8 +981,12 @@ public class PerfMon {
             this.owner = owner;
             this.appender = appender;
             this.offset = offset;
-            synchronized (startStopLockToken) {
+            
+            startStopLock.lock();
+            try {
                 perfMonData = appender.newIntervalData(owner, MiscHelper.currentTimeWithMilliResolution());
+            } finally {
+            	startStopLock.unlock();
             }
             dataArray[offset] = this;
         }
@@ -1037,8 +1089,11 @@ public class PerfMon {
      */
     public static void deInitAndCleanMonitors_TESTONLY() {
     	deInit();
-    	synchronized (mapMonitorLockToken) {
+    	mapMonitorLock.lock();
+    	try {
     		mapMonitors.clear();
+		} finally {
+			mapMonitorLock.unlock();
 		}
     }
     
@@ -1206,7 +1261,8 @@ public class PerfMon {
     }
     
     private void makeInactiveIfNoAppenders() {
-        synchronized (startStopLockToken) {
+    	startStopLock.lock();
+        try {
         	if ((getNumPerfMonTasks() + getNumExternalAppenderTasks()) < 1) {
 	            startTime = null;
 	            totalHits = 0;
@@ -1218,17 +1274,22 @@ public class PerfMon {
 	            maxActiveThreadCount = 0;
 	            maxThroughputPerMinute = null;
         	}
+        } finally {
+        	startStopLock.unlock();
         }
     }
     
     private void makeActive() {
-        synchronized (startStopLockToken) {
+    	startStopLock.lock();
+        try {
         	if (!isActive()) {
 	            if (logger.isDebugEnabled()) {
 	                logger.logDebug("Activating monitor " + this);
 	            }
 	            startTime = new Long(MiscHelper.currentTimeWithMilliResolution());
         	}
+        } finally {
+        	startStopLock.unlock();
         }
     }
     
