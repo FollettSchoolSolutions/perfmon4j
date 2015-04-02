@@ -1,2 +1,6 @@
 /target/
 /.settings/
+/.classpath
+/.gitignore
+/.project
+/derby.log
