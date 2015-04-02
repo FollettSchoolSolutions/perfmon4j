@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Thu Apr 02 15:51:17 CDT 2015:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.10.2.0 - (1582446): instance a816c00e-014c-7be6-fa2d-000002d10128 
+on database directory memory:/home/perfmon/projects/perfmon4j/tomcat7/derbyDB with class loader sun.misc.Launcher$AppClassLoader@4c372a96 
+Loaded from file:/home/perfmon/.m2/repository/org/apache/derby/derby/10.10.2.0/derby-10.10.2.0.jar
+java.vendor=Oracle Corporation
+java.runtime.version=1.7.0_67-b01
+user.dir=/home/perfmon/projects/perfmon4j/tomcat7
+os.name=Linux
+os.arch=amd64
+os.version=3.13.0-39-generic
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
