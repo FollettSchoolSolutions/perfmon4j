@@ -241,7 +241,7 @@ System.out.println(appenderString);
     }
     
     public void testRatio() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(RatioDataProvider.class);
+	  	Class<?> clazz = SnapShotGenerator.generateSnapShotDataImpl(RatioDataProvider.class);
 	  	
 	  	SnapShotGenerator.SnapShotLifecycle snapShotData = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
 	  	SimpleRatio d = (SimpleRatio)snapShotData;
@@ -272,7 +272,65 @@ System.out.println(appenderString);
 	  			appenderString.contains("keywordCacheHitRatio..... 74.257%"));
 	  	assertTrue("availableEntityRatio should be in appenderString", 
 	  			appenderString.contains("availableEntityRatio..... 0.998"));
+
+	  	// Run through one more cycle...
+	  	snapShotData = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
+	  	d = (SimpleRatio)snapShotData;
+	  	
+	  	snapShotData.init(null, 2000);
+
+	  	RatioDataProvider.keywordCacheHits += 50;   
+	  	RatioDataProvider.keywordSearches += 100;
+	  	
+	  	snapShotData.takeSnapShot(null, 3000);
+    
+	  	appenderString = ((SnapShotData)d).toAppenderString();
+	  	
+	  	assertTrue("keywordCacheHitRatio should be in appenderString", 
+	  			appenderString.contains("keywordCacheHitRatio..... 50.000%"));
     }
+
+    
+    @SnapShotProvider(type=SnapShotProvider.Type.STATIC)
+    @SnapShotRatios({
+	    @SnapShotRatio(name="keywordSearchAverage", numerator="keywordSearchTime", denominator="keywordSearchCount", displayAsDuration=true),
+	})
+    public static class AverageProvider {
+    	private static long keywordSearchTime = 0;
+    	private static long keywordSearchCount = 0;
+	
+    	@SnapShotCounter
+    	public static long getKeywordSearchTime() {
+    		return keywordSearchTime;
+    	}
+    	
+    	@SnapShotCounter
+    	public static long getKeywordSearchCount() {
+    		return keywordSearchCount;
+    	}
+    }
+    
+    public void testAverage() throws Exception {
+	  	Class<?> clazz = SnapShotGenerator.generateSnapShotDataImpl(AverageProvider.class);
+	  	
+	  	SnapShotGenerator.SnapShotLifecycle snapShotData = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
+	  	
+	  	AverageProvider.keywordSearchCount = 100;
+	  	AverageProvider.keywordSearchTime = 1000;
+	  	
+	  	snapShotData.init(null, 1000);
+	  	AverageProvider.keywordSearchCount += 5;
+	  	AverageProvider.keywordSearchTime += 5901;
+	  	snapShotData.takeSnapShot(null, 2000);
+
+	  	String appenderString = ((SnapShotData)snapShotData).toAppenderString();
+
+	  	System.out.println(appenderString);	  	
+	  	assertTrue("keywordCacheHitRatio should be in appenderString", 
+	  			appenderString.contains("keywordSearchAverage..... 1180 ms"));
+	  	
+    }
+    
     
     public void testGetCounterData() throws Exception {
 	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);

@@ -33,4 +33,5 @@ public @interface SnapShotRatio {
 	String denominator();
 	String numerator();
 	boolean displayAsPercentage() default false;
+	boolean displayAsDuration() default false;
 }
