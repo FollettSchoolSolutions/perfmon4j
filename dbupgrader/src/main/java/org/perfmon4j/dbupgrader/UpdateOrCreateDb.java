@@ -85,8 +85,10 @@ public class UpdateOrCreateDb {
 				try {
 					if (params.getSqlOutputScript() != null) {
 						writer = new FileWriter(new File(params.getSqlOutputScript()));
+						updater.update((String)null, writer);
+					} else {
+						updater.update((String)null);
 					}
-					updater.update((String)null, writer);
 				} finally {
 					if (writer != null) {
 						writer.close();
