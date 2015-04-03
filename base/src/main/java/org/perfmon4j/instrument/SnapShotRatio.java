@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008 Follett Software Company 
+ *	Copyright 2008-2015 Follett School Solutions
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -33,4 +33,5 @@ public @interface SnapShotRatio {
 	String denominator();
 	String numerator();
 	boolean displayAsPercentage() default false;
+	boolean displayAsDuration() default false;
 }

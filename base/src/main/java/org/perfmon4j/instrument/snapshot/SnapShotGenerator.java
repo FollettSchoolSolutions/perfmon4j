@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008-2011 Follett Software Company 
+ *	Copyright 2008-2015 Follett School Solutions 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -97,6 +97,7 @@ public class SnapShotGenerator {
 		String denominatorMethod = generateGetterName(ratio.denominator());
 		String numeratorMethod = generateGetterName(ratio.numerator());
 		boolean displayAsPercentage = ratio.displayAsPercentage();
+		boolean displayAsDuration = ratio.displayAsDuration();
 		
 		String methodSource = "public org.perfmon4j.instrument.snapshot.Ratio " + methodName + "() {" +
 				"return org.perfmon4j.instrument.snapshot.Ratio.generateRatio(" + numeratorMethod + "(), " + denominatorMethod + "());}"; 
@@ -106,10 +107,12 @@ public class SnapShotGenerator {
 		String appendToAppenderString;
 		if (displayAsPercentage) {
 			appendToAppenderString = " result += \" \" +  " + MiscHelper.class.getName() + ".formatTextDataLine(25, \"" + ratio.name() + "\", " + methodName + "().getRatio()*100, \"%\", 3);\r\n";
+		} else if (displayAsDuration){
+			appendToAppenderString = " result += \" \" +  " + MiscHelper.class.getName() + ".formatTextDataLine(25, \"" + ratio.name() + "\", " +  MiscHelper.class.getName() 
+					+ ".getMillisDisplayable((long)"  + methodName + "().getRatio()));\r\n";
 		} else {
 			appendToAppenderString = " result += \" \" +  " + MiscHelper.class.getName() + ".formatTextDataLine(25, \"" + ratio.name() + "\", " + methodName + "().getRatio(), \"\", 3);\r\n";
 		}
-		
 		toAppenderStringBody.append(appendToAppenderString);
 	}
 	
@@ -474,6 +477,9 @@ public class SnapShotGenerator {
 			toAppenderStringBody.append("result += \"********************************************************************************\";\r\n");
 			toAppenderStringBody.append("return result;}");
 			
+//System.out.println(initBody.toString());			
+//System.out.println(providerBody.toString());			
+			
 			addMethod(ctClass, initBody.toString());
 			addMethod(ctClass, providerBody.toString());
 			addMethod(ctClass, toAppenderStringBody.toString());
@@ -482,8 +488,9 @@ public class SnapShotGenerator {
 		} catch (Exception ex) {
 			throw new GenerateSnapShotException("Error generating SnapShotDataImpl", ex);
 		}
-		
 	}
+	
+	
 	static public Bundle generateBundle(Class<?> provider) throws GenerateSnapShotException {
 		return generateBundle(provider, null);
 	}

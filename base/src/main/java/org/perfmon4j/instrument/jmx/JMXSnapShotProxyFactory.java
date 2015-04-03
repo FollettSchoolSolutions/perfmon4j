@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008,2009 Follett Software Company 
+ *	Copyright 2008-2015 Follett School Solutions 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -249,14 +249,17 @@ public class JMXSnapShotProxyFactory {
 	    		String numeratorValue = atts.getValue("numerator");
 	    		String denominatorValue = atts.getValue("denominator");
 	    		String displayAsPercentageValue = atts.getValue("displayAsPercentage");
+	    		String displayAsDurationValue = atts.getValue("displayAsDuration");
 	    		
 	    		validateArg(SECTION_SNAP_SHOT_RATIO, "name", nameValue);
 	    		validateArg(SECTION_SNAP_SHOT_RATIO, "numerator", numeratorValue);
 	    		validateArg(SECTION_SNAP_SHOT_RATIO, "denominator", denominatorValue);
 	    		
 	    		boolean displayAsPercentage = Boolean.parseBoolean(displayAsPercentageValue);
+	    		boolean displayAsDuration = Boolean.parseBoolean(displayAsDurationValue);
+	    		
 	    		config.snapShotRatios.addSnapShotRatio(new SnapShotRatioVO(
-	    				nameValue, numeratorValue, denominatorValue, displayAsPercentage));
+	    				nameValue, numeratorValue, denominatorValue, displayAsPercentage, displayAsDuration));
 	    	} else if (SECTION_SNAP_SHOT_COUNTER.equals(name)) {
 	    		Class<? extends NumberFormatter> formatter =
 	    			extractNumberFormatter(atts);
@@ -490,13 +493,15 @@ public class JMXSnapShotProxyFactory {
 		private final String numerator;
 		private final String denominator;
 		private final boolean displayAsPercentage;
+		private final boolean displayAsDuration;
 		
 		private SnapShotRatioVO(String name, String numerator, String denominator,
-			boolean displayAsPercentage) {
+			boolean displayAsPercentage, boolean displayAsDuration) {
 			this.name = name;
 			this.numerator = numerator;
 			this.denominator = denominator;
 			this.displayAsPercentage = displayAsPercentage;
+			this.displayAsDuration = displayAsDuration;
 		}
 		
 		public String denominator() {
@@ -517,6 +522,10 @@ public class JMXSnapShotProxyFactory {
 
 		public Class<? extends Annotation> annotationType() {
 			return SnapShotRatio.class;
+		}
+
+		public boolean displayAsDuration() {
+			return displayAsDuration;
 		}
 	}
 
