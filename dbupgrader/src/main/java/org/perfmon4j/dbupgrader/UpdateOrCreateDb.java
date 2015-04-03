@@ -21,6 +21,8 @@
 
 package org.perfmon4j.dbupgrader;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
@@ -78,9 +80,26 @@ public class UpdateOrCreateDb {
 				if (params.isClearChecksums()) {
 					updater.clearCheckSums();
 				}
-				updater.update((String)null);
+				
+				FileWriter writer = null;
+				try {
+					if (params.getSqlOutputScript() != null) {
+						writer = new FileWriter(new File(params.getSqlOutputScript()));
+						updater.update((String)null, writer);
+					} else {
+						updater.update((String)null);
+					}
+				} finally {
+					if (writer != null) {
+						writer.close();
+					}
+				}
 				System.out.println();
-				System.out.println("Success: Database upgraded or installed.");
+				if (params.getSqlOutputScript() != null) {
+					System.out.println("Success: Database has not been upgraded but upgrade script created " + params.getSqlOutputScript());
+				} else {
+					System.out.println("Success: Database upgraded or installed.");
+				}
 			} catch (Exception ex) {
 				ex.printStackTrace();
 				System.err.println();
@@ -89,8 +108,11 @@ public class UpdateOrCreateDb {
 				closeNoThrow(conn);
 			}
 		} else {
-			System.err.println("Usage: java -jar perfmon4j-dbupgrader.jar driverClass=my.jdbc.Driver jdbcURL=jdbc://myurl driverJarFile=./myjdbc.jar [userName=dbuser] [password=dbpassword] [schema=myschema]");
+			System.err.println("Usage: java -jar perfmon4j-dbupgrader.jar driverClass=my.jdbc.Driver jdbcURL=jdbc://myurl driverJarFile=./myjdbc.jar [userName=dbuser] [password=dbpassword] [schema=myschema] [sqlOutputScript=./upgrade.sql]");
 			System.err.println("\tNote: [] indicates optional parameters.");
+			System.err.println("\t      * Providing a sqlOutputScript parameter will create an");
+			System.err.println("\t        upgrade script that can be used to manually upgrade");
+			System.err.println("\t        the database. The database will not be altered.");
 			if (params.insufficentParameters && args.length > 0) {
 				System.err.println("\tError: Insufficient parameters");
 			}
@@ -133,6 +155,8 @@ public class UpdateOrCreateDb {
 					result.setSchema(split[1]);
 				} else if ("clearChecksums".equals(split[0])) {
 					result.setClearChecksums(split[1]);
+				} else if ("sqlOutputScript".equals(split[0])) {
+					result.setSqlOutputScript(split[1]);
 				} else {
 					badArg = true;
 				}
@@ -165,6 +189,7 @@ public class UpdateOrCreateDb {
 		private String driverClass;
 		private String driverJarFile;
 		private String schema;
+		private String sqlOutputScript;
 		private boolean clearChecksums = false;
 		private final List<String> badParameters = new ArrayList<String>();
 		private boolean insufficentParameters = false;
@@ -229,6 +254,12 @@ public class UpdateOrCreateDb {
 		
 		public boolean isClearChecksums() {
 			return clearChecksums;
+		}
+		public String getSqlOutputScript() {
+			return sqlOutputScript;
+		}
+		public void setSqlOutputScript(String sqlOutputScript) {
+			this.sqlOutputScript = sqlOutputScript;
 		}
 	}
 	
