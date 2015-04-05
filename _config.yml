@@ -1,10 +1,12 @@
 # Site settings
 title: Perfmon4j
-email: your-email@domain.com
+email: perfmon4j@fsc.follett.com
 description: > # this means to ignore newlines until "baseurl:"
   Perfmon4j is a tool to monitor java applications while under load.
-baseurl: "" # the subpath of your site, e.g. /blog/
-url: "http://yourdomain.com" # the base hostname & protocol for your site
+
+baseurl: "/perfmon4j/" # the subpath of your site, e.g. /blog/
+url: "http://follettschoolsolutions.github.io" # the base hostname & protocol for your site
+
 #twitter_username: jekyllrb
 #github_username:  jekyll
 
