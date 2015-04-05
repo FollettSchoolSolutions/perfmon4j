@@ -9,5 +9,5 @@ url: "http://yourdomain.com" # the base hostname & protocol for your site
 #github_username:  jekyll
 
 # Build settings
-markdown: KramdownPygments
+markdown: Kramdown
 highlight: pygments
