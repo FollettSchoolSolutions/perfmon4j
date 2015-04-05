@@ -11,5 +11,6 @@ url: "http://follettschoolsolutions.github.io" # the base hostname & protocol fo
 #github_username:  jekyll
 
 # Build settings
-markdown: KramdownPygments
+markdown: Kramdown
+#markdown: KramdownPygments
 highlight: pygments
