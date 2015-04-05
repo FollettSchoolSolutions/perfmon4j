@@ -63,6 +63,10 @@ a:hover {
 	color: grey;
 }
 
+table, th, td {
+   border: 1px solid black;
+} 
+
 
 // Using media queries with like this:
 // @include media-query($on-palm) {
@@ -87,7 +91,4 @@ a:hover {
 ;
 
 
-//table, th, td {
-//   border: 1px solid black;
-//} 
 
