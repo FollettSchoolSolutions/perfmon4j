@@ -127,10 +127,10 @@
 		</createTable>
 	
 		<addPrimaryKey columnNames="SystemID, InstanceName, StartTime, EndTime"
-			constraintName="P4JFetchPolicySnapshot_pk" tableName="P4JFetchPolicySnapshot" />
+			constraintName="FSSFetchPolicySnapshot_pk" tableName="FSSFetchPolicySnapshot" />
 			
 		<addForeignKeyConstraint baseColumnNames="SystemID"
-			baseTableName="P4JFetchPolicySnapshot" constraintName="P4JFetchPolicySnapshot_SystemID_fk"
+			baseTableName="FSSFetchPolicySnapshot" constraintName="FSSFetchPolicySnapshot_SystemID_fk"
 			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
