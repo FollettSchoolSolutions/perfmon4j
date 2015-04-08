@@ -25,7 +25,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import liquibase.Liquibase;
 import liquibase.database.Database;
@@ -77,6 +79,7 @@ public class UpdateOrCreateDb {
 					}
 				}
 				Liquibase updater = new Liquibase("org/perfmon4j/update-change-master-log.xml", new ClassLoaderResourceAccessor(), db);
+			
 				if (params.isClearChecksums()) {
 					updater.clearCheckSums();
 				}
@@ -86,8 +89,11 @@ public class UpdateOrCreateDb {
 					if (params.getSqlOutputScript() != null) {
 						writer = new FileWriter(new File(params.getSqlOutputScript()));
 						updater.update((String)null, writer);
+						applyThirdPartyChanges(params, db, writer);
+						
 					} else {
 						updater.update((String)null);
+						applyThirdPartyChanges(params, db, null);
 					}
 				} finally {
 					if (writer != null) {
@@ -121,8 +127,18 @@ public class UpdateOrCreateDb {
 			}
 		}
 	}
+
+	static private void applyThirdPartyChanges(Parameters params, Database db, FileWriter writer) throws Exception {
+		for (String s : params.getThirdPartyExtensions()) {
+			Liquibase updater = new Liquibase("org/perfmon4j/thirdParty/" + s + "/change-log.xml", new ClassLoaderResourceAccessor(), db);
+			if (writer != null) {
+				updater.update((String)null, writer);
+			} else {
+				updater.update((String)null);
+			}
+		}
+	}
 	
-	 
 	static private String[] splitArg(String arg) {
 		String result[] = arg.split("=", 2);
 		if (result.length != 2) {
@@ -157,6 +173,8 @@ public class UpdateOrCreateDb {
 					result.setClearChecksums(split[1]);
 				} else if ("sqlOutputScript".equals(split[0])) {
 					result.setSqlOutputScript(split[1]);
+				} else if ("thirdPartyExtensions".equals(split[0])) {
+					result.addThirdPartyExtensions(split[1]);
 				} else {
 					badArg = true;
 				}
@@ -192,7 +210,9 @@ public class UpdateOrCreateDb {
 		private String sqlOutputScript;
 		private boolean clearChecksums = false;
 		private final List<String> badParameters = new ArrayList<String>();
+		private final Set<String> thirdPartyExtensions = new HashSet<String>(); 
 		private boolean insufficentParameters = false;
+		
 	
 		public String getUserName() {
 			return userName;
@@ -261,6 +281,21 @@ public class UpdateOrCreateDb {
 		public void setSqlOutputScript(String sqlOutputScript) {
 			this.sqlOutputScript = sqlOutputScript;
 		}
+		
+		public String[] getThirdPartyExtensions() {
+			return thirdPartyExtensions.toArray(new String[]{}); 
+		}
+		
+		private void addThirdPartyExtensions(String extensionString) {
+			if (extensionString.contains(",")) {
+				for (String s : extensionString.split(",")) {
+					thirdPartyExtensions.add(s);
+				}
+			} else {
+				thirdPartyExtensions.add(extensionString);
+			}
+		}
+		
 	}
 	
 	static void closeNoThrow(Connection conn) {

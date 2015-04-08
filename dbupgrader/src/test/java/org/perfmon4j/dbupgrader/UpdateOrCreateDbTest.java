@@ -20,11 +20,15 @@
 */
 package org.perfmon4j.dbupgrader;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
 import junit.framework.TestCase;
 import liquibase.Liquibase;
@@ -152,10 +156,51 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertEquals("myDriver", params.getDriverClass());
 		assertEquals("c:/mydriver.jar", params.getDriverJarFile());
 		assertEquals("dbo", params.getSchema());
+		assertEquals(0, params.getThirdPartyExtensions().length);
 		assertTrue(params.isValid());
 	}
-	
 
+	public void testParse3rdPartyIncludesMultiple() throws Exception {
+		String args[] = {
+				"userName=dave",
+				"password=pw",
+				"jdbcURL=my.jdbc.url",
+				"driverClass=myDriver",
+				"driverJarFile=c:/mydriver.jar",
+				"schema=dbo",
+				"thirdPartyExtensions=Follett,Other,YetAnother"
+		};
+		
+		Parameters params = UpdateOrCreateDb.getParameters(args);
+		String thirdPartyExtensions[] = params.getThirdPartyExtensions();
+		assertEquals("Should have 3 thirdPartyExtensions", 3, thirdPartyExtensions.length);
+		List<String> extensions = Arrays.asList(thirdPartyExtensions);
+		
+		assertTrue("Should have Follett Extension", extensions.contains("Follett"));
+		assertTrue("Should have Other Extension", extensions.contains("Other"));
+		assertTrue("Should have YetAnother Extension", extensions.contains("YetAnother"));
+	}
+
+	public void testParse3rdPartyIncludesSingle() throws Exception {
+		String args[] = {
+				"userName=dave",
+				"password=pw",
+				"jdbcURL=my.jdbc.url",
+				"driverClass=myDriver",
+				"driverJarFile=c:/mydriver.jar",
+				"schema=dbo",
+				"thirdPartyExtensions=Follett"
+		};
+		
+		Parameters params = UpdateOrCreateDb.getParameters(args);
+		String thirdPartyExtensions[] = params.getThirdPartyExtensions();
+		assertEquals("Should have 3 thirdPartyExtensions", 1, thirdPartyExtensions.length);
+		List<String> extensions = Arrays.asList(thirdPartyExtensions);
+		
+		assertTrue("Should have Follett Extension", extensions.contains("Follett"));
+	}
+	
+	
 	public void testInsufficientParameters() throws Exception {
 		String args[] = {};
 		
@@ -276,6 +321,45 @@ public class UpdateOrCreateDbTest extends TestCase {
 
 		assertTrue("Database change log should reflect databaseLabel 0003.0 applied", databaseLabelExistsInChangeLog("0003.0"));
 	}
+	
+	public void testApplyThirdPartyChanges() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA,
+				"thirdPartyExtensions=FSS"});
+		
+		assertTrue("Should have a FSSFetchPolicySnapshot table", UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchPolicySnapshot"));
+		
+		System.out.println(dumpQuery(conn, "SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG"));
+		assertTrue("Database change log should reflect databaseLabel 0002.0 applied", databaseLabelExistsInChangeLog("0002.0"));
+	}	
+	
+	
+	public void testWriteSQLScript() throws Exception { 
+		File sqlFile = new File(System.getProperty("java.io.tmpdir"), new Random().nextInt(10000) +  ".sql");
+
+		try {
+			System.out.println(sqlFile.getCanonicalPath());
+			// Start with an empty database...
+			UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+					"jdbcURL=" + JDBC_URL,
+					"driverJarFile=EMBEDDED",
+					"schema=" + SCHEMA,
+					"thirdPartyExtensions=FSS"
+					,"sqlOutputScript=" + sqlFile.getCanonicalPath()});
+			
+			assertFalse("Should NOT have created database.  We just asked for a srcipt", 
+					UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchPolicySnapshot"));
+
+			assertTrue("Should have created SQL Script", sqlFile.exists());
+		} finally {
+			if (sqlFile.exists()) {
+				sqlFile.delete();
+			}
+		}
+	}		
 	
 	public void X_testLivePostgres() {
 		String [] args = new String[] {
