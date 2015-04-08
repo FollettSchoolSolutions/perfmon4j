@@ -378,7 +378,9 @@ public class UpdateOrCreateDbTest extends TestCase {
 			"driverClass=com.microsoft.sqlserver.jdbc.SQLServerDriver", 
 			"jdbcURL=jdbc:sqlserver://10.0.2.2:1433;databaseName=TestUpgrade", 
 			"userName=perfmonwriter", 
-			"password=perfmon"
+			"password=perfmon",
+			"thirdPartyExtensions=FSS",
+			"sqlOutputScript=/media/sf_shared/tools/common/create.sql" 
 			};
 		
 		UpdateOrCreateDb.main(args);
