@@ -11,8 +11,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.perfmon4j.restdatasource.data.Category;
+import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Database;
 import org.perfmon4j.restdatasource.data.Field;
+import org.perfmon4j.restdatasource.data.IntervalTemplate;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
 
 @Path("/message")
@@ -45,19 +47,22 @@ public class RestImpl {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Category[] getCategories() {
 		List<Field> fields = new ArrayList<Field>();
-		String[] aggregationTypes = new String[] {"SUM", "AVERAGE", "MAX", "MIN"};
-		
-		fields.add(new Field("Throughput", aggregationTypes));
-		fields.add(new Field("Average", aggregationTypes));
-		fields.add(new Field("Median", aggregationTypes));
-		fields.add(new Field("MaxDuration", aggregationTypes));
-		fields.add(new Field("MinDuration", aggregationTypes));
-		fields.add(new Field("SQLAverage", aggregationTypes));
-		fields.add(new Field("SQLMax", aggregationTypes));
 		
 		Field[] f = fields.toArray(new Field[]{});
 		
-		return new Category[]{new Category("Interval:WebRequest", f), new Category("Interval:WebRequest.search", f) };
+		return new Category[]{new Category("Interval:WebRequest", "Interval"), 
+			new Category("Interval:WebRequest.search", "Interval"), 
+			new Category("Snapshot:Cache:SearchResults", "Cache"),
+			new Category("Snapshot:JVM", "JVM"),
+			new Category("Snapshot:GarbageCollection:ConcurrentMarkSweep", "GarbageCollection"),
+			
+		};
 	}
 
+	@GET
+	@Path("/categories/template")
+	@Produces(MediaType.APPLICATION_JSON)
+	public CategoryTemplate[] getCategoryTemplate() {
+		return new CategoryTemplate[] {new IntervalTemplate()};
+	}
 }

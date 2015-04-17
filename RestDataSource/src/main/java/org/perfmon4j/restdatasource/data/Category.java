@@ -2,12 +2,12 @@ package org.perfmon4j.restdatasource.data;
 
 public class Category {
 	private String name;
-	private Field[] fields;
+	private String templateName;
 	
-	public Category(String name, Field[] fields) {
+	public Category(String name, String templateName) {
 		super();
 		this.name = name;
-		this.fields = fields;
+		this.templateName = templateName;
 	}
 	
 	public String getName() {
@@ -16,10 +16,12 @@ public class Category {
 	public void setName(String name) {
 		this.name = name;
 	}
-	public Field[] getFields() {
-		return fields;
+
+	public String getTemplateName() {
+		return templateName;
 	}
-	public void setFields(Field[] fields) {
-		this.fields = fields;
+
+	public void setTemplateName(String templateName) {
+		this.templateName = templateName;
 	}
 }
