@@ -22,7 +22,8 @@
 		<module>utils</module>
 		<module>wildfly8</module>
 <!--		<module>perfmon4jweb</module> -->
-	</modules>
+    <module>RestDataSource</module>
+  </modules>
 
 	<scm>
 		<developerConnection>scm:svn:svn+ssh://ddeucher@svn.code.sf.net/p/perfmon4j/code/trunk</developerConnection>
