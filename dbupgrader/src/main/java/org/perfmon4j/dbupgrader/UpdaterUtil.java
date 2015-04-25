@@ -33,6 +33,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
+import java.util.Random;
 
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
@@ -167,5 +168,27 @@ class UpdaterUtil {
 		}
 		return result;
 	}
-
+	
+	private final static String IDENTITY_CHARS = "BCDFGHJKLMNPRSTVWXYZ";
+	private final static Random random = new Random();
+	
+	private static char nextChar() {
+		int offset = random.nextInt(IDENTITY_CHARS.length());
+		return IDENTITY_CHARS.charAt(offset);
+	}
+	
+	
+	public static String generateUniqueIdentity() {
+		StringBuilder builder = new StringBuilder();
+		
+		for (int j = 0; j < 2; j++) {
+			for(int i = 0; i < 4; i++) {
+				builder.append(nextChar());
+			}
+			if (j == 0) {
+				builder.append('-');
+			}
+		}
+		return builder.toString();
+	}
 }

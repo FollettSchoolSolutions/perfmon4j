@@ -12,17 +12,17 @@ public class IntervalTemplate extends CategoryTemplate {
 	private static final Field[] buildFields() {
 		List<Field> fields = new ArrayList<Field>();
 		
-		fields.add(new Field("MaxActiveThreads", AggregationType.DEFAULT, AggregationType.SUM));
-		fields.add(new Field("MaxDuration", AggregationType.DEFAULT, AggregationType.MAX));
-		fields.add(new Field("MinDuration", AggregationType.DEFAULT, AggregationType.MIN));
-		fields.add(new Field("ThroughputPerMinute", AggregationType.DEFAULT_WITH_NATURAL));
-		fields.add(new Field("AverageDuration", AggregationType.DEFAULT_WITH_NATURAL));
-		fields.add(new Field("MedianDuration", AggregationType.DEFAULT, AggregationType.AVERAGE));
-		fields.add(new Field("StandardDeviation", AggregationType.DEFAULT_WITH_NATURAL));
-		fields.add(new Field("SQLMaxDuration", AggregationType.DEFAULT, AggregationType.MAX));
-		fields.add(new Field("SQLMinDuration", AggregationType.DEFAULT, AggregationType.MIN));
-		fields.add(new Field("SQLAverageDuration", AggregationType.DEFAULT_WITH_NATURAL));
-		fields.add(new Field("SQLStandardDeviation", AggregationType.DEFAULT_WITH_NATURAL));
+		fields.add(new Field("maxActiveThreads", AggregationType.DEFAULT, AggregationType.SUM));
+		fields.add(new Field("maxDuration", AggregationType.DEFAULT, AggregationType.MAX));
+		fields.add(new Field("minDuration", AggregationType.DEFAULT, AggregationType.MIN));
+		fields.add(new Field("throughputPerMinute", AggregationType.DEFAULT_WITH_NATURAL));
+		fields.add(new Field("averageDuration", AggregationType.DEFAULT_WITH_NATURAL));
+		fields.add(new Field("medianDuration", AggregationType.DEFAULT, AggregationType.AVERAGE));
+		fields.add(new Field("standardDeviation", AggregationType.DEFAULT_WITH_NATURAL));
+		fields.add(new Field("sqlMaxDuration", AggregationType.DEFAULT, AggregationType.MAX));
+		fields.add(new Field("sqlLMinDuration", AggregationType.DEFAULT, AggregationType.MIN));
+		fields.add(new Field("sqlAverageDuration", AggregationType.DEFAULT_WITH_NATURAL));
+		fields.add(new Field("sqlStandardDeviation", AggregationType.DEFAULT_WITH_NATURAL));
 		
 		return fields.toArray(new Field[]{});
 	}

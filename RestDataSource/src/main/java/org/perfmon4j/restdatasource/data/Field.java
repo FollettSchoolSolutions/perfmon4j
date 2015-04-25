@@ -3,6 +3,7 @@ package org.perfmon4j.restdatasource.data;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+@JsonInclude(Include.NON_NULL)
 public class Field {
 	private String name;
 	private AggregationType[] aggregationTypes;
@@ -40,8 +41,7 @@ public class Field {
 	public void setAggregationTypes(AggregationType[] aggregationTypes) {
 		this.aggregationTypes = aggregationTypes;
 	}
-
-	@JsonInclude(Include.NON_NULL)
+	
 	public AggregationType getDefaultAggregationType() {
 		return defaultAggregationType;
 	}
