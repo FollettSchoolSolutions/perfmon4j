@@ -4,12 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
@@ -23,16 +24,8 @@ import org.perfmon4j.restdatasource.data.query.category.Result;
 import org.perfmon4j.restdatasource.data.query.category.ResultElement;
 import org.perfmon4j.restdatasource.data.query.category.SystemResult;
 
-@Path("/message")
+@Path("/datasource")
 public class RestImpl {
-	@GET
-	@Path("/x/{param}")
-	public Response printMessage(@PathParam("param") String msg) {
- 
-		String result = "Restful example : " + msg;
-		
-		return Response.status(200).entity(result).build();
-	}
 	
 	@GET
 	@Path("/databases")
@@ -43,19 +36,27 @@ public class RestImpl {
 				new Database("uat", false, "DSTT-WRVS")};
 	}
 
+		
 	@GET
-	@Path("/systems")
+	@Path("/databases/{databaseID}/systems")
 	@Produces(MediaType.APPLICATION_JSON)
-	public MonitoredSystem[] getSystems() {
+	public MonitoredSystem[] getSystems(@PathParam("databaseID") String databaseID, 
+			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+			@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 		return new MonitoredSystem[]{new MonitoredSystem("DAP-341234", "GRDW-KWST.101"), 
 				new MonitoredSystem("SHELF-72131", "GRDW-KWST.102"), 
 				new MonitoredSystem("UD-ADS-21323", "GRDW-KWST.200")};
 	}
 
+///http://127.0.0.1/perfmon4j/datasource/databases/databaseID/categories?systemID=systemID&timeStart=timeStart&timeEnd=timeEnd	
+	
 	@GET
-	@Path("/categories")
+	@Path("/databases/{databaseID}/categories")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Category[] getCategories() {
+	public Category[] getCategories(@PathParam("databaseID") String databaseID, 
+			@QueryParam("systemID") String systemID, 
+			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+			@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 		List<Field> fields = new ArrayList<Field>();
 		
 		Field[] f = fields.toArray(new Field[]{});
@@ -68,25 +69,34 @@ public class RestImpl {
 			
 		};
 	}
+	
+//	http://127.0.0.1/perfmon4j/datasource/databases/databaseID/categories/templates/template
 
 	@GET
-	@Path("/categories/template")
+	@Path("/databases/{databaseID}/categories/templates/{template}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public CategoryTemplate[] getCategoryTemplate() {
+	public CategoryTemplate[] getCategoryTemplate(@PathParam("databaseID") String databaseID, 
+			@PathParam("template") String template) {
 		return new CategoryTemplate[] {new IntervalTemplate()};
 	}
 	
+//	http://127.0.0.1/perfmon4j/datasoure/databases/databaseID/categories/category/observations?systemId=systemId&timeStart=`now-480'&timeEnd=timeEnd&maxObservations=1440
+	
 	@GET
-	@Path("/categories/result")
+	@Path("/databases/{databaseID}/categories/{category}/observations")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Result getCategoryResults() {
+	public Result getCategoryResults(@PathParam("databaseID") String databaseID, 
+			@PathParam("category") String category, 
+			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
+			@QueryParam("maxObservations")@DefaultValue("1440")  int maxObservations) {
 		Result result = new Result();
 		
 		List<ResultElement> elementsA = new ArrayList<ResultElement>();
 		List<ResultElement> elementsB = new ArrayList<ResultElement>();
 		
 		for (int i = 0; i < 3; i++) {
-			String dateTime = "20150421_090" + i;
+			String dateTime = "2015-04-21T09:0" + i;
 			elementsA.add(buildRandomIntervalElement(dateTime, i));
 			elementsB.add(buildRandomIntervalElement(dateTime, i + 10000));
 		}
@@ -106,11 +116,18 @@ public class RestImpl {
 		return result;
 	}
 
-	
+//	http://127.0.0.1/perfmon4j/datasource/databases/databaseID/observations?
+//		seriesDefinition=seriesDefinition&timeStart=now-480&timeEnd=now&maxObservations=1440&seriesAlias=seriesAlias
+
 	@GET
-	@Path("/query/observations")
+	@Path("/databases/{databaseID}/observations")
 	@Produces(MediaType.APPLICATION_JSON)
-	public org.perfmon4j.restdatasource.data.query.advanced.Result getQueryObservations() {
+	public org.perfmon4j.restdatasource.data.query.advanced.Result getQueryObservations(@PathParam("databaseID") String databaseID, 
+			@QueryParam("seriesDefinition") String seriesDefinition,
+			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
+			@QueryParam("maxObservations")@DefaultValue("1440")  int maxObservations,
+			@QueryParam("seriesAlias") @DefaultValue("")  String seriesAlias) {
 		org.perfmon4j.restdatasource.data.query.advanced.Result result = new org.perfmon4j.restdatasource.data.query.advanced.Result();
 		
 		Series seriesA = new Series();
@@ -145,7 +162,7 @@ public class RestImpl {
 		Random randC = new Random(3);
 		
 		for (int i = 0; i < 10; i++) {
-			dateTimes.add("20150421_090" + i);
+			dateTimes.add("2015-04-21T09:0" + i);
 			valuesA.add(Integer.valueOf(randA.nextInt(50)));
 			valuesB.add(roundOff((randB.nextDouble() + 0.5) * (randB.nextInt(10) + 1)));
 			valuesC.add(roundOff((randC.nextDouble() + 0.5) * (randC.nextInt(10) + 1)));
