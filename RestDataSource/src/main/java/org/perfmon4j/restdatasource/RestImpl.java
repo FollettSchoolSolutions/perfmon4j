@@ -1,3 +1,24 @@
+/*
+ *	Copyright 2015 Follett School Solutions 
+ *
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ * 	Follett School Solutions
+ * 	1391 Corporate Drive
+ * 	McHenry, IL 60050
+ * 
+*/
+
 package org.perfmon4j.restdatasource;
 
 import java.util.ArrayList;
@@ -31,9 +52,9 @@ public class RestImpl {
 	@Path("/databases")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Database[] getDatabases() {
-		return new Database[]{new Database("production", true, "GRDW-KWST"), 
-				new Database("integration", false, "TRXS-GSMR"), 
-				new Database("uat", false, "DSTT-WRVS")};
+		return new Database[]{new Database("production", true, "GRDW-KWST", 5.0), 
+				new Database("integration", false, "TRXS-GSMR", 5.0), 
+				new Database("uat", false, "DSTT-WRVS", 5.0)};
 	}
 
 		
@@ -55,7 +76,7 @@ public class RestImpl {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Category[] getCategories(@PathParam("databaseID") String databaseID, 
 			@QueryParam("systemID") String systemID, 
-			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 			@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 		List<Field> fields = new ArrayList<Field>();
 		
@@ -87,7 +108,7 @@ public class RestImpl {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Result getCategoryResults(@PathParam("databaseID") String databaseID, 
 			@PathParam("category") String category, 
-			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
 			@QueryParam("maxObservations")@DefaultValue("1440")  int maxObservations) {
 		Result result = new Result();
@@ -124,9 +145,8 @@ public class RestImpl {
 	@Produces(MediaType.APPLICATION_JSON)
 	public org.perfmon4j.restdatasource.data.query.advanced.Result getQueryObservations(@PathParam("databaseID") String databaseID, 
 			@QueryParam("seriesDefinition") String seriesDefinition,
-			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
-			@QueryParam("maxObservations")@DefaultValue("1440")  int maxObservations,
 			@QueryParam("seriesAlias") @DefaultValue("")  String seriesAlias) {
 		org.perfmon4j.restdatasource.data.query.advanced.Result result = new org.perfmon4j.restdatasource.data.query.advanced.Result();
 		
