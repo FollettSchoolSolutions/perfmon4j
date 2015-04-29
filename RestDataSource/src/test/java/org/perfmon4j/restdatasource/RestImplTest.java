@@ -21,20 +21,22 @@
 
 package org.perfmon4j.restdatasource;
 
-import javax.servlet.http.HttpServletResponse;
+import java.util.Properties;
 
-import junit.framework.TestCase;
+import javax.servlet.http.HttpServletResponse;
 
 import org.jboss.resteasy.core.Dispatcher;
 import org.jboss.resteasy.mock.MockDispatcherFactory;
 import org.jboss.resteasy.mock.MockHttpRequest;
 import org.jboss.resteasy.mock.MockHttpResponse;
 import org.jboss.resteasy.plugins.server.resourcefactory.POJOResourceFactory;
+import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.restdatasource.data.Database;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class RestImplTest extends TestCase {
+public class RestImplTest extends BaseDatabaseTest {
 	private final Dispatcher dispatcher;
 	private final ObjectMapper mapper;
 	
@@ -50,10 +52,24 @@ public class RestImplTest extends TestCase {
 	}
 
 	protected void setUp() throws Exception {
+		PerfMonConfiguration config = new PerfMonConfiguration();
+		
+//		private String driverClass = null; 
+//		private String jdbcURL = null;
+		
+		Properties props = new Properties();
+		props.setProperty("driverClass", JDBC_DRIVER);
+		props.setProperty("jdbcURL", JDBC_URL);
+		config.defineAppender("Appender1" , "org.perfmon4j.JDBCSQLAppender", "1 minute", props);
+		
+		PerfMon.configure(config);
+		
 		super.setUp();
 	}
 
 	protected void tearDown() throws Exception {
+		PerfMon.configure();
+		
 		super.tearDown();
 	}
 	
@@ -63,6 +79,10 @@ public class RestImplTest extends TestCase {
 	}
 	
 	public void testGetDatabases() throws Exception {
+		long systemID = addSystem("Dave");
+		System.out.println(systemID);
+		
+		
         MockHttpRequest request = MockHttpRequest.get("/datasource/databases");
         MockHttpResponse response = new MockHttpResponse();
 
