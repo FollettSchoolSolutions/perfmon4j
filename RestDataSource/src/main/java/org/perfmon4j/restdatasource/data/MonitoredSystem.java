@@ -4,6 +4,10 @@ public class MonitoredSystem {
 	private String name;
 	private String id;
 	
+	public MonitoredSystem() {
+		super();
+	}
+	
 	public MonitoredSystem(String name, String id) {
 		super();
 		this.name = name;
@@ -21,5 +25,9 @@ public class MonitoredSystem {
 	}
 	public void setId(String id) {
 		this.id = id;
+	}
+	@Override
+	public String toString() {
+		return "MonitoredSystem [name=" + name + ", id=" + id + "]";
 	}
 }

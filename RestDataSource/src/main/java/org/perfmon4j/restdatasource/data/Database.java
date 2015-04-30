@@ -51,19 +51,11 @@ public class Database {
 		this.name = name;
 	}
 
-	public boolean isDef() {
-		return def;
-	}
-
-	public void setDef(boolean def) {
-		this.def = def;
-	}
-
-	public String getId() {
+	public String getID() {
 		return id;
 	}
 
-	public void setId(String id) {
+	public void setID(String id) {
 		this.id = id;
 	}
 
@@ -77,10 +69,7 @@ public class Database {
 
 	@Override
 	public String toString() {
-		return "Database [def=" + def + ", name=" + name + ", id=" + id
+		return "Database [default=" + def + ", name=" + name + ", ID=" + id
 				+ ", databaseVersion=" + databaseVersion + "]";
 	}
-	
-	
-	
 }

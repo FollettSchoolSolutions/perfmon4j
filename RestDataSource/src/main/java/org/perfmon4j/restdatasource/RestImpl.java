@@ -21,18 +21,27 @@
 
 package org.perfmon4j.restdatasource;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Database;
@@ -44,17 +53,31 @@ import org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultEleme
 import org.perfmon4j.restdatasource.data.query.category.Result;
 import org.perfmon4j.restdatasource.data.query.category.ResultElement;
 import org.perfmon4j.restdatasource.data.query.category.SystemResult;
+import org.perfmon4j.restdatasource.util.DateTimeHelper;
+import org.perfmon4j.restdatasource.util.ProcessArgsException;
+import org.perfmon4j.util.JDBCHelper;
 
 @Path("/datasource")
 public class RestImpl {
-	
+	private final DateTimeHelper helper = new DateTimeHelper();
+
 	@GET
 	@Path("/databases")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Database[] getDatabases() {
-		return new Database[]{new Database("production", true, "GRDW-KWST", 5.0), 
-				new Database("integration", false, "TRXS-GSMR", 5.0), 
-				new Database("uat", false, "DSTT-WRVS", 5.0)};
+		List<Database> result = new ArrayList<Database>();
+		for (RegisteredDatabaseConnections.Database db : RegisteredDatabaseConnections.getAllDatabases()) {
+			Database element = new Database();
+			
+			element.setDatabaseVersion(db.getDatabaseVersion());
+			element.setDefault(db.isDefault());
+			element.setID(db.getID());
+			element.setName(db.getName());
+			
+			result.add(element);
+		}
+		
+		return result.toArray(new Database[]{});
 	}
 
 		
@@ -62,12 +85,26 @@ public class RestImpl {
 	@Path("/databases/{databaseID}/systems")
 	@Produces(MediaType.APPLICATION_JSON)
 	public MonitoredSystem[] getSystems(@PathParam("databaseID") String databaseID, 
-			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
-			@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
-		return new MonitoredSystem[]{new MonitoredSystem("DAP-341234", "GRDW-KWST.101"), 
-				new MonitoredSystem("SHELF-72131", "GRDW-KWST.102"), 
-				new MonitoredSystem("UD-ADS-21323", "GRDW-KWST.200")};
+		@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+		@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
+
+		RegisteredDatabaseConnections.Database db = null;
+		if ("default".equals(databaseID)) {
+			db = RegisteredDatabaseConnections.getDefaultDatabase();
+		} else {
+			db = RegisteredDatabaseConnections.getDatabaseByID(databaseID);
+		}
+		
+		if (db == null) {
+			throw new NotFoundException("Database not found.  databaseID: " + databaseID);
+		}
+		
+		return lookupMonitoredSystems(db, timeStart, timeEnd);
+//		return new MonitoredSystem[]{new MonitoredSystem("DAP-341234", "GRDW-KWST.101"), 
+//				new MonitoredSystem("SHELF-72131", "GRDW-KWST.102"), 
+//				new MonitoredSystem("UD-ADS-21323", "GRDW-KWST.200")};
 	}
+	
 
 ///http://127.0.0.1/perfmon4j/datasource/databases/databaseID/categories?systemID=systemID&timeStart=timeStart&timeEnd=timeEnd	
 	
@@ -223,5 +260,50 @@ public class RestImpl {
 	
 	private Double roundOff(double value) {
 		return Double.valueOf(Math.round(value * 100)/100.00);
+	}
+	
+	private String fixupSchema(String schema) {
+		return schema == null ? "" : schema + ".";
+	}
+	
+	private MonitoredSystem[] lookupMonitoredSystems(RegisteredDatabaseConnections.Database db, String timeStart, String timeEnd) {
+		List<MonitoredSystem> result = new ArrayList<MonitoredSystem>(); 
+		
+		Connection conn = null;
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		try {
+			String schema = fixupSchema(db.getSchema());
+			
+			long start = helper.parseDateTime(timeStart).getTimeForStart();
+			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+			
+			String SQL = "SELECT SystemID, SystemName "
+				+ " FROM " + schema + "P4JSystem s "
+				+ " WHERE EXISTS (SELECT MAX(IntervalID) " 
+				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.SystemID = s.SystemID "
+				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+			
+			conn = db.openConnection();
+			stmt = conn.prepareStatement(SQL);
+			stmt.setTimestamp(1, new Timestamp(start));
+			stmt.setTimestamp(2, new Timestamp(end));
+			
+			rs = stmt.executeQuery();
+			while (rs.next()) {
+				MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName"), db.getID() + "." + rs.getLong("SystemID"));
+				result.add(ms);
+			}
+		} catch (SQLException se) {
+			throw new InternalServerErrorException(se);
+		} catch (ProcessArgsException e) {
+			throw new BadRequestException(e);
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmt);
+			JDBCHelper.closeNoThrow(conn);
+		}
+		
+		return result.toArray(new MonitoredSystem[]{});
 	}
 }
