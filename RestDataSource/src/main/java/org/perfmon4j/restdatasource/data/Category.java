@@ -3,6 +3,10 @@ package org.perfmon4j.restdatasource.data;
 public class Category {
 	private String name;
 	private String templateName;
+
+	public Category() {
+		super();
+	}
 	
 	public Category(String name, String templateName) {
 		super();

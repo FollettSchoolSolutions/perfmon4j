@@ -29,6 +29,8 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.DefaultValue;
@@ -45,7 +47,6 @@ import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Database;
-import org.perfmon4j.restdatasource.data.Field;
 import org.perfmon4j.restdatasource.data.IntervalTemplate;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
 import org.perfmon4j.restdatasource.data.query.advanced.Series;
@@ -56,9 +57,12 @@ import org.perfmon4j.restdatasource.data.query.category.SystemResult;
 import org.perfmon4j.restdatasource.util.DateTimeHelper;
 import org.perfmon4j.restdatasource.util.ProcessArgsException;
 import org.perfmon4j.util.JDBCHelper;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
 
 @Path("/datasource")
 public class RestImpl {
+	private static final Logger logger = LoggerFactory.initLogger(RestImpl.class);
 	private final DateTimeHelper helper = new DateTimeHelper();
 
 	@GET
@@ -88,21 +92,8 @@ public class RestImpl {
 		@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
 		@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 
-		RegisteredDatabaseConnections.Database db = null;
-		if ("default".equals(databaseID)) {
-			db = RegisteredDatabaseConnections.getDefaultDatabase();
-		} else {
-			db = RegisteredDatabaseConnections.getDatabaseByID(databaseID);
-		}
-		
-		if (db == null) {
-			throw new NotFoundException("Database not found.  databaseID: " + databaseID);
-		}
-		
+		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
 		return lookupMonitoredSystems(db, timeStart, timeEnd);
-//		return new MonitoredSystem[]{new MonitoredSystem("DAP-341234", "GRDW-KWST.101"), 
-//				new MonitoredSystem("SHELF-72131", "GRDW-KWST.102"), 
-//				new MonitoredSystem("UD-ADS-21323", "GRDW-KWST.200")};
 	}
 	
 
@@ -113,19 +104,14 @@ public class RestImpl {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Category[] getCategories(@PathParam("databaseID") String databaseID, 
 			@QueryParam("systemID") String systemID, 
-			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
+			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
 			@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
-		List<Field> fields = new ArrayList<Field>();
 		
-		Field[] f = fields.toArray(new Field[]{});
 		
-		return new Category[]{new Category("Interval:WebRequest", "Interval"), 
-			new Category("Interval:WebRequest.search", "Interval"), 
-			new Category("Snapshot:Cache:SearchResults", "Cache"),
-			new Category("Snapshot:JVM", "JVM"),
-			new Category("Snapshot:GarbageCollection:ConcurrentMarkSweep", "GarbageCollection"),
-			
-		};
+		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
+		SystemID ids[] = SystemID.parse(systemID, db.getID());
+		
+		return lookupMonitoredCategories(db, ids, timeStart, timeEnd);
 	}
 	
 //	http://127.0.0.1/perfmon4j/datasource/databases/databaseID/categories/templates/template
@@ -236,7 +222,20 @@ public class RestImpl {
 		
 		return result;
 	}
-	
+
+	private RegisteredDatabaseConnections.Database getDatabase(String databaseID) {
+		RegisteredDatabaseConnections.Database db = null;
+		if ("default".equals(databaseID)) {
+			db = RegisteredDatabaseConnections.getDefaultDatabase();
+		} else {
+			db = RegisteredDatabaseConnections.getDatabaseByID(databaseID);
+		}
+		
+		if (db == null) {
+			throw new NotFoundException("Database not found.  databaseID: " + databaseID);
+		}
+		return db;
+	}
 	
 	private ResultElement buildRandomIntervalElement(String dateTime, long seed) {
 		IntervalQueryResultElement result = new IntervalQueryResultElement();
@@ -280,9 +279,12 @@ public class RestImpl {
 			
 			String SQL = "SELECT SystemID, SystemName "
 				+ " FROM " + schema + "P4JSystem s "
-				+ " WHERE EXISTS (SELECT MAX(IntervalID) " 
+				+ " WHERE EXISTS (SELECT IntervalID " 
 				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.SystemID = s.SystemID "
 				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+			if (logger.isDebugEnabled()) {
+				logger.logDebug("getSystems SQL: " + SQL);
+			}
 			
 			conn = db.openConnection();
 			stmt = conn.prepareStatement(SQL);
@@ -295,8 +297,10 @@ public class RestImpl {
 				result.add(ms);
 			}
 		} catch (SQLException se) {
+			logger.logDebug("getSystems", se);
 			throw new InternalServerErrorException(se);
 		} catch (ProcessArgsException e) {
+			logger.logDebug("getSystems", e);
 			throw new BadRequestException(e);
 		} finally {
 			JDBCHelper.closeNoThrow(rs);
@@ -305,5 +309,107 @@ public class RestImpl {
 		}
 		
 		return result.toArray(new MonitoredSystem[]{});
+	}
+	
+
+	private String buildInArrayForSystems(SystemID systems[]) {
+		StringBuilder builder = new StringBuilder();
+		builder.append("( ");
+
+		for (SystemID id: systems) {
+			if (builder.length() > 2) {
+				builder.append(", ");
+			}
+			builder.append(id.getID());	
+		}
+		builder.append(" )");
+		
+		return builder.toString();
+	}
+	
+	private Category[] lookupMonitoredCategories(RegisteredDatabaseConnections.Database db, SystemID systems[], String timeStart, String timeEnd) {
+		List<Category> result = new ArrayList<Category>(); 
+		Connection conn = null;
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		try {
+			String schema = fixupSchema(db.getSchema());
+			
+			long start = helper.parseDateTime(timeStart).getTimeForStart();
+			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+			
+			String SQL = "SELECT CategoryName"
+				+ " FROM " + schema + "P4JCategory cat "
+				+ " WHERE EXISTS (SELECT IntervalID " 
+				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.categoryId = cat.categoryID "
+				+ " AND pid.systemID IN " + buildInArrayForSystems(systems)
+				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+			
+System.out.println(SQL);			
+			if (logger.isDebugEnabled()) {
+				logger.logDebug("getIntervalCategories SQL: " + SQL);
+			}
+			
+			conn = db.openConnection();
+			stmt = conn.prepareStatement(SQL);
+			stmt.setTimestamp(1, new Timestamp(start));
+			stmt.setTimestamp(2, new Timestamp(end));
+			
+			rs = stmt.executeQuery();
+			while (rs.next()) {
+				Category cat = new Category("Interval." + rs.getString("CategoryName"), "Interval");
+				result.add(cat);
+			}
+		} catch (SQLException se) {
+			logger.logDebug("getIntervalCategories", se);
+			throw new InternalServerErrorException(se);
+		} catch (ProcessArgsException e) {
+			logger.logDebug("getIntervalCategories", e);
+			throw new BadRequestException(e);
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmt);
+			JDBCHelper.closeNoThrow(conn);
+		}
+		
+		return result.toArray(new Category[]{});
+	}
+	
+	private static final class SystemID {
+		private static final Pattern pattern = Pattern.compile("(\\w{4}\\-\\w{4})\\.(\\d+)"); 
+		private final String databaseID;
+		private final long ID;
+		
+		SystemID(String systemID, String expectedDatabaseID) throws BadRequestException {
+			Matcher matcher = pattern.matcher(systemID);
+			if (matcher.matches()) {
+				databaseID = matcher.group(1);
+				ID = Long.parseLong(matcher.group(2));
+				if (!expectedDatabaseID.equals(databaseID)) {
+					throw new BadRequestException("SystemID must match the specified database(" + expectedDatabaseID + "): " + systemID);
+				}
+			} else {
+				throw new BadRequestException("Invalid SystemID: " + systemID);
+			}
+		}
+
+		static SystemID[] parse(String systemID, String expectedDatabaseID) {
+			List<SystemID> result = new ArrayList<RestImpl.SystemID>();
+			
+			String[] ids = systemID.split("~");
+			for (String id: ids) {
+				result.add(new SystemID(id, expectedDatabaseID));
+			}
+			
+			return result.toArray(new SystemID[]{});
+		}
+		
+		private String getDatabaseID() {
+			return databaseID;
+		}
+
+		private long getID() {
+			return ID;
+		}
 	}
 }
