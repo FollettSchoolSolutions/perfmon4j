@@ -19,40 +19,40 @@
  * 
 */
 
-package org.perfmon4j.restdatasource.data;
+package org.perfmon4j.restdatasource.util;
 
-public class Category {
-	private String name;
-	private String templateName;
+import org.perfmon4j.restdatasource.data.AggregationMethod;
+import org.perfmon4j.restdatasource.data.Category;
+import org.perfmon4j.restdatasource.data.Field;
 
-	public Category() {
-		super();
-	}
+public class SeriesField {
+	private final Category category;
+	private final Field field;
+	private final AggregationMethod aggregationMethod;
 	
-	public Category(String name, String templateName) {
+	public SeriesField(Category category, Field field, AggregationMethod aggregationMethod) {
 		super();
-		this.name = name;
-		this.templateName = templateName;
-	}
-	
-	public String getName() {
-		return name;
-	}
-	public void setName(String name) {
-		this.name = name;
+		this.category = category;
+		this.field = field;
+		this.aggregationMethod = aggregationMethod;
 	}
 
-	public String getTemplateName() {
-		return templateName;
+	public Category getCategory() {
+		return category;
 	}
 
-	public void setTemplateName(String templateName) {
-		this.templateName = templateName;
+	public Field getField() {
+		return field;
+	}
+
+	public AggregationMethod getAggregationMethod() {
+		return aggregationMethod;
 	}
 
 	@Override
 	public String toString() {
-		return "Category [name=" + name + ", templateName=" + templateName
-				+ "]";
+		return "SeriesField [category=" + category + ", field=" + field
+				+ ", aggregationMethod=" + aggregationMethod + "]";
 	}
 }
+

@@ -1,31 +1,39 @@
 package org.perfmon4j.restdatasource.data;
 
+import java.util.Arrays;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 @JsonInclude(Include.NON_NULL)
 public class Field {
 	private String name;
-	private AggregationType[] aggregationTypes;
-	private AggregationType defaultAggregationType;
+	private AggregationMethod[] aggregationMethods;
+	private AggregationMethod defaultAggregationMethod;
+	private String databaseColumnName;
+	
+	public Field() {
+		super();
+	}
 
 	public Field(String name) {
 		super();
 		this.name = name;
 	}
 	
-	public Field(String name, AggregationType[] aggregationTypes) {
+	public Field(String name, AggregationMethod[] aggregationMethod) {
 		super();
 		this.name = name;
-		this.aggregationTypes = aggregationTypes;
-		this.defaultAggregationType = null;
+		this.aggregationMethods = aggregationMethod;
+		this.defaultAggregationMethod = null;
 	}
 
-	public Field(String name, AggregationType[] aggregationTypes, AggregationType defaultAggregationType) {
+	public Field(String name, AggregationMethod[] aggregationMethods, AggregationMethod defaultAggregationMethod) {
 		super();
 		this.name = name;
-		this.aggregationTypes = aggregationTypes;
-		this.defaultAggregationType = defaultAggregationType;
+		this.aggregationMethods = aggregationMethods;
+		this.defaultAggregationMethod = defaultAggregationMethod;
 	}
 	
 	
@@ -35,18 +43,35 @@ public class Field {
 	public void setName(String name) {
 		this.name = name;
 	}
-	public AggregationType[] getAggregationTypes() {
-		return aggregationTypes;
+	public AggregationMethod[] getAggregationMethods() {
+		return aggregationMethods;
 	}
-	public void setAggregationTypes(AggregationType[] aggregationTypes) {
-		this.aggregationTypes = aggregationTypes;
+	public void setAggregationMethods(AggregationMethod[] aggregationMethods) {
+		this.aggregationMethods = aggregationMethods;
 	}
 	
-	public AggregationType getDefaultAggregationType() {
-		return defaultAggregationType;
+	public AggregationMethod getDefaultAggregationMethod() {
+		return defaultAggregationMethod;
 	}
 
-	public void setDefaultAggregationType(AggregationType defaultAggregationType) {
-		this.defaultAggregationType = defaultAggregationType;
+	public void setDefaultAggregationMethod(AggregationMethod defaultAggregationMethod) {
+		this.defaultAggregationMethod = defaultAggregationMethod;
+	}
+
+	@JsonIgnore
+	public String getDatabaseColumnName() {
+		return databaseColumnName;
+	}
+
+	public void setDatabaseColumnName(String databaseColumnName) {
+		this.databaseColumnName = databaseColumnName;
+	}
+
+	@Override
+	public String toString() {
+		return "Field [name=" + name + ", aggregationMethods="
+				+ Arrays.toString(aggregationMethods)
+				+ ", defaultAggregationMethod=" + defaultAggregationMethod
+				+ ", databaseColumnName=" + databaseColumnName + "]";
 	}
 }

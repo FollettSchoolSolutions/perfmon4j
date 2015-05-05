@@ -345,7 +345,6 @@ public class RestImpl {
 				+ " AND pid.systemID IN " + buildInArrayForSystems(systems)
 				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
 			
-System.out.println(SQL);			
 			if (logger.isDebugEnabled()) {
 				logger.logDebug("getIntervalCategories SQL: " + SQL);
 			}

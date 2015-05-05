@@ -150,7 +150,6 @@ public class RestImplTest extends TestCase {
 		}
 	}
 	
-	
 	public void testGetCategories() throws Exception {
 		setUpDatabase();
 		try {
@@ -208,7 +207,9 @@ public class RestImplTest extends TestCase {
 			tearDownDatabase();
 		}
 	}
-
+	
+	public void testParseSeriesDefinitionString() {
+	}
 	
 	private MockHttpResponse getCategoriesThroughRest(String databaseID, String systemID) throws URISyntaxException {
 		return getCategoriesThroughRest(databaseID, systemID, "");
