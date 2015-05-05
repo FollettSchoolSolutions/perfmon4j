@@ -28,8 +28,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 
-import junit.framework.TestCase;
-
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb;
 import org.perfmon4j.restdatasource.util.DateTimeHelper;
 import org.perfmon4j.restdatasource.util.ProcessArgsException;
@@ -37,7 +35,7 @@ import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
 
 
-public class BaseDatabaseTest extends TestCase {
+public class BaseDatabaseSetup  {
 //	public static final String SCHEMA = "TEST";
 	public static final String JDBC_URL = "jdbc:derby:memory:mydb"; 
 	public static final String JDBC_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
@@ -45,13 +43,10 @@ public class BaseDatabaseTest extends TestCase {
 	protected Connection connection = null;
 	
 	
-	public BaseDatabaseTest(String name) {
-		super(name);
+	public BaseDatabaseSetup() {
 	}
 
-	protected void setUp() throws Exception {
-		super.setUp();
-		
+	void setUpDatabase() throws Exception {
 		connection = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, JDBC_DRIVER, null, JDBC_URL + ";create=true", null, null);
 		connection.setAutoCommit(true);		
 		
@@ -65,18 +60,16 @@ public class BaseDatabaseTest extends TestCase {
 		
 	}
 
-	protected void tearDown() throws Exception {
+	void tearDownDatabase() throws Exception {
 		JDBCHelper.closeNoThrow(connection);
 		
 		try {
 			JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, JDBC_DRIVER, null, JDBC_URL + ";drop=true", null, null);
 		} catch (SQLException sn) {
 		}
-		
-		super.tearDown();
 	}
 
-	private long getID(Statement stmt) throws SQLException {
+	long getID(Statement stmt) throws SQLException {
 		ResultSet rs = null;
 		try {
 			rs = stmt.getGeneratedKeys();
@@ -92,7 +85,7 @@ public class BaseDatabaseTest extends TestCase {
 	}
 	
 	
-	protected long addSystem(String systemName) throws SQLException {
+	long addSystem(String systemName) throws SQLException {
 		Statement stmt = null;
 		try {
 			stmt = connection.createStatement();
@@ -104,7 +97,7 @@ public class BaseDatabaseTest extends TestCase {
 	}
 
 	
-	protected long addInterval(long systemID, long categoryID, String endTime) throws SQLException, ProcessArgsException {
+	long addInterval(long systemID, long categoryID, String endTime) throws SQLException, ProcessArgsException {
 		Timestamp end = new Timestamp(helper.parseDateTime(endTime).getTimeForEnd());
 		Timestamp start = new Timestamp(end.getTime() - (60 * 1000));
 		
@@ -146,7 +139,7 @@ public class BaseDatabaseTest extends TestCase {
 				+ "VALUES(?, "
 				+ "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
 				+ "?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-System.out.println(SQL);		
+//System.out.println(SQL);		
 		PreparedStatement stmt = null;
 		try {
 			stmt = connection.prepareStatement(SQL, Statement.RETURN_GENERATED_KEYS);
@@ -191,7 +184,7 @@ System.out.println(SQL);
 	}
 	
 	
-	protected long addCategory(String category) throws SQLException {
+	long addCategory(String category) throws SQLException {
 		Statement stmt = null;
 		try {
 			stmt = connection.createStatement();

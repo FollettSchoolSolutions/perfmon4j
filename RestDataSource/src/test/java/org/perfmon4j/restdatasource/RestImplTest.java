@@ -26,6 +26,8 @@ import java.net.URISyntaxException;
 
 import javax.servlet.http.HttpServletResponse;
 
+import junit.framework.TestCase;
+
 import org.jboss.resteasy.core.Dispatcher;
 import org.jboss.resteasy.mock.MockDispatcherFactory;
 import org.jboss.resteasy.mock.MockHttpRequest;
@@ -39,9 +41,10 @@ import org.perfmon4j.util.JDBCHelper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class RestImplTest extends BaseDatabaseTest {
+public class RestImplTest extends TestCase {
 	private final Dispatcher dispatcher;
 	private final ObjectMapper mapper;
+	private final BaseDatabaseSetup databaseSetup = new BaseDatabaseSetup();
 	
 	public RestImplTest(String name) {
 		super(name);
@@ -57,19 +60,19 @@ public class RestImplTest extends BaseDatabaseTest {
 	private static String DATABASE_NAME = "Production";
 	
 
-	protected void setUp() throws Exception {
-		super.setUp();
+	void setUpDatabase() throws Exception {
+		databaseSetup.setUpDatabase();
 		
-		addCategory("WebRequest");
-		addCategory("WebRequest.search");
-		RegisteredDatabaseConnections.addJDBCDatabase(DATABASE_NAME, true, BaseDatabaseTest.JDBC_DRIVER, 
-				null, BaseDatabaseTest.JDBC_URL, null, null, null);
+		databaseSetup.addCategory("WebRequest");
+		databaseSetup.addCategory("WebRequest.search");
+		RegisteredDatabaseConnections.addJDBCDatabase(DATABASE_NAME, true, BaseDatabaseSetup.JDBC_DRIVER, 
+				null, BaseDatabaseSetup.JDBC_URL, null, null, null);
 	}
 
-	protected void tearDown() throws Exception {
+	protected void tearDownDatabase() throws Exception {
 		RegisteredDatabaseConnections.removeDatabase(DATABASE_NAME);
 		
-		super.tearDown();
+		databaseSetup.tearDownDatabase();
 	}
 
 	private  <T> T  responseToObject(MockHttpResponse response, Class<T> clazz) throws Exception {
@@ -77,22 +80,25 @@ public class RestImplTest extends BaseDatabaseTest {
 	}
 	
 	public void testGetDatabasesWithSingleDatabase() throws Exception {
-        MockHttpResponse response = getDatabasesThroughRest();
-
-        assertEquals("",  HttpServletResponse.SC_OK,  response.getStatus());
-
-        Database[] result = responseToObject(response, Database[].class);
-        assertEquals("Should not have had one database",1, result.length);
-        Database d = result[0];
-        
-        assertTrue("isDefault", d.isDefault());
-        assertEquals("name", "Production", d.getName());
-        assertEquals("database ID",  JDBCHelper.getDatabaseIdentity(connection, null), d.getID());
+		setUpDatabase();
+		try {
+	        MockHttpResponse response = getDatabasesThroughRest();
+	
+	        assertEquals("",  HttpServletResponse.SC_OK,  response.getStatus());
+	
+	        Database[] result = responseToObject(response, Database[].class);
+	        assertEquals("Should not have had one database",1, result.length);
+	        Database d = result[0];
+	        
+	        assertTrue("isDefault", d.isDefault());
+	        assertEquals("name", "Production", d.getName());
+	        assertEquals("database ID",  JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null), d.getID());
+		} finally {
+			tearDownDatabase();
+		}
 	}
 
 	public void testGetDatabasesWithNoDatabases() throws Exception {
-		RegisteredDatabaseConnections.removeDatabase(DATABASE_NAME);
-		
 		MockHttpResponse response = getDatabasesThroughRest();
         assertEquals("",  HttpServletResponse.SC_OK,  response.getStatus());
 
@@ -101,96 +107,106 @@ public class RestImplTest extends BaseDatabaseTest {
 	}
 	
 	public void testGetSystems() throws Exception {
-		String databaseID = JDBCHelper.getDatabaseIdentity(connection, null);
-		
-		MockHttpResponse response = getSystemsThroughRest("BADID");
-		assertEquals("No database registerd with BADID", 404, response.getStatus());
-		
-		response = getSystemsThroughRest("default");
-		assertEquals("default should be found", 200, response.getStatus());
-		
-		response = getSystemsThroughRest(databaseID);
-		assertEquals("There is a database registered with databaseID", 200, response.getStatus());
-		assertEquals("database does not contain any systems with observations", 0, responseToObject(response, MonitoredSystem[].class).length);
-		
-		// Add an observation to the "Default" system...
-		addInterval(1L, 1L, "now");
-		
-		response = getSystemsThroughRest(databaseID);
-		MonitoredSystem systems[] = responseToObject(response, MonitoredSystem[].class);
-		
-		assertEquals("The default system has an observation", 1, systems.length);
-		// Verify fields associated with the monitored systems.
-		assertEquals("name", "Default", systems[0].getName());
-		assertEquals("ID", databaseID + ".1", systems[0].getID());
-		
-
-		// Now add another system with an observation WAY in the past.
-		long systemID = addSystem("Production");
-		addInterval(systemID, 1L, "now-100h");
-
-		response = getSystemsThroughRest(databaseID);
-		systems = responseToObject(response, MonitoredSystem[].class);
-		assertEquals("Still only 1 system has an observation within default start/end time", 1, systems.length);
-
-		// Now change timeStart to include the observation.
-		response = getSystemsThroughRest(databaseID, "timeStart=now-101h");
-		systems = responseToObject(response, MonitoredSystem[].class);
-		assertEquals("Should now have 2 systems", 2, systems.length);
+		setUpDatabase();
+		try {
+			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
+			
+			MockHttpResponse response = getSystemsThroughRest("BADID");
+			assertEquals("No database registerd with BADID", 404, response.getStatus());
+			
+			response = getSystemsThroughRest("default");
+			assertEquals("default should be found", 200, response.getStatus());
+			
+			response = getSystemsThroughRest(databaseID);
+			assertEquals("There is a database registered with databaseID", 200, response.getStatus());
+			assertEquals("database does not contain any systems with observations", 0, responseToObject(response, MonitoredSystem[].class).length);
+			
+			// Add an observation to the "Default" system...
+			databaseSetup.addInterval(1L, 1L, "now");
+			
+			response = getSystemsThroughRest(databaseID);
+			MonitoredSystem systems[] = responseToObject(response, MonitoredSystem[].class);
+			
+			assertEquals("The default system has an observation", 1, systems.length);
+			// Verify fields associated with the monitored systems.
+			assertEquals("name", "Default", systems[0].getName());
+			assertEquals("ID", databaseID + ".1", systems[0].getID());
+			
+	
+			// Now add another system with an observation WAY in the past.
+			long systemID = databaseSetup.addSystem("Production");
+			databaseSetup.addInterval(systemID, 1L, "now-100h");
+	
+			response = getSystemsThroughRest(databaseID);
+			systems = responseToObject(response, MonitoredSystem[].class);
+			assertEquals("Still only 1 system has an observation within default start/end time", 1, systems.length);
+	
+			// Now change timeStart to include the observation.
+			response = getSystemsThroughRest(databaseID, "timeStart=now-101h");
+			systems = responseToObject(response, MonitoredSystem[].class);
+			assertEquals("Should now have 2 systems", 2, systems.length);
+		} finally {
+			tearDownDatabase();
+		}
 	}
 	
 	
 	public void testGetCategories() throws Exception {
-		String databaseID = JDBCHelper.getDatabaseIdentity(connection, null);
-		
-		MockHttpResponse response;
-		
-		response = getCategoriesThroughRest("BADID", "BADDB.1");
-		assertEquals("No database registerd with BADID should return 404", 404, response.getStatus());
-		
-		response = getCategoriesThroughRest(databaseID, "BADDB.1");
-		assertEquals("If system ID does not match the database it is a bad request", 400, response.getStatus());
-		
-		final String defaultSystemID = databaseID + ".1";
-		
-		response = getCategoriesThroughRest(databaseID, defaultSystemID);
-		assertEquals("Default system...  Although no categories, should return empty collection", 200, response.getStatus());
-
-		response = getCategoriesThroughRest("default", defaultSystemID);
-		assertEquals("Also works if you specify the 'default' database", 200, response.getStatus());
-		
-		Category categories[] = responseToObject(response, Category[].class);
-		assertEquals("No active categories yet", 0, categories.length);
-		
-		// Add an observation to the Interval.WebRequest category.
-		addInterval(1L, 1L, "now");
-		response = getCategoriesThroughRest(databaseID, defaultSystemID);
-		categories = responseToObject(response, Category[].class);
-
-		assertEquals("Now have one active category", 1, categories.length);
-		assertEquals("Category name", "Interval.WebRequest", categories[0].getName());
-		assertEquals("Category template", "Interval", categories[0].getTemplateName());
-		
-		// Add another system, this system will have no observations.
-		long systemID = addSystem("Production");
-		final String productionSystemID = databaseID + "." + systemID;
-		
-		response = getCategoriesThroughRest("default", productionSystemID);
-		assertEquals("Request categories for the Production system in the default database", 200, response.getStatus());
-
-		categories = responseToObject(response, Category[].class);
-		assertEquals("The production system has no active categories yet", 0, categories.length);
-		
-		// Now get categories from multiple systems.
-		// Multiple systems are specified in a tilde separated list.
-		final String multipleSystems = defaultSystemID + "~" + productionSystemID;
-		
-		response = getCategoriesThroughRest("default", multipleSystems);
-		assertEquals("Request categories for the Production system and the default systmm in the default database", 200, response.getStatus());
-
-		categories = responseToObject(response, Category[].class);
-		assertEquals("When specifying multiple systems you get a category if at least one of the systems has an observation", 
-				1, categories.length);
+		setUpDatabase();
+		try {
+			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
+			
+			MockHttpResponse response;
+			
+			response = getCategoriesThroughRest("BADID", "BADDB.1");
+			assertEquals("No database registerd with BADID should return 404", 404, response.getStatus());
+			
+			response = getCategoriesThroughRest(databaseID, "BADDB.1");
+			assertEquals("If system ID does not match the database it is a bad request", 400, response.getStatus());
+			
+			final String defaultSystemID = databaseID + ".1";
+			
+			response = getCategoriesThroughRest(databaseID, defaultSystemID);
+			assertEquals("Default system...  Although no categories, should return empty collection", 200, response.getStatus());
+	
+			response = getCategoriesThroughRest("default", defaultSystemID);
+			assertEquals("Also works if you specify the 'default' database", 200, response.getStatus());
+			
+			Category categories[] = responseToObject(response, Category[].class);
+			assertEquals("No active categories yet", 0, categories.length);
+			
+			// Add an observation to the Interval.WebRequest category.
+			databaseSetup.addInterval(1L, 1L, "now");
+			response = getCategoriesThroughRest(databaseID, defaultSystemID);
+			categories = responseToObject(response, Category[].class);
+	
+			assertEquals("Now have one active category", 1, categories.length);
+			assertEquals("Category name", "Interval.WebRequest", categories[0].getName());
+			assertEquals("Category template", "Interval", categories[0].getTemplateName());
+			
+			// Add another system, this system will have no observations.
+			long systemID = databaseSetup.addSystem("Production");
+			final String productionSystemID = databaseID + "." + systemID;
+			
+			response = getCategoriesThroughRest("default", productionSystemID);
+			assertEquals("Request categories for the Production system in the default database", 200, response.getStatus());
+	
+			categories = responseToObject(response, Category[].class);
+			assertEquals("The production system has no active categories yet", 0, categories.length);
+			
+			// Now get categories from multiple systems.
+			// Multiple systems are specified in a tilde separated list.
+			final String multipleSystems = defaultSystemID + "~" + productionSystemID;
+			
+			response = getCategoriesThroughRest("default", multipleSystems);
+			assertEquals("Request categories for the Production system and the default systmm in the default database", 200, response.getStatus());
+	
+			categories = responseToObject(response, Category[].class);
+			assertEquals("When specifying multiple systems you get a category if at least one of the systems has an observation", 
+					1, categories.length);
+		} finally {
+			tearDownDatabase();
+		}
 	}
 
 	
