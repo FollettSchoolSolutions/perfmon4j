@@ -55,6 +55,7 @@ import org.perfmon4j.restdatasource.data.query.category.Result;
 import org.perfmon4j.restdatasource.data.query.category.ResultElement;
 import org.perfmon4j.restdatasource.data.query.category.SystemResult;
 import org.perfmon4j.restdatasource.util.DateTimeHelper;
+import org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
 import org.perfmon4j.restdatasource.util.ProcessArgsException;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
@@ -171,6 +172,10 @@ public class RestImpl {
 			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
 			@QueryParam("seriesAlias") @DefaultValue("")  String seriesAlias) {
+
+		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
+		ParsedSeriesDefinition series[] = ParsedSeriesDefinition.parse(seriesDefinition, databaseID);
+		
 		org.perfmon4j.restdatasource.data.query.advanced.Result result = new org.perfmon4j.restdatasource.data.query.advanced.Result();
 		
 		Series seriesA = new Series();
@@ -374,7 +379,7 @@ public class RestImpl {
 		return result.toArray(new Category[]{});
 	}
 	
-	private static final class SystemID {
+	public static final class SystemID {
 		private static final Pattern pattern = Pattern.compile("(\\w{4}\\-\\w{4})\\.(\\d+)"); 
 		private final String databaseID;
 		private final long ID;
@@ -392,7 +397,23 @@ public class RestImpl {
 			}
 		}
 
-		static SystemID[] parse(String systemID, String expectedDatabaseID) {
+		public static SystemID[] parse(String systemIDs[], String expectedDatabaseID) {
+			List<SystemID> result = new ArrayList<RestImpl.SystemID>();
+			
+			for (String s : systemIDs) {
+				result.add(new SystemID(s, expectedDatabaseID));
+			}
+			
+			return result.toArray(new SystemID[]{});
+		}
+
+		/**
+		 * Parses a ~ separated list of SystemIDs.
+		 * @param systemID
+		 * @param expectedDatabaseID
+		 * @return
+		 */
+		public static SystemID[] parse(String systemID, String expectedDatabaseID) {
 			List<SystemID> result = new ArrayList<RestImpl.SystemID>();
 			
 			String[] ids = systemID.split("~");
@@ -403,11 +424,11 @@ public class RestImpl {
 			return result.toArray(new SystemID[]{});
 		}
 		
-		private String getDatabaseID() {
+		public String getDatabaseID() {
 			return databaseID;
 		}
 
-		private long getID() {
+		public long getID() {
 			return ID;
 		}
 	}

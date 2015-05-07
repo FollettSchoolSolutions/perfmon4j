@@ -208,8 +208,41 @@ public class RestImplTest extends TestCase {
 		}
 	}
 	
-	public void testParseSeriesDefinitionString() {
+	public void testGetQueryObservations() throws Exception {
+		setUpDatabase();
+		try {
+			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
+			
+			MockHttpResponse response;
+	
+			response = queryThroughRest("BADID", "BADDB.1~Interval.WebRequest~avgDuration");
+			assertEquals("No database registerd with BADID should return 404", 404, response.getStatus());
+
+			
+			response = queryThroughRest(databaseID, "BADDB.1~Interval.WebRequest~avgDuration");
+			assertEquals("Good database, but the seriesDefinition contains a system that does not match", 400, response.getStatus());
+		} finally {
+			tearDownDatabase();
+		}
 	}
+
+	private MockHttpResponse queryThroughRest(String databaseID, String seriesDefinition) throws URISyntaxException {
+		return queryThroughRest(databaseID, seriesDefinition, "");
+	}
+	
+	private MockHttpResponse queryThroughRest(String databaseID, String seriesDefinition, String queryParams) throws URISyntaxException {
+		if (queryParams.length() > 0) {
+			queryParams = "&" + queryParams;
+		}
+        MockHttpRequest request = MockHttpRequest.get("/datasource/databases/" + databaseID + "/observations?seriesDefinition=" + seriesDefinition + queryParams);
+        MockHttpResponse response = new MockHttpResponse();
+
+        dispatcher.invoke(request, response);
+        return response;
+	}
+
+	
+	
 	
 	private MockHttpResponse getCategoriesThroughRest(String databaseID, String systemID) throws URISyntaxException {
 		return getCategoriesThroughRest(databaseID, systemID, "");

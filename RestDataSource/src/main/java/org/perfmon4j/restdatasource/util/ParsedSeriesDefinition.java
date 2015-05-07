@@ -26,19 +26,21 @@ import java.util.List;
 
 import javax.ws.rs.BadRequestException;
 
+import org.perfmon4j.restdatasource.RestImpl;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 
 public class ParsedSeriesDefinition {
 	private final AggregationMethod aggregationMethod;
-	private final String[] systems;
+	private final RestImpl.SystemID[] systems;
 	private final String categoryName;
 	private final String fieldName;
 	
-	public ParsedSeriesDefinition(AggregationMethod aggregationMethod, String[] systems,
-			String categoryName, String fieldName) {
+	private ParsedSeriesDefinition(AggregationMethod aggregationMethod, String[] systems,
+			String categoryName, String fieldName, String expectedDatabaseID) {
 		super();
 		this.aggregationMethod = aggregationMethod;
-		this.systems = systems;
+
+		this.systems = RestImpl.SystemID.parse(systems, expectedDatabaseID);
 		this.categoryName = categoryName;
 		this.fieldName = fieldName;
 	}
@@ -47,7 +49,7 @@ public class ParsedSeriesDefinition {
 		return aggregationMethod;
 	}
 
-	public String[] getSystems() {
+	public RestImpl.SystemID[] getSystems() {
 		return systems;
 	}
 
@@ -59,7 +61,7 @@ public class ParsedSeriesDefinition {
 		return fieldName;
 	}
 	
-	private static ParsedSeriesDefinition parseSingleSeries(String definition) {
+	private static ParsedSeriesDefinition parseSingleSeries(String definition, String expectedDatabaseID) {
 		if (definition == null || "".equals(definition.trim())) {
 			throw new BadRequestException("You must provide a series definition");
 		}	
@@ -91,11 +93,11 @@ public class ParsedSeriesDefinition {
 		String categoryName = split[offset++];
 		String fieldName = split[offset];
 		
-		return new ParsedSeriesDefinition(aggregationMethod, systems.toArray(new String[]{}), categoryName, fieldName);
+		return new ParsedSeriesDefinition(aggregationMethod, systems.toArray(new String[]{}), categoryName, fieldName, expectedDatabaseID);
 	}
 
 
-	public static ParsedSeriesDefinition[] parse(String definition) {
+	public static ParsedSeriesDefinition[] parse(String definition, String expectedDatabaseID) {
 		if (definition == null || "".equals(definition.trim())) {
 			throw new BadRequestException("You must provide a series definition");
 		}
@@ -107,7 +109,7 @@ public class ParsedSeriesDefinition {
 			throw new BadRequestException("You must provide a series definition");
 		}		
 		for (String s : split) {
-			result.add(parseSingleSeries(s));	
+			result.add(parseSingleSeries(s, expectedDatabaseID));	
 		}
 		
 		return result.toArray(new ParsedSeriesDefinition[]{});

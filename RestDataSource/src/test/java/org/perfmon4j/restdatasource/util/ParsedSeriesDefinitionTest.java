@@ -23,10 +23,9 @@ package org.perfmon4j.restdatasource.util;
 
 import javax.ws.rs.BadRequestException;
 
-import org.perfmon4j.restdatasource.data.AggregationMethod;
-import org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
-
 import junit.framework.TestCase;
+
+import org.perfmon4j.restdatasource.data.AggregationMethod;
 
 public class ParsedSeriesDefinitionTest extends TestCase {
 
@@ -45,28 +44,28 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 	
 	public void testParserSimpleSeries() {
 		String series = "GRSK-VRTS.1~Interval.WebRequest.search~avgDuration";
-		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series);
+		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
 		
 		assertNotNull(def);
 		assertEquals("def.length", 1, def.length);
 		assertNull("aggregationMethod", def[0].getAggregationMethod());
 		assertEquals("numberOfSystems", 1, def[0].getSystems().length);
-		assertEquals("System", "GRSK-VRTS.1", def[0].getSystems()[0]);
+		assertEquals("System", 1, def[0].getSystems()[0].getID());
 		assertEquals("Category", "Interval.WebRequest.search", def[0].getCategoryName());
 		assertEquals("Field", "avgDuration", def[0].getFieldName());
 	}
 
 	public void testParserCompositeSeries() {
 		String series = "GRSK-VRTS.1~GRSK-VRTS.2~Interval.WebRequest.search~avgDuration";
-		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series);
+		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
 		
 		assertNotNull(def);
 		assertEquals("def.length", 1, def.length);
 		assertNull("aggregationMethod", def[0].getAggregationMethod());
 		
 		assertEquals("numberOfSystems", 2, def[0].getSystems().length);
-		assertEquals("System", "GRSK-VRTS.1", def[0].getSystems()[0]);
-		assertEquals("System", "GRSK-VRTS.2", def[0].getSystems()[1]);
+		assertEquals("System", 1, def[0].getSystems()[0].getID());
+		assertEquals("System", 2, def[0].getSystems()[1].getID());
 		
 		assertEquals("Category", "Interval.WebRequest.search", def[0].getCategoryName());
 		assertEquals("Field", "avgDuration", def[0].getFieldName());
@@ -74,15 +73,15 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testParserCompositeSeriesWithAggregationMethod() {
 		String series = "MAX~GRSK-VRTS.1~GRSK-VRTS.2~Interval.WebRequest.search~avgDuration";
-		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series);
+		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
 		
 		assertNotNull(def);
 		assertEquals("def.length", 1, def.length);
 		assertEquals("aggregationMethod", AggregationMethod.MAX, def[0].getAggregationMethod());
 		
 		assertEquals("numberOfSystems", 2, def[0].getSystems().length);
-		assertEquals("System", "GRSK-VRTS.1", def[0].getSystems()[0]);
-		assertEquals("System", "GRSK-VRTS.2", def[0].getSystems()[1]);
+		assertEquals("System", 1, def[0].getSystems()[0].getID());
+		assertEquals("System", 2, def[0].getSystems()[1].getID());
 		
 		assertEquals("Category", "Interval.WebRequest.search", def[0].getCategoryName());
 		assertEquals("Field", "avgDuration", def[0].getFieldName());
@@ -90,16 +89,25 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testParserMultipleSeries() {
 		String series = "GRSK-VRTS.1~Interval.WebRequest.search~avgDuration_MAX~GRSK-VRTS.4~GRSK-VRTS.5~Interval.WebRequest.search~maxActiveThreads_MAX~GRSK-VRTS.4~GRSK-VRTS.5~Interval.WebRequest.search~medianDuration";
-		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series);
+		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
 		
 		assertNotNull(def);
 		assertEquals("numberOfSeries", 3, def.length);
 	}
-	
+
+	public void testParserWithSeriesContainingASystemNotInCurrentDatabase() {
+		String series = "GRSK-VRTS.1~Interval.WebRequest.search~avgDuration_MAX~GRSK-VRTS.4~GRSK-VRTS.5~Interval.WebRequest.search~maxActiveThreads_MAX~GRSK-VRTS.4~AAAA-BBBB.5~Interval.WebRequest.search~medianDuration";
+		try {
+			ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
+			fail("Expected a BadRequestException");
+		} catch (BadRequestException ex) {
+			assertEquals("SystemID must match the specified database(GRSK-VRTS): AAAA-BBBB.5", ex.getMessage());
+		}
+	}
 
 	public void testNullRequest() {
 		try {
-			ParsedSeriesDefinition.parse(null);
+			ParsedSeriesDefinition.parse(null, "GRSK-VRTS");
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("You must provide a series definition", ex.getMessage());
@@ -108,7 +116,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testEmptyRequest() {
 		try {
-			ParsedSeriesDefinition.parse("");
+			ParsedSeriesDefinition.parse("", "GRSK-VRTS");
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("You must provide a series definition", ex.getMessage());
@@ -117,7 +125,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testMultipleEmptyRequests() {
 		try {
-			ParsedSeriesDefinition.parse("__");
+			ParsedSeriesDefinition.parse("__", "GRSK-VRTS");
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("You must provide a series definition", ex.getMessage());
@@ -126,7 +134,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testMultipleEmptyRequestsWithWhiteSpace() {
 		try {
-			ParsedSeriesDefinition.parse("  _  _  ");
+			ParsedSeriesDefinition.parse("  _  _  ", "GRSK-VRTS");
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("You must provide a series definition", ex.getMessage());
@@ -135,7 +143,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 	
 	public void testInsufficientFieldsInSeriesDefinition() {
 		try {
-			ParsedSeriesDefinition.parse("Interval.WebRequest.search~avgDuration");
+			ParsedSeriesDefinition.parse("Interval.WebRequest.search~avgDuration", "GRSK-VRTS");
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("Insufficent fields in series definition", ex.getMessage());
@@ -144,7 +152,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 		
 	public void testInsufficientFieldsInSeriesDefinitionWithAggregationMethod() {
 		try {
-			ParsedSeriesDefinition.parse("MAX~Interval.WebRequest.search~avgDuration");
+			ParsedSeriesDefinition.parse("MAX~Interval.WebRequest.search~avgDuration", "GRSK-VRTS");
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("Insufficent fields in series definition", ex.getMessage());
@@ -153,7 +161,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testInvalidAggregationMethod() {
 		try {
-			ParsedSeriesDefinition.parse("WHATISTHIS~Interval.WebRequest.search~avgDuration");
+			ParsedSeriesDefinition.parse("WHATISTHIS~Interval.WebRequest.search~avgDuration", "GRSK-VRTS");
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("Invalid aggregation method: WHATISTHIS", ex.getMessage());

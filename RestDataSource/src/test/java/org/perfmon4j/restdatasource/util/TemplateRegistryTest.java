@@ -49,7 +49,7 @@ public class TemplateRegistryTest extends TestCase {
 	}
 	
 	public void testBasicResolve() {
-		ParsedSeriesDefinition def = new ParsedSeriesDefinition(null, null, "Person.student", "shoeSize");
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
 		
 		SeriesField field = registry.resolveField(def);
 		assertNotNull(field);
@@ -59,7 +59,7 @@ public class TemplateRegistryTest extends TestCase {
 		assertEquals("Category Template", "Person", field.getCategory().getTemplateName());
 		assertEquals("Field name", "shoeSize", field.getField().getName());
 		
-		def = new ParsedSeriesDefinition(null, null, "Person.student", "hatSize");
+		def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~hatSize", "ABCD-EFGH")[0];
 		
 		field = registry.resolveField(def);
 		assertNotNull(field);
@@ -72,14 +72,14 @@ public class TemplateRegistryTest extends TestCase {
 	
 
 	public void testOverrideDefaultAggregationMethod() {
-		ParsedSeriesDefinition def = new ParsedSeriesDefinition(AggregationMethod.MAX, null, "Person.student", "shoeSize");
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("MAX~ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
 		
 		SeriesField field = registry.resolveField(def);
 		assertEquals("Should be the specified aggregation method", AggregationMethod.MAX,  field.getAggregationMethod());
 	}
 
 	public void testUnsupportedAggregationMethod() {
-		ParsedSeriesDefinition def = new ParsedSeriesDefinition(AggregationMethod.MIN, null, "Person.student", "shoeSize");
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("MIN~ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
 		
 		try {
 			registry.resolveField(def);
@@ -90,7 +90,7 @@ public class TemplateRegistryTest extends TestCase {
 	}
 
 	public void testUnregisteredTemplate() {
-		ParsedSeriesDefinition def = new ParsedSeriesDefinition(null, null, "Pet.student", "shoeSize");
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Pet.student~shoeSize", "ABCD-EFGH")[0];
 		
 		try {
 			registry.resolveField(def);
@@ -101,8 +101,7 @@ public class TemplateRegistryTest extends TestCase {
 	}
 	
 	public void testInvalidField() {
-		ParsedSeriesDefinition def = new ParsedSeriesDefinition(null, null, "Person.student", "height");
-		
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~height", "ABCD-EFGH")[0];	
 		try {
 			registry.resolveField(def);
 			fail("Template does not contain a height field");
