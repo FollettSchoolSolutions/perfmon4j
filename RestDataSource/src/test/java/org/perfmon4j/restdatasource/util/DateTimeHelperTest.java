@@ -255,6 +255,32 @@ public class DateTimeHelperTest extends TestCase {
 		assertEquals(59, cal.get(Calendar.SECOND));
 		assertEquals(999, cal.get(Calendar.MILLISECOND));
 	}
+
+	
+	
+	public void testTruncateToMinute() throws Exception { 
+		// Should set to the last millisecond of the minute.
+		Calendar cal = new GregorianCalendar();
+		cal.set(2015, 4, 7, 22, 45, 13);
+		cal.set(Calendar.MILLISECOND, 345);
+		
+		
+		long millis = helper.truncateToMinute(cal.getTimeInMillis());
+		
+		cal = new GregorianCalendar();
+		cal.setTimeInMillis(millis);
+		
+		assertEquals(2015, cal.get(Calendar.YEAR));
+		assertEquals(Calendar.MAY, cal.get(Calendar.MONTH));
+		assertEquals(7, cal.get(Calendar.DATE));
+		assertEquals(22, cal.get(Calendar.HOUR_OF_DAY));
+		assertEquals(45, cal.get(Calendar.MINUTE));
+		assertEquals(0, cal.get(Calendar.SECOND));
+		assertEquals(0, cal.get(Calendar.MILLISECOND));
+	}
+	
+	
+	
 	
 	/**
 	 * Force our Test DateTimeHelper to always return the same value for the current system time.

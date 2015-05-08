@@ -171,4 +171,16 @@ public class DateTimeHelper {
 		DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 		return format.format(cal.getTime());
 	}
+
+	public String formatDate(long time) {
+		DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
+		return format.format(time);
+	}
+	
+	
+	public long truncateToMinute(long timeInMillis) {
+		final long ONE_MINUTE = 60000;
+		
+		return (timeInMillis/ONE_MINUTE)*ONE_MINUTE;
+	}
 }

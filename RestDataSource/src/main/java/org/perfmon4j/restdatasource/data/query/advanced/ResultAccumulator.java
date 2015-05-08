@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.perfmon4j.restdatasource.RestImpl.SystemID;
+import org.perfmon4j.restdatasource.util.DateTimeHelper;
 import org.perfmon4j.restdatasource.util.SeriesField;
 import org.perfmon4j.restdatasource.util.aggregators.Aggregator;
 import org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
@@ -15,6 +16,7 @@ public class ResultAccumulator {
 	private final Set<Long> times = new TreeSet<Long>();
 	private final Map<String, Set<SeriesWrapper>> seriesMap = new HashMap<String, Set<SeriesWrapper>>();
 	private final Set<Series> allSeries = new HashSet<Series>();
+	private final DateTimeHelper helper = new DateTimeHelper();
 
 	public void addSeries(SeriesField series, AggregatorFactory factory) {
 		this.addSeries(series.getProvider().getTemplateName(), factory, series.getAlias(), SystemID.toString(series.getSystems()), series.getCategory().getName(), 
@@ -36,13 +38,29 @@ public class ResultAccumulator {
 	}
 
 	public Aggregator[] getAggregators(String templateName, long time) {
-		return null;
+		Set<SeriesWrapper> series = seriesMap.get(templateName);
+		Aggregator[] result = new Aggregator[series.size()];
+		
+		Long timeKey = Long.valueOf(helper.truncateToMinute(time));
+		times.add(timeKey);
+		
+		int i = 0;
+		for (SeriesWrapper w : series) {
+			Aggregator a = w.map.get(timeKey);
+			if (a == null) {
+				a = w.factory.newAggregator();
+				w.map.put(timeKey, a);
+			}
+			result[i++] = a;
+		}
+		
+		return result;
 	}
 	
 	public AdvancedQueryResult buildResults() {
 		AdvancedQueryResult result = new AdvancedQueryResult();
 		
-		result.setDateTime(new String[]{});
+		result.setDateTime(getFormattedTimes());
 		result.setSeries(allSeries.toArray(new Series[]{}));
 		for (Set<SeriesWrapper> set : seriesMap.values()) {
 			for (SeriesWrapper w : set) {
@@ -51,6 +69,18 @@ public class ResultAccumulator {
 		}
 		return result;
 	}
+	
+	private String[] getFormattedTimes() {
+		String result[] = new String[times.size()];
+		
+		int i = 0;
+		for (Long t : times) {
+			result[i++] =  helper.formatDate(t.longValue());
+		}
+		
+		return result;
+	}
+	
 	
 	private Set<SeriesWrapper> getSeriesForProvider(String templateName) {
 		Set<SeriesWrapper> result = seriesMap.get(templateName);
