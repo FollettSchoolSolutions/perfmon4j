@@ -21,10 +21,10 @@
 
 package org.perfmon4j.restdatasource.util;
 
-import javax.ws.rs.BadRequestException;
 
 import junit.framework.TestCase;
 
+import org.jboss.resteasy.spi.BadRequestException;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 
 public class ParsedSeriesDefinitionTest extends TestCase {

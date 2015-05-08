@@ -21,17 +21,25 @@
 
 package org.perfmon4j.restdatasource.util;
 
+import org.perfmon4j.restdatasource.DataProvider;
+import org.perfmon4j.restdatasource.RestImpl.SystemID;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.Field;
 
 public class SeriesField {
+	private final String alias;
+	private final DataProvider provider;
 	private final Category category;
 	private final Field field;
+	private final SystemID systems[];
 	private final AggregationMethod aggregationMethod;
 	
-	public SeriesField(Category category, Field field, AggregationMethod aggregationMethod) {
+	public SeriesField(String alias, DataProvider provider, SystemID systems[], Category category, Field field, AggregationMethod aggregationMethod) {
 		super();
+		this.alias = alias;
+		this.provider = provider;
+		this.systems = systems;
 		this.category = category;
 		this.field = field;
 		this.aggregationMethod = aggregationMethod;
@@ -49,10 +57,16 @@ public class SeriesField {
 		return aggregationMethod;
 	}
 
-	@Override
-	public String toString() {
-		return "SeriesField [category=" + category + ", field=" + field
-				+ ", aggregationMethod=" + aggregationMethod + "]";
+	public String getAlias() {
+		return alias;
+	}
+
+	public DataProvider getProvider() {
+		return provider;
+	}
+
+	public SystemID[] getSystems() {
+		return systems;
 	}
 }
 

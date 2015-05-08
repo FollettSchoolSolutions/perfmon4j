@@ -24,8 +24,7 @@ package org.perfmon4j.restdatasource.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.ws.rs.BadRequestException;
-
+import org.jboss.resteasy.spi.BadRequestException;
 import org.perfmon4j.restdatasource.RestImpl;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 
@@ -39,7 +38,6 @@ public class ParsedSeriesDefinition {
 			String categoryName, String fieldName, String expectedDatabaseID) {
 		super();
 		this.aggregationMethod = aggregationMethod;
-
 		this.systems = RestImpl.SystemID.parse(systems, expectedDatabaseID);
 		this.categoryName = categoryName;
 		this.fieldName = fieldName;

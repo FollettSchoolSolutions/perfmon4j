@@ -25,7 +25,10 @@ public class SumAggregatorFactory implements AggregatorFactory {
 		@Override
 		public void aggreagate(ResultSet rs) throws SQLException {
 			hasValue = true;
-			accumulator += rs.getDouble(databaseColumn);
+			double d = rs.getDouble(databaseColumn);
+			if (!rs.wasNull()) {
+				accumulator += d;
+			}
 		}
 
 		@Override
@@ -45,7 +48,10 @@ public class SumAggregatorFactory implements AggregatorFactory {
 		@Override
 		public void aggreagate(ResultSet rs) throws SQLException {
 			hasValue = true;
-			accumulator += rs.getLong(databaseColumn);
+			long l = rs.getLong(databaseColumn);
+			if (!rs.wasNull()) {
+				accumulator += l;
+			}
 		}
 
 		@Override

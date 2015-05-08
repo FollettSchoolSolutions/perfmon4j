@@ -37,6 +37,8 @@ import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.Database;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
+import org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
+import org.perfmon4j.restdatasource.data.query.advanced.Series;
 import org.perfmon4j.util.JDBCHelper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,7 +60,6 @@ public class RestImplTest extends TestCase {
 	}
 	
 	private static String DATABASE_NAME = "Production";
-	
 
 	void setUpDatabase() throws Exception {
 		databaseSetup.setUpDatabase();
@@ -217,10 +218,33 @@ public class RestImplTest extends TestCase {
 	
 			response = queryThroughRest("BADID", "BADDB.1~Interval.WebRequest~avgDuration");
 			assertEquals("No database registerd with BADID should return 404", 404, response.getStatus());
-
 			
-			response = queryThroughRest(databaseID, "BADDB.1~Interval.WebRequest~avgDuration");
+			response = queryThroughRest(databaseID, "BADDB.1~Interval.WebRequest~averageDuration");
 			assertEquals("Good database, but the seriesDefinition contains a system that does not match", 400, response.getStatus());
+			
+			response = queryThroughRest(databaseID, databaseID + ".1~NOTATEMPLATE.WebRequest~averageDuration");
+			assertEquals("No template found for Category NOTATEMPLATE", 400, response.getStatus());
+
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~NoFieldWithThisName");
+			assertEquals("Template is OK, but field does not exist", 400, response.getStatus());
+			
+			// Try a successful request with no observations recorded.
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration");
+			assertEquals("Valid request", 200, response.getStatus());
+			
+			AdvancedQueryResult result = responseToObject(response, AdvancedQueryResult.class);
+			assertNotNull("Should have a result", result);
+			
+			assertEquals("No data to collect", 0, result.getDateTime().length);
+			assertEquals("Should have one series", 1, result.getSeries().length);
+			
+			Series series = result.getSeries()[0];
+			assertEquals("Should have a default alias", "Series 1", series.getAlias());
+			assertEquals("series.getCategory", "Interval.WebRequest", series.getCategory());
+			assertEquals("series.getAggregationMethod", "NATURAL", series.getAggregationMethod());
+			assertEquals("series.getFieldName", "averageDuration", series.getFieldName());
+			assertEquals("Should have no values", 0, series.getValues());
+			
 		} finally {
 			tearDownDatabase();
 		}
@@ -238,6 +262,11 @@ public class RestImplTest extends TestCase {
         MockHttpResponse response = new MockHttpResponse();
 
         dispatcher.invoke(request, response);
+//        if (response.getStatus() != 200) {
+//        	System.err.println(response.getErrorMessage());
+//        }
+        
+        
         return response;
 	}
 

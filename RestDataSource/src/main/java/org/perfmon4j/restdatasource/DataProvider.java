@@ -21,13 +21,21 @@
 
 package org.perfmon4j.restdatasource;
 
+import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.util.SeriesField;
-import org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
-import org.perfmon4j.restdatasource.util.aggregators.SumAggregatorFactory;
 
-public abstract class TemplateProvider {
+public abstract class DataProvider {
+	private final String templateName;
+	
+	protected DataProvider(String templateName) {
+		this.templateName = templateName;
+	}
+
+	
 	public abstract String buildQueryString(long systemID[], String category, SeriesField[] fields);
-	public AggregatorFactory getFactory(SeriesField field) {
-		return new SumAggregatorFactory(field.getField().getDatabaseColumnName(), true);
+	public abstract CategoryTemplate getCategoryTemplate();
+
+	public String getTemplateName() {
+		return templateName;
 	}
 }

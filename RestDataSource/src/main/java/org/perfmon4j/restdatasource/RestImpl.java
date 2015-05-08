@@ -32,10 +32,8 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.ws.rs.BadRequestException;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -43,20 +41,25 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.jboss.resteasy.spi.BadRequestException;
+import org.jboss.resteasy.spi.InternalServerErrorException;
 import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Database;
 import org.perfmon4j.restdatasource.data.IntervalTemplate;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
-import org.perfmon4j.restdatasource.data.query.advanced.Series;
+import org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
 import org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultElement;
 import org.perfmon4j.restdatasource.data.query.category.Result;
 import org.perfmon4j.restdatasource.data.query.category.ResultElement;
 import org.perfmon4j.restdatasource.data.query.category.SystemResult;
+import org.perfmon4j.restdatasource.dataproviders.IntervalDataProvider;
+import org.perfmon4j.restdatasource.util.DataProviderRegistry;
 import org.perfmon4j.restdatasource.util.DateTimeHelper;
 import org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
 import org.perfmon4j.restdatasource.util.ProcessArgsException;
+import org.perfmon4j.restdatasource.util.SeriesField;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -65,6 +68,12 @@ import org.perfmon4j.util.LoggerFactory;
 public class RestImpl {
 	private static final Logger logger = LoggerFactory.initLogger(RestImpl.class);
 	private final DateTimeHelper helper = new DateTimeHelper();
+	private static final DataProviderRegistry registry = new DataProviderRegistry();
+
+	static {
+		registry.registerDataProvider(new IntervalDataProvider());
+	}
+	
 
 	@GET
 	@Path("/databases")
@@ -167,7 +176,7 @@ public class RestImpl {
 	@GET
 	@Path("/databases/{databaseID}/observations")
 	@Produces(MediaType.APPLICATION_JSON)
-	public org.perfmon4j.restdatasource.data.query.advanced.Result getQueryObservations(@PathParam("databaseID") String databaseID, 
+	public org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult getQueryObservations(@PathParam("databaseID") String databaseID, 
 			@QueryParam("seriesDefinition") String seriesDefinition,
 			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
@@ -175,55 +184,63 @@ public class RestImpl {
 
 		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
 		ParsedSeriesDefinition series[] = ParsedSeriesDefinition.parse(seriesDefinition, databaseID);
-		
-		org.perfmon4j.restdatasource.data.query.advanced.Result result = new org.perfmon4j.restdatasource.data.query.advanced.Result();
-		
-		Series seriesA = new Series();
-		Series seriesB = new Series();
-		Series seriesC = new Series();
-		
-		seriesA.setAlias("DAP.MaxThreads");
-		seriesA.setCategory("Interval.WebRequest.search");
-		seriesA.setFieldName("maxActiveThreads");
-		seriesA.setSystemID("HRGW-KVCE.101_HRGW-KVCE.429");
-		seriesA.setAggregationMethod("SUM");
-		
-		seriesB.setAlias("DAP.AverageDuration");
-		seriesB.setCategory("Interval.WebRequest.search");
-		seriesB.setFieldName("avgDuration");
-		seriesB.setSystemID("HRGW-KVCE.101_HRGW-KVCE.429");
-		seriesB.setAggregationMethod("NATURAL");
 
-		seriesC.setAlias("SHELF.AverageDuration");
-		seriesC.setCategory("Interval.WebRequest.search");
-		seriesC.setFieldName("avgDuration");
-		seriesC.setSystemID("HRGW-KVCE.200");
-		
-		
-		List<String> dateTimes = new ArrayList<String>();
-		List<Number> valuesA = new ArrayList<Number>();
-		List<Number> valuesB = new ArrayList<Number>();
-		List<Number> valuesC = new ArrayList<Number>();
-		
-		Random randA = new Random(1);
-		Random randB = new Random(2);
-		Random randC = new Random(3);
-		
-		for (int i = 0; i < 10; i++) {
-			dateTimes.add("2015-04-21T09:0" + i);
-			valuesA.add(Integer.valueOf(randA.nextInt(50)));
-			valuesB.add(roundOff((randB.nextDouble() + 0.5) * (randB.nextInt(10) + 1)));
-			valuesC.add(roundOff((randC.nextDouble() + 0.5) * (randC.nextInt(10) + 1)));
-		}
-		valuesC.set(2, null); // Mock series not recording an observation in a period.
+		AdvancedQueryResult result = new AdvancedQueryResult();
 
+		// Just work with one of the Series for now....
+		SeriesField field = registry.resolveField(series[0], "Series 1");
 		
-		seriesA.setValues(valuesA.toArray(new Number[]{}));
-		seriesB.setValues(valuesB.toArray(new Number[]{}));
-		seriesC.setValues(valuesC.toArray(new Number[]{}));
-
-		result.setDateTime(dateTimes.toArray(new String[]{}));
-		result.setSeries(new Series[]{seriesA, seriesB, seriesC});
+		
+		
+		
+				
+//		
+//		Series seriesA = new Series();
+//		Series seriesB = new Series();
+//		Series seriesC = new Series();
+//		
+//		seriesA.setAlias("DAP.MaxThreads");
+//		seriesA.setCategory("Interval.WebRequest.search");
+//		seriesA.setFieldName("maxActiveThreads");
+//		seriesA.setSystemID("HRGW-KVCE.101_HRGW-KVCE.429");
+//		seriesA.setAggregationMethod("SUM");
+//		
+//		seriesB.setAlias("DAP.AverageDuration");
+//		seriesB.setCategory("Interval.WebRequest.search");
+//		seriesB.setFieldName("avgDuration");
+//		seriesB.setSystemID("HRGW-KVCE.101_HRGW-KVCE.429");
+//		seriesB.setAggregationMethod("NATURAL");
+//
+//		seriesC.setAlias("SHELF.AverageDuration");
+//		seriesC.setCategory("Interval.WebRequest.search");
+//		seriesC.setFieldName("avgDuration");
+//		seriesC.setSystemID("HRGW-KVCE.200");
+//		
+//		
+//		List<String> dateTimes = new ArrayList<String>();
+//		List<Number> valuesA = new ArrayList<Number>();
+//		List<Number> valuesB = new ArrayList<Number>();
+//		List<Number> valuesC = new ArrayList<Number>();
+//		
+//		Random randA = new Random(1);
+//		Random randB = new Random(2);
+//		Random randC = new Random(3);
+//		
+//		for (int i = 0; i < 10; i++) {
+//			dateTimes.add("2015-04-21T09:0" + i);
+//			valuesA.add(Integer.valueOf(randA.nextInt(50)));
+//			valuesB.add(roundOff((randB.nextDouble() + 0.5) * (randB.nextInt(10) + 1)));
+//			valuesC.add(roundOff((randC.nextDouble() + 0.5) * (randC.nextInt(10) + 1)));
+//		}
+//		valuesC.set(2, null); // Mock series not recording an observation in a period.
+//
+//		
+//		seriesA.setValues(valuesA.toArray(new Number[]{}));
+//		seriesB.setValues(valuesB.toArray(new Number[]{}));
+//		seriesC.setValues(valuesC.toArray(new Number[]{}));
+//
+//		result.setDateTime(dateTimes.toArray(new String[]{}));
+//		result.setSeries(new Series[]{seriesA, seriesB, seriesC});
 		
 		return result;
 	}
@@ -422,6 +439,17 @@ public class RestImpl {
 			}
 			
 			return result.toArray(new SystemID[]{});
+		}
+		
+		public static String toString(SystemID systems[]) {
+			String result = "";
+			for (SystemID s : systems) {
+				if (result.isEmpty()) {
+					result += "~";
+				}
+				result += s.getDatabaseID() + "." + s.getID();
+			}
+			return result;
 		}
 		
 		public String getDatabaseID() {

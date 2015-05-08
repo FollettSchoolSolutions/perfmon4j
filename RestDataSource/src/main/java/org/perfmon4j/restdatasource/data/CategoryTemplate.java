@@ -23,12 +23,10 @@ package org.perfmon4j.restdatasource.data;
 
 import java.util.Arrays;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class CategoryTemplate {
 	private String name;
 	private Field[] fields;
-	private String databaseTableName;
 
 	public CategoryTemplate() {
 	}
@@ -54,20 +52,10 @@ public class CategoryTemplate {
 	public void setFields(Field[] fields) {
 		this.fields = fields;
 	}
-	
-	@JsonIgnore
-	public String getDatabaseTableName() {
-		return databaseTableName;
-	}
-
-	public void setDatabaseTableName(String databaseTableName) {
-		this.databaseTableName = databaseTableName;
-	}
 
 	@Override
 	public String toString() {
 		return "CategoryTemplate [name=" + name + ", fields="
-				+ Arrays.toString(fields) + ", databaseTableName="
-				+ databaseTableName + "]";
+				+ Arrays.toString(fields) + "]";
 	}
 }

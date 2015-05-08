@@ -25,29 +25,29 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.ws.rs.BadRequestException;
-
+import org.jboss.resteasy.spi.BadRequestException;
+import org.perfmon4j.restdatasource.DataProvider;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Field;
 
-public class TemplateRegistry {
-	private final Map<String, CategoryTemplate> categoryTemplates = new HashMap<String, CategoryTemplate>();
+public class DataProviderRegistry {
+	private final Map<String, DataProvider> templates = new HashMap<String, DataProvider>();
 	
-	public void registerTemplate(CategoryTemplate category) {
-		categoryTemplates.put(category.getName(),category);
+	public void registerDataProvider(DataProvider provider) {
+		templates.put(provider.getTemplateName(), provider);
 	}
 
-	public void removeTemplate(String categoryName) {
-		categoryTemplates.remove(categoryName);
+	public void removeDataProvider(String name) {
+		templates.remove(name);
 	}
 
-	public CategoryTemplate getTemplate(String categoryName) {
-		return categoryTemplates.get(categoryName);
+	public DataProvider getDataProvider(String name) {
+		return templates.get(name);
 	}
 	
-	public Field findField(CategoryTemplate template, String fieldName) {
+	private Field findField(CategoryTemplate template, String fieldName) {
 		Field result = null;
 		
 		for (Field f : template.getFields()) {
@@ -63,12 +63,14 @@ public class TemplateRegistry {
 		return Arrays.asList(field.getAggregationMethods()).contains(method);
 	}
 	
-	public SeriesField resolveField(ParsedSeriesDefinition def) {
+	public SeriesField resolveField(ParsedSeriesDefinition def, String alias) {
 		SeriesField result = null;
 		String templateName = def.getCategoryName().split("\\.")[0];
 		
-		CategoryTemplate template = getTemplate(templateName);
-		if (template != null) {
+		DataProvider provider = getDataProvider(templateName);
+		
+		if (provider != null) {
+			CategoryTemplate template = provider.getCategoryTemplate();
 			Field field = findField(template, def.getFieldName());
 			
 			if (field != null) {
@@ -82,8 +84,7 @@ public class TemplateRegistry {
 				} else {
 					method = field.getDefaultAggregationMethod();
 				}
-				
-				result = new SeriesField(new Category(def.getCategoryName(), templateName), field, method);
+				result = new SeriesField(alias, provider, def.getSystems(), new Category(def.getCategoryName(), templateName), field, method);
 			} else {
 				throw new BadRequestException("Category template " + templateName + " field " + def.getFieldName() + " not found");
 			}

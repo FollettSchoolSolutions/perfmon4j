@@ -21,27 +21,28 @@
 
 package org.perfmon4j.restdatasource.util;
 
-import javax.ws.rs.BadRequestException;
 
 import junit.framework.TestCase;
 
+import org.jboss.resteasy.spi.BadRequestException;
+import org.perfmon4j.restdatasource.DataProvider;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Field;
 
-public class TemplateRegistryTest extends TestCase {
+public class DataProviderRegistryTest extends TestCase {
 
-	private TemplateRegistry registry;
+	private DataProviderRegistry registry;
 	
-	public TemplateRegistryTest(String name) {
+	public DataProviderRegistryTest(String name) {
 		super(name);
 	}
 
 	protected void setUp() throws Exception {
 		super.setUp();
 		
-		registry = new TemplateRegistry();
-		registry.registerTemplate(new TestCategoryTemplate());
+		registry = new DataProviderRegistry();
+		registry.registerDataProvider(new TestDataProvider());
 	}
 
 	protected void tearDown() throws Exception {
@@ -51,7 +52,7 @@ public class TemplateRegistryTest extends TestCase {
 	public void testBasicResolve() {
 		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
 		
-		SeriesField field = registry.resolveField(def);
+		SeriesField field = registry.resolveField(def, "series 1");
 		assertNotNull(field);
 		
 		assertEquals("Should be the default aggregation method", AggregationMethod.AVERAGE,  field.getAggregationMethod());
@@ -61,7 +62,7 @@ public class TemplateRegistryTest extends TestCase {
 		
 		def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~hatSize", "ABCD-EFGH")[0];
 		
-		field = registry.resolveField(def);
+		field = registry.resolveField(def, "series 1");
 		assertNotNull(field);
 		
 		assertEquals("Should be the default aggregation method", AggregationMethod.SUM,  field.getAggregationMethod());
@@ -74,7 +75,7 @@ public class TemplateRegistryTest extends TestCase {
 	public void testOverrideDefaultAggregationMethod() {
 		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("MAX~ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
 		
-		SeriesField field = registry.resolveField(def);
+		SeriesField field = registry.resolveField(def, "series 1");
 		assertEquals("Should be the specified aggregation method", AggregationMethod.MAX,  field.getAggregationMethod());
 	}
 
@@ -82,7 +83,7 @@ public class TemplateRegistryTest extends TestCase {
 		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("MIN~ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
 		
 		try {
-			registry.resolveField(def);
+			registry.resolveField(def, "series 1");
 			fail("Expected an exception, MIN is not supported by field shoeSize");
 		} catch (BadRequestException e) {
 			assertEquals("Exception message", "Aggregation method MIN not supported for field shoeSize in Person category template", e.getMessage());
@@ -93,7 +94,7 @@ public class TemplateRegistryTest extends TestCase {
 		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Pet.student~shoeSize", "ABCD-EFGH")[0];
 		
 		try {
-			registry.resolveField(def);
+			registry.resolveField(def, "series 1");
 			fail("No template registered named Pet");
 		} catch (BadRequestException e) {
 			assertEquals("Exception message", "Category template Pet not found", e.getMessage());
@@ -103,12 +104,33 @@ public class TemplateRegistryTest extends TestCase {
 	public void testInvalidField() {
 		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~height", "ABCD-EFGH")[0];	
 		try {
-			registry.resolveField(def);
+			registry.resolveField(def, "series 1");
 			fail("Template does not contain a height field");
 		} catch (BadRequestException e) {
 			assertEquals("Exception message", "Category template Person field height not found", e.getMessage());
 		}
 	}
+	
+	private static class TestDataProvider extends DataProvider {
+
+		private final TestCategoryTemplate template = new TestCategoryTemplate();
+
+		public TestDataProvider() {
+			super("Person");
+		}
+		
+		@Override
+		public String buildQueryString(long[] systemID, String category,
+				SeriesField[] fields) {
+			return null;
+		}
+
+		@Override
+		public CategoryTemplate getCategoryTemplate() {
+			return template;
+		}
+	}
+	
 	
 	private static class TestCategoryTemplate extends CategoryTemplate {
 		public TestCategoryTemplate() {

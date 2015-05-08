@@ -2,7 +2,6 @@ package org.perfmon4j.restdatasource.data;
 
 import java.util.Arrays;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
@@ -11,7 +10,6 @@ public class Field {
 	private String name;
 	private AggregationMethod[] aggregationMethods;
 	private AggregationMethod defaultAggregationMethod;
-	private String databaseColumnName;
 	
 	public Field() {
 		super();
@@ -58,20 +56,11 @@ public class Field {
 		this.defaultAggregationMethod = defaultAggregationMethod;
 	}
 
-	@JsonIgnore
-	public String getDatabaseColumnName() {
-		return databaseColumnName;
-	}
-
-	public void setDatabaseColumnName(String databaseColumnName) {
-		this.databaseColumnName = databaseColumnName;
-	}
-
 	@Override
 	public String toString() {
 		return "Field [name=" + name + ", aggregationMethods="
 				+ Arrays.toString(aggregationMethods)
 				+ ", defaultAggregationMethod=" + defaultAggregationMethod
-				+ ", databaseColumnName=" + databaseColumnName + "]";
+				+ "]";
 	}
 }

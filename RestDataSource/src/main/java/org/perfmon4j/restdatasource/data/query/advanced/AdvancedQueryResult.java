@@ -21,7 +21,7 @@
 
 package org.perfmon4j.restdatasource.data.query.advanced;
 
-public class Result {
+public class AdvancedQueryResult {
 	private String[] dateTime;
 	private Series[] series;
 	
