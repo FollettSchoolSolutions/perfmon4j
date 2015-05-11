@@ -27,7 +27,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -50,6 +52,7 @@ import org.perfmon4j.restdatasource.data.Database;
 import org.perfmon4j.restdatasource.data.IntervalTemplate;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
 import org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
+import org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultElement;
 import org.perfmon4j.restdatasource.data.query.category.Result;
 import org.perfmon4j.restdatasource.data.query.category.ResultElement;
@@ -182,18 +185,37 @@ public class RestImpl {
 			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
 			@QueryParam("seriesAlias") @DefaultValue("")  String seriesAlias) {
 
+		AdvancedQueryResult result = null;
 		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
 		ParsedSeriesDefinition series[] = ParsedSeriesDefinition.parse(seriesDefinition, databaseID);
 
-		AdvancedQueryResult result = new AdvancedQueryResult();
-
 		// Just work with one of the Series for now....
-		SeriesField field = registry.resolveField(series[0], "Series 1");
-		
-		
-		
-		
+		Map<String, List<SeriesField>> seriesToProcess = groupFieldsByTemplate(series);
+
+		Connection conn = null;;
+		try {
+			long start = helper.parseDateTime(timeStart).getTimeForStart();
+			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+			
+			conn = db.openConnection();
+			
+			ResultAccumulator accumulator = new ResultAccumulator(conn, db.getSchema());
+			for (String templateName : seriesToProcess.keySet()) {
+				// Accumulate data for each DataProvider template
+				DataProvider provider =  registry.getDataProvider(templateName);
+				provider.processResults(accumulator, seriesToProcess.get(templateName).toArray(new SeriesField[]{}), start, end);
+			}
+			result = accumulator.buildResults();
+		} catch (SQLException ex) {
+ex.printStackTrace();			
+			throw new InternalServerErrorException(ex);
+		} catch (ProcessArgsException pe) {
+			throw new BadRequestException(pe);
+		} finally {
+			JDBCHelper.closeNoThrow(conn);
+		}
 				
+		
 //		
 //		Series seriesA = new Series();
 //		Series seriesB = new Series();
@@ -245,6 +267,33 @@ public class RestImpl {
 		return result;
 	}
 
+	/**
+	 * This method will group all of the data series into their respective 
+	 * provider templates.
+	 * @param series
+	 * @return
+	 */
+	private Map<String, List<SeriesField>> groupFieldsByTemplate(ParsedSeriesDefinition series[]) {
+		Map<String, List<SeriesField>> result = new HashMap<String, List<SeriesField>>();
+		
+		int defaultSeriesID = 1;
+		
+		for (ParsedSeriesDefinition def : series) {
+			String defaultSeriesAlias = "Series " + Integer.toString(defaultSeriesID++);
+			
+			SeriesField field = registry.resolveField(def, defaultSeriesAlias);
+			String templateName = field.getCategory().getTemplateName();
+			
+			List<SeriesField> seriesForTemplate = result.get(templateName);
+			if (seriesForTemplate == null) {
+				seriesForTemplate = new ArrayList<SeriesField>();
+				result.put(templateName, seriesForTemplate);
+			}
+			seriesForTemplate.add(field);
+		}
+		return result;
+	}
+	
 	private RegisteredDatabaseConnections.Database getDatabase(String databaseID) {
 		RegisteredDatabaseConnections.Database db = null;
 		if ("default".equals(databaseID)) {
@@ -444,7 +493,7 @@ public class RestImpl {
 		public static String toString(SystemID systems[]) {
 			String result = "";
 			for (SystemID s : systems) {
-				if (result.isEmpty()) {
+				if (!result.isEmpty()) {
 					result += "~";
 				}
 				result += s.getDatabaseID() + "." + s.getID();

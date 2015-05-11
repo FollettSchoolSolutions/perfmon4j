@@ -21,7 +21,10 @@
 
 package org.perfmon4j.restdatasource;
 
+import java.sql.SQLException;
+
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
+import org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import org.perfmon4j.restdatasource.util.SeriesField;
 
 public abstract class DataProvider {
@@ -30,9 +33,10 @@ public abstract class DataProvider {
 	protected DataProvider(String templateName) {
 		this.templateName = templateName;
 	}
-
 	
-	public abstract String buildQueryString(long systemID[], String category, SeriesField[] fields);
+	public abstract void processResults(ResultAccumulator accumulator, SeriesField[] fields, long startTime, 
+			long endTime) throws SQLException;
+	
 	public abstract CategoryTemplate getCategoryTemplate();
 
 	public String getTemplateName() {

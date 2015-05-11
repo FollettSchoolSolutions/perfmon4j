@@ -24,7 +24,7 @@ public class Field {
 		super();
 		this.name = name;
 		this.aggregationMethods = aggregationMethod;
-		this.defaultAggregationMethod = null;
+		this.defaultAggregationMethod = AggregationMethod.NATURAL;
 	}
 
 	public Field(String name, AggregationMethod[] aggregationMethods, AggregationMethod defaultAggregationMethod) {

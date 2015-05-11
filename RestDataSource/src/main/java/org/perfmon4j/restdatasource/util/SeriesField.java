@@ -26,6 +26,7 @@ import org.perfmon4j.restdatasource.RestImpl.SystemID;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.Field;
+import org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 
 public class SeriesField {
 	private final String alias;
@@ -34,6 +35,9 @@ public class SeriesField {
 	private final Field field;
 	private final SystemID systems[];
 	private final AggregationMethod aggregationMethod;
+	
+	// This will be set by the dataProvider.
+	private AggregatorFactory factory = null;
 	
 	public SeriesField(String alias, DataProvider provider, SystemID systems[], Category category, Field field, AggregationMethod aggregationMethod) {
 		super();
@@ -67,6 +71,14 @@ public class SeriesField {
 
 	public SystemID[] getSystems() {
 		return systems;
+	}
+
+	public AggregatorFactory getFactory() {
+		return factory;
+	}
+
+	public void setFactory(AggregatorFactory factory) {
+		this.factory = factory;
 	}
 }
 

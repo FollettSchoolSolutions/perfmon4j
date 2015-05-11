@@ -95,9 +95,13 @@ public class BaseDatabaseSetup  {
 			JDBCHelper.closeNoThrow(stmt);
 		}
 	}
-
 	
 	long addInterval(long systemID, long categoryID, String endTime) throws SQLException, ProcessArgsException {
+		return addInterval(systemID, categoryID, endTime, 1);
+	}
+
+	
+	long addInterval(long systemID, long categoryID, String endTime, int factor) throws SQLException, ProcessArgsException {
 		Timestamp end = new Timestamp(helper.parseDateTime(endTime).getTimeForEnd());
 		Timestamp start = new Timestamp(end.getTime() - (60 * 1000));
 		
@@ -148,32 +152,32 @@ public class BaseDatabaseSetup  {
 			
 			stmt.setTimestamp(p++, start); 	   	// STARTTIME
 			stmt.setTimestamp(p++, end);	   	// ENDTIME	
-			stmt.setInt(p++, 10);	   			// TOTALHITS	
-			stmt.setInt(p++, 10);	   			// TOTALCOMPLETIONS	
-			stmt.setInt(p++, 5);	   			// MAXACTIVETHREDS	
+			stmt.setInt(p++, 10 * factor);	   			// TOTALHITS	
+			stmt.setInt(p++, 10 * factor);	   			// TOTALCOMPLETIONS	
+			stmt.setInt(p++, 5 * factor);	   			// MAXACTIVETHREDS	
 			
 			stmt.setTimestamp(p++, end);	   	// MAXACTIVETHREADSSET	
-			stmt.setInt(p++, 50);	   			// MAXDURATION	
+			stmt.setInt(p++, 50 * factor);	   			// MAXDURATION	
 			stmt.setTimestamp(p++, end);	   	// MAXDURATIONSET	
 			stmt.setInt(p++, 0);	   			// MINDURATION	
 			stmt.setTimestamp(p++, start);	   	// MINDURATIONSET	
 			
-			stmt.setDouble(p++, 10.3);	   		// AVERAGEDURATION	
-			stmt.setDouble(p++, 11.5);	   		// MEDIANDURATION	
-			stmt.setDouble(p++, 3.4);	   		// STANDARDDEVIATION	
-			stmt.setDouble(p++, 10);	   		// NORMALIZEDTHROUGHPUTPERMINUTE	
-			stmt.setInt(p++, 1000);	   			// DURATIONSUM	
+			stmt.setDouble(p++, 10.3 * factor);	   		// AVERAGEDURATION	
+			stmt.setDouble(p++, 11.5 * factor);	   		// MEDIANDURATION	
+			stmt.setDouble(p++, 3.4 * factor);	   		// STANDARDDEVIATION	
+			stmt.setDouble(p++, 10 * factor);	   		// NORMALIZEDTHROUGHPUTPERMINUTE	
+			stmt.setInt(p++, 1000 * factor);	   			// DURATIONSUM	
 
-			stmt.setInt(p++, 10000);	   		// DURATIONSUMOFSQUARES	
-			stmt.setInt(p++, 45);	   			// SQLMAXDURATION	
+			stmt.setInt(p++, 10000 * factor);	   		// DURATIONSUMOFSQUARES	
+			stmt.setInt(p++, 45 * factor);	   			// SQLMAXDURATION	
 			stmt.setTimestamp(p++, end);	   	// SQLMAXDURATIONSET	
 			stmt.setInt(p++, 0);	   			// SQLMINDURATION	
 			stmt.setTimestamp(p++, start);	   	// SQLMINDURATIONSET	
 
-			stmt.setDouble(p++, 1.5);	   		// SQLAVERAGEDURATION	
-			stmt.setDouble(p++, .65);	   		// SQLSTANDARDDEVIATION	
-			stmt.setInt(p++, 200);	   			// SQLDURATIONSUM	
-			stmt.setInt(p++, 2000);	   			// SQLDURATIONSUMOFSQUARES	
+			stmt.setDouble(p++, 1.5 * factor);	// SQLAVERAGEDURATION	
+			stmt.setDouble(p++, .65 * factor);	// SQLSTANDARDDEVIATION	
+			stmt.setInt(p++, 200 * factor);	   	// SQLDURATIONSUM	
+			stmt.setInt(p++, 2000 * factor);	// SQLDURATIONSUMOFSQUARES	
 			stmt.setLong(p++, systemID);	   	// SYSTEMID	
 			
 			stmt.executeUpdate();

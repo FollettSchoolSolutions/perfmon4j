@@ -22,6 +22,8 @@
 package org.perfmon4j.restdatasource.util;
 
 
+import java.sql.SQLException;
+
 import junit.framework.TestCase;
 
 import org.jboss.resteasy.spi.BadRequestException;
@@ -29,6 +31,7 @@ import org.perfmon4j.restdatasource.DataProvider;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Field;
+import org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 
 public class DataProviderRegistryTest extends TestCase {
 
@@ -120,14 +123,16 @@ public class DataProviderRegistryTest extends TestCase {
 		}
 		
 		@Override
-		public String buildQueryString(long[] systemID, String category,
-				SeriesField[] fields) {
-			return null;
+		public CategoryTemplate getCategoryTemplate() {
+			return template;
 		}
 
 		@Override
-		public CategoryTemplate getCategoryTemplate() {
-			return template;
+		public void processResults(ResultAccumulator accumulator,
+				SeriesField[] fields, long startTime, long endTime)
+				throws SQLException {
+			// TODO Auto-generated method stub
+			
 		}
 	}
 	

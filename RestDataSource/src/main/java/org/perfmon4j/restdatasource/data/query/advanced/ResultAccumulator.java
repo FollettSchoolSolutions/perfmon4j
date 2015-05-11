@@ -1,5 +1,28 @@
+/*
+ *	Copyright 2015 Follett School Solutions 
+ *
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ * 	Follett School Solutions
+ * 	1391 Corporate Drive
+ * 	McHenry, IL 60050
+ * 
+*/
 package org.perfmon4j.restdatasource.data.query.advanced;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -17,9 +40,23 @@ public class ResultAccumulator {
 	private final Map<String, Set<SeriesWrapper>> seriesMap = new HashMap<String, Set<SeriesWrapper>>();
 	private final Set<Series> allSeries = new HashSet<Series>();
 	private final DateTimeHelper helper = new DateTimeHelper();
+	private final Connection conn;
+	private final String schema;
 
-	public void addSeries(SeriesField series, AggregatorFactory factory) {
-		this.addSeries(series.getProvider().getTemplateName(), factory, series.getAlias(), SystemID.toString(series.getSystems()), series.getCategory().getName(), 
+	public ResultAccumulator() {
+		super();
+		this.conn = null;
+		this.schema = null;
+	}
+	
+	public ResultAccumulator(Connection conn, String schema) {
+		super();
+		this.conn = conn;
+		this.schema = schema;
+	}
+
+	public void addSeries(SeriesField series) {
+		this.addSeries(series.getProvider().getTemplateName(), series.getFactory(), series.getAlias(), SystemID.toString(series.getSystems()), series.getCategory().getName(), 
 				series.getField().getName(), series.getAggregationMethod().toString());
 	}
 	
@@ -35,6 +72,15 @@ public class ResultAccumulator {
 		
 		getSeriesForProvider(templateName).add(new SeriesWrapper(series, factory));
 		allSeries.add(series);
+	}
+	
+	public void accumulateResults(String templateName, ResultSet rs) throws SQLException {
+		long time = rs.getTimestamp("EndTime").getTime();
+		
+		Aggregator[] aggregators = getAggregators(templateName, time);
+		for (Aggregator a : aggregators) {
+			a.aggreagate(rs);
+		}
 	}
 
 	public Aggregator[] getAggregators(String templateName, long time) {
@@ -93,7 +139,16 @@ public class ResultAccumulator {
 		return result;
 	}
 	
-	
+	public Connection getConn() {
+		return conn;
+	}
+
+	public String getSchema() {
+		return schema;
+	}
+
+
+
 	private static class SeriesWrapper {
 		private final Series series;
 		private final AggregatorFactory factory;

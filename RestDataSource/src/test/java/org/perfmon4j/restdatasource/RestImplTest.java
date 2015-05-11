@@ -39,6 +39,8 @@ import org.perfmon4j.restdatasource.data.Database;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
 import org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
 import org.perfmon4j.restdatasource.data.query.advanced.Series;
+import org.perfmon4j.restdatasource.util.DateTimeHelper;
+import org.perfmon4j.restdatasource.util.DateTimeValue;
 import org.perfmon4j.util.JDBCHelper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,6 +49,7 @@ public class RestImplTest extends TestCase {
 	private final Dispatcher dispatcher;
 	private final ObjectMapper mapper;
 	private final BaseDatabaseSetup databaseSetup = new BaseDatabaseSetup();
+	private final DateTimeHelper helper = new DateTimeHelper();
 	
 	public RestImplTest(String name) {
 		super(name);
@@ -215,7 +218,9 @@ public class RestImplTest extends TestCase {
 			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
 			
 			MockHttpResponse response;
-	
+			Series series;
+			AdvancedQueryResult result;
+			
 			response = queryThroughRest("BADID", "BADDB.1~Interval.WebRequest~avgDuration");
 			assertEquals("No database registerd with BADID should return 404", 404, response.getStatus());
 			
@@ -232,24 +237,90 @@ public class RestImplTest extends TestCase {
 			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration");
 			assertEquals("Valid request", 200, response.getStatus());
 			
-			AdvancedQueryResult result = responseToObject(response, AdvancedQueryResult.class);
+			result = responseToObject(response, AdvancedQueryResult.class);
 			assertNotNull("Should have a result", result);
 			
 			assertEquals("No data to collect", 0, result.getDateTime().length);
 			assertEquals("Should have one series", 1, result.getSeries().length);
 			
-			Series series = result.getSeries()[0];
+			series = result.getSeries()[0];
 			assertEquals("Should have a default alias", "Series 1", series.getAlias());
+			assertEquals("SystemID", databaseID + ".1", series.getSystemID());
 			assertEquals("series.getCategory", "Interval.WebRequest", series.getCategory());
 			assertEquals("series.getAggregationMethod", "NATURAL", series.getAggregationMethod());
 			assertEquals("series.getFieldName", "averageDuration", series.getFieldName());
-			assertEquals("Should have no values", 0, series.getValues());
+			assertEquals("Should have no values", 0, series.getValues().length);
+
+			// Try again, only this time add an observation...
+			DateTimeValue now = helper.parseDateTime("now");
 			
+			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime());
+			
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration");
+			assertEquals("Valid request", 200, response.getStatus());
+			
+			result = responseToObject(response, AdvancedQueryResult.class);
+			assertNotNull("Should have a result", result);
+			
+			assertEquals("Have 1 element", 1, result.getDateTime().length);
+			assertEquals("Expected date/time", now.getFixedDateTime(), result.getDateTime()[0]);
+			
+			
+			assertEquals("Should have one series", 1, result.getSeries().length);
+			
+			series = result.getSeries()[0];
+			assertEquals("Should have a default alias", "Series 1", series.getAlias());
+			assertEquals("Should have one observation", 1, series.getValues().length);
+			assertEquals("Observation Value", "10.3", series.getValues()[0].toString());
 		} finally {
 			tearDownDatabase();
 		}
 	}
 
+	public void testMultipleSeriesAcrossCategories() throws Exception {
+		setUpDatabase();
+		try {
+			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
+			
+			MockHttpResponse response;
+			Series series;
+			AdvancedQueryResult result;
+			
+			DateTimeValue now = helper.parseDateTime("now");
+			
+			// Add one observation for "WebRequest"
+			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime()); // Average will be set to 10.3
+			
+			// Add one observation for WebRequest.search
+			databaseSetup.addInterval(1L, 2L, now.getFixedDateTime(), 2); // Average will be set to 20.6
+			
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration"
+					+ "_" + databaseID + ".1~Interval.WebRequest.search~averageDuration");
+			assertEquals("Valid request", 200, response.getStatus());
+			
+			result = responseToObject(response, AdvancedQueryResult.class);
+			assertNotNull("Should have a result", result);
+			
+			assertEquals("Have 1 element", 1, result.getDateTime().length);
+			assertEquals("Expected date/time", now.getFixedDateTime(), result.getDateTime()[0]);
+			
+			assertEquals("Should have two series", 2, result.getSeries().length);
+			
+			series = result.getSeries()[0];
+			assertEquals("Should have a default alias", "Series 1", series.getAlias());
+			assertEquals("Should have one observation", 1, series.getValues().length);
+			assertEquals("Observation Value", "10.3", series.getValues()[0].toString());
+			
+			series = result.getSeries()[1];
+			assertEquals("Should have a default alias", "Series 2", series.getAlias());
+			assertEquals("Should have one observation", 1, series.getValues().length);
+			assertEquals("Observation Value", "20.6", series.getValues()[0].toString());
+		} finally {
+			tearDownDatabase();
+		}
+	}
+	
+	
 	private MockHttpResponse queryThroughRest(String databaseID, String seriesDefinition) throws URISyntaxException {
 		return queryThroughRest(databaseID, seriesDefinition, "");
 	}
@@ -269,8 +340,6 @@ public class RestImplTest extends TestCase {
         
         return response;
 	}
-
-	
 	
 	
 	private MockHttpResponse getCategoriesThroughRest(String databaseID, String systemID) throws URISyntaxException {
