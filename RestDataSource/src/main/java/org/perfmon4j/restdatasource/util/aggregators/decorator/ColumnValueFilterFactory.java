@@ -28,6 +28,15 @@ public class ColumnValueFilterFactory implements AggregatorFactory {
 		return new ColumnValueFilter(d);
 	}
 
+	@Override
+	public String[] getDatabaseColumns() {
+		Set<String> result = new HashSet<String>(Arrays.asList(delegate.getDatabaseColumns()));
+		
+		result.add(columnName);
+		
+		return result.toArray(new String[]{});
+	}
+	
 	private class ColumnValueFilter implements Aggregator {
 		private final Aggregator delegate;
 		
@@ -49,5 +58,4 @@ public class ColumnValueFilterFactory implements AggregatorFactory {
 			return delegate.getResult();
 		}
 	}
-	
 }

@@ -23,13 +23,16 @@ package org.perfmon4j.restdatasource.data.query.advanced;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.perfmon4j.restdatasource.RestImpl.SystemID;
+import org.perfmon4j.restdatasource.data.AggregationMethod;
 import org.perfmon4j.restdatasource.util.DateTimeHelper;
 import org.perfmon4j.restdatasource.util.SeriesField;
 import org.perfmon4j.restdatasource.util.aggregators.Aggregator;
@@ -38,7 +41,7 @@ import org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 public class ResultAccumulator {
 	private final Set<Long> times = new TreeSet<Long>();
 	private final Map<String, Set<SeriesWrapper>> seriesMap = new HashMap<String, Set<SeriesWrapper>>();
-	private final Set<Series> allSeries = new HashSet<Series>();
+	private final List<Series> allSeries = new ArrayList<Series>();
 	private final DateTimeHelper helper = new DateTimeHelper();
 	private final Connection conn;
 	private final String schema;
@@ -56,8 +59,14 @@ public class ResultAccumulator {
 	}
 
 	public void addSeries(SeriesField series) {
+		String aggregationMethodDisplayName = null;
+		AggregationMethod method = series.getAggregationMethod();
+		if (method != null) {
+			aggregationMethodDisplayName = method.toString();
+		}
+		
 		this.addSeries(series.getProvider().getTemplateName(), series.getFactory(), series.getAlias(), SystemID.toString(series.getSystems()), series.getCategory().getName(), 
-				series.getField().getName(), series.getAggregationMethod().toString());
+				series.getField().getName(), aggregationMethodDisplayName);
 	}
 	
 	// Package level to make unit testing easier

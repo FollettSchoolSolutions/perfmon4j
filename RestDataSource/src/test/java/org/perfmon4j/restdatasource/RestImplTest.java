@@ -319,7 +319,94 @@ public class RestImplTest extends TestCase {
 			tearDownDatabase();
 		}
 	}
+
 	
+	public void testMultipleSeriesAcrossSystems() throws Exception {
+		setUpDatabase();
+		try {
+			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
+			long systemID2 = databaseSetup.addSystem("Production");
+			
+			MockHttpResponse response;
+			Series series;
+			AdvancedQueryResult result;
+			
+			DateTimeValue now = helper.parseDateTime("now");
+			
+			// Add one observation for the "default" system
+			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime()); // Average will be set to 10.3
+			
+			// Add one observation for the "Production" system.
+			databaseSetup.addInterval(systemID2, 1L, now.getFixedDateTime(), 2); // Average will be set to 20.6
+			
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration"
+					+ "_" + databaseID + ".2~Interval.WebRequest~averageDuration");
+			assertEquals("Valid request", 200, response.getStatus());
+			
+			result = responseToObject(response, AdvancedQueryResult.class);
+			assertNotNull("Should have a result", result);
+			
+			assertEquals("Have 1 element", 1, result.getDateTime().length);
+			assertEquals("Expected date/time", now.getFixedDateTime(), result.getDateTime()[0]);
+			
+			assertEquals("Should have two series", 2, result.getSeries().length);
+			
+			series = result.getSeries()[0];
+			assertEquals("Should have a default alias", "Series 1", series.getAlias());
+			assertEquals("Should have one observation", 1, series.getValues().length);
+			assertEquals("Observation Value", "10.3", series.getValues()[0].toString());
+			
+			series = result.getSeries()[1];
+			assertEquals("Should have a default alias", "Series 2", series.getAlias());
+			assertEquals("Should have one observation", 1, series.getValues().length);
+			assertEquals("Observation Value", "20.6", series.getValues()[0].toString());
+		} finally {
+			tearDownDatabase();
+		}
+	}
+
+	public void testNumericValueOfNullForMissingObservation() throws Exception {
+		setUpDatabase();
+		try {
+			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
+			databaseSetup.addSystem("Production");
+			
+			MockHttpResponse response;
+			Series series;
+			AdvancedQueryResult result;
+		
+			DateTimeValue now = helper.parseDateTime("now");
+			
+			// Add one observation for the "default" system
+			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime()); // Average will be set to 10.3
+			
+			// Do NOT add an observation for the "Production" system..  This should be returned as null.
+			
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration"
+					+ "_" + databaseID + ".2~Interval.WebRequest~averageDuration");
+			assertEquals("Valid request", 200, response.getStatus());
+			
+			result = responseToObject(response, AdvancedQueryResult.class);
+			assertNotNull("Should have a result", result);
+			
+			assertEquals("Have 1 element", 1, result.getDateTime().length);
+			assertEquals("Expected date/time", now.getFixedDateTime(), result.getDateTime()[0]);
+			
+			assertEquals("Should have two series", 2, result.getSeries().length);
+			
+			series = result.getSeries()[0]; 
+			assertEquals("Should have a default alias", "Series 1", series.getAlias());
+			assertEquals("Should have one observation", 1, series.getValues().length);
+			assertEquals("Observation Value", "10.3", series.getValues()[0].toString());
+			
+			series = result.getSeries()[1];
+			assertEquals("Should have a default alias", "Series 2", series.getAlias());
+			assertEquals("Should have one observation", 1, series.getValues().length);
+			assertNull("No observation recorded in this timeframe for Production system", series.getValues()[0]);
+		} finally {
+			tearDownDatabase();
+		}
+	}
 	
 	private MockHttpResponse queryThroughRest(String databaseID, String seriesDefinition) throws URISyntaxException {
 		return queryThroughRest(databaseID, seriesDefinition, "");
