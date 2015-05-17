@@ -12,7 +12,8 @@ public class NaturalPerMinuteAggregatorFactory implements AggregatorFactory {
 	private final String databaseColumnCounter;
 	
 	
-	public NaturalPerMinuteAggregatorFactory(String databaseColumnStartTime, String databaseColumnEndTime, String databaseColumnCounter) {
+	public NaturalPerMinuteAggregatorFactory(String databaseColumnStartTime, String databaseColumnEndTime, 
+			String databaseColumnCounter) {
 		this.databaseColumnStartTime = databaseColumnStartTime;
 		this.databaseColumnEndTime = databaseColumnEndTime;
 		this.databaseColumnCounter = databaseColumnCounter;
@@ -33,19 +34,30 @@ public class NaturalPerMinuteAggregatorFactory implements AggregatorFactory {
 	private final class FloatingPoint implements Aggregator {
 		private boolean hasValue = false;
 
-		private BigDecimal accumulatorMillis = new BigDecimal(0);
+		private long startTime = Long.MAX_VALUE;
+		private long endTime = 0;
+		
+//		private BigDecimal accumulatorMillis = new BigDecimal(0);
 		private BigDecimal accumulatorCounter = new BigDecimal(0);
 		
 		@Override
 		public void aggreagate(ResultSet rs) throws SQLException {
-			Timestamp start = rs.getTimestamp(databaseColumnStartTime);
-			Timestamp end = rs.getTimestamp(databaseColumnEndTime);
-			if (start != null && end != null) {
+			Timestamp tsStart = rs.getTimestamp(databaseColumnStartTime);
+			Timestamp tsEnd = rs.getTimestamp(databaseColumnEndTime);
+			if (tsStart != null && tsEnd != null) {
 				long counter = rs.getLong(databaseColumnCounter);
 				if (!rs.wasNull()) {
 					hasValue =  true;
-					long millisToAdd = end.getTime() - start.getTime();
-					accumulatorMillis = accumulatorMillis.add(new BigDecimal(millisToAdd));
+					long start = tsStart.getTime();
+					long end = tsEnd.getTime();
+
+					if (start < startTime) {
+						startTime = start;
+					}
+				
+					if (end > endTime) {
+						endTime = end;
+					}
 					accumulatorCounter = accumulatorCounter.add(new BigDecimal(counter));
 				}
 			}
@@ -56,9 +68,9 @@ public class NaturalPerMinuteAggregatorFactory implements AggregatorFactory {
 			Double result = null;
 			
 			if (hasValue) {
-				BigDecimal minutes = accumulatorMillis.divide(new BigDecimal(60000), 4, RoundingMode.HALF_UP);
-				if (minutes.doubleValue() != 0.0) {
-					result = Double.valueOf(accumulatorCounter.divide(minutes, 4, RoundingMode.HALF_UP).doubleValue());
+				double minutes = ((endTime - startTime)/60000.0);
+				if (minutes != 0.0) {
+					result = Double.valueOf(accumulatorCounter.divide(new BigDecimal(minutes), 4, RoundingMode.HALF_UP).doubleValue());
 				}
 			}
 			return result;

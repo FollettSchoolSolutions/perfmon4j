@@ -256,7 +256,7 @@ public class RestImplTest extends TestCase {
 			
 			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime());
 			
-			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration");
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~maxActiveThreads");
 			assertEquals("Valid request", 200, response.getStatus());
 			
 			result = responseToObject(response, AdvancedQueryResult.class);
@@ -271,7 +271,7 @@ public class RestImplTest extends TestCase {
 			series = result.getSeries()[0];
 			assertEquals("Should have a default alias", "Series 1", series.getAlias());
 			assertEquals("Should have one observation", 1, series.getValues().length);
-			assertEquals("Observation Value", "10.3", series.getValues()[0].toString());
+			assertEquals("Observation Value", "5", series.getValues()[0].toString());
 		} finally {
 			tearDownDatabase();
 		}
@@ -294,8 +294,8 @@ public class RestImplTest extends TestCase {
 			// Add one observation for WebRequest.search
 			databaseSetup.addInterval(1L, 2L, now.getFixedDateTime(), 2); // Average will be set to 20.6
 			
-			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration"
-					+ "_" + databaseID + ".1~Interval.WebRequest.search~averageDuration");
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~maxActiveThreads"
+					+ "_" + databaseID + ".1~Interval.WebRequest.search~maxActiveThreads");
 			assertEquals("Valid request", 200, response.getStatus());
 			
 			result = responseToObject(response, AdvancedQueryResult.class);
@@ -309,12 +309,12 @@ public class RestImplTest extends TestCase {
 			series = result.getSeries()[0];
 			assertEquals("Should have a default alias", "Series 1", series.getAlias());
 			assertEquals("Should have one observation", 1, series.getValues().length);
-			assertEquals("Observation Value", "10.3", series.getValues()[0].toString());
+			assertEquals("Observation Value", "5", series.getValues()[0].toString());
 			
 			series = result.getSeries()[1];
 			assertEquals("Should have a default alias", "Series 2", series.getAlias());
 			assertEquals("Should have one observation", 1, series.getValues().length);
-			assertEquals("Observation Value", "20.6", series.getValues()[0].toString());
+			assertEquals("Observation Value", "10", series.getValues()[0].toString());
 		} finally {
 			tearDownDatabase();
 		}
@@ -334,13 +334,13 @@ public class RestImplTest extends TestCase {
 			DateTimeValue now = helper.parseDateTime("now");
 			
 			// Add one observation for the "default" system
-			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime()); // Average will be set to 10.3
+			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime()); // maxActiveThreads will be set to 5
 			
 			// Add one observation for the "Production" system.
-			databaseSetup.addInterval(systemID2, 1L, now.getFixedDateTime(), 2); // Average will be set to 20.6
+			databaseSetup.addInterval(systemID2, 1L, now.getFixedDateTime(), 2); // maxActiveThreads will be set to 10
 			
-			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration"
-					+ "_" + databaseID + ".2~Interval.WebRequest~averageDuration");
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~maxActiveThreads"
+					+ "_" + databaseID + ".2~Interval.WebRequest~maxActiveThreads");
 			assertEquals("Valid request", 200, response.getStatus());
 			
 			result = responseToObject(response, AdvancedQueryResult.class);
@@ -354,12 +354,12 @@ public class RestImplTest extends TestCase {
 			series = result.getSeries()[0];
 			assertEquals("Should have a default alias", "Series 1", series.getAlias());
 			assertEquals("Should have one observation", 1, series.getValues().length);
-			assertEquals("Observation Value", "10.3", series.getValues()[0].toString());
+			assertEquals("Observation Value", "5", series.getValues()[0].toString());
 			
 			series = result.getSeries()[1];
 			assertEquals("Should have a default alias", "Series 2", series.getAlias());
 			assertEquals("Should have one observation", 1, series.getValues().length);
-			assertEquals("Observation Value", "20.6", series.getValues()[0].toString());
+			assertEquals("Observation Value", "10", series.getValues()[0].toString());
 		} finally {
 			tearDownDatabase();
 		}
@@ -378,12 +378,12 @@ public class RestImplTest extends TestCase {
 			DateTimeValue now = helper.parseDateTime("now");
 			
 			// Add one observation for the "default" system
-			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime()); // Average will be set to 10.3
+			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime()); // maxActiveThreads will be set to 5
 			
 			// Do NOT add an observation for the "Production" system..  This should be returned as null.
 			
-			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~averageDuration"
-					+ "_" + databaseID + ".2~Interval.WebRequest~averageDuration");
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~maxActiveThreads"
+					+ "_" + databaseID + ".2~Interval.WebRequest~maxActiveThreads");
 			assertEquals("Valid request", 200, response.getStatus());
 			
 			result = responseToObject(response, AdvancedQueryResult.class);
@@ -397,7 +397,7 @@ public class RestImplTest extends TestCase {
 			series = result.getSeries()[0]; 
 			assertEquals("Should have a default alias", "Series 1", series.getAlias());
 			assertEquals("Should have one observation", 1, series.getValues().length);
-			assertEquals("Observation Value", "10.3", series.getValues()[0].toString());
+			assertEquals("Observation Value", "5", series.getValues()[0].toString());
 			
 			series = result.getSeries()[1];
 			assertEquals("Should have a default alias", "Series 2", series.getAlias());
