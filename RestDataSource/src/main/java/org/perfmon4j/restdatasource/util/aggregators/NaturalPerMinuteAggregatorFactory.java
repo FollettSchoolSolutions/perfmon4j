@@ -71,6 +71,8 @@ public class NaturalPerMinuteAggregatorFactory implements AggregatorFactory {
 				double minutes = ((endTime - startTime)/60000.0);
 				if (minutes != 0.0) {
 					result = Double.valueOf(accumulatorCounter.divide(new BigDecimal(minutes), 4, RoundingMode.HALF_UP).doubleValue());
+				} else {
+					result = Double.valueOf(0);
 				}
 			}
 			return result;

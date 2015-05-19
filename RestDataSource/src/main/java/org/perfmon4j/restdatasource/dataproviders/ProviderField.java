@@ -24,26 +24,16 @@ public class ProviderField extends Field {
 	AggregatorFactory buildFactory(AggregationMethod method) {
 		AggregatorFactory factory = null;
 		
-		switch (method) {
-			case SUM:
-				factory = new SumAggregatorFactory(databaseColumn, floatingPoint);
-				break;
-				
-			case MAX:
-				factory = new MaxAggregatorFactory(databaseColumn, floatingPoint);
-				break;
-				
-			case MIN:
-				factory = new MinAggregatorFactory(databaseColumn, floatingPoint);
-				break;
-				
-			case AVERAGE:
-				factory = new AverageAggregatorFactory(databaseColumn, floatingPoint);
-				break;
-				
-			case NATURAL:
-			default:
-				throw new BadRequestException("Aggregation method not supported for field");	
+		if (method.equals(AggregationMethod.SUM)) {
+			factory = new SumAggregatorFactory(databaseColumn, floatingPoint);
+		} else if (method.equals(AggregationMethod.MAX)) {
+			factory = new MaxAggregatorFactory(databaseColumn, floatingPoint);
+		} else if (method.equals(AggregationMethod.MIN)) {
+			factory = new MinAggregatorFactory(databaseColumn, floatingPoint);
+		} else if (method.equals(AggregationMethod.AVERAGE)) {
+			factory = new AverageAggregatorFactory(databaseColumn, floatingPoint);
+		} else {
+			throw new BadRequestException("Aggregation method not supported for field");	
 		}
 
 		return factory;

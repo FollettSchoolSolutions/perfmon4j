@@ -55,9 +55,9 @@ public class NaturalStdDevAggregatorFactory implements AggregatorFactory {
 		@Override
 		public Number getResult() {
 			if (hasValue && accumulatorDenominator > 0) {
-				return calcStdDeviation(accumulatorDenominator, accumulatorNumerator, accumulatorSumOfSquares);
+				return Double.valueOf(calcStdDeviation(accumulatorDenominator, accumulatorNumerator, accumulatorSumOfSquares));
 			} else {
-				return null;
+				return hasValue ? Double.valueOf(0) : null;
 			}
 		}
 	}

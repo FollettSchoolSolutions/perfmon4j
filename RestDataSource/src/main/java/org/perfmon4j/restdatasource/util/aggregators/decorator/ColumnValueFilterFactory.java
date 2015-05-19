@@ -48,8 +48,11 @@ public class ColumnValueFilterFactory implements AggregatorFactory {
 		@Override
 		public void aggreagate(ResultSet rs) throws SQLException {
 			String filterValue = rs.getString(columnName);
-			if (values.contains(filterValue)) {		
-				delegate.aggreagate(rs);
+			if (filterValue != null) {
+				filterValue = filterValue.trim();
+				if (values.contains(filterValue)) {		
+					delegate.aggreagate(rs);
+				}
 			}
 		}
 

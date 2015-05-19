@@ -21,19 +21,25 @@
 
 package org.perfmon4j;
 
+import java.util.Properties;
+
 
 public class RegisteredDatabaseConnectionsTest extends SQLTest {
-
+	private final static String JDBC_APPENDER_CLASS_NAME = JDBCSQLAppender.class.getName();
+	
+	
 	public RegisteredDatabaseConnectionsTest(String name) {
 		super(name);
 	}
 
 	protected void setUp() throws Exception {
 		super.setUp();
+		RegisteredDatabaseConnections.mockIdentityAndVersionForTest = true;
 	}
 
 	protected void tearDown() throws Exception {
 		super.tearDown();
+		RegisteredDatabaseConnections.mockIdentityAndVersionForTest = false;
 	}
 	
 	public void testAddRemoveJDBCDatabase() throws Exception {
@@ -46,5 +52,55 @@ public class RegisteredDatabaseConnectionsTest extends SQLTest {
 		assertNull(RegisteredDatabaseConnections.getDefaultDatabase());
 	}
 	
-	/** todo This class has insufficient test coverage! **/
+	public void testConfigureAddJDBCSQLAppender() throws Exception {
+		PerfMonConfiguration config = new PerfMonConfiguration();
+
+		Properties attributes = new Properties();
+    	attributes.setProperty("driverPath", "c:/driver.path");
+    	attributes.setProperty("driverClass", "myDriver");
+    	attributes.setProperty("jdbcURL", "jdbc://localhost");
+    	attributes.setProperty("userName", "userName");
+    	attributes.setProperty("password", "password");
+    	
+		config.defineAppender("production", JDBC_APPENDER_CLASS_NAME, "1 minute", attributes);
+		
+		RegisteredDatabaseConnections.config(config);
+		
+		assertNotNull("Should have registered database", RegisteredDatabaseConnections.getDatabaseByName("production"));
+		
+		config = new PerfMonConfiguration();
+		RegisteredDatabaseConnections.config(config);
+
+		assertNull("Should not have registered database", RegisteredDatabaseConnections.getDatabaseByName("production"));
+	}
+	
+	public void testReplaceDatabase() throws Exception {
+		PerfMonConfiguration config = new PerfMonConfiguration();
+
+		Properties attributes = new Properties();
+    	attributes.setProperty("driverPath", "c:/driver.path");
+    	attributes.setProperty("driverClass", "myDriver");
+    	attributes.setProperty("jdbcURL", "jdbc://localhost");
+    	attributes.setProperty("userName", "userName");
+    	attributes.setProperty("password", "password");
+    	
+		config.defineAppender("production", JDBC_APPENDER_CLASS_NAME, "1 minute", attributes);
+		
+		RegisteredDatabaseConnections.config(config);
+		
+		String signature = RegisteredDatabaseConnections.getDatabaseByName("production").getSignature();
+	
+		config = new PerfMonConfiguration();
+		// Change the userName
+	 	attributes.setProperty("userName", "anotherUserName");
+		config.defineAppender("production", JDBC_APPENDER_CLASS_NAME, "1 minute", attributes);
+		RegisteredDatabaseConnections.config(config);
+	    	
+		String newSignature = RegisteredDatabaseConnections.getDatabaseByName("production").getSignature();
+		
+		assertFalse("Should have updated the database", newSignature.equals(signature));
+
+		RegisteredDatabaseConnections.removeDatabase("production");
+	}
+
 }

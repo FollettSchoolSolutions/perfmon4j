@@ -54,7 +54,7 @@ public class NaturalAverageAggregatorFactory implements AggregatorFactory {
 				BigDecimal result = accumulatorNumerator.divide(denominator, 4, RoundingMode.HALF_UP);
 				return Double.valueOf(result.doubleValue());
 			} else {
-				return null;
+				return hasValue ? Double.valueOf(0) : null;
 			}
 		}
 	}

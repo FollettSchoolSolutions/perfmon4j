@@ -90,7 +90,6 @@ public class RestImpl {
 			element.setDefault(db.isDefault());
 			element.setID(db.getID());
 			element.setName(db.getName());
-			
 			result.add(element);
 		}
 		
@@ -364,7 +363,7 @@ ex.printStackTrace();
 			
 			rs = stmt.executeQuery();
 			while (rs.next()) {
-				MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName"), db.getID() + "." + rs.getLong("SystemID"));
+				MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName").trim(), db.getID() + "." + rs.getLong("SystemID"));
 				result.add(ms);
 			}
 		} catch (SQLException se) {
@@ -427,7 +426,7 @@ ex.printStackTrace();
 			
 			rs = stmt.executeQuery();
 			while (rs.next()) {
-				Category cat = new Category("Interval." + rs.getString("CategoryName"), "Interval");
+				Category cat = new Category("Interval." + rs.getString("CategoryName").trim(), "Interval");
 				result.add(cat);
 			}
 		} catch (SQLException se) {

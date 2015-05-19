@@ -25,24 +25,107 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
 
 public final class RegisteredDatabaseConnections {
+	private static final Logger logger = LoggerFactory.initLogger(RegisteredDatabaseConnections.class);
 	private static final Object lockToken = new Object();
 	private static final Map<String, Database> databaseByName = new HashMap<String, RegisteredDatabaseConnections.Database>();
 	private static final Map<String, Database> databaseByID = new HashMap<String, RegisteredDatabaseConnections.Database>();
 	private static Database defaultDatabase = null;
+	
+	private static final String DB_SCHEMA = "dbSchema";
+	private static String DRIVER_PATH = "driverPath";
+	private static String DRIVER_CLASS = "driverClass"; 
+	private static String JDBC_URL = "jdbcURL";
+	private static String USER_NAME = "userName";
+	private static String PASSWORD = "password";
+	
+	static boolean mockIdentityAndVersionForTest = false;
+	
+	private static String buildSignature(String dbSchema, String driverPath, String driverClass, String jdbcURL, String userName, String password) {
+		return dbSchema + "|" + driverPath + "|" + driverClass + "|" + jdbcURL + "|" + userName + "|" + password;
+	}
+
+	
+	static public void config(PerfMonConfiguration config) {
+		Map<String, Properties> configDBs = getDatabaseProperties(config);
+		
+		for (Map.Entry<String, Properties> entry : configDBs.entrySet()) {
+			String name = entry.getKey();
+			Properties props = entry.getValue();
+			
+			String dbSchema = props.getProperty(DB_SCHEMA);
+			String driverPath = props.getProperty(DRIVER_PATH); 
+			String driverClass = props.getProperty(DRIVER_CLASS);
+			String jdbcURL = props.getProperty(JDBC_URL);
+			String userName = props.getProperty(USER_NAME);
+			String password = props.getProperty(PASSWORD);
+			
+			boolean addDatabase = true;
+			Database db = getDatabaseByName(name);
+			if (db != null) {
+				String newSignature = buildSignature(dbSchema, driverPath, driverClass, jdbcURL, userName, password);
+				if (newSignature.equals(db.getSignature())) {
+					addDatabase = false;
+				} else {
+					RegisteredDatabaseConnections.removeDatabase(name);
+				}
+			}
+			if (addDatabase) {
+				try {
+					RegisteredDatabaseConnections.addJDBCDatabase(name, false, driverClass, driverPath, jdbcURL, dbSchema, userName, password);
+				} catch (InvalidConfigException e) {
+					logger.logWarn("Error registering database: " + name, e);
+				}
+			}
+		}
+		
+		// Walk through and remove any databases that no longer exist.
+		for (Database db : RegisteredDatabaseConnections.getAllDatabases()) {
+			if (!configDBs.keySet().contains(db.getName())) {
+				RegisteredDatabaseConnections.removeDatabase(db.getName());
+			}
+		}
+	}
+	
+	static private Map<String, Properties> getDatabaseProperties(PerfMonConfiguration config) {
+		Map<String, Properties> result = new HashMap<String, Properties>();
+
+		for (String name : config.getAppenderNames()) {
+			AppenderID id = config.getAppenderForName(name);
+			
+			if (id.getClassName().equals(JDBCSQLAppender.class.getName())) {
+				result.put(name, id.getAttributes());
+			}
+		}
+		
+		return result;
+	}
+	
 	
 	static public void addJDBCDatabase(String name, boolean isDefault, String driverClassName, String jarFileName,
 	    String jdbcURL, String schema, String userName, String password) throws InvalidConfigException {
 		
 		Connection conn = null;
 		try {
-			conn = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, null, jdbcURL, userName, password);
-			String databaseIdentity = JDBCHelper.getDatabaseIdentity(conn, schema);
-			double databaseVersion = JDBCHelper.getDatabaseVersion(conn, schema);
+			String databaseIdentity;
+			double databaseVersion;
+
+			if (mockIdentityAndVersionForTest) {
+				databaseIdentity = Long.toString(System.nanoTime());
+				databaseVersion = 1.0;
+			} else {
+				conn = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, jarFileName, jdbcURL, userName, password);
+				databaseIdentity = JDBCHelper.getDatabaseIdentity(conn, schema);
+				databaseVersion = JDBCHelper.getDatabaseVersion(conn, schema);
+			}
 
 			Database database = new JDBCDatabase();
 			database.setDefault(isDefault);
@@ -146,7 +229,7 @@ public final class RegisteredDatabaseConnections {
 		
 		return result;
 	}
-	
+
 	public static abstract class Database {
 		private boolean defaultDatabase = false;
 		private String id = null;
@@ -196,6 +279,8 @@ public final class RegisteredDatabaseConnections {
 		private void setDatabaseVersion(double databaseVerson) {
 			this.databaseVersion = databaseVerson;
 		}
+		
+		abstract String getSignature();
 	
 	}
 	
@@ -230,7 +315,10 @@ public final class RegisteredDatabaseConnections {
 		private void setPassword(String password) {
 			this.password = password;
 		}
+
+		@Override
+		String getSignature() {
+			return buildSignature(this.getSchema(), jarFileName, driverClassName, jdbcURL, userName, password);
+		}
 	}
-	
-	
 }
