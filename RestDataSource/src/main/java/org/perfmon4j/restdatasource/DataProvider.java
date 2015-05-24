@@ -21,9 +21,13 @@
 
 package org.perfmon4j.restdatasource;
 
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Set;
 
+import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
+import org.perfmon4j.restdatasource.data.MonitoredSystem;
 import org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import org.perfmon4j.restdatasource.util.SeriesField;
 
@@ -34,6 +38,8 @@ public abstract class DataProvider {
 		this.templateName = templateName;
 	}
 	
+	public abstract Set<MonitoredSystem> lookupMonitoredSystems(Connection conn, RegisteredDatabaseConnections.Database database, 
+			long startTime, long endTime) throws SQLException;	
 	public abstract void processResults(ResultAccumulator accumulator, SeriesField[] fields, long startTime, 
 			long endTime) throws SQLException;
 	
@@ -42,4 +48,8 @@ public abstract class DataProvider {
 	public String getTemplateName() {
 		return templateName;
 	}
+	
+	protected String fixupSchema(String schema) {
+		return schema == null ? "" : schema + ".";
+	}	
 }

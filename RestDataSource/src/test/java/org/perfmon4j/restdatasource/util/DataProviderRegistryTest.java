@@ -22,15 +22,19 @@
 package org.perfmon4j.restdatasource.util;
 
 
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
 import org.jboss.resteasy.spi.BadRequestException;
+import org.perfmon4j.RegisteredDatabaseConnections.Database;
 import org.perfmon4j.restdatasource.DataProvider;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Field;
+import org.perfmon4j.restdatasource.data.MonitoredSystem;
 import org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 
 public class DataProviderRegistryTest extends TestCase {
@@ -133,6 +137,14 @@ public class DataProviderRegistryTest extends TestCase {
 				throws SQLException {
 			// TODO Auto-generated method stub
 			
+		}
+
+		@Override
+		public Set<MonitoredSystem> lookupMonitoredSystems(Connection conn,
+				Database database, long startTime, long endTime)
+				throws SQLException {
+			// TODO Auto-generated method stub
+			return null;
 		}
 	}
 	

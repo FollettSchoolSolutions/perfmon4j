@@ -28,9 +28,11 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -95,7 +97,6 @@ public class RestImpl {
 		
 		return result.toArray(new Database[]{});
 	}
-
 		
 	@GET
 	@Path("/databases/{databaseID}/systems")
@@ -104,10 +105,30 @@ public class RestImpl {
 		@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
 		@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 
+		Set<MonitoredSystem> result = new HashSet<MonitoredSystem>();
 		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
-		return lookupMonitoredSystems(db, timeStart, timeEnd);
+ 		
+		Connection conn = null;
+		try {
+			conn = db.openConnection();
+			long start = helper.parseDateTime(timeStart).getTimeForStart();
+			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+			for (DataProvider provider : registry.getDataProviders()) {
+				Set<MonitoredSystem> r = provider.lookupMonitoredSystems(conn, db, start, end);
+				result.addAll(r);
+	 		}
+		} catch (SQLException e) {
+			logger.logDebug("getSystems", e);
+			throw new InternalServerErrorException(e);
+		} catch (ProcessArgsException e) {
+			logger.logDebug("getSystems", e);
+			throw new BadRequestException(e);		
+		} finally {
+			JDBCHelper.closeNoThrow(conn);
+		}
+		
+		return result.toArray(new MonitoredSystem[]{});
 	}
-	
 
 ///http://127.0.0.1/perfmon4j/datasource/databases/databaseID/categories?systemID=systemID&timeStart=timeStart&timeEnd=timeEnd	
 	
@@ -186,6 +207,7 @@ public class RestImpl {
 
 		AdvancedQueryResult result = null;
 		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
+		databaseID = db.getID(); // Make sure we are using the actual databaseID in case the "default" keyword was used.
 		ParsedSeriesDefinition series[] = ParsedSeriesDefinition.parse(seriesDefinition, databaseID);
 
 		// Just work with one of the Series for now....
@@ -213,55 +235,6 @@ ex.printStackTrace();
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
 		}
-				
-		
-//		
-//		Series seriesA = new Series();
-//		Series seriesB = new Series();
-//		Series seriesC = new Series();
-//		
-//		seriesA.setAlias("DAP.MaxThreads");
-//		seriesA.setCategory("Interval.WebRequest.search");
-//		seriesA.setFieldName("maxActiveThreads");
-//		seriesA.setSystemID("HRGW-KVCE.101_HRGW-KVCE.429");
-//		seriesA.setAggregationMethod("SUM");
-//		
-//		seriesB.setAlias("DAP.AverageDuration");
-//		seriesB.setCategory("Interval.WebRequest.search");
-//		seriesB.setFieldName("avgDuration");
-//		seriesB.setSystemID("HRGW-KVCE.101_HRGW-KVCE.429");
-//		seriesB.setAggregationMethod("NATURAL");
-//
-//		seriesC.setAlias("SHELF.AverageDuration");
-//		seriesC.setCategory("Interval.WebRequest.search");
-//		seriesC.setFieldName("avgDuration");
-//		seriesC.setSystemID("HRGW-KVCE.200");
-//		
-//		
-//		List<String> dateTimes = new ArrayList<String>();
-//		List<Number> valuesA = new ArrayList<Number>();
-//		List<Number> valuesB = new ArrayList<Number>();
-//		List<Number> valuesC = new ArrayList<Number>();
-//		
-//		Random randA = new Random(1);
-//		Random randB = new Random(2);
-//		Random randC = new Random(3);
-//		
-//		for (int i = 0; i < 10; i++) {
-//			dateTimes.add("2015-04-21T09:0" + i);
-//			valuesA.add(Integer.valueOf(randA.nextInt(50)));
-//			valuesB.add(roundOff((randB.nextDouble() + 0.5) * (randB.nextInt(10) + 1)));
-//			valuesC.add(roundOff((randC.nextDouble() + 0.5) * (randC.nextInt(10) + 1)));
-//		}
-//		valuesC.set(2, null); // Mock series not recording an observation in a period.
-//
-//		
-//		seriesA.setValues(valuesA.toArray(new Number[]{}));
-//		seriesB.setValues(valuesB.toArray(new Number[]{}));
-//		seriesC.setValues(valuesC.toArray(new Number[]{}));
-//
-//		result.setDateTime(dateTimes.toArray(new String[]{}));
-//		result.setSeries(new Series[]{seriesA, seriesB, seriesC});
 		
 		return result;
 	}
@@ -335,51 +308,51 @@ ex.printStackTrace();
 		return schema == null ? "" : schema + ".";
 	}
 	
-	private MonitoredSystem[] lookupMonitoredSystems(RegisteredDatabaseConnections.Database db, String timeStart, String timeEnd) {
-		List<MonitoredSystem> result = new ArrayList<MonitoredSystem>(); 
-		
-		Connection conn = null;
-		PreparedStatement stmt = null;
-		ResultSet rs = null;
-		try {
-			String schema = fixupSchema(db.getSchema());
-			
-			long start = helper.parseDateTime(timeStart).getTimeForStart();
-			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
-			
-			String SQL = "SELECT SystemID, SystemName "
-				+ " FROM " + schema + "P4JSystem s "
-				+ " WHERE EXISTS (SELECT IntervalID " 
-				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.SystemID = s.SystemID "
-				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
-			if (logger.isDebugEnabled()) {
-				logger.logDebug("getSystems SQL: " + SQL);
-			}
-			
-			conn = db.openConnection();
-			stmt = conn.prepareStatement(SQL);
-			stmt.setTimestamp(1, new Timestamp(start));
-			stmt.setTimestamp(2, new Timestamp(end));
-			
-			rs = stmt.executeQuery();
-			while (rs.next()) {
-				MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName").trim(), db.getID() + "." + rs.getLong("SystemID"));
-				result.add(ms);
-			}
-		} catch (SQLException se) {
-			logger.logDebug("getSystems", se);
-			throw new InternalServerErrorException(se);
-		} catch (ProcessArgsException e) {
-			logger.logDebug("getSystems", e);
-			throw new BadRequestException(e);
-		} finally {
-			JDBCHelper.closeNoThrow(rs);
-			JDBCHelper.closeNoThrow(stmt);
-			JDBCHelper.closeNoThrow(conn);
-		}
-		
-		return result.toArray(new MonitoredSystem[]{});
-	}
+//	private MonitoredSystem[] lookupMonitoredSystems(RegisteredDatabaseConnections.Database db, String timeStart, String timeEnd) {
+//		List<MonitoredSystem> result = new ArrayList<MonitoredSystem>(); 
+//		
+//		Connection conn = null;
+//		PreparedStatement stmt = null;
+//		ResultSet rs = null;
+//		try {
+//			String schema = fixupSchema(db.getSchema());
+//			
+//			long start = helper.parseDateTime(timeStart).getTimeForStart();
+//			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+//			
+//			String SQL = "SELECT SystemID, SystemName "
+//				+ " FROM " + schema + "P4JSystem s "
+//				+ " WHERE EXISTS (SELECT IntervalID " 
+//				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.SystemID = s.SystemID "
+//				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+//			if (logger.isDebugEnabled()) {
+//				logger.logDebug("getSystems SQL: " + SQL);
+//			}
+//			
+//			conn = db.openConnection();
+//			stmt = conn.prepareStatement(SQL);
+//			stmt.setTimestamp(1, new Timestamp(start));
+//			stmt.setTimestamp(2, new Timestamp(end));
+//			
+//			rs = stmt.executeQuery();
+//			while (rs.next()) {
+//				MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName").trim(), db.getID() + "." + rs.getLong("SystemID"));
+//				result.add(ms);
+//			}
+//		} catch (SQLException se) {
+//			logger.logDebug("getSystems", se);
+//			throw new InternalServerErrorException(se);
+//		} catch (ProcessArgsException e) {
+//			logger.logDebug("getSystems", e);
+//			throw new BadRequestException(e);
+//		} finally {
+//			JDBCHelper.closeNoThrow(rs);
+//			JDBCHelper.closeNoThrow(stmt);
+//			JDBCHelper.closeNoThrow(conn);
+//		}
+//		
+//		return result.toArray(new MonitoredSystem[]{});
+//	}
 	
 
 	private String buildInArrayForSystems(SystemID systems[]) {

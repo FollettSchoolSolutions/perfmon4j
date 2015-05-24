@@ -136,7 +136,6 @@ public class RestImplTest extends TestCase {
 			assertEquals("name", "Default", systems[0].getName());
 			assertEquals("ID", databaseID + ".1", systems[0].getID());
 			
-	
 			// Now add another system with an observation WAY in the past.
 			long systemID = databaseSetup.addSystem("Production");
 			databaseSetup.addInterval(systemID, 1L, "now-100h");
@@ -272,6 +271,12 @@ public class RestImplTest extends TestCase {
 			assertEquals("Should have a default alias", "Series 1", series.getAlias());
 			assertEquals("Should have one observation", 1, series.getValues().length);
 			assertEquals("Observation Value", "5", series.getValues()[0].toString());
+
+			// Check to see if we can use the "default" keyword as a substitute in the path for 
+			// the default database.
+			response = queryThroughRest("default", databaseID + ".1~Interval.WebRequest~maxActiveThreads");
+			assertEquals("Valid request", 200, response.getStatus());
+		
 		} finally {
 			tearDownDatabase();
 		}

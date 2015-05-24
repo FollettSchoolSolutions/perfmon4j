@@ -11,20 +11,25 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.restdatasource.DataProvider;
 import org.perfmon4j.restdatasource.RestImpl.SystemID;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Field;
+import org.perfmon4j.restdatasource.data.MonitoredSystem;
 import org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import org.perfmon4j.restdatasource.util.SeriesField;
 import org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 import org.perfmon4j.restdatasource.util.aggregators.decorator.ColumnValueFilterFactory;
 import org.perfmon4j.util.JDBCHelper;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
 
 public class IntervalDataProvider extends DataProvider {
 	private static final String TEMPLATE_NAME = "Interval";
 	private final IntervalTemplate categoryTemplate;
+	private static final Logger logger = LoggerFactory.initLogger(IntervalDataProvider.class);
 	
 	public IntervalDataProvider() {
 		super(TEMPLATE_NAME);
@@ -197,5 +202,41 @@ System.out.println(query);
 			
 			return fields.toArray(new Field[]{});
 		}
+	}
+
+
+	@Override
+	public Set<MonitoredSystem> lookupMonitoredSystems(Connection conn, RegisteredDatabaseConnections.Database database, 
+			long timeStart, long timeEnd) throws SQLException {
+		Set<MonitoredSystem> result = new HashSet<MonitoredSystem>();
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		try {
+			String schema = fixupSchema(database.getSchema());
+			
+			String SQL = "SELECT SystemID, SystemName "
+				+ " FROM " + schema + "P4JSystem s "
+				+ " WHERE EXISTS (SELECT IntervalID " 
+				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.SystemID = s.SystemID "
+				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+			if (logger.isDebugEnabled()) {
+				logger.logDebug("getSystems SQL: " + SQL);
+			}
+			
+			stmt = conn.prepareStatement(SQL);
+			stmt.setTimestamp(1, new Timestamp(timeStart));
+			stmt.setTimestamp(2, new Timestamp(timeEnd));
+			
+			rs = stmt.executeQuery();
+			while (rs.next()) {
+				MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName").trim(), database.getID() + "." + rs.getLong("SystemID"));
+				result.add(ms);
+			}
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmt);
+		}
+		
+		return result;
 	}
 }
