@@ -23,6 +23,8 @@ package org.perfmon4j.restdatasource.util;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
+import javax.ws.rs.BadRequestException;
+
 import junit.framework.TestCase;
 
 public class DateTimeHelperTest extends TestCase {
@@ -80,27 +82,27 @@ public class DateTimeHelperTest extends TestCase {
 	public void testInvalidTimeOnly() throws Exception {
 		try {
 			helper.parseDateTime("00:00");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			fail("Valid hour and minutes");
 		}
 
 		try {
 			helper.parseDateTime("23:59");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			fail("Valid hour and minutes");
 		}
 		
 		try {
 			helper.parseDateTime("24:00");
 			fail("Hours out of bounds, should have thrown an exception");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			// expected.
 		}
 
 		try {
 			helper.parseDateTime("00:60");
 			fail("Minutes out of bounds, should have thrown an exception");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			// expected.
 		}
 	}
@@ -109,35 +111,35 @@ public class DateTimeHelperTest extends TestCase {
 	public void testInvalidDateOnly() throws Exception {
 		try {
 			helper.parseDateTime("2014-02-28");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			fail("Valid date");
 		}
 
 		try {
 			helper.parseDateTime("2014-00-28");
 			fail("month out of bounds should have thrown exception");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			// expected.
 		}
 		
 		try {
 			helper.parseDateTime("2014-13-28");
 			fail("month out of bounds should have thrown exception");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			// expected.
 		}
 		
 		try {
 			helper.parseDateTime("2014-02-29");
 			fail("day out of bounds should have thrown exception");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			// expected.
 		}
 		
 		try {
 			helper.parseDateTime("2014-02-00");
 			fail("day out of bounds should have thrown exception");
-		} catch (ProcessArgsException pe) {
+		} catch (BadRequestException pe) {
 			// expected.
 		}
 	}

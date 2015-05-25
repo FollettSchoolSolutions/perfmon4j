@@ -22,10 +22,7 @@
 package org.perfmon4j.restdatasource;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,7 +60,6 @@ import org.perfmon4j.restdatasource.dataproviders.IntervalDataProvider;
 import org.perfmon4j.restdatasource.util.DataProviderRegistry;
 import org.perfmon4j.restdatasource.util.DateTimeHelper;
 import org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
-import org.perfmon4j.restdatasource.util.ProcessArgsException;
 import org.perfmon4j.restdatasource.util.SeriesField;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
@@ -102,7 +98,7 @@ public class RestImpl {
 	@Path("/databases/{databaseID}/systems")
 	@Produces(MediaType.APPLICATION_JSON)
 	public MonitoredSystem[] getSystems(@PathParam("databaseID") String databaseID, 
-		@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
+		@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 		@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 
 		Set<MonitoredSystem> result = new HashSet<MonitoredSystem>();
@@ -120,9 +116,6 @@ public class RestImpl {
 		} catch (SQLException e) {
 			logger.logDebug("getSystems", e);
 			throw new InternalServerErrorException(e);
-		} catch (ProcessArgsException e) {
-			logger.logDebug("getSystems", e);
-			throw new BadRequestException(e);		
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
 		}
@@ -141,10 +134,26 @@ public class RestImpl {
 			@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 		
 		
+		Set<Category> result = new HashSet<Category>();
 		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
 		SystemID ids[] = SystemID.parse(systemID, db.getID());
+		Connection conn = null;
+		try {
+			conn = db.openConnection();
+			long start = helper.parseDateTime(timeStart).getTimeForStart();
+			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+			for (DataProvider provider : registry.getDataProviders()) {
+				Set<Category> r = provider.lookupMonitoredCategories(conn, db, ids, start, end);
+				result.addAll(r);
+	 		}
+		} catch (SQLException e) {
+			logger.logDebug("getCategories", e);
+			throw new InternalServerErrorException(e);
+		} finally {
+			JDBCHelper.closeNoThrow(conn);
+		}
 		
-		return lookupMonitoredCategories(db, ids, timeStart, timeEnd);
+		return result.toArray(new Category[]{});
 	}
 	
 //	http://127.0.0.1/perfmon4j/datasource/databases/databaseID/categories/templates/template
@@ -228,10 +237,7 @@ public class RestImpl {
 			}
 			result = accumulator.buildResults();
 		} catch (SQLException ex) {
-ex.printStackTrace();			
 			throw new InternalServerErrorException(ex);
-		} catch (ProcessArgsException pe) {
-			throw new BadRequestException(pe);
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
 		}
@@ -302,119 +308,6 @@ ex.printStackTrace();
 	
 	private Double roundOff(double value) {
 		return Double.valueOf(Math.round(value * 100)/100.00);
-	}
-	
-	private String fixupSchema(String schema) {
-		return schema == null ? "" : schema + ".";
-	}
-	
-//	private MonitoredSystem[] lookupMonitoredSystems(RegisteredDatabaseConnections.Database db, String timeStart, String timeEnd) {
-//		List<MonitoredSystem> result = new ArrayList<MonitoredSystem>(); 
-//		
-//		Connection conn = null;
-//		PreparedStatement stmt = null;
-//		ResultSet rs = null;
-//		try {
-//			String schema = fixupSchema(db.getSchema());
-//			
-//			long start = helper.parseDateTime(timeStart).getTimeForStart();
-//			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
-//			
-//			String SQL = "SELECT SystemID, SystemName "
-//				+ " FROM " + schema + "P4JSystem s "
-//				+ " WHERE EXISTS (SELECT IntervalID " 
-//				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.SystemID = s.SystemID "
-//				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
-//			if (logger.isDebugEnabled()) {
-//				logger.logDebug("getSystems SQL: " + SQL);
-//			}
-//			
-//			conn = db.openConnection();
-//			stmt = conn.prepareStatement(SQL);
-//			stmt.setTimestamp(1, new Timestamp(start));
-//			stmt.setTimestamp(2, new Timestamp(end));
-//			
-//			rs = stmt.executeQuery();
-//			while (rs.next()) {
-//				MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName").trim(), db.getID() + "." + rs.getLong("SystemID"));
-//				result.add(ms);
-//			}
-//		} catch (SQLException se) {
-//			logger.logDebug("getSystems", se);
-//			throw new InternalServerErrorException(se);
-//		} catch (ProcessArgsException e) {
-//			logger.logDebug("getSystems", e);
-//			throw new BadRequestException(e);
-//		} finally {
-//			JDBCHelper.closeNoThrow(rs);
-//			JDBCHelper.closeNoThrow(stmt);
-//			JDBCHelper.closeNoThrow(conn);
-//		}
-//		
-//		return result.toArray(new MonitoredSystem[]{});
-//	}
-	
-
-	private String buildInArrayForSystems(SystemID systems[]) {
-		StringBuilder builder = new StringBuilder();
-		builder.append("( ");
-
-		for (SystemID id: systems) {
-			if (builder.length() > 2) {
-				builder.append(", ");
-			}
-			builder.append(id.getID());	
-		}
-		builder.append(" )");
-		
-		return builder.toString();
-	}
-	
-	private Category[] lookupMonitoredCategories(RegisteredDatabaseConnections.Database db, SystemID systems[], String timeStart, String timeEnd) {
-		List<Category> result = new ArrayList<Category>(); 
-		Connection conn = null;
-		PreparedStatement stmt = null;
-		ResultSet rs = null;
-		try {
-			String schema = fixupSchema(db.getSchema());
-			
-			long start = helper.parseDateTime(timeStart).getTimeForStart();
-			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
-			
-			String SQL = "SELECT CategoryName"
-				+ " FROM " + schema + "P4JCategory cat "
-				+ " WHERE EXISTS (SELECT IntervalID " 
-				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.categoryId = cat.categoryID "
-				+ " AND pid.systemID IN " + buildInArrayForSystems(systems)
-				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
-			
-			if (logger.isDebugEnabled()) {
-				logger.logDebug("getIntervalCategories SQL: " + SQL);
-			}
-			
-			conn = db.openConnection();
-			stmt = conn.prepareStatement(SQL);
-			stmt.setTimestamp(1, new Timestamp(start));
-			stmt.setTimestamp(2, new Timestamp(end));
-			
-			rs = stmt.executeQuery();
-			while (rs.next()) {
-				Category cat = new Category("Interval." + rs.getString("CategoryName").trim(), "Interval");
-				result.add(cat);
-			}
-		} catch (SQLException se) {
-			logger.logDebug("getIntervalCategories", se);
-			throw new InternalServerErrorException(se);
-		} catch (ProcessArgsException e) {
-			logger.logDebug("getIntervalCategories", e);
-			throw new BadRequestException(e);
-		} finally {
-			JDBCHelper.closeNoThrow(rs);
-			JDBCHelper.closeNoThrow(stmt);
-			JDBCHelper.closeNoThrow(conn);
-		}
-		
-		return result.toArray(new Category[]{});
 	}
 	
 	public static final class SystemID {

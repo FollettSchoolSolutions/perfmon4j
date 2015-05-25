@@ -12,9 +12,11 @@ import java.util.List;
 import java.util.Set;
 
 import org.perfmon4j.RegisteredDatabaseConnections;
+import org.perfmon4j.RegisteredDatabaseConnections.Database;
 import org.perfmon4j.restdatasource.DataProvider;
 import org.perfmon4j.restdatasource.RestImpl.SystemID;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
+import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Field;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
@@ -70,17 +72,6 @@ public class IntervalDataProvider extends DataProvider {
 		return toSQLSet(systemIDs, false);
 	}
 
-	private String buildSchemaPrefix(ResultAccumulator accumulator) {
-		String result = "";
-		String schema = accumulator.getSchema();
-		
-		if (schema != null && !"".equals(schema)) {
-			result = schema + ".";
-		}
-		
-		return result;
-	}
-	
 	private String normalizeCategoryName(String categoryName) {
 		return categoryName.replaceFirst("Interval\\.", "");
 	}
@@ -141,7 +132,7 @@ public class IntervalDataProvider extends DataProvider {
 	@Override
 	public void processResults(ResultAccumulator accumulator, SeriesField[] fields, long startTime, 
 			long endTime) throws SQLException {
-		String schemaPrefix = buildSchemaPrefix(accumulator);
+		String schemaPrefix = fixupSchema(accumulator.getSchema());
 		Set<String> selectList = buildSelectListAndPopulateAccumulators(accumulator, fields);
 		
 		selectList.add("EndTime");
@@ -155,7 +146,6 @@ public class IntervalDataProvider extends DataProvider {
 			+ "AND cat.categoryName IN "+ buildCategoryNameSet(fields) + "\r\n"
 			+ "AND pid.EndTime >= ?\r\n"
 			+ "AND pid.EndTime <= ?\r\n";
-System.out.println(query);		
 		Connection conn = accumulator.getConn();
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
@@ -207,7 +197,7 @@ System.out.println(query);
 
 	@Override
 	public Set<MonitoredSystem> lookupMonitoredSystems(Connection conn, RegisteredDatabaseConnections.Database database, 
-			long timeStart, long timeEnd) throws SQLException {
+			long start, long end) throws SQLException {
 		Set<MonitoredSystem> result = new HashSet<MonitoredSystem>();
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
@@ -224,13 +214,52 @@ System.out.println(query);
 			}
 			
 			stmt = conn.prepareStatement(SQL);
-			stmt.setTimestamp(1, new Timestamp(timeStart));
-			stmt.setTimestamp(2, new Timestamp(timeEnd));
+			stmt.setTimestamp(1, new Timestamp(start));
+			stmt.setTimestamp(2, new Timestamp(end));
 			
 			rs = stmt.executeQuery();
 			while (rs.next()) {
 				MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName").trim(), database.getID() + "." + rs.getLong("SystemID"));
 				result.add(ms);
+			}
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmt);
+		}
+		
+		return result;
+	}
+
+	@Override
+	public Set<Category> lookupMonitoredCategories(Connection conn,
+			Database db, SystemID[] systems, long start, long end)
+			throws SQLException {
+		Set<Category> result = new HashSet<Category>(); 
+		
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		try {
+			String schema = fixupSchema(db.getSchema());
+			
+			String SQL = "SELECT CategoryName"
+				+ " FROM " + schema + "P4JCategory cat "
+				+ " WHERE EXISTS (SELECT IntervalID " 
+				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.categoryId = cat.categoryID "
+				+ " AND pid.systemID IN " + buildInArrayForSystems(systems)
+				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+			
+			if (logger.isDebugEnabled()) {
+				logger.logDebug("getIntervalCategories SQL: " + SQL);
+			}
+			
+			stmt = conn.prepareStatement(SQL);
+			stmt.setTimestamp(1, new Timestamp(start));
+			stmt.setTimestamp(2, new Timestamp(end));
+			
+			rs = stmt.executeQuery();
+			while (rs.next()) {
+				Category cat = new Category("Interval." + rs.getString("CategoryName").trim(), "Interval");
+				result.add(cat);
 			}
 		} finally {
 			JDBCHelper.closeNoThrow(rs);

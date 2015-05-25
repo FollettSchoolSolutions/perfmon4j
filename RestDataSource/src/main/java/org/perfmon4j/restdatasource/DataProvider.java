@@ -26,6 +26,8 @@ import java.sql.SQLException;
 import java.util.Set;
 
 import org.perfmon4j.RegisteredDatabaseConnections;
+import org.perfmon4j.restdatasource.RestImpl.SystemID;
+import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
 import org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
@@ -40,6 +42,10 @@ public abstract class DataProvider {
 	
 	public abstract Set<MonitoredSystem> lookupMonitoredSystems(Connection conn, RegisteredDatabaseConnections.Database database, 
 			long startTime, long endTime) throws SQLException;	
+	
+	public abstract Set<Category> lookupMonitoredCategories(Connection conn, RegisteredDatabaseConnections.Database db, 
+			SystemID systems[], long startTime, long endTime) throws SQLException;
+	
 	public abstract void processResults(ResultAccumulator accumulator, SeriesField[] fields, long startTime, 
 			long endTime) throws SQLException;
 	
@@ -52,4 +58,20 @@ public abstract class DataProvider {
 	protected String fixupSchema(String schema) {
 		return schema == null ? "" : schema + ".";
 	}	
+	
+	protected String buildInArrayForSystems(SystemID systems[]) {
+		StringBuilder builder = new StringBuilder();
+		builder.append("( ");
+
+		for (SystemID id: systems) {
+			if (builder.length() > 2) {
+				builder.append(", ");
+			}
+			builder.append(id.getID());	
+		}
+		builder.append(" )");
+		
+		return builder.toString();
+	}
+	
 }

@@ -31,7 +31,9 @@ import junit.framework.TestCase;
 import org.jboss.resteasy.spi.BadRequestException;
 import org.perfmon4j.RegisteredDatabaseConnections.Database;
 import org.perfmon4j.restdatasource.DataProvider;
+import org.perfmon4j.restdatasource.RestImpl.SystemID;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
+import org.perfmon4j.restdatasource.data.Category;
 import org.perfmon4j.restdatasource.data.CategoryTemplate;
 import org.perfmon4j.restdatasource.data.Field;
 import org.perfmon4j.restdatasource.data.MonitoredSystem;
@@ -142,6 +144,14 @@ public class DataProviderRegistryTest extends TestCase {
 		@Override
 		public Set<MonitoredSystem> lookupMonitoredSystems(Connection conn,
 				Database database, long startTime, long endTime)
+				throws SQLException {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Set<Category> lookupMonitoredCategories(Connection conn,
+				Database db, SystemID[] systems, long startTime, long endTime)
 				throws SQLException {
 			// TODO Auto-generated method stub
 			return null;

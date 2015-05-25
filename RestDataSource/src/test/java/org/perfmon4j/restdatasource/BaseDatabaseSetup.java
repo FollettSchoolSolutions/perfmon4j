@@ -30,7 +30,6 @@ import java.sql.Timestamp;
 
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb;
 import org.perfmon4j.restdatasource.util.DateTimeHelper;
-import org.perfmon4j.restdatasource.util.ProcessArgsException;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
 
@@ -96,12 +95,12 @@ public class BaseDatabaseSetup  {
 		}
 	}
 	
-	long addInterval(long systemID, long categoryID, String endTime) throws SQLException, ProcessArgsException {
+	long addInterval(long systemID, long categoryID, String endTime) throws SQLException {
 		return addInterval(systemID, categoryID, endTime, 1);
 	}
 
 	
-	long addInterval(long systemID, long categoryID, String endTime, int factor) throws SQLException, ProcessArgsException {
+	long addInterval(long systemID, long categoryID, String endTime, int factor) throws SQLException {
 		Timestamp end = new Timestamp(helper.parseDateTime(endTime).getTimeForEnd());
 		Timestamp start = new Timestamp(end.getTime() - (60 * 1000));
 		
