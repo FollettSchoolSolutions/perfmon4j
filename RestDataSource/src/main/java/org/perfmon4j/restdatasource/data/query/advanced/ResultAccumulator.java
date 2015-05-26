@@ -20,7 +20,6 @@
 */
 package org.perfmon4j.restdatasource.data.query.advanced;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -43,21 +42,11 @@ public class ResultAccumulator {
 	private final Map<String, Set<SeriesWrapper>> seriesMap = new HashMap<String, Set<SeriesWrapper>>();
 	private final List<Series> allSeries = new ArrayList<Series>();
 	private final DateTimeHelper helper = new DateTimeHelper();
-	private final Connection conn;
-	private final String schema;
 
 	public ResultAccumulator() {
 		super();
-		this.conn = null;
-		this.schema = null;
 	}
 	
-	public ResultAccumulator(Connection conn, String schema) {
-		super();
-		this.conn = conn;
-		this.schema = schema;
-	}
-
 	public void addSeries(SeriesField series) {
 		String aggregationMethodDisplayName = null;
 		AggregationMethod method = series.getAggregationMethod();
@@ -147,16 +136,6 @@ public class ResultAccumulator {
 		
 		return result;
 	}
-	
-	public Connection getConn() {
-		return conn;
-	}
-
-	public String getSchema() {
-		return schema;
-	}
-
-
 
 	private static class SeriesWrapper {
 		private final Series series;

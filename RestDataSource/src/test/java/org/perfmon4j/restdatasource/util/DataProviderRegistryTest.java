@@ -29,6 +29,7 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import org.jboss.resteasy.spi.BadRequestException;
+import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.RegisteredDatabaseConnections.Database;
 import org.perfmon4j.restdatasource.DataProvider;
 import org.perfmon4j.restdatasource.RestImpl.SystemID;
@@ -134,8 +135,8 @@ public class DataProviderRegistryTest extends TestCase {
 		}
 
 		@Override
-		public void processResults(ResultAccumulator accumulator,
-				SeriesField[] fields, long startTime, long endTime)
+		public void processResults(Connection conn, RegisteredDatabaseConnections.Database db, ResultAccumulator accumulator,
+				SeriesField[] fields, long start, long end)
 				throws SQLException {
 			// TODO Auto-generated method stub
 			

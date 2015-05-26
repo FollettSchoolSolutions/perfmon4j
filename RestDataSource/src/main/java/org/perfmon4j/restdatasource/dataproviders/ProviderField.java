@@ -1,4 +1,4 @@
-	package org.perfmon4j.restdatasource.dataproviders;
+package org.perfmon4j.restdatasource.dataproviders;
 
 import org.jboss.resteasy.spi.BadRequestException;
 import org.perfmon4j.restdatasource.data.AggregationMethod;
@@ -21,7 +21,7 @@ public class ProviderField extends Field {
 		this.floatingPoint = floatingPoint;
 	}
 
-	AggregatorFactory buildFactory(AggregationMethod method) {
+	public AggregatorFactory buildFactory(AggregationMethod method) {
 		AggregatorFactory factory = null;
 		
 		if (method.equals(AggregationMethod.SUM)) {

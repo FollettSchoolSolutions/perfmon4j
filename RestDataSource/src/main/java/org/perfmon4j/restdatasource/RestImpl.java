@@ -229,11 +229,11 @@ public class RestImpl {
 			
 			conn = db.openConnection();
 			
-			ResultAccumulator accumulator = new ResultAccumulator(conn, db.getSchema());
+			ResultAccumulator accumulator = new ResultAccumulator();
 			for (String templateName : seriesToProcess.keySet()) {
 				// Accumulate data for each DataProvider template
 				DataProvider provider =  registry.getDataProvider(templateName);
-				provider.processResults(accumulator, seriesToProcess.get(templateName).toArray(new SeriesField[]{}), start, end);
+				provider.processResults(conn, db, accumulator, seriesToProcess.get(templateName).toArray(new SeriesField[]{}), start, end);
 			}
 			result = accumulator.buildResults();
 		} catch (SQLException ex) {

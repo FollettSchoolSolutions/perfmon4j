@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,121 +37,36 @@ public class IntervalDataProvider extends DataProvider {
 		categoryTemplate = new IntervalTemplate(TEMPLATE_NAME);
 	}
 
-	private String toSQLSet(Set<String> values, boolean quoteForSQL) {
-		boolean firstElement = true;
-		StringBuilder builder = new StringBuilder("( ");
-		
-		for(String s : values) {
-			if (!firstElement) {
-				builder.append(", ");
-			}
-			firstElement = false;
-			if (quoteForSQL) {
-				builder.append("'");
-			}
-			builder.append(s);
-			if (quoteForSQL) {
-				builder.append("'");
-			}
-		}
-		builder.append(" )");
-		
-		return builder.toString();
-	}
-	
-	private String buildSystemIDList(SeriesField fields[]) {
-		Set<String> systemIDs = new HashSet<String>();
-		
-		for (SeriesField field : fields) {
-			for (SystemID id : field.getSystems()) {
-				systemIDs.add(Long.toString(id.getID()));
-			}
-		}
-		
-		return toSQLSet(systemIDs, false);
-	}
-
-	private String normalizeCategoryName(String categoryName) {
-		return categoryName.replaceFirst("Interval\\.", "");
-	}
-	
-	
-	private String buildCategoryNameSet(SeriesField[] fields) {
-		Set<String> categories = new HashSet<String>();
-		
-		for (SeriesField field : fields) {
-			String shortenedCategoryName = normalizeCategoryName(field.getCategory().getName());
-			categories.add(shortenedCategoryName);
-		}
-		
-		return toSQLSet(categories, true);
-	}
-	
-	private Set<String> buildSelectListAndPopulateAccumulators(ResultAccumulator accumulator, SeriesField []fields) {
-		Set<String> databaseColumnsToSelect = new HashSet<String>();
-
-		for (SeriesField seriesField : fields) {
-			Set<String> systemIDString = new HashSet<String>();
-			for (SystemID id : seriesField.getSystems()) {
-				systemIDString.add(Long.toString(id.getID()));
-			}
-			ProviderField providerField = (ProviderField)seriesField.getField();
-			
-			
-			String shortenedCategoryName = normalizeCategoryName(seriesField.getCategory().getName());
-			AggregatorFactory aggregator = providerField.buildFactory(seriesField.getAggregationMethod());
-			AggregatorFactory categoryFilter = new ColumnValueFilterFactory(aggregator, "CategoryName", new String[]{shortenedCategoryName});
-			AggregatorFactory systemIDFilter = new ColumnValueFilterFactory(categoryFilter, "SystemID", systemIDString.toArray(new String[]{}));
-			databaseColumnsToSelect.addAll(Arrays.asList(systemIDFilter.getDatabaseColumns()));
-			
-			seriesField.setFactory(systemIDFilter);
-			accumulator.addSeries(seriesField);
-		}
-		
-		return databaseColumnsToSelect;
-	}
 	
 
-	private String commaSeparate(Set<String> set) {
-		boolean first = true;
-		StringBuilder builder = new StringBuilder();
-		
-		for (String value : set) {
-			if (!first) {
-				builder.append(", ");
-			}
-			first = false;
-			builder.append(value);
-		}
-		
-		return builder.toString();
-	}
-	
-	
 	@Override
-	public void processResults(ResultAccumulator accumulator, SeriesField[] fields, long startTime, 
-			long endTime) throws SQLException {
-		String schemaPrefix = fixupSchema(accumulator.getSchema());
+	public AggregatorFactory wrapWithCategoryLevelFilter(AggregatorFactory factory, String subCategoryName) {
+		return  new ColumnValueFilterFactory(factory, "CategoryName", new String[]{subCategoryName});
+	}
+	
+
+	@Override
+	public void processResults(Connection conn, RegisteredDatabaseConnections.Database db, ResultAccumulator accumulator, SeriesField[] fields, long start, 
+			long end) throws SQLException {
+		String schemaPrefix = fixupSchema(db.getSchema());
 		Set<String> selectList = buildSelectListAndPopulateAccumulators(accumulator, fields);
 		
 		selectList.add("EndTime");
-	
 		
 		String query =
 			"SELECT " + commaSeparate(selectList) + "\r\n"
 			+ "FROM " + schemaPrefix + "P4JIntervalData pid\r\n"
 			+ "JOIN " + schemaPrefix + "P4JCategory cat ON cat.categoryID = pid.CategoryID\r\n"
-			+ "WHERE pid.systemID IN " + buildSystemIDList(fields) + "\r\n"
+			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
 			+ "AND cat.categoryName IN "+ buildCategoryNameSet(fields) + "\r\n"
 			+ "AND pid.EndTime >= ?\r\n"
 			+ "AND pid.EndTime <= ?\r\n";
-		Connection conn = accumulator.getConn();
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
 		try {
 			stmt = conn.prepareStatement(query);
-			stmt.setTimestamp(1, new Timestamp(startTime));
-			stmt.setTimestamp(2, new Timestamp(endTime));
+			stmt.setTimestamp(1, new Timestamp(start));
+			stmt.setTimestamp(2, new Timestamp(end));
 			rs = stmt.executeQuery();
 			while (rs.next()) {
 				accumulator.accumulateResults(TEMPLATE_NAME, rs);
