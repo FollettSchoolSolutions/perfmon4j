@@ -47,6 +47,10 @@ public class DataProviderRegistry {
 		return templates.get(name);
 	}
 	
+	public DataProvider[] getDataProviders() {
+		return templates.values().toArray(new DataProvider[]{});
+	}
+	
 	private Field findField(CategoryTemplate template, String fieldName) {
 		Field result = null;
 		

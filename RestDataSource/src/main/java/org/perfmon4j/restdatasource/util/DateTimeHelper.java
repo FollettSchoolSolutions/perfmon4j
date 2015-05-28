@@ -28,6 +28,8 @@ import java.util.GregorianCalendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.ws.rs.BadRequestException;
+
 public class DateTimeHelper {
 	private static final Pattern NOW_MINUS_MINUTES = Pattern.compile("NOW\\-(\\d+)");
 	private static final Pattern NOW_MINUS_HOURS = Pattern.compile("NOW\\-(\\d+)H");
@@ -35,7 +37,7 @@ public class DateTimeHelper {
 	private static final Pattern DATE_ONLY = Pattern.compile("(\\d{4})-(\\d{2})-(\\d{2})");
 	private static final Pattern DATE_TIME = Pattern.compile("(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})");
 	
-	public DateTimeValue parseDateTime(String dateTime) throws ProcessArgsException {
+	public DateTimeValue parseDateTime(String dateTime) {
 		DateTimeValue result = null;
 		
 		// Ignore case on time matching...
@@ -71,7 +73,7 @@ public class DateTimeHelper {
 				try {
 					result = DateTimeValue.forRelativeTime(dateTime, cal);
 				} catch (IllegalArgumentException ie) {
-					new ProcessArgsException("Unable to parse date/time from input: " + dateTime);
+					new BadRequestException("Unable to parse date/time from input: " + dateTime);
 				}
 			 }
 		}
@@ -91,7 +93,7 @@ public class DateTimeHelper {
 				try {
 					result = DateTimeValue.forFixedDateOnly(cal);
 				} catch (IllegalArgumentException ie) {
-					new ProcessArgsException("Unable to parse date/time from input: " + dateTime);
+					new BadRequestException("Unable to parse date/time from input: " + dateTime);
 				}
 			}
 		}
@@ -117,14 +119,14 @@ public class DateTimeHelper {
 				try {
 					result = DateTimeValue.forFixedDateTime(cal);
 				} catch (IllegalArgumentException ie) {
-					new ProcessArgsException("Unable to parse date/time from input: " + dateTime);
+					new BadRequestException("Unable to parse date/time from input: " + dateTime);
 				}
 			}
 		}
 
 		
 		if (result == null) {
-			throw new ProcessArgsException("Unable to parse date/time from input: " + dateTime);
+			throw new BadRequestException("Unable to parse date/time from input: " + dateTime);
 		}
 		
 		return result;

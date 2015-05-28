@@ -51,6 +51,38 @@ public class Category {
 	}
 
 	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((name == null) ? 0 : name.hashCode());
+		result = prime * result
+				+ ((templateName == null) ? 0 : templateName.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Category other = (Category) obj;
+		if (name == null) {
+			if (other.name != null)
+				return false;
+		} else if (!name.equals(other.name))
+			return false;
+		if (templateName == null) {
+			if (other.templateName != null)
+				return false;
+		} else if (!templateName.equals(other.templateName))
+			return false;
+		return true;
+	}
+
+	@Override
 	public String toString() {
 		return "Category [name=" + name + ", templateName=" + templateName
 				+ "]";

@@ -21,7 +21,7 @@ public class NaturalAverageProviderField extends ProviderField {
 	}
 
 	@Override
-	AggregatorFactory buildFactory(AggregationMethod method) {
+	public AggregatorFactory buildFactory(AggregationMethod method) {
 		if (method.equals(AggregationMethod.NATURAL)) {
 			return new NaturalAverageAggregatorFactory(numeratorColumn, denominatorColumn);
 		} else {

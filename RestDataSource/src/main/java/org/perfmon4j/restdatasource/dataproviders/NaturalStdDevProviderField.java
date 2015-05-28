@@ -24,7 +24,7 @@ public class NaturalStdDevProviderField extends ProviderField {
 	}
 
 	@Override
-	AggregatorFactory buildFactory(AggregationMethod method) {
+	public AggregatorFactory buildFactory(AggregationMethod method) {
 		if (method.equals(AggregationMethod.NATURAL)) {
 			return new NaturalStdDevAggregatorFactory(numeratorColumn, sumOfSquaresColumn, denominatorColumn);
 		} else {
