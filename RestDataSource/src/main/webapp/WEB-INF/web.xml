@@ -12,7 +12,7 @@
 
 	<filter>
 		<filter-name>CORS</filter-name>
-		<filter-class>war.org.perfmon4j.restdatasource.filters.CorsFilter</filter-class>
+		<filter-class>web.org.perfmon4j.restdatasource.filters.CorsFilter</filter-class>
 	</filter>
 	
 	<filter-mapping>
@@ -25,7 +25,7 @@
 		<servlet-class>org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher</servlet-class>
 		<init-param>
 			<param-name>javax.ws.rs.Application</param-name>
-			<param-value>war.org.perfmon4j.restdatasource.RestApp</param-value>
+			<param-value>web.org.perfmon4j.restdatasource.RestApp</param-value>
 		</init-param>
 	</servlet>
  
