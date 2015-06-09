@@ -36,7 +36,6 @@ import org.jboss.resteasy.plugins.server.resourcefactory.POJOResourceFactory;
 import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.util.JDBCHelper;
 
-import web.org.perfmon4j.restdatasource.RestImpl;
 import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.Database;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
@@ -372,6 +371,43 @@ public class RestImplTest extends TestCase {
 		}
 	}
 
+	
+	public void testDefineSeriesNames() throws Exception {
+		setUpDatabase();
+		try {
+			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
+			long systemID2 = databaseSetup.addSystem("Production");
+			
+			MockHttpResponse response;
+			Series series;
+			AdvancedQueryResult result;
+			
+			DateTimeValue now = helper.parseDateTime("now");
+			
+			// Add one observation for the "default" system
+			databaseSetup.addInterval(1L, 1L, now.getFixedDateTime()); // maxActiveThreads will be set to 5
+			
+			// Add one observation for the "Production" system.
+			databaseSetup.addInterval(systemID2, 1L, now.getFixedDateTime(), 2); // maxActiveThreads will be set to 10
+			
+			response = queryThroughRest(databaseID, databaseID + ".1~Interval.WebRequest~maxActiveThreads"
+					+ "_" + databaseID + ".2~Interval.WebRequest~maxActiveThreads", "seriesAlias=SystemA_SystemB");
+			assertEquals("Valid request", 200, response.getStatus());
+			
+			result = responseToObject(response, AdvancedQueryResult.class);
+			assertNotNull("Should have a result", result);
+
+			series = result.getSeries()[0];
+			assertEquals("Should have a default alias", "SystemA", series.getAlias());
+			
+			series = result.getSeries()[1];
+			assertEquals("Should have a default alias", "SystemB", series.getAlias());
+		} finally {
+			tearDownDatabase();
+		}
+	}
+	
+	
 	public void testNumericValueOfNullForMissingObservation() throws Exception {
 		setUpDatabase();
 		try {

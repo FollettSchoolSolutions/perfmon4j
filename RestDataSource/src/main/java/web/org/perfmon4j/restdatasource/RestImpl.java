@@ -56,6 +56,7 @@ import web.org.perfmon4j.restdatasource.data.IntervalTemplate;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
+import web.org.perfmon4j.restdatasource.data.query.advanced.Series;
 import web.org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultElement;
 import web.org.perfmon4j.restdatasource.data.query.category.Result;
 import web.org.perfmon4j.restdatasource.data.query.category.ResultElement;
@@ -238,6 +239,15 @@ public class RestImpl {
 				provider.processResults(conn, db, accumulator, seriesToProcess.get(templateName).toArray(new SeriesField[]{}), start, end);
 			}
 			result = accumulator.buildResults();
+			
+			if (seriesAlias != null && !"".equals(seriesAlias)) {
+				String aliasNames[] = seriesAlias.split("_");
+				Series seriesResult[] = result.getSeries();
+				for (int i = 0; i < aliasNames.length && i < seriesResult.length; i++) {
+					seriesResult[i].setAlias(aliasNames[i]);
+				}
+			}
+			
 		} catch (SQLException ex) {
 			throw new InternalServerErrorException(ex);
 		} finally {
