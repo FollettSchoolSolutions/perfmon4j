@@ -395,12 +395,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	// jboss.modules.system.pkgs system property...  If we are not 
     	// running on jboss7 this property will have no impact.
     	final String PROP_KEY = "jboss.modules.system.pkgs";
+    	final String PERFMON_4J_PACKAGES = "org.perfmon4j";
     	
     	String existing = System.getProperty(PROP_KEY);
     	if (existing == null) {
-    		System.setProperty(PROP_KEY, "org.perfmon4j");
+    		System.setProperty(PROP_KEY, PERFMON_4J_PACKAGES);
     	} else {
-    		System.setProperty(PROP_KEY, existing + ",org.perfmon4j");
+    		System.setProperty(PROP_KEY, existing + "," + PERFMON_4J_PACKAGES);
     	}
     }
     

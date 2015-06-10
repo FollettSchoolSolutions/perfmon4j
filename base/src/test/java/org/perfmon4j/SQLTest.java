@@ -8,6 +8,7 @@ import junit.framework.TestCase;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.JDBCHelper;
+import org.perfmon4j.util.JDBCHelper.DriverCache;
 
 public abstract class SQLTest extends TestCase {
 
@@ -80,10 +81,18 @@ public abstract class SQLTest extends TestCase {
 		"CompletionsOver BIGINT NOT NULL,\r\n" +
 		"PercentOver DECIMAL(5, 2) NOT NULL\r\n" +
 		")";
+   
+    final String DERBY_DROP_DATABASEIDENTITY = "DROP TABLE mydb.P4JDATABASEIDENTITY";
+    final String DERBY_CREATE_DATABASEIDENTITY = "CREATE TABLE mydb.P4JDATABASEIDENTITY (DATABASEID CHAR(9) NOT NULL)";
     
 
     final String DERBY_CREATE_STUB_CHANGELOG = "CREATE TABLE mydb.DATABASECHANGELOG (id varchar(150) not null, author varchar(150) not null)";
     final String DERBY_DROP_STUB_CHANGELOG = "DROP TABLE mydb.DATABASECHANGELOG ";
+    
+    public static final String SCHEMA_NAME = "mydb";
+    public static final String DRIVER_CLASS = "org.apache.derby.jdbc.EmbeddedDriver";
+    public static final String JDBC_URL = "jdbc:derby:memory:derbyDB";
+    public static final String DATABASE_ID = "ABCD-EFGH";
     
     
 	protected void setUp() throws Exception {
@@ -92,7 +101,7 @@ public abstract class SQLTest extends TestCase {
 		appender = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()));
 		appender.setDbSchema("mydb");
 		appender.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver");
-		appender.setJdbcURL("jdbc:derby:memory:derbyDB;create=true");
+		appender.setJdbcURL(JDBC_URL + ";create=true");
 		
 		createTables();
 	}
@@ -110,6 +119,8 @@ public abstract class SQLTest extends TestCase {
 			stmt.execute(DERBY_CREATE_INTERVAL_DATA);
 			stmt.execute(DERBY_CREATE_THRESHOLD);
 			stmt.execute(DERBY_CREATE_STUB_CHANGELOG);
+			stmt.execute(DERBY_CREATE_DATABASEIDENTITY);
+			stmt.execute("INSERT INTO mydb.P4JDATABASEIDENTITY (DatabaseID) VALUES('" + DATABASE_ID + "')");
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 			stmt = null;
@@ -127,7 +138,8 @@ public abstract class SQLTest extends TestCase {
 			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_CATEGORY);
 			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_SYSTEM);
 			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_STUB_CHANGELOG);
-				} finally {
+			JDBCHelper.executeNoThrow(stmt, DERBY_DROP_DATABASEIDENTITY);
+		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 			stmt = null;
 		}
@@ -139,6 +151,12 @@ public abstract class SQLTest extends TestCase {
 		
 		appender.deInit();
 		appender = null;
+		
+		try {
+			JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, DRIVER_CLASS, null, JDBC_URL + ";drop=true", null, null);
+		} catch (SQLException sn) {
+			// The drop in-memory database throws a SQLException even when successful
+		}
 		
 		super.tearDown();
 	}

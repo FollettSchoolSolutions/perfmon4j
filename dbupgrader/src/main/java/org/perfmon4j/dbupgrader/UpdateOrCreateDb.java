@@ -79,7 +79,7 @@ public class UpdateOrCreateDb {
 					}
 				}
 				Liquibase updater = new Liquibase("org/perfmon4j/update-change-master-log.xml", new ClassLoaderResourceAccessor(), db);
-			
+				updater.setChangeLogParameter("DatabaseIdentifier", UpdaterUtil.generateUniqueIdentity());
 				if (params.isClearChecksums()) {
 					updater.clearCheckSums();
 				}

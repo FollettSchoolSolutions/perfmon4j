@@ -3,6 +3,8 @@ package org.perfmon4j.dbupgrader;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashSet;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -61,4 +63,24 @@ public class UpdaterUtilTest extends TestCase {
 			UpdaterUtil.closeNoThrow(stmt);
 		}
 	}
+	
+	
+	public void testGenerateUniqueIdentity() throws Exception {
+		String identity = UpdaterUtil.generateUniqueIdentity();
+		assertNotNull("Should have created and Identity", identity);
+		assertTrue("Should match pattern", identity.matches("[A-Z]{4}-[A-Z]{4}"));
+		
+		Set<String> identities = new HashSet<String>();
+		
+		final int numToCreate = 20000;
+		for (int i = 0; i < numToCreate; i++) {
+			identity = UpdaterUtil.generateUniqueIdentity();
+			identities.add(identity);
+		}
+ 		assertEquals("Should never create a duplicate identity", numToCreate, identities.size());
+	}
+
+	
+	
+	
 }

@@ -136,6 +136,30 @@ public class UpdateOrCreateDbTest extends TestCase {
 		}
 				
 	}
+
+	
+	public void testVersion5Update() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA});
+		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
+				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0005.0'");
+		assertEquals("should have installed 5.0 label", 1, count);
+		
+		try {
+			// Select new columns...
+			count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
+				+ ".P4JDatabaseIdentity WHERE DatabaseID IS NOT NULL");
+			assertEquals("Should have populated database identity", 1, count);
+		} catch (Exception ex) {
+			fail("Should have added database identity table");
+		}
+				
+	}
+	
+	
 	
 	public void testParseParameters() throws Exception {
 		String args[] = {

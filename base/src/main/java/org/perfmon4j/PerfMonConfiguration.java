@@ -71,6 +71,11 @@ public class PerfMonConfiguration {
             appenderMap.put(name, AppenderID.getAppenderID(className, convertIntervalStringToMillis(interval), attributes));
         }
     }
+
+/*----------------------------------------------------------------------------*/
+    public String[] getAppenderNames() {
+    	return appenderMap.keySet().toArray(new String[]{});
+    }
     
 /*----------------------------------------------------------------------------*/
     public void defineMonitor(String monitorName) {

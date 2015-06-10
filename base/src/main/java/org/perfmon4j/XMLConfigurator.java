@@ -23,7 +23,6 @@ package org.perfmon4j;
 import java.io.File;
 import java.io.FileReader;
 import java.util.Iterator;
-import java.util.TimerTask;
 
 import org.perfmon4j.util.FailSafeTimerTask;
 import org.perfmon4j.util.Logger;
@@ -63,9 +62,23 @@ public class XMLConfigurator {
         TimerTaskImpl(File configFile, long reloadSeconds) {
             this.configFile = configFile;
             this.reloadSeconds = reloadSeconds;
-            run();
+            long initialDelay = 500;
+            
+            // Having problems with JBoss 7.x when loading the perfmon4j configuration, particularly
+            // when loading the Microsoft JDBCDriver.  When the driver is instantiated, it 
+            // attempts to log output and the jboss logger is not yet initialized.  This
+            // causes JBoss to throw an exception, and then subsequently fails to start.
+            // To mitigate this issue we will delay 5 seconds before initial configuration
+            // of perfmon4j to give jboss time to initialize its log manager.
+            //
+            if ("org.jboss.logmanager.LogManager".equals(System.getProperty("java.util.logging.manager"))) {
+            	System.err.println("org.jboss.logmanager.LogManager found.  Will delay initial load of perfmon4j config for 5 seconds to allow JBoss time to load the LogManager");
+            	initialDelay = Integer.getInteger("Perfmon4j.configDelayMillisForJBossLogManager", 5000).longValue();
+            }
             if (reloadSeconds > 0) {
-                PerfMon.getUtilityTimer().schedule(this, reloadSeconds * 1000, reloadSeconds * 1000);
+                PerfMon.getUtilityTimer().schedule(this, initialDelay, reloadSeconds * 1000);
+            } else {
+                PerfMon.getUtilityTimer().schedule(this, initialDelay);
             }
         }
 

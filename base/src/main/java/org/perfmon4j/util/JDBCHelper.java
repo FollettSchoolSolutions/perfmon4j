@@ -114,6 +114,54 @@ public class JDBCHelper {
 		return result;
 	}
 	
+	public static String getDatabaseIdentity(Connection conn, String schema) throws SQLException {
+		String result = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		final String tableName = (schema != null ? schema + "." : "") + "P4JDatabaseIdentity";
+		
+		try {
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery("SELECT DatabaseID FROM " + tableName);
+			if (rs.next()) {
+				result = rs.getString(1);
+			}
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmt);
+		}
+		
+		return result;
+	}
+	
+	public static double getDatabaseVersion(Connection conn, String dbSchema) throws SQLException {
+		double result = 0.0;
+		
+		if (conn != null) {
+			Statement stmt = null;
+			ResultSet rs = null;
+			try {
+				String s = (dbSchema == null) ? "" : (dbSchema + ".");
+				String sql = "SELECT ID FROM " + s + "DATABASECHANGELOG WHERE author = 'databaseLabel' ORDER BY ID DESC";
+				stmt = conn.createStatement();
+				rs = stmt.executeQuery(sql);
+				if (rs.next()) {
+					try {
+						result = Double.parseDouble(rs.getString(1));
+					} catch (NumberFormatException nfe) {
+						// Nothing to do... Just return default version..
+					}
+				}
+			} finally {
+				JDBCHelper.closeNoThrow(rs);
+				JDBCHelper.closeNoThrow(stmt);
+			}
+		}
+		
+		return result;
+	}
+	
+	
 	public static long getQueryCount(Connection conn, String sql) throws SQLException {
 		long result = 0;
 		
@@ -226,6 +274,9 @@ public class JDBCHelper {
 	}
 	
 	public static final class DriverCache {
+		public static final DriverCache DEFAULT = new DriverCache();
+		
+		
 		private final Map<String, WeakReference<Driver>> cache =
 			new HashMap<String, WeakReference<Driver>>();
 		

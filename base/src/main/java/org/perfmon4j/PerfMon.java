@@ -1156,6 +1156,9 @@ public class PerfMon {
         }
         
         configured = true;
+        
+        RegisteredDatabaseConnections.config(config);
+        
         String monitors[] = config.getMonitorArray();
         
         boolean handledRootMonitor = false;
@@ -1179,6 +1182,7 @@ public class PerfMon {
         }
         
         SnapShotManager.applyConfig(config);
+
         
         Appender.purgeUnusedAppenders(config);
         
