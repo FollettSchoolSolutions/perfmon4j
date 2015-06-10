@@ -20,9 +20,8 @@
 		<module>sunjava6</module>
 		<module>reportconsole</module>
 		<module>utils</module>
+		<module>webapp</module>
 		<module>wildfly8</module>
-<!--		<module>perfmon4jweb</module> -->
-    <module>RestDataSource</module>
   </modules>
 
 	<scm>
