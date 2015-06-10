@@ -1,0 +1,140 @@
+<!-- 
+	3rd Party changes DO NOT fit within the Perfmon4j database version.
+	All changes referenced in this file are applied to the database
+	whenever an upgrade is run specifying the parent folder name
+	as a thirdPartyExtension.  Liquibase's native functionality 
+	is used to determine which, if any updates must be applied to the
+	database.
+	
+	3rd party extensions will always be executed after the base perfmon4j
+	schema has been updated.
+ -->
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
+
+	<changeSet author="rlancaster" id="FSS-P4JFetchPolicySnapshot-tableCreate">
+		<createTable tableName="FSSFetchPolicySnapshot">
+
+			<column defaultValueNumeric="1" name="SystemID" type="INT">
+				<constraints nullable="false" />
+			</column>
+			<column name="InstanceName" type="VARCHAR(200)">
+				<constraints nullable="false" />
+			</column>
+			<column name="StartTime" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			<column name="EndTime" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			<column name="Duration" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="L2CacheCumulativeTime" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L2CacheQueryCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L2CacheHitCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L2CacheMissCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L2CachePutCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L2CacheDeleteCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L2CacheHitRatio" type="DECIMAL(18, 2)">
+				<constraints nullable="false" />
+			</column>
+			<column name="L2timePerQuery" type="DECIMAL(18, 2)">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="L3CacheCumulativeTime" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L3CacheQueryCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L3CacheHitCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L3CacheMissCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L3CachePutCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L3CacheDeleteCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="L3CacheHitRatio" type="DECIMAL(18, 2)">
+				<constraints nullable="false" />
+			</column>
+			<column name="L3timePerQuery" type="DECIMAL(18, 2)">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="ProviderCumulativeTime" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="ProviderQueryCount" type="INT">
+				<constraints nullable="false" />
+			</column>
+			<column name="ProviderHitCount" type="INT">
+				<constraints nullable="false" />
+			</column>
+			<column name="ProviderMissCount" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="ProviedrWaiveCount" type="INT">
+				<constraints nullable="false" />
+			</column>
+			<column name="ProviderErrorCount" type="INT">
+				<constraints nullable="false" />
+			</column>
+			<column name="ProviderWaiveRatio" type="DECIMAL(18,2)">
+				<constraints nullable="false" />
+			</column>
+			<column name="ProviderTimePerQuery" type="DECIMAL(18,2)">
+				<constraints nullable="false" />
+			</column>
+			<column name="PromiseBlockCululativeTime" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="PromiseOwnCumulativeTime" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="PromiseBlockedThreads" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="PromiseExpirations" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="PromiseCancellations" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+	
+		<addPrimaryKey columnNames="SystemID, InstanceName, StartTime, EndTime"
+			constraintName="FSSFetchPolicySnapshot_pk" tableName="FSSFetchPolicySnapshot" />
+			
+		<addForeignKeyConstraint baseColumnNames="SystemID"
+			baseTableName="FSSFetchPolicySnapshot" constraintName="FSSFetchPolicySnapshot_SystemID_fk"
+			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
+			onUpdate="NO ACTION" referencedColumnNames="SystemID"
+			referencedTableName="P4JSystem" />
+	</changeSet>
+
+	<!--  DO NOT UPDATE THE DATABASE VERSION IN thirdpartyExtensions -->
+</databaseChangeLog>
