@@ -24,9 +24,12 @@ package web.org.perfmon4j.restdatasource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb;
 import org.perfmon4j.util.JDBCHelper;
@@ -46,7 +49,7 @@ public class BaseDatabaseSetup  {
 	public BaseDatabaseSetup() {
 	}
 
-	void setUpDatabase() throws Exception {
+	public void setUpDatabase() throws Exception {
 		connection = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, JDBC_DRIVER, null, JDBC_URL + ";create=true", null, null);
 		connection.setAutoCommit(true);		
 		
@@ -60,7 +63,7 @@ public class BaseDatabaseSetup  {
 		
 	}
 
-	void tearDownDatabase() throws Exception {
+	public void tearDownDatabase() throws Exception {
 		JDBCHelper.closeNoThrow(connection);
 		
 		try {
@@ -85,7 +88,7 @@ public class BaseDatabaseSetup  {
 	}
 	
 	
-	long addSystem(String systemName) throws SQLException {
+	public long addSystem(String systemName) throws SQLException {
 		Statement stmt = null;
 		try {
 			stmt = connection.createStatement();
@@ -96,12 +99,12 @@ public class BaseDatabaseSetup  {
 		}
 	}
 	
-	long addInterval(long systemID, long categoryID, String endTime) throws SQLException {
+	public long addInterval(long systemID, long categoryID, String endTime) throws SQLException {
 		return addInterval(systemID, categoryID, endTime, 1);
 	}
 
 	
-	long addInterval(long systemID, long categoryID, String endTime, int factor) throws SQLException {
+	public long addInterval(long systemID, long categoryID, String endTime, int factor) throws SQLException {
 		Timestamp end = new Timestamp(helper.parseDateTime(endTime).getTimeForEnd());
 		Timestamp start = new Timestamp(end.getTime() - (60 * 1000));
 		
@@ -188,7 +191,7 @@ public class BaseDatabaseSetup  {
 	}
 	
 	
-	long addCategory(String category) throws SQLException {
+	public long addCategory(String category) throws SQLException {
 		Statement stmt = null;
 		try {
 			stmt = connection.createStatement();
@@ -198,7 +201,73 @@ public class BaseDatabaseSetup  {
 			JDBCHelper.closeNoThrow(stmt);
 		}
 	}
+
+	public void addJVMObservation(long systemID, long endTime) throws SQLException {
+		Map<String, Object> overrideValues = new HashMap<String, Object>();
+		
+		overrideValues.put("SYSTEMID", Long.valueOf(systemID));
+		overrideValues.put("STARTTIME", new Timestamp(endTime - 60000));
+		overrideValues.put("ENDTIME", new Timestamp(endTime));
+		
+		String sql = buildDefaultInsertStatement("P4JVMSnapShot", overrideValues);
+		
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate(sql);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
 	
+	
+	private String buildDefaultInsertStatement(String tableName, Map<String, Object> overrideValues) throws SQLException {
+		StringBuilder insertInto = new StringBuilder("INSERT INTO " + tableName + " (");
+		StringBuilder values = new StringBuilder(") VALUES(");
+		Statement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = connection.createStatement();
+			rs = stmt.executeQuery("SELECT * FROM " + tableName);
+			ResultSetMetaData md = rs.getMetaData();
+			int columnCount = md.getColumnCount();
+			
+			for (int i = 0; i < columnCount; i++) {
+				if (i > 0) {
+					insertInto.append(", ");
+					values.append(", ");
+				}
+				int colOffset = i + 1;
+				String columnName = md.getColumnName(colOffset);
+				insertInto.append(columnName);
+				
+				Object v = overrideValues.get(columnName);
+				if (v == null) {
+					v = Integer.valueOf(colOffset);
+				}
+				
+				if (v instanceof Timestamp) {
+					v = ((Timestamp)v).toString();
+				}
+				
+				if (v instanceof String) {
+					v = "'" + v + "'";
+				} 
+				
+		
+				values.append(v.toString());
+			}
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmt);
+		}
+		
+		values.append(")");
+		insertInto.append(values.toString());
+		
+		return insertInto.toString();
+	}
+
 	public Connection getConnection() {
 		return connection;
 	}

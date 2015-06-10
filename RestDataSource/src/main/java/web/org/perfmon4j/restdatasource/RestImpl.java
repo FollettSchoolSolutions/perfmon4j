@@ -52,16 +52,15 @@ import org.perfmon4j.util.LoggerFactory;
 import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
 import web.org.perfmon4j.restdatasource.data.Database;
-import web.org.perfmon4j.restdatasource.data.IntervalTemplate;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
-import web.org.perfmon4j.restdatasource.data.query.advanced.Series;
 import web.org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultElement;
 import web.org.perfmon4j.restdatasource.data.query.category.Result;
 import web.org.perfmon4j.restdatasource.data.query.category.ResultElement;
 import web.org.perfmon4j.restdatasource.data.query.category.SystemResult;
 import web.org.perfmon4j.restdatasource.dataproviders.IntervalDataProvider;
+import web.org.perfmon4j.restdatasource.dataproviders.JVMDataProvider;
 import web.org.perfmon4j.restdatasource.util.DataProviderRegistry;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
@@ -76,6 +75,7 @@ public class RestImpl {
 
 	static {
 		registry.registerDataProvider(new IntervalDataProvider());
+		registry.registerDataProvider(new JVMDataProvider());
 	}
 	
 
@@ -166,7 +166,12 @@ public class RestImpl {
 	@Produces(MediaType.APPLICATION_JSON)
 	public CategoryTemplate[] getCategoryTemplate(@PathParam("databaseID") String databaseID, 
 			@PathParam("template") String template) {
-		return new CategoryTemplate[] {new IntervalTemplate()};
+		
+		DataProvider provider = registry.getDataProvider(template);
+		if (provider == null) {
+			throw new NotFoundException("Category template not found: " + template);
+		}
+		return new CategoryTemplate[] {provider.getCategoryTemplate()};
 	}
 	
 //	http://127.0.0.1/perfmon4j/datasoure/databases/databaseID/categories/category/observations?systemId=systemId&timeStart=`now-480'&timeEnd=timeEnd&maxObservations=1440
@@ -221,9 +226,14 @@ public class RestImpl {
 		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
 		databaseID = db.getID(); // Make sure we are using the actual databaseID in case the "default" keyword was used.
 		ParsedSeriesDefinition series[] = ParsedSeriesDefinition.parse(seriesDefinition, databaseID);
+		
+		String aliasNames[] = new String[]{};
+		if (seriesAlias != null && !"".equals(seriesAlias)) {
+			aliasNames = seriesAlias.split("_");
+		}
 
 		// Just work with one of the Series for now....
-		Map<String, List<SeriesField>> seriesToProcess = groupFieldsByTemplate(series);
+		Map<String, List<SeriesField>> seriesToProcess = groupFieldsByTemplate(series, aliasNames);
 
 		Connection conn = null;;
 		try {
@@ -239,15 +249,6 @@ public class RestImpl {
 				provider.processResults(conn, db, accumulator, seriesToProcess.get(templateName).toArray(new SeriesField[]{}), start, end);
 			}
 			result = accumulator.buildResults();
-			
-			if (seriesAlias != null && !"".equals(seriesAlias)) {
-				String aliasNames[] = seriesAlias.split("_");
-				Series seriesResult[] = result.getSeries();
-				for (int i = 0; i < aliasNames.length && i < seriesResult.length; i++) {
-					seriesResult[i].setAlias(aliasNames[i]);
-				}
-			}
-			
 		} catch (SQLException ex) {
 			throw new InternalServerErrorException(ex);
 		} finally {
@@ -263,15 +264,20 @@ public class RestImpl {
 	 * @param series
 	 * @return
 	 */
-	private Map<String, List<SeriesField>> groupFieldsByTemplate(ParsedSeriesDefinition series[]) {
+	private Map<String, List<SeriesField>> groupFieldsByTemplate(ParsedSeriesDefinition series[], String aliasOverride[]) {
 		Map<String, List<SeriesField>> result = new HashMap<String, List<SeriesField>>();
 		
-		int defaultSeriesID = 1;
+	
+		int seriesOffset = 0;
+		
 		
 		for (ParsedSeriesDefinition def : series) {
-			String defaultSeriesAlias = "Series " + Integer.toString(defaultSeriesID++);
+			String seriesAlias = "Series " + Integer.toString(++seriesOffset);
+			if (aliasOverride.length >= seriesOffset) {
+				seriesAlias = aliasOverride[seriesOffset - 1];
+			}
 			
-			SeriesField field = registry.resolveField(def, defaultSeriesAlias);
+			SeriesField field = registry.resolveField(def, seriesAlias);
 			String templateName = field.getCategory().getTemplateName();
 			
 			List<SeriesField> seriesForTemplate = result.get(templateName);
@@ -365,6 +371,10 @@ public class RestImpl {
 			}
 			
 			return result.toArray(new SystemID[]{});
+		}
+		
+		public static SystemID manualConstructor_TESTONLY(String databaseID, long systemID) {
+			return new SystemID(databaseID + "." + systemID, databaseID);
 		}
 		
 		public static String toString(SystemID systems[]) {
