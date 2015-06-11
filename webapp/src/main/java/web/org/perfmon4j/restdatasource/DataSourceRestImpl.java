@@ -24,6 +24,7 @@ package web.org.perfmon4j.restdatasource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -54,7 +55,9 @@ import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
 import web.org.perfmon4j.restdatasource.data.Database;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
+import web.org.perfmon4j.restdatasource.data.query.advanced.C3DataResult;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
+import web.org.perfmon4j.restdatasource.data.query.advanced.Series;
 import web.org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultElement;
 import web.org.perfmon4j.restdatasource.data.query.category.Result;
 import web.org.perfmon4j.restdatasource.data.query.category.ResultElement;
@@ -209,7 +212,8 @@ public class DataSourceRestImpl {
 		
 		return result;
 	}
-
+	
+	
 //	http://127.0.0.1/perfmon4j/datasource/databases/databaseID/observations?
 //		seriesDefinition=seriesDefinition&timeStart=now-480&timeEnd=now&maxObservations=1440&seriesAlias=seriesAlias
 
@@ -257,6 +261,39 @@ public class DataSourceRestImpl {
 		
 		return result;
 	}
+
+	
+	@GET
+	@Path("/databases/{databaseID}/observations.c3")
+	@Produces(MediaType.APPLICATION_JSON)
+	public C3DataResult getQueryObservationsInC3Format(@PathParam("databaseID") String databaseID, 
+			@QueryParam("seriesDefinition") String seriesDefinition,
+			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
+			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
+			@QueryParam("seriesAlias") @DefaultValue("")  String seriesAlias) {
+
+		AdvancedQueryResult qr =  getQueryObservations(databaseID, seriesDefinition, timeStart, timeEnd, seriesAlias);
+		List<Object[]> columns = new ArrayList<Object[]>(); 
+		
+		
+		List<Object> dateTime = new ArrayList<Object>();
+		dateTime.addAll(Arrays.asList(qr.getDateTime()));
+		dateTime.add(0, "dateTime");
+		columns.add(dateTime.toArray());
+
+		for (Series s : qr.getSeries()) {
+			List<Object> sList = new ArrayList<Object>();
+			sList.addAll(Arrays.asList(s.getValues()));
+			sList.add(0, s.getAlias());
+
+			columns.add(sList.toArray());
+		}
+		C3DataResult result = new C3DataResult();
+		result.setColumns(columns.toArray(new Object[][]{}));
+		
+		return result;
+	}
+	
 
 	/**
 	 * This method will group all of the data series into their respective 

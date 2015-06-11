@@ -40,6 +40,7 @@ import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.Database;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
+import web.org.perfmon4j.restdatasource.data.query.advanced.C3DataResult;
 import web.org.perfmon4j.restdatasource.data.query.advanced.Series;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.DateTimeValue;
@@ -278,6 +279,11 @@ public class DataSourceRestImplTest extends TestCase {
 			response = queryThroughRest("default", databaseID + ".1~Interval.WebRequest~maxActiveThreads");
 			assertEquals("Valid request", 200, response.getStatus());
 		
+			// Check C3 specific data format.
+			C3DataResult c3Result = responseToObject(queryThroughRestC3("default", databaseID + ".1~Interval.WebRequest~maxActiveThreads"), C3DataResult.class);
+			assertEquals("dateTime", c3Result.getX());
+			assertEquals("%Y-%m-%dT%H:%M", c3Result.getxFormat());
+			assertEquals(2, c3Result.getColumns().length);
 		} finally {
 			tearDownDatabase();
 		}
@@ -460,6 +466,27 @@ public class DataSourceRestImplTest extends TestCase {
 			queryParams = "&" + queryParams;
 		}
         MockHttpRequest request = MockHttpRequest.get("/datasource/databases/" + databaseID + "/observations?seriesDefinition=" + seriesDefinition + queryParams);
+        MockHttpResponse response = new MockHttpResponse();
+
+        dispatcher.invoke(request, response);
+//        if (response.getStatus() != 200) {
+//        	System.err.println(response.getErrorMessage());
+//        }
+        
+        
+        return response;
+	}
+
+	
+	private MockHttpResponse queryThroughRestC3(String databaseID, String seriesDefinition) throws URISyntaxException {
+		return queryThroughRestC3(databaseID, seriesDefinition, "");
+	}
+	
+	private MockHttpResponse queryThroughRestC3(String databaseID, String seriesDefinition, String queryParams) throws URISyntaxException {
+		if (queryParams.length() > 0) {
+			queryParams = "&" + queryParams;
+		}
+        MockHttpRequest request = MockHttpRequest.get("/datasource/databases/" + databaseID + "/observations.c3?seriesDefinition=" + seriesDefinition + queryParams);
         MockHttpResponse response = new MockHttpResponse();
 
         dispatcher.invoke(request, response);
