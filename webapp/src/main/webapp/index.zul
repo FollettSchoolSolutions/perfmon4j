@@ -1,0 +1,47 @@
+<?page id="Perfmon4jConsoleMain" title="Perfmon4j System Console" contentType="text/html;charset=UTF-8"?>
+<zk>
+
+    <borderlayout apply="web.org.perfmon4j.console.app.MainWindowController">
+ 		<north height="100px" border="none" style='background-color: #616161;'>
+        	<borderlayout style='background-color: transparent;'>
+        		<north style='background-color: transparent;' border='none'><image src="/images/perfmon4jFULL.png"/></north>
+        		<south> 
+        			<menubar>
+						<menu label="Info">
+                			<menupopup>
+                    			<menuitem id="systemInfoMenuItem" label="System Info" />
+                			</menupopup>
+            			</menu>       				
+						<menu label="Config">
+                			<menupopup>
+                    			<menuitem id="configRestDataSource" label="Rest DataSource" />
+                			</menupopup>
+            			</menu>       				
+						<menu label="Help">
+                			<menupopup>
+                    			<menuitem id="aboutMenuItem" label="About.." />
+                			</menupopup>
+            			</menu>       				
+        			</menubar>
+        		</south>
+ 			</borderlayout>
+        </north>
+        <center id="mainContent" autoscroll="true">
+        <tabbox id="mainTabbox">
+			<tabs>
+			</tabs>
+			<tabpanels>
+			</tabpanels>
+		</tabbox>
+		
+		
+<!--            <label style="font-size:50px">Center for content</label> -->
+        </center>
+        <south height="50px" border="none" style='background-color: #616161;'>
+        	<borderlayout style='background-color: transparent;'>
+        		<west style='background-color: transparent; padding-top:15px; padding-left:5px;' border='none'><label style="font-size:14px; color:#EEEEEE">Version: 121.12</label></west>
+        		<east style='background-color: transparent; padding-top:15px; padding-right:5px;' border='none'><label style="font-size:14px; color:#EEEEEE">Copyright Follett School Solutions 2015</label></east>
+        	</borderlayout>	
+        </south>
+    </borderlayout>
+</zk>

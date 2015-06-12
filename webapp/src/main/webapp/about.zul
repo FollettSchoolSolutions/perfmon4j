@@ -1,0 +1,7 @@
+<?page title="About Perfmon4j Console" contentType="text/html;charset=UTF-8"?>
+<zk>
+<window id="aboutDialog" title="About Perfmon4j Console" border="normal" apply="web.org.perfmon4j.console.app.AboutController">
+New Content Here!
+<button id="okButton" label="Ok" />
+</window>
+</zk>

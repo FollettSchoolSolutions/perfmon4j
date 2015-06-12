@@ -12,6 +12,18 @@
 	<packaging>war</packaging>
 	<name>Perfmon4j webapp</name>
 	<url>http://maven.apache.org</url>
+	<properties>
+		<zk.version>7.0.3</zk.version>
+		<commons-io>1.3.1</commons-io>
+	</properties>
+	<repositories>
+		<repository>
+			<id>ZK CE</id>
+			<name>ZK CE Repository</name>
+			<url>http://mavensync.zkoss.org/maven2</url>
+		</repository>
+	</repositories>
+
 
 	<build>
 		<finalName>perfmon4j</finalName>
@@ -75,6 +87,32 @@
 		    <version>10.10.2.0</version>
 			<scope>test</scope>
 		</dependency>		
+		<dependency>
+			<groupId>org.zkoss.zk</groupId>
+			<artifactId>zkbind</artifactId>
+			<version>${zk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.zkoss.zk</groupId>
+			<artifactId>zul</artifactId>
+			<version>${zk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.zkoss.zk</groupId>
+			<artifactId>zkplus</artifactId>
+			<version>${zk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.zkoss.zk</groupId>
+			<artifactId>zhtml</artifactId>
+			<version>${zk.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons-io}</version>
+		</dependency>
 		
 	</dependencies>
 </project>

@@ -1,0 +1,16 @@
+<?page title="new page title" contentType="text/html;charset=UTF-8"?>
+<zk>
+<window border="none" apply="web.org.perfmon4j.console.app.SystemInfoController">
+	<grid id="systemInfoGrid" >
+		<columns>
+			<column label="Key"/>
+			<column label="Value"/>
+		</columns>
+		<rows>
+			<row>	
+			</row>
+		</rows>
+	</grid>
+</window>
+
+</zk>
