@@ -1,15 +1,16 @@
 <?page id="Perfmon4jConsoleMain" title="Perfmon4j System Console" contentType="text/html;charset=UTF-8"?>
 <zk>
-
     <borderlayout apply="web.org.perfmon4j.console.app.MainWindowController">
- 		<north height="100px" border="none" style='background-color: #616161;'>
+ 		<north height="105px" border="none" style='background-color: #616161;'>
         	<borderlayout style='background-color: transparent;'>
-        		<north style='background-color: transparent;' border='none'><image src="/images/perfmon4jFULL.png"/></north>
+        		<north style='background-color: transparent;' border='none'>
+        			<image src="/app/images/perfmon4jFULL.png"/>
+        		</north>	
         		<south> 
         			<menubar>
 						<menu label="Info">
                 			<menupopup>
-                    			<menuitem id="systemInfoMenuItem" label="System Info" />
+                    			<menuitem  id="systemInfoMenuItem" label="System Info" />
                 			</menupopup>
             			</menu>       				
 						<menu label="Config">
@@ -21,10 +22,15 @@
                 			<menupopup>
                     			<menuitem id="aboutMenuItem" label="About.." />
                 			</menupopup>
+            			</menu>
+						<menu id="currentUserMenu">
+                			<menupopup>
+                    			<menuitem id="logoutMenuItem" label="Logout.." />
+                			</menupopup>
             			</menu>       				
         			</menubar>
         		</south>
- 			</borderlayout>
+        	</borderlayout>	
         </north>
         <center id="mainContent" autoscroll="true">
         <tabbox id="mainTabbox">
