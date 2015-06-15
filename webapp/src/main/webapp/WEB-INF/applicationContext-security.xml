@@ -16,7 +16,7 @@
         <!-- the login page -->
         <intercept-url pattern="/app/login.zul" access="IS_AUTHENTICATED_ANONYMOUSLY" />
         <!-- pages for anonymous access in an application -->
-        <intercept-url pattern="/app/index.zul" access="ROLE_ADMIN" />
+        <intercept-url pattern="/app/**" access="ROLE_ADMIN" />
 <!--          
         <intercept-url pattern="/articleContent.zul" access="IS_AUTHENTICATED_ANONYMOUSLY" />
         <intercept-url pattern="/**" access="ROLE_USER" />

@@ -2,9 +2,9 @@
 <zk>
     <borderlayout apply="web.org.perfmon4j.console.app.MainWindowController">
  		<north height="105px" border="none" style='background-color: #616161;'>
-        	<borderlayout style='background-color: transparent;'>
+        	<borderlayout height="100%" style='background-color: transparent;'>
         		<north style='background-color: transparent;' border='none'>
-        			<image src="/app/images/perfmon4jFULL.png"/>
+        			<image height='85px' src="/app/images/perfmon4jFULL.png"/>
         		</north>	
         		<south> 
         			<menubar>
