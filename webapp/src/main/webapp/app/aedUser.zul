@@ -1,0 +1,58 @@
+<?page title="Add User" contentType="text/html;charset=UTF-8"?>
+<zk>
+
+
+<window title="Add User" border="normal"
+	width="800px" 
+	apply="org.zkoss.bind.BindComposer"
+	viewModel="@id('vm') @init('web.org.perfmon4j.console.app.model.UserFormViewModel')"
+   	validationMessages="@id('vmsgs')"
+   	form="@id('fx') @load(vm.user) @save(vm.user, before='submit') @validator('web.org.perfmon4j.console.app.model.UserFormValidator', password=vm.password, retypedPassword=vm.retypedPassword)">
+        <grid>
+            <columns>
+                <column label="Field" width="120px" />
+                <column label="Content" width="500px"/>
+            </columns>
+            <rows>
+                <row>
+                    <label value="UserName" width="150px" />
+                    <hlayout>
+                        <textbox value="@bind(fx.userName)"
+                            width="150px" tabindex="1" />
+                    </hlayout>
+                </row>
+                <row>
+                    <label value="DisplayName" width="150px" />
+                    <hlayout>
+                        <textbox value="@bind(fx.displayName)"
+                            width="150px" tabindex="2" />
+                    </hlayout>
+                </row>
+                <row>
+                    Password
+                    <textbox type="password" value="@bind(vm.password)"
+                        width="150px" tabindex="3" />
+                </row>
+                <row>
+                    Re-type Password
+                    <cell>
+                        <textbox type="password" value="@bind(vm.retypedPassword)"
+                             width="150px"  tabindex="3" />
+                        <label class="error"
+                            value="@load(vmsgs['password'])" />
+                    </cell>
+                </row>    
+              	<row>
+                    <cell colspan="2" style="text-align:center">
+                        <vlayout>
+                            <label visible="@load(empty vmsgs)"
+                                value="@load(empty vmsgs ? 'Form successfully submitted!' : '', before='submit')" />
+                            <button label="Submit" onClick="@command('submit')"
+                                width="100px" height="30px" autodisable="self"/>
+                        </vlayout>
+                    </cell>
+                </row>                                            
+      		</rows>
+      	</grid>	          
+</window>
+</zk>

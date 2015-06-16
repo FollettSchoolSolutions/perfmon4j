@@ -79,7 +79,6 @@
 			<groupId>org.apache.derby</groupId>
 			<artifactId>derby</artifactId>
 			<version>10.10.2.0</version>
-			<scope>test</scope>
 		</dependency>
 
 		<dependency>
@@ -88,6 +87,7 @@
 		    <version>10.10.2.0</version>
 			<scope>test</scope>
 		</dependency>		
+		
 		<dependency>
 			<groupId>org.zkoss.zk</groupId>
 			<artifactId>zkbind</artifactId>
@@ -120,6 +120,13 @@
 		    <artifactId>spring-security-web</artifactId>
 		    <version>${springsecurity.version}</version>
 		</dependency>		
+		
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-entitymanager</artifactId>
+			<version>4.3.10.Final</version>
+		</dependency>
+		
 		
 		<dependency>
 			<groupId>commons-io</groupId>

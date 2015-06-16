@@ -58,6 +58,20 @@ public class MainWindowController extends SelectorComposer<Component> {
 		Executions.createComponents("/app/systeminfo.zul", panel, null);
 	}
 
+	@Listen("onClick = #aedUsers")
+	public void aedUsers() {
+		Tabpanel panel = new Tabpanel();
+	
+		Tab tab = new Tab("Users");
+		tab.setClosable(true);
+		
+		
+		mainTabbox.getTabpanels().appendChild(panel);
+		mainTabbox.getTabs().appendChild(tab);
+		
+		Executions.createComponents("/app/users.zul", panel, null);
+	}
+
 	
 		
 	

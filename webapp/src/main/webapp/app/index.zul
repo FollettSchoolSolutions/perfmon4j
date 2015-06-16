@@ -15,6 +15,7 @@
             			</menu>       				
 						<menu label="Config">
                 			<menupopup>
+                    			<menuitem id="aedUsers" label="Users" />
                     			<menuitem id="configRestDataSource" label="Rest DataSource" />
                 			</menupopup>
             			</menu>       				
