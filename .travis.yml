@@ -1,2 +1,3 @@
 language: java
-script: mvn -U -e clean assembly:assembly install -D'M2_REPO=$WORKSPACE/.repository'
+
+install: mvn -U -e clean assembly:assembly install -D'M2_REPO=$WORKSPACE/.repository'
