@@ -1,0 +1,9 @@
+<?page title="Header" contentType="text/html;charset=UTF-8"?>
+<zk>
+	<div height="50px" style='background-color: #616161;'>
+       	<borderlayout style='background-color: transparent;'>
+       		<west style='background-color: transparent; padding-top:15px; padding-left:5px;' border='none'><label style="font-size:14px; color:#EEEEEE">Version: 121.12</label></west>
+       		<east style='background-color: transparent; padding-top:15px; padding-right:5px;' border='none'><label style="font-size:14px; color:#EEEEEE">Copyright Follett School Solutions 2015</label></east>
+       	</borderlayout>	
+	</div>
+</zk>

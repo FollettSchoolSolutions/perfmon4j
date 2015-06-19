@@ -6,59 +6,114 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import org.zkoss.zk.ui.Component;
-import org.zkoss.zk.ui.Executions;
-import org.zkoss.zk.ui.select.SelectorComposer;
+import org.zkoss.zk.ui.event.Event;
+import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
+import org.zkoss.zul.Button;
 import org.zkoss.zul.Grid;
+import org.zkoss.zul.Hlayout;
 import org.zkoss.zul.Label;
+import org.zkoss.zul.ListModelList;
+import org.zkoss.zul.Messagebox;
 import org.zkoss.zul.Row;
-import org.zkoss.zul.Window;
+import org.zkoss.zul.RowRenderer;
 
 import web.org.perfmon4j.console.app.data.EMProvider;
 import web.org.perfmon4j.console.app.data.User;
+import web.org.perfmon4j.console.app.zk.RefreshableComposer;
 
 
-public class UsersController  extends SelectorComposer<Component> {
-	   private static final long serialVersionUID = 1L;
-	     
-	   private EntityManager em = EMProvider.getEM();
-	   
-		@Wire
-	    Grid usersGrid;
-
-	    @Override
+public class UsersController extends RefreshableComposer<Component>  {
+	private static final long serialVersionUID = 1L;
+	    
+	private EntityManager em = EMProvider.getEM();
+	
+	@Wire
+	private Component usersWindow;
+	
+	@Wire
+    private Grid usersGrid;
+	
+    @Override
 	public void doAfterCompose(Component comp) throws Exception {
 		super.doAfterCompose(comp);
-		
-		Query q = em.createQuery("select u from User u");
-		Collection<User> users = (Collection<User>)q.getResultList();
 
-		for (User u : users) {
-			Row row = new Row();
-			row.appendChild(new Label("" + u.getId()));
-			row.appendChild(new Label(u.getDisplayName()));
-			usersGrid.getRows().appendChild(row);
-		}
-	}
+		usersGrid.setRowRenderer(new UserRowRender());
+		usersGrid.setModel(new ListModelList<User>(getAllUsers()));
+	    }
 	    
 	@Listen("onClick = #createUserButton")
-	public void about() {
-		  Window window = (Window)Executions.createComponents(
-				  "/app/aedUser.zul", null, null);
-		  window.doModal();
-		
-//		em.getTransaction().begin();
-//		User user = new User();
-//		user.setDisplayName("Dave");
-//		user.setUserName("ddeucher");
-//		user.setHashedPassword("81dc9bdb52d04dc20036dbd8313ed055");
-//		
-//		em.persist(user);
-//		em.getTransaction().commit();
-//		em.flush();
-//		
-//System.out.println(user.getId());		
+	public void createUser() {
+		UserAEDController.showDialog(usersWindow, null);
+		usersGrid.setModel(new ListModelList<User>(getAllUsers()));
 	}
-	    
+
+	@SuppressWarnings("unchecked")
+	private Collection<User> getAllUsers() {
+		Query q = em.createQuery("select u from User u");
+		return (Collection<User>)q.getResultList();
+	}
+	
+	
+	public void onDeleteUser(Event event) {
+		final User user = (User)event.getTarget().getAttribute("user");
+		Messagebox.show("Delete user: " + user.getUserName() + "?", "Question", Messagebox.YES | Messagebox.NO, Messagebox.QUESTION, new EventListener<Event>() {
+			@Override
+			public void onEvent(Event event) throws Exception {
+				int result = ((Integer)event.getData()).intValue();
+				if (result == Messagebox.YES) {
+					em.getTransaction().begin();
+					try {
+						em.remove(user);
+					} finally {
+						em.getTransaction().commit();
+					}
+					RefreshableComposer.postRefreshEvent(usersWindow);
+				}
+			}
+		}); 
+	}
+
+	public void onEditUser(Event event) {
+		User user = (User)event.getTarget().getAttribute("user");
+		UserAEDController.showDialog(usersWindow, user);
+		usersGrid.setModel(new ListModelList<User>(getAllUsers()));
+	}
+	
+	protected void handleRefreshEvent(Event event) {
+		usersGrid.setModel(new ListModelList<User>(getAllUsers()));		
+	}
+
+	private class UserRowRender implements RowRenderer<User> {
+		@Override
+		public void render(Row row, User user, int whatIsThis) throws Exception {
+			row.appendChild(new Label(user.getUserName()));
+			row.appendChild(new Label(user.getDisplayName()));
+			Hlayout layout = new Hlayout();
+			
+			Button edit = new Button();
+			edit.setAttribute("user", user);
+			edit.setImage("/app/images/pencil-2x.png");
+			edit.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
+				public void onEvent(Event event) {
+					onEditUser(event);
+				}
+			});
+			layout.appendChild(edit);
+			
+			Button delete = new Button();
+			delete.setAttribute("user", user);
+			delete.setImage("/app/images/delete-2x.png");
+			delete.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
+				public void onEvent(Event event) {
+					onDeleteUser(event);
+				}
+			});
+			layout.appendChild(delete);
+			
+			row.appendChild(layout);
+		}
+	}
 }

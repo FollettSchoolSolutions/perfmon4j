@@ -1,17 +1,26 @@
-<?page title="new page title" contentType="text/html;charset=UTF-8"?>
+<?page title="Perfmon4j Console - Users" contentType="text/html;charset=UTF-8"?>
 <zk>
-<window border="none" apply="web.org.perfmon4j.console.app.UsersController">
-	<button id="createUserButton" label="Create User"/>
-	<grid id="usersGrid" >
-		<columns>
-			<column label="Key"/>
-			<column label="Value"/>
-		</columns>
-		<rows>
-			<row>	
-			</row>
-		</rows>
-	</grid>
-</window>
-
+	<div id="usersWindow" height="100%" width="100%" apply="web.org.perfmon4j.console.app.UsersController">
+		<borderlayout>
+			<north>
+				<include src="/app/header.zul"/>
+			</north>
+			<center>
+				<vlayout>
+					<button id="createUserButton" label="Create User"/>
+					<grid id="usersGrid" width="600px" height="400px">
+						<columns>
+							<column label="User Name"/>
+							<column label="Display Name"/>
+							<column label="Actions"/>
+						</columns>
+						<rows/>
+					</grid>
+				</vlayout>
+			</center>
+			<south>
+				<include src="/app/footer.zul"/>
+			</south>
+		</borderlayout>
+	</div>
 </zk>

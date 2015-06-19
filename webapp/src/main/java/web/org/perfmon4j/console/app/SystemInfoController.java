@@ -11,9 +11,6 @@ import org.zkoss.zul.Row;
 public class SystemInfoController  extends SelectorComposer<Component> {
 	   private static final long serialVersionUID = 1L;
 	     
-	   
-	   
-
 		@Wire
 	    Grid systemInfoGrid;
 
@@ -33,7 +30,5 @@ public class SystemInfoController  extends SelectorComposer<Component> {
 		
 		
 		systemInfoGrid.getRows().appendChild(row);
-		
-		
 	}
 }

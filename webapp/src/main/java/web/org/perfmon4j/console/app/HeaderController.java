@@ -8,19 +8,13 @@ import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zul.Menu;
-import org.zkoss.zul.Tab;
-import org.zkoss.zul.Tabbox;
-import org.zkoss.zul.Tabpanel;
 import org.zkoss.zul.Window;
 
 import web.org.perfmon4j.console.app.spring.security.Perfmon4jUserConsoleLoginService.Perfmon4jUser;
 
-public class MainWindowController extends SelectorComposer<Component> {
+public class HeaderController extends SelectorComposer<Component> {
 	private static final long serialVersionUID = -7098664190564412475L;
 
-	@Wire
-	private Tabbox mainTabbox;
-	
 	@Wire Menu currentUserMenu;
 	
 	
@@ -46,34 +40,13 @@ public class MainWindowController extends SelectorComposer<Component> {
 	
 	@Listen("onClick = #systemInfoMenuItem")
 	public void systemInfo() {
-		Tabpanel panel = new Tabpanel();
-	
-		Tab tab = new Tab("System Info");
-		tab.setClosable(true);
-		
-		
-		mainTabbox.getTabpanels().appendChild(panel);
-		mainTabbox.getTabs().appendChild(tab);
-		
-		Executions.createComponents("/app/systeminfo.zul", panel, null);
+		Executions.sendRedirect("/app/systeminfo.zul");
 	}
 
 	@Listen("onClick = #aedUsers")
 	public void aedUsers() {
-		Tabpanel panel = new Tabpanel();
-	
-		Tab tab = new Tab("Users");
-		tab.setClosable(true);
-		
-		
-		mainTabbox.getTabpanels().appendChild(panel);
-		mainTabbox.getTabs().appendChild(tab);
-		
-		Executions.createComponents("/app/users.zul", panel, null);
+		Executions.sendRedirect("/app/users.zul");
 	}
-
-	
-		
 	
 }
 

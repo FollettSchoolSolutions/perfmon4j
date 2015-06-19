@@ -12,7 +12,7 @@ import javax.persistence.Table;
 @Entity
 @Table(name = "Users")
 public class User {
-	private int id;
+	private Integer id;
 	private String displayName;
 	private String userName;
 	private String hashedPassword;
@@ -50,11 +50,11 @@ public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	@Column(nullable=false, unique=true)
-	public int getId() {
+	public Integer getId() {
 		return id;
 	}
 
-	public void setId(int id) {
+	public void setId(Integer id) {
 		this.id = id;
 	}
 }

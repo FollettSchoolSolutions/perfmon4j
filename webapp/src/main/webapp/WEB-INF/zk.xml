@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <zk>
 	<!-- [Optional]
 	Uncomment if you want to defines the application's name 
@@ -13,5 +12,9 @@
          <name>org.zkoss.theme.preferred</name>
          <value>silvertail</value>
     </library-property>	
+	
+	<listener>
+    	<listener-class>web.org.perfmon4j.console.app.Application</listener-class>
+	</listener>
 	
 </zk>
