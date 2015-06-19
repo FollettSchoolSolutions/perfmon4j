@@ -20,8 +20,11 @@
 */
 package web.org.perfmon4j.restdatasource.util;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.TimeZone;
 
 import junit.framework.TestCase;
 
@@ -293,8 +296,10 @@ public class DateTimeHelperTest extends TestCase {
 	private static final class TestDateTimeHelper extends DateTimeHelper {
 		@Override
 		long getCurrentTime() {
-			// 2015-04-16T18:15
-			return 1430090139911L;
+		    TimeZone timezone = TimeZone.getDefault();
+		    
+			// 2015-04-26T18:15:14.998 adjusted for daylight savings and machine timezone
+			return 1430072114998L - (timezone.getRawOffset() + timezone.getDSTSavings());
 		}
 	}
 
