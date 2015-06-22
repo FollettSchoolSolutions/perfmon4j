@@ -56,6 +56,10 @@ import org.perfmon4j.PerfMon;
 
 public class MiscHelper {
     static private final Logger logger = LoggerFactory.initLogger(MiscHelper.class);
+
+	public static final int hashCodeForCWD = buildHashCodeForCWD(); 
+	private static final String defaultSystemName = generateDefaultSystemName();
+    
     
     static private final String[] MEASUREMENT_UNITS_MILLISECOND = {"MS", "MILLI", "MILLIS", "MILLISECOND", "MILLISECONDS"};
     static private final String[] MEASUREMENT_UNITS_SECOND = {"S", "SEC", "SECS", "SECOND", "SECONDS"};
@@ -610,7 +614,6 @@ public class MiscHelper {
 		return result;
 	}
 
-	private static final String defaultSystemName = generateDefaultSystemName();
 
 	public static String getDefaultSystemName() {
 		return defaultSystemName;

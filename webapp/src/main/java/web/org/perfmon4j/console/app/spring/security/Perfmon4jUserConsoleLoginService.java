@@ -1,28 +1,77 @@
 package web.org.perfmon4j.console.app.spring.security;
 
 
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.codec.binary.Hex;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import web.org.perfmon4j.console.app.data.User;
+import web.org.perfmon4j.console.app.data.UserService;
+
+
+
 @Service
 public class Perfmon4jUserConsoleLoginService implements UserDetailsService {
-
+	
+	private final UserService userService = new UserService();
+	private @Autowired HttpServletRequest request;
+	
+	private static final String LOCAL_IP = "127.0.0.1";
+	private static final String LOCAL_IPV6 = "0:0:0:0:0:0:0:1";
+	
+	
 	@Override
-	public UserDetails loadUserByUsername(String username)
+	public UserDetails loadUserByUsername(String userName)
 			throws UsernameNotFoundException {
+
+		// In case all users were deleted... We will reinstall the default local host admin.
+		userService.initializeUsers();
 		
-		if ("admin".equalsIgnoreCase(username)) {
-			// password = 1234
-			return new Perfmon4jUser("Administrator", username, "81dc9bdb52d04dc20036dbd8313ed055", "ROLE_ADMIN");
+		User user = userService.findByUserName(userName);
+		if (user != null && UserService.ADMIN_USER_NAME.equals(user.getUserName())  
+				&& UserService.DEFAULT_ADMIN_PASSWORD_MD5.equals(user.getHashedPassword())) {
+			// Trying to login with the default admin user, and the password has not been 
+			// changed.  Only allow this login if the request is coming from local host.
+			if (!isClientOnLocalhost()) {
+				user = null;
+			}
+		}
+		
+		if (user != null) {
+			return new Perfmon4jUser(user.getId(), user.getDisplayName(), user.getUserName(), user.getHashedPassword(), "ROLE_ADMIN");
 		} else {
-			return null;
+			throw new UsernameNotFoundException("User not found");
+		}
+	}
+
+	private boolean isClientOnLocalhost() {
+		String clientAddr = request.getRemoteAddr();
+		return LOCAL_IP.equals(clientAddr) || LOCAL_IPV6.equals(clientAddr);
+		
+	}
+	
+	public static String generateMD5Hash(String str) {
+		try {
+			MessageDigest d = MessageDigest.getInstance("MD5");
+			d.update(str.getBytes("UTF-8"));
+			return Hex.encodeHexString(d.digest());
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException("UTF-8 not supported");
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException("Unable to create MD5 hash", e);
 		}
 	}
 	
@@ -31,10 +80,12 @@ public class Perfmon4jUserConsoleLoginService implements UserDetailsService {
 		private final String displayName;
 		private final String username;
 		private final String hashedPassword;
-		private final Set<GrantedAuthority> authorities = new HashSet<GrantedAuthority>(); 
+		private final Set<GrantedAuthority> authorities = new HashSet<GrantedAuthority>();
+		private final Integer userID;
 		
 
-		private Perfmon4jUser(String displayName, String username, String hashedPasswords, String... authorities) {
+		private Perfmon4jUser(Integer userID, String displayName, String username, String hashedPasswords, String... authorities) {
+			this.userID = userID;
 			this.displayName = displayName;
 			this.username = username;
 			this.hashedPassword = hashedPasswords;
@@ -80,6 +131,10 @@ public class Perfmon4jUserConsoleLoginService implements UserDetailsService {
 
 		public String getDisplayName() {
 			return displayName;
+		}
+
+		public Integer getUserID() {
+			return userID;
 		}
 	}
 	

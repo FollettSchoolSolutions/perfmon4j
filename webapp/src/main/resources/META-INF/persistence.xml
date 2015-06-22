@@ -8,7 +8,9 @@
 	<class>web.org.perfmon4j.console.app.data.User</class>
     <properties>
       <property name="javax.persistence.jdbc.driver" value="org.apache.derby.jdbc.EmbeddedDriver"/>
-      <property name="javax.persistence.jdbc.url" value="jdbc:derby:perfmon4jconsole;create=true"/>
+      
+      <!-- This URL will create a unique database for each java instance running perfmon4j (based on the application current working directory) --> 
+      <property name="javax.persistence.jdbc.url" value="jdbc:derby:${user.home}/.perfmon4j/console.db/${Perfmon4j.cwdHash};create=true"/>
       <property name="javax.persistence.jdbc.user" value="root"/>
       <property name="javax.persistence.jdbc.password" value="root"/>
       <property name="hibernate.hbm2ddl.auto" value="update"/>

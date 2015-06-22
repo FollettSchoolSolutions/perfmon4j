@@ -7,8 +7,10 @@
 			</north>
 			<center>
 				<vlayout>
+					<separator/>
 					<button id="createUserButton" label="Create User"/>
-					<grid id="usersGrid" width="600px" height="400px">
+					<separator/>
+					<grid id="usersGrid" width="600px" height="100%" mold="paging" pageSize="10">
 						<columns>
 							<column label="User Name"/>
 							<column label="Display Name"/>

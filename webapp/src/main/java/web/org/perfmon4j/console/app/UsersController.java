@@ -5,6 +5,7 @@ import java.util.Collection;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
@@ -22,6 +23,8 @@ import org.zkoss.zul.RowRenderer;
 
 import web.org.perfmon4j.console.app.data.EMProvider;
 import web.org.perfmon4j.console.app.data.User;
+import web.org.perfmon4j.console.app.data.UserService;
+import web.org.perfmon4j.console.app.spring.security.Perfmon4jUserConsoleLoginService.Perfmon4jUser;
 import web.org.perfmon4j.console.app.zk.RefreshableComposer;
 
 
@@ -52,7 +55,7 @@ public class UsersController extends RefreshableComposer<Component>  {
 
 	@SuppressWarnings("unchecked")
 	private Collection<User> getAllUsers() {
-		Query q = em.createQuery("select u from User u");
+		Query q = em.createQuery("select u from User u order by u.userName");
 		return (Collection<User>)q.getResultList();
 	}
 	
@@ -111,6 +114,18 @@ public class UsersController extends RefreshableComposer<Component>  {
 					onDeleteUser(event);
 				}
 			});
+			
+			
+			if (UserService.ADMIN_USER_NAME.equals(user.getUserName())) {
+				// Don't allow user to delete admin user.
+				delete.setDisabled(true);
+			} else {
+				// Don't allow the logged in user to delete themselves
+				Perfmon4jUser loggedInUser =  (Perfmon4jUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+				if (loggedInUser.getUserID().equals(user.getId())) {
+					delete.setDisabled(true);
+				}
+			}
 			layout.appendChild(delete);
 			
 			row.appendChild(layout);

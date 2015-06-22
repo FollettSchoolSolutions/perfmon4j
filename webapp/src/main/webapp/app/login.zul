@@ -4,18 +4,23 @@
     <zscript>
     	boolean hasError = Executions.getCurrent().getParameter("login_error") != null;
     </zscript>
-    
-    <grid>
-        <rows>
-           	<row visible="${hasError}" spans="2"><label width="100%" style="color: red;">Login failed</label></row>
-            <row>User: <textbox id="u" name="j_username"/></row>
-            <row>Password: <textbox id="p" type="password" name="j_password"/></row>
-            <row spans="2">
-                <hbox>
-                    <button type="reset" label="Reset" onClick='Executions.sendRedirect("./login.zul")'/>
-                    <button type="submit" label="Submit" />
-                </hbox>
-            </row>
-        </rows>
-    </grid>
+
+	<vlayout>
+		<separator/>    
+		Login to Perfmon4j System Console
+		<separator/>    
+	    <grid>
+	        <rows>
+	           	<row visible="${hasError}" spans="2"><label width="100%" style="color: red;">Login failed</label></row>
+	            <row>User: <textbox id="u" name="j_username"/></row>
+	            <row>Password: <textbox id="p" type="password" name="j_password"/></row>
+	            <row spans="2">
+	                <hbox>
+	                    <button type="reset" label="Reset" onClick='Executions.sendRedirect("./login.zul")'/>
+	                    <button type="submit" label="Submit" />
+	                </hbox>
+	            </row>
+	        </rows>
+	    </grid>
+    </vlayout>
 </html:form>

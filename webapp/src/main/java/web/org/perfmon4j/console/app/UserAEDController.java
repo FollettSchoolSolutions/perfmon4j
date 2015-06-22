@@ -16,13 +16,16 @@ import org.zkoss.zul.Window;
 
 import web.org.perfmon4j.console.app.data.EMProvider;
 import web.org.perfmon4j.console.app.data.User;
+import web.org.perfmon4j.console.app.data.UserService;
+import web.org.perfmon4j.console.app.spring.security.Perfmon4jUserConsoleLoginService;
 import web.org.perfmon4j.console.app.zk.RefreshableComposer;
 
 public class UserAEDController extends SelectorComposer<Component> {
 	private static final long serialVersionUID = -4455643804067121875L;
-	private static final String PASSWORD_UNMODIFIED =  "4455643804067121875";
+	private static final String PASSWORD_UNMODIFIED =  Long.toString(serialVersionUID);
 
 	private final EntityManager em = EMProvider.getEM();
+	private final UserService userService = new UserService();
 	private User user;
 
 	@Wire
@@ -51,6 +54,11 @@ public class UserAEDController extends SelectorComposer<Component> {
 			displayNameTextbox.setValue(user.getDisplayName());
 			passwordTextbox.setValue(PASSWORD_UNMODIFIED);
 			retypePasswordTextbox.setValue(PASSWORD_UNMODIFIED);
+			// For the admin user only password can be changed.
+			if (UserService.ADMIN_USER_NAME.equals(user.getUserName())) {
+				userNameTextbox.setDisabled(true);
+				displayNameTextbox.setDisabled(true);
+			}
 		} else {
 			user = new User();
 		}
@@ -63,9 +71,18 @@ public class UserAEDController extends SelectorComposer<Component> {
 			try {
 				user.setDisplayName(getDisplayName());
 				if (user.getId() == null || !getPassword().equals(PASSWORD_UNMODIFIED)) {
-					user.setHashedPassword(getPassword()); // Must create MD5
+					user.setHashedPassword(Perfmon4jUserConsoleLoginService.generateMD5Hash(getPassword()));
 				}
 				user.setUserName(getUserName());
+				if (UserService.ADMIN_USER_NAME.equals(user.getUserName())) {
+					if (UserService.DEFAULT_ADMIN_PASSWORD_MD5.equals(user.getHashedPassword())) {
+						// Admin user is using the default password... Access is only allowed
+						// from localhost.
+						user.setDisplayName(UserService.ADMIN_LOCALHOST_DISPLAY_NAME);
+					} else {
+						user.setDisplayName(UserService.ADMIN_DISPLAY_NAME);
+					}
+				}
 				em.persist(user);
 			} finally {
 				em.getTransaction().commit();
@@ -95,7 +112,10 @@ public class UserAEDController extends SelectorComposer<Component> {
 	private boolean validate() {
 		boolean result = false;
 
-		if ("".equals(getUserName())) {
+		String userName = getUserName();
+		
+		
+		if ("".equals(userName)) {
 			setError("You must supply a username");
 		} else if ("".equals(getDisplayName())) {
 			setError("You must supply a display name");
@@ -103,9 +123,15 @@ public class UserAEDController extends SelectorComposer<Component> {
 			setError("You must supply a password");
 		} else if (!getPassword().equals(getRetypePassword())) {
 			setError("Passwords must match");
-		} else {
-			result = true;
-		}
+		} else  {
+			// Check to see that we are not creating a duplicate an existing user...
+			User matchingUser = userService.findByUserName(userName);
+			if (matchingUser != null && !matchingUser.getId().equals(user.getId())) {
+				setError("Duplicate userName found");
+			} else {
+				result = true;
+			}
+		} 
 
 		return result;
 	}
