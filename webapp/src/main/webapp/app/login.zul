@@ -7,11 +7,10 @@
 
 	<vlayout>
 		<separator/>    
-		Login to Perfmon4j System Console
-		<separator/>    
+		<html:h2>Login to Perfmon4j System Console</html:h2>
 	    <grid>
 	        <rows>
-	           	<row visible="${hasError}" spans="2"><label width="100%" style="color: red;">Login failed</label></row>
+	           	<row visible="${hasError}" spans="2"><html:h3 style="color: red;">Login failed</html:h3></row>
 	            <row>User: <textbox id="u" name="j_username"/></row>
 	            <row>Password: <textbox id="p" type="password" name="j_password"/></row>
 	            <row spans="2">
