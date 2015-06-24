@@ -26,7 +26,7 @@ import java.util.Properties;
 
 public class RegisteredDatabaseConnectionsTest extends SQLTest {
 	private final static String JDBC_APPENDER_CLASS_NAME = JDBCSQLAppender.class.getName();
-	
+	private final static String POOLED_SQL_APPENDER_CLASS_NAME = PooledSQLAppender.class.getName();
 	
 	public RegisteredDatabaseConnectionsTest(String name) {
 		super(name);
@@ -43,7 +43,7 @@ public class RegisteredDatabaseConnectionsTest extends SQLTest {
 	}
 	
 	public void testAddRemoveJDBCDatabase() throws Exception {
-		RegisteredDatabaseConnections.addJDBCDatabase("First", false, SQLTest.DRIVER_CLASS, null, SQLTest.JDBC_URL, SQLTest.SCHEMA_NAME, null, null);
+		RegisteredDatabaseConnections.addDatabase("First", false, SQLTest.DRIVER_CLASS, null, SQLTest.JDBC_URL, SQLTest.SCHEMA_NAME, null, null, null, null, null);
 		
 		assertNotNull(RegisteredDatabaseConnections.getDefaultDatabase());
 		
@@ -73,6 +73,27 @@ public class RegisteredDatabaseConnectionsTest extends SQLTest {
 
 		assertNull("Should not have registered database", RegisteredDatabaseConnections.getDatabaseByName("production"));
 	}
+
+//	
+//	Figure out what to do with this test...  It needs an active jndiBased dataSource in order to pass.
+//	public void testConfigureAddDatabasePool() throws Exception {
+//		PerfMonConfiguration config = new PerfMonConfiguration();
+//
+//		Properties attributes = new Properties();
+//    	attributes.setProperty("poolName", "productionDS");
+//    	
+//		config.defineAppender("production", POOLED_SQL_APPENDER_CLASS_NAME, "1 minute", attributes);
+//		
+//		RegisteredDatabaseConnections.config(config);
+//		
+//		assertNotNull("Should have registered database", RegisteredDatabaseConnections.getDatabaseByName("production"));
+//		
+//		config = new PerfMonConfiguration();
+//		RegisteredDatabaseConnections.config(config);
+//
+//		assertNull("Should not have registered database", RegisteredDatabaseConnections.getDatabaseByName("production"));
+//	}
+//	
 	
 	public void testReplaceDatabase() throws Exception {
 		PerfMonConfiguration config = new PerfMonConfiguration();

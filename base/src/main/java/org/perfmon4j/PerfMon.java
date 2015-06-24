@@ -64,6 +64,8 @@ public class PerfMon {
     public static final int MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS = 
     	Integer.getInteger(PerfMon.class.getName() + ".MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS", 2500).intValue();
     
+    
+    
     public static final String ROOT_MONITOR_NAME;
     private final String name;
 
@@ -94,13 +96,28 @@ public class PerfMon {
     // monitor even if the children are specified as a dynamic path.
     private final Map<Object, String> forceDynamicPathWeakMap = Collections.synchronizedMap(new WeakHashMap<Object, String>());
   
+    // Meta system properties that are set regarding perfmon4j.
+    public static final String PERFMON4J_VERSION = "Perfmon4j.version";
+    public static final String PERFMON4J_COPYRIGHT = "Perfmon4j.copyright";
+    public static final String PERFMON4J_CWD_HASH = "Perfmon4j.cwdHash";  // This is a unique hash within a single system.
+    
+    
     static {
         // Order of these is important....
         nextMonitorID = 0;
         ROOT_MONITOR_NAME = "<ROOT>";
         rootMonitor = new PerfMon(null, ROOT_MONITOR_NAME);
+        
+        String version = PerfMon.class.getPackage().getImplementationVersion();
+        if (version == null) {
+            // In production the package implementation version will always exists
+			// However in test it will not, since tests are not running off a bundled JAR.
+        	version = "NA(Running in test)";
+        }
+        System.setProperty(PERFMON4J_VERSION,  version);
+        System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
+        System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015 Follett School Solutions, Inc");
     }
-    
     
     private final List<Appender> appenderList = Collections.synchronizedList(new ArrayList<Appender>());
     private final Map<Appender, String> appenderPatternMap = Collections.synchronizedMap(new HashMap<Appender, String>());

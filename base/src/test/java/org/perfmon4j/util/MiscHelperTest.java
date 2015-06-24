@@ -363,8 +363,7 @@ public class MiscHelperTest extends TestCase {
 		
 		assertMatches(false, "myobject:a=*,c=*", "myobject:a=b,c=d,d=f");
 	}
-	
-	
+
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

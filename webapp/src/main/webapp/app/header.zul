@@ -1,0 +1,35 @@
+<?page title="Header" contentType="text/html;charset=UTF-8"?>
+<zk>
+	<div height="115px" style='background-color: #616161;' apply="web.org.perfmon4j.console.app.HeaderController">
+       	<borderlayout height="100%" style='background-color: transparent;'>
+       		<north style='background-color: transparent;' border='none'>
+       			<image height='85px' src="/app/images/perfmon4jFULL.png" onClick='Executions.sendRedirect("/app/index.zul")'/>
+       		</north>	
+       		<south> 
+       			<menubar>
+					<menu label="Info">
+               			<menupopup>
+                   			<menuitem  id="systemInfoMenuItem" label="System Info" />
+               			</menupopup>
+           			</menu>       				
+					<menu label="Config">
+               			<menupopup>
+                   			<menuitem id="aedUsers" label="Users" />
+                   			<menuitem id="configureDataSources" label="Configure Data Sources" />
+               			</menupopup>
+           			</menu>       				
+					<menu label="Help">
+               			<menupopup>
+                   			<menuitem id="aboutMenuItem" label="About.." />
+               			</menupopup>
+           			</menu>
+					<menu id="currentUserMenu" style="float : right !important">
+               			<menupopup>
+                   			<menuitem id="logoutMenuItem" label="Logout.." />
+               			</menupopup>
+           			</menu>       				
+       			</menubar>
+       		</south>
+     	</borderlayout>	
+	</div>
+</zk>

@@ -30,8 +30,8 @@ public class JVMDataProviderTest extends TestCase {
 		}
 		
 		databaseSetup.setUpDatabase();
-		RegisteredDatabaseConnections.addJDBCDatabase(DATABASE_NAME, true, BaseDatabaseSetup.JDBC_DRIVER, 
-				null, BaseDatabaseSetup.JDBC_URL, null, null, null);
+		RegisteredDatabaseConnections.addDatabase(DATABASE_NAME, true, BaseDatabaseSetup.JDBC_DRIVER, 
+				null, BaseDatabaseSetup.JDBC_URL, null, null, null, null, null, null);
 		conn = databaseSetup.getConnection();
 		database = RegisteredDatabaseConnections.getDatabaseByName(DATABASE_NAME);
 	}

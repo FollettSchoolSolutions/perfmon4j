@@ -40,6 +40,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
+
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.util.vo.ResponseInfo;
 import org.perfmon4j.util.vo.ResponseInfoImpl;
@@ -438,5 +443,25 @@ public class JDBCHelper {
     		JDBCHelper.closeNoThrow(stmt);
     	}
     	return result;
+    }
+    
+    public static DataSource lookupDataSource(String poolName, String contextFactory, String urlPkgs) throws SQLException {
+    	DataSource result = null;
+    	
+		try {
+            Properties props = new Properties();
+            if (contextFactory != null) {
+            	props.put(Context.INITIAL_CONTEXT_FACTORY, contextFactory);
+            }
+            if (urlPkgs != null) {
+            	props.put("java.naming.factory.url.pkgs", urlPkgs);
+            }
+            InitialContext initialContext = new InitialContext(props);
+			result = (DataSource)initialContext.lookup(poolName);
+		} catch (NamingException e) {
+			throw new SQLException("Unabled find datasource: " + poolName + ": " + e.getMessage());
+		} 
+		
+		return result;
     }
 }

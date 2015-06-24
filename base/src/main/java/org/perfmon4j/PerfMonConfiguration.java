@@ -68,7 +68,21 @@ public class PerfMonConfiguration {
     public void defineAppender(String name, String className, 
         String interval, Properties attributes) {
         if (appenderMap.get(name) == null) {
-            appenderMap.put(name, AppenderID.getAppenderID(className, convertIntervalStringToMillis(interval), attributes));
+        	AppenderID id = AppenderID.getAppenderID(className, convertIntervalStringToMillis(interval), attributes);
+        	boolean isAvailable = true;
+        	if (PooledSQLAppender.class.getName().equals(className)) {
+        		isAvailable = PooledSQLAppender.testIfDataSourceIsAvailable(attributes);
+        		if (!isAvailable) {
+        			String dataSourceName = attributes.getProperty("poolName");
+        			if (dataSourceName == null) {
+        				dataSourceName = "Unknown Datasource";
+        			}
+        			classNotFoundInfo.add("PooledSQLAppender (jndiDataSource): " + dataSourceName);
+        		}
+        	}
+        	if (isAvailable) {
+        		appenderMap.put(name, id);
+        	}
         }
     }
 
