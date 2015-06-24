@@ -70,8 +70,8 @@ public class DataSourceRestImplTest extends TestCase {
 		
 		databaseSetup.addCategory("WebRequest");
 		databaseSetup.addCategory("WebRequest.search");
-		RegisteredDatabaseConnections.addJDBCDatabase(DATABASE_NAME, true, BaseDatabaseSetup.JDBC_DRIVER, 
-				null, BaseDatabaseSetup.JDBC_URL, null, null, null);
+		RegisteredDatabaseConnections.addDatabase(DATABASE_NAME, true, BaseDatabaseSetup.JDBC_DRIVER, 
+				null, BaseDatabaseSetup.JDBC_URL, null, null, null, null, null, null);
 	}
 
 	protected void tearDownDatabase() throws Exception {

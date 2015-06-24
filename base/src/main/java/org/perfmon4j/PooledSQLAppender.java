@@ -4,9 +4,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import org.perfmon4j.util.JDBCHelper;
@@ -32,19 +29,7 @@ public class PooledSQLAppender extends SQLAppender {
     		if (poolName == null) {
     			throw new SQLException("poolName must not be NULL");
     		}
-    		try {
-                Properties props = new Properties();
-                if (contextFactory != null) {
-                	props.put(Context.INITIAL_CONTEXT_FACTORY, contextFactory);
-                }
-                if (urlPkgs != null) {
-                	props.put("java.naming.factory.url.pkgs", urlPkgs);
-                }
-                InitialContext initialContext = new InitialContext(props);
-				dataSource = (DataSource)initialContext.lookup(poolName);
-			} catch (NamingException e) {
-				throw new SQLException("Unabled find datasource: " + poolName + ": " + e.getMessage());
-			} 
+    		dataSource = JDBCHelper.lookupDataSource(poolName, contextFactory, urlPkgs);
     	}
     	result = dataSource.getConnection();
     	
@@ -84,4 +69,19 @@ public class PooledSQLAppender extends SQLAppender {
 	public void setUrlPkgs(String urlPkgs) {
 		this.urlPkgs = urlPkgs;
 	}
+	
+	public static boolean testIfDataSourceIsAvailable(Properties props) {
+		boolean result = false;
+		
+		try {
+			JDBCHelper.lookupDataSource(props.getProperty("poolName"), props.getProperty("contextFactory"), 
+					props.getProperty("urlPkgs"));
+			result = true;
+		} catch (SQLException e) {
+			// Ignore... We will just assume datasource is not available.
+		}
+		
+		return result;
+	}
+	
 }

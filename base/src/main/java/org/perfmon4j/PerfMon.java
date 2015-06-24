@@ -108,7 +108,13 @@ public class PerfMon {
         ROOT_MONITOR_NAME = "<ROOT>";
         rootMonitor = new PerfMon(null, ROOT_MONITOR_NAME);
         
-        System.setProperty(PERFMON4J_VERSION, PerfMon.class.getPackage().getImplementationVersion());
+        String version = PerfMon.class.getPackage().getImplementationVersion();
+        if (version == null) {
+            // In production the package implementation version will always exists
+			// However in test it will not, since tests are not running off a bundled JAR.
+        	version = "NA(Running in test)";
+        }
+        System.setProperty(PERFMON4J_VERSION,  version);
         System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
         System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015 Follett School Solutions, Inc");
     }

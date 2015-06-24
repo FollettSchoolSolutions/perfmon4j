@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import javax.sql.DataSource;
+
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
@@ -41,16 +43,22 @@ public final class RegisteredDatabaseConnections {
 	private static Database defaultDatabase = null;
 	
 	private static final String DB_SCHEMA = "dbSchema";
-	private static String DRIVER_PATH = "driverPath";
-	private static String DRIVER_CLASS = "driverClass"; 
-	private static String JDBC_URL = "jdbcURL";
-	private static String USER_NAME = "userName";
-	private static String PASSWORD = "password";
+	private static final String DRIVER_PATH = "driverPath";
+	private static final String DRIVER_CLASS = "driverClass"; 
+	private static final String JDBC_URL = "jdbcURL";
+	private static final String USER_NAME = "userName";
+	private static final String PASSWORD = "password";
+	private static final String POOL_NAME = "poolName"; 
+	private static final String CONTEXT_FACTORY = "contextFactory";
+	private static final String URL_PKGS = "urlPkgs";
+	
 	
 	static boolean mockIdentityAndVersionForTest = false;
 	
-	private static String buildSignature(String dbSchema, String driverPath, String driverClass, String jdbcURL, String userName, String password) {
-		return dbSchema + "|" + driverPath + "|" + driverClass + "|" + jdbcURL + "|" + userName + "|" + password;
+	private static String buildSignature(String dbSchema, String driverPath, String driverClass, String jdbcURL, String userName, 
+			String password, String poolName, String contextFactory, String urlPkgs) {
+		return dbSchema + "|" + driverPath + "|" + driverClass + "|" + jdbcURL + "|" + userName + "|" + password + "|" + poolName 
+				+ "|" + contextFactory + "|" + urlPkgs;
 	}
 
 	
@@ -60,18 +68,26 @@ public final class RegisteredDatabaseConnections {
 		for (Map.Entry<String, Properties> entry : configDBs.entrySet()) {
 			String name = entry.getKey();
 			Properties props = entry.getValue();
-			
+
+			// General SQLAppender Properties
 			String dbSchema = props.getProperty(DB_SCHEMA);
+			String userName = props.getProperty(USER_NAME);
+			String password = props.getProperty(PASSWORD);
+
+			// JDBC Appender Properties
 			String driverPath = props.getProperty(DRIVER_PATH); 
 			String driverClass = props.getProperty(DRIVER_CLASS);
 			String jdbcURL = props.getProperty(JDBC_URL);
-			String userName = props.getProperty(USER_NAME);
-			String password = props.getProperty(PASSWORD);
+			
+			// Pooled Properties
+			String poolName = props.getProperty(POOL_NAME);
+			String contextFactory = props.getProperty(CONTEXT_FACTORY);
+			String urlPkgs = props.getProperty(URL_PKGS);						
 			
 			boolean addDatabase = true;
 			Database db = getDatabaseByName(name);
 			if (db != null) {
-				String newSignature = buildSignature(dbSchema, driverPath, driverClass, jdbcURL, userName, password);
+				String newSignature = buildSignature(dbSchema, driverPath, driverClass, jdbcURL, userName, password, poolName, contextFactory, urlPkgs);
 				if (newSignature.equals(db.getSignature())) {
 					addDatabase = false;
 				} else {
@@ -80,7 +96,8 @@ public final class RegisteredDatabaseConnections {
 			}
 			if (addDatabase) {
 				try {
-					RegisteredDatabaseConnections.addJDBCDatabase(name, false, driverClass, driverPath, jdbcURL, dbSchema, userName, password);
+					RegisteredDatabaseConnections.addDatabase(name, false, driverClass, driverPath, jdbcURL, dbSchema, userName, 
+							password, poolName, contextFactory, urlPkgs);
 				} catch (InvalidConfigException e) {
 					logger.logWarn("Error registering database: " + name, e);
 				}
@@ -103,6 +120,8 @@ public final class RegisteredDatabaseConnections {
 			
 			if (id.getClassName().equals(JDBCSQLAppender.class.getName())) {
 				result.put(name, id.getAttributes());
+			} else if (id.getClassName().equals(PooledSQLAppender.class.getName())) {
+				result.put(name, id.getAttributes());
 			}
 		}
 		
@@ -110,36 +129,51 @@ public final class RegisteredDatabaseConnections {
 	}
 	
 	
-	static public void addJDBCDatabase(String name, boolean isDefault, String driverClassName, String jarFileName,
-	    String jdbcURL, String schema, String userName, String password) throws InvalidConfigException {
-		
+	static public void addDatabase(String name, boolean isDefault, String driverClassName, String jarFileName,
+	    String jdbcURL, String schema, String userName, String password, String poolName, String contextFactory, String urlPkgs) throws InvalidConfigException {
 		Connection conn = null;
+		
 		try {
 			String databaseIdentity;
 			double databaseVersion;
 
+			Database database = null;
 			if (mockIdentityAndVersionForTest) {
 				databaseIdentity = Long.toString(System.nanoTime());
 				databaseVersion = 1.0;
+				JDBCDatabase jdbcDatabase;
+				database = jdbcDatabase = new JDBCDatabase();
+				jdbcDatabase.setDriverClassName(driverClassName);
+				jdbcDatabase.setJarFileName(jarFileName);
+				jdbcDatabase.setJdbcURL(jdbcURL);
 			} else {
-				conn = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, jarFileName, jdbcURL, userName, password);
+				if (jdbcURL != null) {
+					JDBCDatabase jdbcDatabase;
+					conn = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, jarFileName, jdbcURL, userName, password);
+					database = jdbcDatabase = new JDBCDatabase();
+					jdbcDatabase.setDriverClassName(driverClassName);
+					jdbcDatabase.setJarFileName(jarFileName);
+					jdbcDatabase.setJdbcURL(jdbcURL);
+				} else {
+					PooledDatabase pooledDatabase;
+					DataSource dataSource = JDBCHelper.lookupDataSource(poolName, contextFactory, urlPkgs);
+					conn = dataSource.getConnection();
+					database = pooledDatabase = new PooledDatabase(dataSource);
+					pooledDatabase.setPoolName(poolName);
+					pooledDatabase.setContextFactory(contextFactory);
+					pooledDatabase.setUrlPkgs(urlPkgs);
+				}
 				databaseIdentity = JDBCHelper.getDatabaseIdentity(conn, schema);
 				databaseVersion = JDBCHelper.getDatabaseVersion(conn, schema);
 			}
 
-			Database database = new JDBCDatabase();
 			database.setDefault(isDefault);
 			database.setId(databaseIdentity);
 			database.setName(name);
 			database.setSchema(schema);
 			database.setDatabaseVersion(databaseVersion);
-			
-			JDBCDatabase jdbcDatabase = (JDBCDatabase)database;
-			jdbcDatabase.setDriverClassName(driverClassName);
-			jdbcDatabase.setJarFileName(jarFileName);
-			jdbcDatabase.setJdbcURL(jdbcURL);
-			jdbcDatabase.setUserName(userName);
-			jdbcDatabase.setPassword(password);
+			database.setUserName(userName);
+			database.setPassword(password);
 			
 			synchronized (lockToken) {
 				if (getDatabaseByName(name) != null) {
@@ -235,6 +269,8 @@ public final class RegisteredDatabaseConnections {
 		private String id = null;
 		private String name = null;
 		private String schema = null;
+	    private String userName; 
+	    private String password;		
 		private double databaseVersion = 0.0;
 		
 		public abstract Connection openConnection() throws SQLException ; 
@@ -259,6 +295,27 @@ public final class RegisteredDatabaseConnections {
 		public double getDatabaseVersion() {
 			return databaseVersion;
 		}
+		
+
+		public String getUserName() {
+			return userName;
+		}
+
+
+		public void setUserName(String userName) {
+			this.userName = userName;
+		}
+
+
+		public String getPassword() {
+			return password;
+		}
+
+
+		public void setPassword(String password) {
+			this.password = password;
+		}
+
 
 		private void setDefault(boolean defaultDatabase) {
 			this.defaultDatabase = defaultDatabase;
@@ -288,12 +345,10 @@ public final class RegisteredDatabaseConnections {
 		private String driverClassName;
 		private String jarFileName;
 	    private String jdbcURL; 
-	    private String userName; 
-	    private String password;
-	    
+
 		@Override
 		public Connection openConnection() throws SQLException {
-			return JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, jarFileName, jdbcURL, userName, password);
+			return JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, jarFileName, jdbcURL, getUserName(), getPassword());
 		}
 
 		private void setDriverClassName(String driverClassName) {
@@ -308,17 +363,44 @@ public final class RegisteredDatabaseConnections {
 			this.jdbcURL = jdbcURL;
 		}
 
-		private void setUserName(String userName) {
-			this.userName = userName;
+		@Override
+		String getSignature() {
+			return buildSignature(this.getSchema(), jarFileName, driverClassName, jdbcURL, getUserName(), getPassword(), null, null, null);
+		}
+	}
+
+	private static class PooledDatabase extends Database {
+		private final DataSource dataSource;
+		private String poolName = null;
+		private String contextFactory = null;
+		private String urlPkgs = null;
+		
+		public PooledDatabase(DataSource dataSource) {
+			this.dataSource = dataSource;
+		}
+		
+		@Override
+		public Connection openConnection() throws SQLException {
+			return dataSource.getConnection();
+		}
+		
+		public void setPoolName(String poolName) {
+			this.poolName = poolName;
 		}
 
-		private void setPassword(String password) {
-			this.password = password;
+		public void setContextFactory(String contextFactory) {
+			this.contextFactory = contextFactory;
+		}
+
+		public void setUrlPkgs(String urlPkgs) {
+			this.urlPkgs = urlPkgs;
 		}
 
 		@Override
 		String getSignature() {
-			return buildSignature(this.getSchema(), jarFileName, driverClassName, jdbcURL, userName, password);
+			return buildSignature(this.getSchema(), null, null, null, getUserName(), getPassword(), poolName, contextFactory, urlPkgs);
 		}
 	}
+
+
 }
