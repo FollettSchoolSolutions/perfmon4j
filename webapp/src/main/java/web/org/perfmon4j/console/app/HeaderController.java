@@ -38,6 +38,13 @@ public class HeaderController extends SelectorComposer<Component> {
 		Executions.sendRedirect("../j_spring_security_logout");
 	}
 	
+	@Listen("onClick = #configureDataSources")
+	public void configureDataSources() {
+		Executions.sendRedirect("/app/datasources.zul");
+	}
+
+	
+	
 	@Listen("onClick = #systemInfoMenuItem")
 	public void systemInfo() {
 		Executions.sendRedirect("/app/systeminfo.zul");

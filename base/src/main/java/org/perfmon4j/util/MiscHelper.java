@@ -30,6 +30,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -646,4 +647,30 @@ public class MiscHelper {
 		}
 		return Math.abs(result);
 	}
+	
+	private final static String OAUTH_CHARS = "BCDFGHJKLMNPRSTVWXYZ";
+	private final static SecureRandom random = new SecureRandom();
+	
+	private static char nextChar() {
+		int offset = random.nextInt(OAUTH_CHARS.length());
+		return OAUTH_CHARS.charAt(offset);
+	}
+	
+	public static String generateOauthKey() {
+		StringBuilder builder = new StringBuilder();
+		
+		for (int j = 0; j < 2; j++) {
+			for(int i = 0; i < 4; i++) {
+				builder.append(nextChar());
+			}
+			if (j == 0) {
+				builder.append('-');
+			}
+		}
+		return builder.toString();
+	}	
+
+	public static String generateOauthSecret() {
+		return generateOauthKey() + "-" + generateOauthKey();
+	}	
 } 

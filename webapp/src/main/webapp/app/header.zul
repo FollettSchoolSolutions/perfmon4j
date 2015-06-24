@@ -15,7 +15,7 @@
 					<menu label="Config">
                			<menupopup>
                    			<menuitem id="aedUsers" label="Users" />
-                   			<menuitem id="configRestDataSource" label="Rest DataSource" />
+                   			<menuitem id="configureDataSources" label="Configure Data Sources" />
                			</menupopup>
            			</menu>       				
 					<menu label="Help">
@@ -23,7 +23,7 @@
                    			<menuitem id="aboutMenuItem" label="About.." />
                			</menupopup>
            			</menu>
-					<menu id="currentUserMenu">
+					<menu id="currentUserMenu" style="float : right !important">
                			<menupopup>
                    			<menuitem id="logoutMenuItem" label="Logout.." />
                			</menupopup>

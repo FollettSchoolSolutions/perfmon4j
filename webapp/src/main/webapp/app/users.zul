@@ -1,13 +1,13 @@
 <?page title="Perfmon4j Console - Users" contentType="text/html;charset=UTF-8"?>
-<zk>
+<zk xmlns:html="native">
 	<div id="usersWindow" height="100%" width="100%" apply="web.org.perfmon4j.console.app.UsersController">
 		<borderlayout>
 			<north>
 				<include src="/app/header.zul"/>
 			</north>
 			<center>
-				<vlayout>
-					<separator/>
+				<vlayout hflex="1" vflex="1" style="overflow-y: auto !important; overflow-x: auto !important;">
+					<html:h2>Add/Edit Users</html:h2>
 					<button id="createUserButton" label="Create User"/>
 					<separator/>
 					<grid id="usersGrid" width="600px" height="100%" mold="paging" pageSize="10">
