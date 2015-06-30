@@ -9,6 +9,16 @@
 		<param-name>resteasy.servlet.mapping.prefix</param-name>
 		<param-value>/rest</param-value>
 	</context-param>	
+	
+	<context-param>
+	      <param-name>resteasy.providers</param-name>
+	      <param-value>web.org.perfmon4j.restdatasource.DataSourceSecurityInterceptor</param-value>
+	</context-param>	
+	
+	<context-param>
+	      <param-name>resteasy.providers</param-name>
+	      <param-value>web.org.perfmon4j.restdatasource.DefaultExceptionMapper</param-value>
+	</context-param>	
 
 	<filter>
 		<filter-name>CORS</filter-name>
@@ -158,55 +168,4 @@
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>
-
-<!-- !!NEVER DEPLOY INTO A PRODUCTION SYSTEM WITHOUT CONFIGURING A SECURITY CONSTRAINT!! 
--->
-<!--  
-	<security-constraint>
-   		<web-resource-collection>
-			<web-resource-name>Perfmon4jSystemConsole</web-resource-name>
-			<description>Restrict access to the Perfmon4j System Console</description>
-			<url-pattern>/zkau/*</url-pattern>
-			<url-pattern>/app/*</url-pattern> 
-		</web-resource-collection>
-		<auth-constraint>
-			<role-name>Perfmon4jAdmin</role-name>
-		</auth-constraint>
-	</security-constraint>
--->	
-<!-- 
-	Example of a Apache tomcat authentication realm.
- -->
-<!--   
-	<login-config>
-    	<auth-method>BASIC</auth-method>
-      	<realm-name>UserDatabaseRealm</realm-name>
-	</login-config>
-
-	<security-role>
-		<role-name>Perfmon4jAdmin</role-name>
-	</security-role>	
--->
-
-
-<!-- 
-	Example of a JBoss 7 authentication realm.
-	
-	To use this realm you need to add a user to the jboss ApplicationRealm
-	Do this by running the jboss/bin/add-user.sh or (.bat) file.
-	When prompted enter:
-		ApplicationRealm - For realm type 
-		Perfmon4jAdmin - For one of the users roles
- -->
-<!--	
-	<login-config>
-    	<auth-method>BASIC</auth-method>
-      	<realm-name>ApplicationRealm</realm-name>
-	</login-config>
-
-	<security-role>
-		<role-name>Perfmon4jAdmin</role-name>
-	</security-role>	
--->
-
 </web-app>

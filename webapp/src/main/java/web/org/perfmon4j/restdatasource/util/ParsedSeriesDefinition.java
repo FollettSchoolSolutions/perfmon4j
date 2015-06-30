@@ -24,7 +24,7 @@ package web.org.perfmon4j.restdatasource.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jboss.resteasy.spi.BadRequestException;
+import javax.ws.rs.BadRequestException;
 
 import web.org.perfmon4j.restdatasource.DataSourceRestImpl;
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;

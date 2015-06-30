@@ -23,6 +23,7 @@ package web.org.perfmon4j.restdatasource;
 
 
 import java.net.URISyntaxException;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -33,6 +34,7 @@ import org.jboss.resteasy.mock.MockDispatcherFactory;
 import org.jboss.resteasy.mock.MockHttpRequest;
 import org.jboss.resteasy.mock.MockHttpResponse;
 import org.jboss.resteasy.plugins.server.resourcefactory.POJOResourceFactory;
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.util.JDBCHelper;
 
@@ -52,6 +54,8 @@ public class DataSourceRestImplTest extends TestCase {
 	private final ObjectMapper mapper;
 	private final BaseDatabaseSetup databaseSetup = new BaseDatabaseSetup();
 	private final DateTimeHelper helper = new DateTimeHelper();
+	private static String DATABASE_NAME = "Production";
+	private DataSourceSecurityInterceptor.SecuritySettings restoreSettings = null;
 	
 	public DataSourceRestImplTest(String name) {
 		super(name);
@@ -59,13 +63,28 @@ public class DataSourceRestImplTest extends TestCase {
 		dispatcher = MockDispatcherFactory.createDispatcher();
 
 		POJOResourceFactory noDefaults = new POJOResourceFactory(DataSourceRestImpl.class);
+		
 		dispatcher.getRegistry().addResourceFactory(noDefaults);
+		dispatcher.getProviderFactory().registerProvider(DataSourceSecurityInterceptor.class);
+		dispatcher.getProviderFactory().registerProvider(DefaultExceptionMapper.class);
+		
+		ResteasyProviderFactory.pushContext(DataSourceSecurityInterceptor.class, new DataSourceSecurityInterceptor());
+		
+		
 		mapper = new ObjectMapper();
 
 	}
 	
-	private static String DATABASE_NAME = "Production";
-
+	public void setUp() throws Exception {
+		super.setUp();
+		restoreSettings = DataSourceSecurityInterceptor.setSecuritySettings(new MockSecuritySettings(true, true, null));
+	}
+	
+	public void tearDown() throws Exception {
+		DataSourceSecurityInterceptor.setSecuritySettings(restoreSettings);
+		super.tearDown();
+	}
+	
 	void setUpDatabase() throws Exception {
 		databaseSetup.setUpDatabase();
 		
@@ -154,6 +173,33 @@ public class DataSourceRestImplTest extends TestCase {
 			tearDownDatabase();
 		}
 	}
+
+	public void testGetSystemsWithNullSecuritySettings() throws Exception {
+		DataSourceSecurityInterceptor.setSecuritySettings(null);
+
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Not authorized", 401, response.getStatus());
+	}
+
+	
+	public void testGetSystemsWithDisabledSecuritySettings() throws Exception {
+		MockSecuritySettings disabled = new MockSecuritySettings(false, false, null);
+
+		DataSourceSecurityInterceptor.setSecuritySettings(disabled);
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Not authorized", 401, response.getStatus());
+	}
+	
+
+	public void testGetSystemsWithAnonymousDisabledSecuritySettings() throws Exception {
+		MockSecuritySettings disabled = new MockSecuritySettings(true, false, null);
+
+		DataSourceSecurityInterceptor.setSecuritySettings(disabled);
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Not authorized", 401, response.getStatus());
+	}
+
+	
 	
 	public void testGetCategories() throws Exception {
 		setUpDatabase();
@@ -469,10 +515,9 @@ public class DataSourceRestImplTest extends TestCase {
         MockHttpResponse response = new MockHttpResponse();
 
         dispatcher.invoke(request, response);
-//        if (response.getStatus() != 200) {
-//        	System.err.println(response.getErrorMessage());
-//        }
-        
+        if (response.getStatus() != 200) {
+        	System.err.println(response.getContentAsString());
+        }
         
         return response;
 	}
@@ -490,9 +535,9 @@ public class DataSourceRestImplTest extends TestCase {
         MockHttpResponse response = new MockHttpResponse();
 
         dispatcher.invoke(request, response);
-//        if (response.getStatus() != 200) {
-//        	System.err.println(response.getErrorMessage());
-//        }
+        if (response.getStatus() != 200) {
+        	System.err.println(response.getContentAsString());
+        }
         
         
         return response;
@@ -527,6 +572,9 @@ public class DataSourceRestImplTest extends TestCase {
         MockHttpResponse response = new MockHttpResponse();
 
         dispatcher.invoke(request, response);
+        if (response.getStatus() != 200) {
+        	System.err.println(response.getContentAsString());
+        }
         return response;
 	}
 	
@@ -535,6 +583,45 @@ public class DataSourceRestImplTest extends TestCase {
         MockHttpResponse response = new MockHttpResponse();
 
         dispatcher.invoke(request, response);
+        if (response.getStatus() != 200) {
+        	System.err.println(response.getContentAsString());
+        }        
         return response;
 	}
+	
+	private static class MockSecuritySettings implements DataSourceSecurityInterceptor.SecuritySettings {
+		private final boolean enabled;
+		private final boolean anonymousAllowed;
+		private final Map<String, String> oauthMap;  
+
+		private MockSecuritySettings(boolean enabled, boolean anonymousEnabled, Map<String, String> oauthMap) {
+			this.enabled = enabled;
+			this.anonymousAllowed = anonymousEnabled;
+			this.oauthMap = oauthMap;
+		}
+		
+		@Override
+		public boolean isEnabled() {
+			return enabled;
+		}
+
+		@Override
+		public boolean isAnonymousAllowed() {
+			// TODO Auto-generated method stub
+			return anonymousAllowed;
+		}
+
+		@Override
+		public String getSecret(String oauthKey) {
+			String result = null;
+			
+			if (oauthMap != null) {
+				result = oauthMap.get(oauthKey);
+			}
+			
+			return result;
+		}
+		
+	}
+	
 }

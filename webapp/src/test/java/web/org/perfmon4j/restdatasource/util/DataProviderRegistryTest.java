@@ -26,9 +26,10 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Set;
 
+import javax.ws.rs.BadRequestException;
+
 import junit.framework.TestCase;
 
-import org.jboss.resteasy.spi.BadRequestException;
 import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.RegisteredDatabaseConnections.Database;
 
@@ -40,9 +41,6 @@ import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
 import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
-import web.org.perfmon4j.restdatasource.util.DataProviderRegistry;
-import web.org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
-import web.org.perfmon4j.restdatasource.util.SeriesField;
 
 public class DataProviderRegistryTest extends TestCase {
 

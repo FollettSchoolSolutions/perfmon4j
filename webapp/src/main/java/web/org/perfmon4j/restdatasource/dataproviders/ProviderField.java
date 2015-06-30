@@ -1,6 +1,7 @@
 package web.org.perfmon4j.restdatasource.dataproviders;
 
-import org.jboss.resteasy.spi.BadRequestException;
+
+import javax.ws.rs.BadRequestException;
 
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;
 import web.org.perfmon4j.restdatasource.data.Field;

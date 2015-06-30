@@ -20,18 +20,12 @@
 */
 package web.org.perfmon4j.restdatasource.util;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 import junit.framework.TestCase;
-
-import org.jboss.resteasy.spi.BadRequestException;
-
-import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
-import web.org.perfmon4j.restdatasource.util.DateTimeValue;
+import javax.ws.rs.BadRequestException;
 
 public class DateTimeHelperTest extends TestCase {
 	private final DateTimeHelper helper = new TestDateTimeHelper();

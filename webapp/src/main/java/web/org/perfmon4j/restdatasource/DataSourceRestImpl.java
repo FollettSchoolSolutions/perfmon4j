@@ -34,17 +34,17 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import org.jboss.resteasy.spi.BadRequestException;
-import org.jboss.resteasy.spi.InternalServerErrorException;
-import org.jboss.resteasy.spi.NotFoundException;
 import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
@@ -75,11 +75,14 @@ public class DataSourceRestImpl {
 	private static final Logger logger = LoggerFactory.initLogger(DataSourceRestImpl.class);
 	private final DateTimeHelper helper = new DateTimeHelper();
 	private static final DataProviderRegistry registry = new DataProviderRegistry();
-
+	
+	
 	static {
 		registry.registerDataProvider(new IntervalDataProvider());
 		registry.registerDataProvider(new JVMDataProvider());
 	}
+	
+	
 	
 
 	@GET
