@@ -7,11 +7,13 @@
        		</north>	
        		<south> 
        			<menubar>
+  <!--       			
 					<menu label="Info">
                			<menupopup>
                    			<menuitem  id="systemInfoMenuItem" label="System Info" />
                			</menupopup>
            			</menu>       				
+-->					
 					<menu label="Config">
                			<menupopup>
                    			<menuitem id="aedUsers" label="Users" />

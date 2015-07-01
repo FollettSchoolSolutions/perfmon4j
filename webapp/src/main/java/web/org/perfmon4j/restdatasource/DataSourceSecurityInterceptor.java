@@ -13,7 +13,6 @@ import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.Provider;
 
-import org.jboss.resteasy.annotations.interception.ServerInterceptor;
 import org.jboss.resteasy.core.ResourceMethodInvoker;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -22,7 +21,6 @@ import web.org.perfmon4j.restdatasource.oauth2.OauthTokenHelper;
 
 
 @Provider
-@ServerInterceptor
 public class DataSourceSecurityInterceptor implements ContainerRequestFilter  {
 	private static final Logger logger = LoggerFactory.initLogger(DataSourceSecurityInterceptor.class);
 	
@@ -39,8 +37,8 @@ public class DataSourceSecurityInterceptor implements ContainerRequestFilter  {
 	@Override
 	public void filter(ContainerRequestContext requestContext) throws IOException {
 		ResourceMethodInvoker methodInvoker = (ResourceMethodInvoker) requestContext.getProperty("org.jboss.resteasy.core.ResourceMethodInvoker");
+
 		if (methodInvoker.getResourceClass().equals(DataSourceRestImpl.class)) {
-			
 			SecuritySettings currentSettings = securitySettings; // Get a copy, don't want it to change out from under us.
 			if (currentSettings == null) {
 				logger.logError("Security settings for DataSourceSecurityInterceptor have not been initialized");

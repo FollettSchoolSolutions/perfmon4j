@@ -12,14 +12,9 @@
 	
 	<context-param>
 	      <param-name>resteasy.providers</param-name>
-	      <param-value>web.org.perfmon4j.restdatasource.DataSourceSecurityInterceptor</param-value>
+	      <param-value>web.org.perfmon4j.restdatasource.DataSourceSecurityInterceptor,web.org.perfmon4j.restdatasource.DefaultExceptionMapper</param-value>
 	</context-param>	
 	
-	<context-param>
-	      <param-name>resteasy.providers</param-name>
-	      <param-value>web.org.perfmon4j.restdatasource.DefaultExceptionMapper</param-value>
-	</context-param>	
-
 	<filter>
 		<filter-name>CORS</filter-name>
 		<filter-class>web.org.perfmon4j.restdatasource.filters.CorsFilter</filter-class>
@@ -45,6 +40,10 @@
     	<url-pattern>/zkau/*</url-pattern>
 	</filter-mapping>
 
+ 	<listener>
+      <listener-class>org.jboss.resteasy.plugins.server.servlet.ResteasyBootstrap</listener-class>
+   </listener>
+   
 	<!-- Loads the Spring application context configuration -->
 	<listener>
 	    <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>

@@ -1,5 +1,6 @@
 package web.org.perfmon4j.restdatasource.oauth2;
 
+import java.net.URLEncoder;
 import java.util.Arrays;
 
 import javax.crypto.Mac;
@@ -212,5 +213,13 @@ public class OauthTokenHelper {
 		public String getSignature() {
 			return signature;
 		}
+	}
+	
+	public static void main(String args[]) throws Exception {
+		OauthTokenHelper helper = new OauthTokenHelper("GXMS-KNGD", "ZRCX-PDSP-CLDD-YFLM");
+		
+		System.out.println("Basic Bearer Token: " + URLEncoder.encode(helper.buildBasicToken()));
+		
+		System.out.println("Method Bearer Token: " + URLEncoder.encode(helper.buildMethodToken("GET", "/datasource/databases/default/systems", new String[]{})));
 	}
 }
