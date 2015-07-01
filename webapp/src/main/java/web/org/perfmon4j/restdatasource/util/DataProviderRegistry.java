@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jboss.resteasy.spi.BadRequestException;
+import javax.ws.rs.BadRequestException;
 
 import web.org.perfmon4j.restdatasource.DataProvider;
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;

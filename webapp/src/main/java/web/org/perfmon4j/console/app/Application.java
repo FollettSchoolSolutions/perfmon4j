@@ -13,14 +13,16 @@ import org.zkoss.zk.ui.WebApp;
 import org.zkoss.zk.ui.util.WebAppCleanup;
 import org.zkoss.zk.ui.util.WebAppInit;
 
+import web.org.perfmon4j.console.app.data.AppConfigService;
 import web.org.perfmon4j.console.app.data.EMProvider;
 
 public class Application implements WebAppInit, WebAppCleanup{
-
+	
 	@Override
 	public void init(WebApp wapp) throws Exception {
 		// Initialize the EntityManager
 		EMProvider.getEM();
+		(new AppConfigService()).refreshDataSourceSecurity();
 	}
 
 	@Override

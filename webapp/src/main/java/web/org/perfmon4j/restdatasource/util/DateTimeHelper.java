@@ -28,7 +28,8 @@ import java.util.GregorianCalendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.jboss.resteasy.spi.BadRequestException;
+import javax.ws.rs.BadRequestException;
+
 
 public class DateTimeHelper {
 	private static final Pattern NOW_MINUS_MINUTES = Pattern.compile("NOW\\-(\\d+)");

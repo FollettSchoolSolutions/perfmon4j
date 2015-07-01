@@ -23,6 +23,9 @@ package web.org.perfmon4j.restdatasource;
 
 
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -33,6 +36,7 @@ import org.jboss.resteasy.mock.MockDispatcherFactory;
 import org.jboss.resteasy.mock.MockHttpRequest;
 import org.jboss.resteasy.mock.MockHttpResponse;
 import org.jboss.resteasy.plugins.server.resourcefactory.POJOResourceFactory;
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.util.JDBCHelper;
 
@@ -42,6 +46,7 @@ import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
 import web.org.perfmon4j.restdatasource.data.query.advanced.C3DataResult;
 import web.org.perfmon4j.restdatasource.data.query.advanced.Series;
+import web.org.perfmon4j.restdatasource.oauth2.OauthTokenHelper;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.DateTimeValue;
 
@@ -52,6 +57,9 @@ public class DataSourceRestImplTest extends TestCase {
 	private final ObjectMapper mapper;
 	private final BaseDatabaseSetup databaseSetup = new BaseDatabaseSetup();
 	private final DateTimeHelper helper = new DateTimeHelper();
+	private static String DATABASE_NAME = "Production";
+	private DataSourceSecurityInterceptor.SecuritySettings restoreSettings = null;
+	private String authorizationHeader = null;
 	
 	public DataSourceRestImplTest(String name) {
 		super(name);
@@ -59,13 +67,27 @@ public class DataSourceRestImplTest extends TestCase {
 		dispatcher = MockDispatcherFactory.createDispatcher();
 
 		POJOResourceFactory noDefaults = new POJOResourceFactory(DataSourceRestImpl.class);
+		
 		dispatcher.getRegistry().addResourceFactory(noDefaults);
+		dispatcher.getProviderFactory().registerProvider(DataSourceSecurityInterceptor.class);
+		dispatcher.getProviderFactory().registerProvider(DefaultExceptionMapper.class);
+		
+		ResteasyProviderFactory.pushContext(DataSourceSecurityInterceptor.class, new DataSourceSecurityInterceptor());
+		
 		mapper = new ObjectMapper();
-
 	}
 	
-	private static String DATABASE_NAME = "Production";
-
+	public void setUp() throws Exception {
+		super.setUp();
+		restoreSettings = DataSourceSecurityInterceptor.setSecuritySettings(new MockSecuritySettings(true, true));
+	}
+	
+	public void tearDown() throws Exception {
+		DataSourceSecurityInterceptor.setSecuritySettings(restoreSettings);
+		authorizationHeader = null;
+		super.tearDown();
+	}
+	
 	void setUpDatabase() throws Exception {
 		databaseSetup.setUpDatabase();
 		
@@ -154,6 +176,127 @@ public class DataSourceRestImplTest extends TestCase {
 			tearDownDatabase();
 		}
 	}
+
+	public void testGetSystemsWithNullSecuritySettings() throws Exception {
+		DataSourceSecurityInterceptor.setSecuritySettings(null);
+
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Not authorized", 401, response.getStatus());
+	}
+
+	
+	public void testGetSystemsWithDisabledSecuritySettings() throws Exception {
+		MockSecuritySettings disabled = new MockSecuritySettings(false, false);
+
+		DataSourceSecurityInterceptor.setSecuritySettings(disabled);
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Not authorized", 401, response.getStatus());
+	}
+	
+
+	public void testGetSystemsWithAnonymousDisabledSecuritySettings() throws Exception {
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false);
+
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Not authorized", 401, response.getStatus());
+	}
+
+
+	public void testGetSystemsWithBasicTokenInAuthorizationHeader() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildBasicToken();
+		
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Should have been authorized", 404, response.getStatus());
+	}
+
+	public void testGetSystemsWithBasicTokenInQueryParameter() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		String token = helper.buildBasicToken();
+		token = URLEncoder.encode(token, "UTF-8");
+		
+		MockHttpResponse response = getSystemsThroughRest("default", "access_token=" + token);
+		assertEquals("Should have been authorized", 404, response.getStatus());
+	}
+
+	public void testGetSystemsWithMethodTokenInAuthorizationHeader() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildMethodToken("GET", "/datasource/databases/default/systems", null);
+		
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Should have been authorized", 404, response.getStatus());
+	}
+	
+	public void testGetSystemsWithMethodTokenInQueryParameter() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		String token = helper.buildMethodToken("GET", "/datasource/databases/default/systems", null);
+		token = URLEncoder.encode(token, "UTF-8");
+		
+		MockHttpResponse response = getSystemsThroughRest("default", "access_token=" + token);
+		assertEquals("Should have been authorized", 404, response.getStatus());
+	}
+
+
+	public void testMethodTokenAlterParameterShouldFail() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildMethodToken("GET", "/datasource/databases/default/systems", new String[]{"a=b"});
+		
+		MockHttpResponse response = getSystemsThroughRest("default", "a=c");
+		assertEquals("Should NOT have been authorized, parameter was changed", 401, response.getStatus());
+
+		response = getSystemsThroughRest("default");
+		assertEquals("Should NOT have been authorized, parameter was not included", 401, response.getStatus());
+	
+		response = getSystemsThroughRest("default", "a=b&a=d");
+		assertEquals("Should NOT have been authorized, extra parameter was included", 401, response.getStatus());
+	}
+
+	public void testMethodTokenAlterHttpMethodShouldFail() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildMethodToken("POST", "/datasource/databases/default/systems", null);
+		
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Should NOT have been authorized signed expecting a POST, but was a GET", 401, response.getStatus());
+	}
+	
+	public void testMethodTokenAlterPathShouldFail() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildMethodToken("GET", "/datasource/databases/OTHER/systems", null);
+		
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Should NOT have authorized, was signed going to a different databasae", 401, response.getStatus());
+	}
+
+	
 	
 	public void testGetCategories() throws Exception {
 		setUpDatabase();
@@ -413,7 +556,6 @@ public class DataSourceRestImplTest extends TestCase {
 		}
 	}
 	
-	
 	public void testNumericValueOfNullForMissingObservation() throws Exception {
 		setUpDatabase();
 		try {
@@ -468,11 +610,7 @@ public class DataSourceRestImplTest extends TestCase {
         MockHttpRequest request = MockHttpRequest.get("/datasource/databases/" + databaseID + "/observations?seriesDefinition=" + seriesDefinition + queryParams);
         MockHttpResponse response = new MockHttpResponse();
 
-        dispatcher.invoke(request, response);
-//        if (response.getStatus() != 200) {
-//        	System.err.println(response.getErrorMessage());
-//        }
-        
+        invokeDispatcher(request, response);
         
         return response;
 	}
@@ -489,11 +627,7 @@ public class DataSourceRestImplTest extends TestCase {
         MockHttpRequest request = MockHttpRequest.get("/datasource/databases/" + databaseID + "/observations.c3?seriesDefinition=" + seriesDefinition + queryParams);
         MockHttpResponse response = new MockHttpResponse();
 
-        dispatcher.invoke(request, response);
-//        if (response.getStatus() != 200) {
-//        	System.err.println(response.getErrorMessage());
-//        }
-        
+        invokeDispatcher(request, response);
         
         return response;
 	}
@@ -510,7 +644,7 @@ public class DataSourceRestImplTest extends TestCase {
         MockHttpRequest request = MockHttpRequest.get("/datasource/databases/" + databaseID + "/categories?systemID=" + systemID + queryParams);
         MockHttpResponse response = new MockHttpResponse();
 
-        dispatcher.invoke(request, response);
+        invokeDispatcher(request, response);
         return response;
 	}
 	
@@ -526,15 +660,71 @@ public class DataSourceRestImplTest extends TestCase {
         MockHttpRequest request = MockHttpRequest.get("/datasource/databases/" + databaseID + "/systems" + queryParams);
         MockHttpResponse response = new MockHttpResponse();
 
-        dispatcher.invoke(request, response);
+        invokeDispatcher(request, response);
+
         return response;
 	}
+	
+	private void invokeDispatcher(MockHttpRequest request, MockHttpResponse response) {
+		if (authorizationHeader != null) {
+			request.header("Authorization", authorizationHeader);
+		}
+		
+		dispatcher.invoke(request, response);
+		
+        if (response.getStatus() != 200) {
+        	System.err.println(response.getContentAsString());
+        }
+	}
+	
 	
 	private MockHttpResponse getDatabasesThroughRest() throws URISyntaxException {
         MockHttpRequest request = MockHttpRequest.get("/datasource/databases");
         MockHttpResponse response = new MockHttpResponse();
-
-        dispatcher.invoke(request, response);
+        
+        invokeDispatcher(request, response);
         return response;
+	}
+	
+	private static class MockSecuritySettings implements DataSourceSecurityInterceptor.SecuritySettings {
+		private final boolean enabled;
+		private final boolean anonymousAllowed;
+		private final Map<String, OauthTokenHelper> oauthMap;  
+
+		private MockSecuritySettings(boolean enabled, boolean anonymousEnabled) {
+			this(enabled, anonymousEnabled, null);
+		}
+		
+		private MockSecuritySettings(boolean enabled, boolean anonymousEnabled, OauthTokenHelper helper) {
+			this.enabled = enabled;
+			this.anonymousAllowed = anonymousEnabled;
+			this.oauthMap = new HashMap<String, OauthTokenHelper>();
+			if (helper != null) {
+				oauthMap.put(helper.getOauthKey(), helper);
+			}
+		}
+		
+		@Override
+		public boolean isEnabled() {
+			return enabled;
+		}
+
+		@Override
+		public boolean isAnonymousAllowed() {
+			// TODO Auto-generated method stub
+			return anonymousAllowed;
+		}
+
+		@Override
+		public OauthTokenHelper getTokenHelper(String oauthKey) {
+			OauthTokenHelper result = null;
+			
+			if (oauthMap != null) {
+				result = oauthMap.get(oauthKey);
+			}
+			
+			return result;
+		}
+		
 	}
 }

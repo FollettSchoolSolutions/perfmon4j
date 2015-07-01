@@ -12,20 +12,18 @@
     <!--  HTTP configuration sample -->
     <http auto-config="true">
         <!-- ZK AU reqeust -->
-        <intercept-url pattern="/zkau/**" access="IS_AUTHENTICATED_ANONYMOUSLY" />
+        <intercept-url pattern="/zkau/**" access="ROLE_ADMIN" />
         <!-- the login page -->
-        <intercept-url pattern="/app/login.zul" access="IS_AUTHENTICATED_ANONYMOUSLY" />
-        <!-- pages for anonymous access in an application -->
+        <!-- Only page we allow anonymous access is the login page. 
+        -->
+        <intercept-url pattern="/app/login.jsp" access="IS_AUTHENTICATED_ANONYMOUSLY" />
         <intercept-url pattern="/app/**" access="ROLE_ADMIN" />
-<!--          
-        <intercept-url pattern="/articleContent.zul" access="IS_AUTHENTICATED_ANONYMOUSLY" />
-        <intercept-url pattern="/**" access="ROLE_USER" />
--->         
-        <form-login login-page="/app/login.zul"
-            authentication-failure-url="/app/login.zul?login_error=1"
+        
+        <form-login login-page="/app/login.jsp"
+            authentication-failure-url="/app/login.jsp?login_error=1"
             login-processing-url="/j_spring_security_check"/>
              
-        <logout logout-success-url="/app/login.zul" invalidate-session="true" />
+        <logout logout-success-url="/app/login.jsp" invalidate-session="true" />
     </http>   
  
     <!-- omit inactive configurations -->

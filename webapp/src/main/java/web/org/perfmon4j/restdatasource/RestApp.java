@@ -34,8 +34,8 @@ public class RestApp extends Application {
 	public RestApp() {
 		singletons.add(new DataSourceRestImpl());
 	}
- 
-//	@Override
+
+	@Override
 	public Set<Object> getSingletons() {
 		return singletons;
 	}

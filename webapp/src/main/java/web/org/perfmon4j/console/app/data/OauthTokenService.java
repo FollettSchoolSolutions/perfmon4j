@@ -20,6 +20,7 @@ public class OauthTokenService {
 		} finally {
 			em.getTransaction().commit();
 		}
+		new AppConfigService().refreshDataSourceSecurity();
 	}
 
 	public void delete(OauthToken token) {
@@ -29,6 +30,7 @@ public class OauthTokenService {
 		} finally {
 			em.getTransaction().commit();
 		}
+		new AppConfigService().refreshDataSourceSecurity();
 	}
 	
 	
