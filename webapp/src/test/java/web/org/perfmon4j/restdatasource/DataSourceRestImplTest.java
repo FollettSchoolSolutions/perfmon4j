@@ -74,9 +74,7 @@ public class DataSourceRestImplTest extends TestCase {
 		
 		ResteasyProviderFactory.pushContext(DataSourceSecurityInterceptor.class, new DataSourceSecurityInterceptor());
 		
-		
 		mapper = new ObjectMapper();
-
 	}
 	
 	public void setUp() throws Exception {
@@ -226,9 +224,78 @@ public class DataSourceRestImplTest extends TestCase {
 		String token = helper.buildBasicToken();
 		token = URLEncoder.encode(token, "UTF-8");
 		
-		MockHttpResponse response = getSystemsThroughRest("default", "access_token=" + helper.buildBasicToken());
+		MockHttpResponse response = getSystemsThroughRest("default", "access_token=" + token);
 		assertEquals("Should have been authorized", 404, response.getStatus());
 	}
+
+	public void testGetSystemsWithMethodTokenInAuthorizationHeader() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildMethodToken("GET", "/datasource/databases/default/systems", null);
+		
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Should have been authorized", 404, response.getStatus());
+	}
+	
+	public void testGetSystemsWithMethodTokenInQueryParameter() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		String token = helper.buildMethodToken("GET", "/datasource/databases/default/systems", null);
+		token = URLEncoder.encode(token, "UTF-8");
+		
+		MockHttpResponse response = getSystemsThroughRest("default", "access_token=" + token);
+		assertEquals("Should have been authorized", 404, response.getStatus());
+	}
+
+
+	public void testMethodTokenAlterParameterShouldFail() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildMethodToken("GET", "/datasource/databases/default/systems", new String[]{"a=b"});
+		
+		MockHttpResponse response = getSystemsThroughRest("default", "a=c");
+		assertEquals("Should NOT have been authorized, parameter was changed", 401, response.getStatus());
+
+		response = getSystemsThroughRest("default");
+		assertEquals("Should NOT have been authorized, parameter was not included", 401, response.getStatus());
+	
+		response = getSystemsThroughRest("default", "a=b&a=d");
+		assertEquals("Should NOT have been authorized, extra parameter was included", 401, response.getStatus());
+	}
+
+	public void testMethodTokenAlterHttpMethodShouldFail() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildMethodToken("POST", "/datasource/databases/default/systems", null);
+		
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Should NOT have been authorized signed expecting a POST, but was a GET", 401, response.getStatus());
+	}
+	
+	public void testMethodTokenAlterPathShouldFail() throws Exception {
+		// Don't allow anonymous, require a token.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		MockSecuritySettings noAnonymous = new MockSecuritySettings(true, false, helper);
+		DataSourceSecurityInterceptor.setSecuritySettings(noAnonymous);
+		
+		authorizationHeader = "Bearer " + helper.buildMethodToken("GET", "/datasource/databases/OTHER/systems", null);
+		
+		MockHttpResponse response = getSystemsThroughRest("default");
+		assertEquals("Should NOT have authorized, was signed going to a different databasae", 401, response.getStatus());
+	}
+
 	
 	
 	public void testGetCategories() throws Exception {
@@ -660,5 +727,4 @@ public class DataSourceRestImplTest extends TestCase {
 		}
 		
 	}
-	
 }

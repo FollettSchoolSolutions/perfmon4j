@@ -1,12 +1,15 @@
 package web.org.perfmon4j.restdatasource;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.Provider;
 
@@ -47,6 +50,7 @@ public class DataSourceSecurityInterceptor implements ContainerRequestFilter  {
 			} else {
 				// Check to see if we have an Authorization header
 				String bearerToken = getBearerToken(requestContext);
+				
 				if (bearerToken != null) {
 					final String publicDeniedMessage = "Bearer token expired and/or invalid";
 					final String tokenDenied = " (" + bearerToken + "), Access denied";
@@ -62,11 +66,13 @@ public class DataSourceSecurityInterceptor implements ContainerRequestFilter  {
 						logger.logError("Ouath key not found for bearer token:" + tokenDenied);
 						throw new NotAuthorizedException(publicDeniedMessage, "Bearer", "error=\"oauth key not found\"");
 					}
-					
-					if (!helper.validateBasicToken(bearerToken)) {
+
+					if (!validateToken(requestContext, helper, bearerToken)) {
 						logger.logError("Bearer token failed validation:" + tokenDenied);
 						throw new NotAuthorizedException(publicDeniedMessage, "Bearer", "error=\"token validation failed\"");
 					}
+					
+
 					// Valid.
 				} else if (!currentSettings.isAnonymousAllowed()) {
 					throw new NotAuthorizedException("Perfmon4j data source access is not enabled", "OAuth2.0 token");
@@ -74,7 +80,53 @@ public class DataSourceSecurityInterceptor implements ContainerRequestFilter  {
 			}
 		}
 	}
+	
 
+	private boolean validateToken(ContainerRequestContext requestContext, OauthTokenHelper helper, String token) {
+		boolean result = false;
+		
+		if (token.startsWith(OauthTokenHelper.BASIC_TOKEN_PREFIX)) {
+			result = helper.validateBasicToken(token);
+		} else {
+			String httpMethod = requestContext.getMethod();
+			UriInfo info = requestContext.getUriInfo();
+			String partialURLPath = getPath(info);
+			String[] signedParameters = getParametersForMethodSignature(info); 
+			result = helper.validateMethodToken(token, httpMethod, partialURLPath, signedParameters);
+		}
+		
+		return result;
+	}
+	
+	
+	private String getPath(UriInfo info) {
+		StringBuilder builder = new StringBuilder();
+		List<PathSegment> pathSegments = info.getPathSegments();
+		for (PathSegment p : pathSegments) {
+			builder.append("/")
+				.append(p.getPath());
+		}
+		return builder.toString();
+	}
+	
+	private String[] getParametersForMethodSignature(UriInfo info) {
+		List<String> result = new ArrayList<String>();
+		MultivaluedMap<String, String> parameters = info.getQueryParameters();
+		if (parameters != null) {
+			for (Map.Entry<String, List<String>> entry : parameters.entrySet()) {
+				String key = entry.getKey();
+				if (!"access_token".equals(key)) {
+					for (String param : entry.getValue()) {
+						result.add(key + "=" + param);
+					}
+				}
+			}
+		}
+		return result.toArray(new String[]{});
+	}
+
+	
+	
 	private String getBearerToken(ContainerRequestContext requestContext) {
 		String result = null;
 		String authHeader = requestContext.getHeaderString("Authorization");
@@ -99,7 +151,7 @@ public class DataSourceSecurityInterceptor implements ContainerRequestFilter  {
 		
 		UriInfo uriInfo = requestContext.getUriInfo();
 		if (uriInfo != null) {
-			MultivaluedMap<String, String> map =  uriInfo.getQueryParameters(false);
+			MultivaluedMap<String, String> map =  uriInfo.getQueryParameters();
 			if (map != null) {
 				List<String> params = map.get(parameterName);
 				if (params != null && !params.isEmpty()) {

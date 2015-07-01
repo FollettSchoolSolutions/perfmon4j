@@ -21,6 +21,13 @@ public class OauthTokenHelperTest extends TestCase {
 		String token = helper.buildBasicToken(5000);
 		assertEquals("BASIC~ABCD-EFGH~5~PNXHP8YoT+MpAQ1TIR/CclzBM64=", token);
 	}
+
+	public void testBuildMethodToken() throws Exception {
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		
+		String token = helper.buildMethodToken(5000, "GET", "/databases", new String[]{"x=value1", "a=value2"});
+		assertEquals("METHOD~ABCD-EFGH~5~HP9KE2QIUu/QmpzFK1YsflBtvA8=", token);
+	}
 	
 	public void testSimpleBasicTokenValidate() throws Exception {
 		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
@@ -33,6 +40,31 @@ public class OauthTokenHelperTest extends TestCase {
 		assertFalse("Token has been tampered with... Should not validate", helper.validateBasicToken(token));
 	}
 
+	public void testSimpleMethodTokenValidate() throws Exception {
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+		
+		String token = helper.buildMethodToken("GET", "/databases", new String[]{"a=value1", "z=value2", "q=value3"});
+		
+		assertTrue("Should validate", helper.validateMethodToken(token, "GET", "/databases", new String[]{"a=value1", "z=value2", "q=value3"}));
+		assertTrue("Order of parameters should not be significant", 
+				helper.validateMethodToken(token, "GET", "/databases", new String[]{"z=value2", "q=value3", "a=value1"}));
+	}
+	
+
+	public void testMethodTokenValidateExpiration() throws Exception {
+		// Method token's expire in 5 minutes by default.
+		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
+
+		long fourMinutesAgo = System.currentTimeMillis() - (4 * 60 * 1000); 
+		long sixMinutesAgo = System.currentTimeMillis() - (6 * 60 * 1000); 
+		
+		String tokenGood = helper.buildMethodToken(fourMinutesAgo, "GET", "/databases", new String[]{"a=value1", "z=value2", "q=value3"});
+		String tokenExpired = helper.buildMethodToken(sixMinutesAgo, "GET", "/databases", new String[]{"a=value1", "z=value2", "q=value3"});
+	
+		assertTrue("Should still be good", helper.validateMethodToken(tokenGood,"GET", "/databases", new String[]{"a=value1", "z=value2", "q=value3"}));
+		assertFalse("Should be expired", helper.validateMethodToken(tokenExpired,"GET", "/databases", new String[]{"a=value1", "z=value2", "q=value3"}));
+	}
+	
 	public void testBasicTokenValidateIncorrectKey() throws Exception {
 		OauthTokenHelper helper = new OauthTokenHelper("ABCD-EFGH", "IJKL-MNOP-QRST-UVWX");
 		
@@ -80,10 +112,9 @@ public class OauthTokenHelperTest extends TestCase {
 		assertFalse("Client system clock outside of acceptable range", helper.validateBasicToken(tokenBad));
 	}
 	
-	
 	public void testParseToken() throws Exception {
 		String validBasicToken = "BASIC~A~1~SIGNATURE"; 
-		String validLimitedToken = "LIMITED~A~1~SIGNATURE"; 
+		String validMethodToken = "METHOD~A~1~SIGNATURE"; 
 			
 		OauthTokenHelper.Token token = OauthTokenHelper.parseToken(validBasicToken);
 		assertNotNull("Has the correct parts", token);
@@ -92,14 +123,28 @@ public class OauthTokenHelperTest extends TestCase {
 		assertEquals(1, token.getTimestamp());
 		assertEquals("SIGNATURE",token.getSignature());
 		
-		token = OauthTokenHelper.parseToken(validLimitedToken);
+		token = OauthTokenHelper.parseToken(validMethodToken);
 		assertNotNull("Has the correct parts", token);
-		assertEquals("LIMITED", token.getType());
+		assertEquals("METHOD", token.getType());
 
 		assertNull("Uknown type", OauthTokenHelper.parseToken(validBasicToken.replaceFirst("BASIC", "OTHER")));
 		assertNull("Missing Signature", OauthTokenHelper.parseToken(validBasicToken.replaceFirst("SIGNATURE", "")));
 		assertNull("Too few elements", OauthTokenHelper.parseToken(validBasicToken.replaceFirst("~1", "")));
 		assertNull("Too many elements", OauthTokenHelper.parseToken(validBasicToken + "~x"));
 		assertNull("Timestamp is not a number", OauthTokenHelper.parseToken(validBasicToken.replaceFirst("~1", "~@")));
+	}
+	
+	public void testBuildMethodSignatureString() {
+		String expected = "GET&/datasource/databases/default/observations&a=a&a=b&x=param1Value";
+		
+		assertEquals(expected, OauthTokenHelper.buildMethodSignatureString("GET", "/datasource/databases/default/observations",
+			new String[]{"a=b", "x=param1Value", "a=a"}));
+	}
+
+	public void testBuildMethodSignatureStringNoParams() {
+		String expected = "GET&/datasource/databases/default/observations";
+		
+		assertEquals(expected, OauthTokenHelper.buildMethodSignatureString("GET", "/datasource/databases/default/observations",
+			null));
 	}
 }
