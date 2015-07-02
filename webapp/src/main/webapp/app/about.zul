@@ -1,7 +1,28 @@
 <?page title="About Perfmon4j Console" contentType="text/html;charset=UTF-8"?>
 <zk>
-<window id="aboutDialog" title="About Perfmon4j Console" border="normal" apply="web.org.perfmon4j.console.app.AboutController">
-New Content Here!
-<button id="okButton" label="Ok" />
+    <zscript>
+		String version = System.getProperty(org.perfmon4j.PerfMon.PERFMON4J_VERSION);    	
+		String copyright = System.getProperty(org.perfmon4j.PerfMon.PERFMON4J_COPYRIGHT);
+		
+		if (version==null) {
+			version = "1.2.1";
+		}
+		if (copyright==null) {
+			copyright = "2015 (c) Follett School Solutions, Inc";
+		}
+    </zscript>
+<window id="aboutDialog" title="About Perfmon4j Console" border="normal" apply="web.org.perfmon4j.console.app.AboutController" xmlns:html="native">
+	<vlayout>
+		<hlayout><image src="/app/images/perfmon4j-logo.png"/>
+			<vlayout>
+				<label>Perfmon4j - Version: ${version}</label>
+				<hlayout><label>Source code: </label> Hosted on <html:a href="https://github.com/FollettSchoolSolutions/perfmon4j" target="_blank">Github</html:a></hlayout>
+				<hlayout><label>License: </label><html:a href="http://opensource.org/licenses/LGPL-3.0" target="_blank">GNU Lesser General Public License</html:a></hlayout>
+				<hlayout><label>Documentation: </label>Available <html:a href="http://follettschoolsolutions.github.io/perfmon4j/" target="_blank">here</html:a></hlayout>
+				<label>${copyright}</label>
+			</vlayout>
+		</hlayout>	
+		<button id="okButton" label="Ok" />
+	</vlayout>
 </window>
 </zk>

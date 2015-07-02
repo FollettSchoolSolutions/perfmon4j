@@ -45,6 +45,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.jboss.resteasy.annotations.cache.Cache;
+import org.jboss.resteasy.spi.NotImplementedYetException;
 import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
@@ -61,7 +63,6 @@ import web.org.perfmon4j.restdatasource.data.query.advanced.Series;
 import web.org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultElement;
 import web.org.perfmon4j.restdatasource.data.query.category.Result;
 import web.org.perfmon4j.restdatasource.data.query.category.ResultElement;
-import web.org.perfmon4j.restdatasource.data.query.category.SystemResult;
 import web.org.perfmon4j.restdatasource.dataproviders.IntervalDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.JVMDataProvider;
 import web.org.perfmon4j.restdatasource.util.DataProviderRegistry;
@@ -81,13 +82,11 @@ public class DataSourceRestImpl {
 		registry.registerDataProvider(new IntervalDataProvider());
 		registry.registerDataProvider(new JVMDataProvider());
 	}
-	
-	
-	
 
 	@GET
 	@Path("/databases")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Cache(maxAge=60)
 	public Database[] getDatabases() {
 		List<Database> result = new ArrayList<Database>();
 		for (RegisteredDatabaseConnections.Database db : RegisteredDatabaseConnections.getAllDatabases()) {
@@ -106,6 +105,7 @@ public class DataSourceRestImpl {
 	@GET
 	@Path("/databases/{databaseID}/systems")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Cache(maxAge=60)
 	public MonitoredSystem[] getSystems(@PathParam("databaseID") String databaseID, 
 		@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 		@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
@@ -137,6 +137,7 @@ public class DataSourceRestImpl {
 	@GET
 	@Path("/databases/{databaseID}/categories")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Cache(maxAge=60)
 	public Category[] getCategories(@PathParam("databaseID") String databaseID, 
 			@QueryParam("systemID") String systemID, 
 			@QueryParam("timeStart") @DefaultValue("now-480") String timeStart,
@@ -170,6 +171,7 @@ public class DataSourceRestImpl {
 	@GET
 	@Path("/databases/{databaseID}/categories/templates/{template}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Cache(maxAge=300)
 	public CategoryTemplate[] getCategoryTemplate(@PathParam("databaseID") String databaseID, 
 			@PathParam("template") String template) {
 		
@@ -185,35 +187,38 @@ public class DataSourceRestImpl {
 	@GET
 	@Path("/databases/{databaseID}/categories/{category}/observations")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Cache(maxAge=60)
 	public Result getCategoryResults(@PathParam("databaseID") String databaseID, 
 			@PathParam("category") String category, 
 			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 			@QueryParam("timeEnd") @DefaultValue("now")  String timeEnd, 
 			@QueryParam("maxObservations")@DefaultValue("1440")  int maxObservations) {
-		Result result = new Result();
+		throw new NotImplementedYetException();
 		
-		List<ResultElement> elementsA = new ArrayList<ResultElement>();
-		List<ResultElement> elementsB = new ArrayList<ResultElement>();
-		
-		for (int i = 0; i < 3; i++) {
-			String dateTime = "2015-04-21T09:0" + i;
-			elementsA.add(buildRandomIntervalElement(dateTime, i));
-			elementsB.add(buildRandomIntervalElement(dateTime, i + 10000));
-		}
-
-		SystemResult systemA = new SystemResult(); 
-		SystemResult systemB = new SystemResult(); 
-		
-		systemA.setSystemID("HRGW-KVCE.101");
-		systemA.setElements(elementsA.toArray(new ResultElement[]{}));
-		
-		systemB.setSystemID("HRGW-KVCE.200");
-		systemB.setElements(elementsB.toArray(new ResultElement[]{}));
-		
-		result.setCategory("Interval.WebRequest.search");
-		result.setSystemResults(new SystemResult[]{systemA, systemB});
-		
-		return result;
+//		Result result = new Result();
+//		
+//		List<ResultElement> elementsA = new ArrayList<ResultElement>();
+//		List<ResultElement> elementsB = new ArrayList<ResultElement>();
+//		
+//		for (int i = 0; i < 3; i++) {
+//			String dateTime = "2015-04-21T09:0" + i;
+//			elementsA.add(buildRandomIntervalElement(dateTime, i));
+//			elementsB.add(buildRandomIntervalElement(dateTime, i + 10000));
+//		}
+//
+//		SystemResult systemA = new SystemResult(); 
+//		SystemResult systemB = new SystemResult(); 
+//		
+//		systemA.setSystemID("HRGW-KVCE.101");
+//		systemA.setElements(elementsA.toArray(new ResultElement[]{}));
+//		
+//		systemB.setSystemID("HRGW-KVCE.200");
+//		systemB.setElements(elementsB.toArray(new ResultElement[]{}));
+//		
+//		result.setCategory("Interval.WebRequest.search");
+//		result.setSystemResults(new SystemResult[]{systemA, systemB});
+//		
+//		return result;
 	}
 	
 	
@@ -223,6 +228,7 @@ public class DataSourceRestImpl {
 	@GET
 	@Path("/databases/{databaseID}/observations")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Cache(maxAge=60)
 	public web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult getQueryObservations(@PathParam("databaseID") String databaseID, 
 			@QueryParam("seriesDefinition") String seriesDefinition,
 			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
@@ -269,6 +275,7 @@ public class DataSourceRestImpl {
 	@GET
 	@Path("/databases/{databaseID}/observations.c3")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Cache(maxAge=60)
 	public C3DataResult getQueryObservationsInC3Format(@PathParam("databaseID") String databaseID, 
 			@QueryParam("seriesDefinition") String seriesDefinition,
 			@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
