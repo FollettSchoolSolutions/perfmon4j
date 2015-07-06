@@ -42,7 +42,6 @@ import java.util.Vector;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import org.perfmon4j.PerfMon;
@@ -448,7 +447,12 @@ public class JDBCHelper {
     public static DataSource lookupDataSource(String poolName, String contextFactory, String urlPkgs) throws SQLException {
     	DataSource result = null;
     	
+    	ClassLoader loader = GlobalClassLoader.getClassLoader();
+    	ClassLoader restoreLoader = Thread.currentThread().getContextClassLoader();
 		try {
+			if (loader != null) {
+				Thread.currentThread().setContextClassLoader(loader);
+			}
             Properties props = new Properties();
             if (contextFactory != null) {
             	props.put(Context.INITIAL_CONTEXT_FACTORY, contextFactory);
@@ -456,11 +460,17 @@ public class JDBCHelper {
             if (urlPkgs != null) {
             	props.put("java.naming.factory.url.pkgs", urlPkgs);
             }
+            
             InitialContext initialContext = new InitialContext(props);
-			result = (DataSource)initialContext.lookup(poolName);
-		} catch (NamingException e) {
+        	result = (DataSource)initialContext.lookup(poolName);
+		} catch (Exception e) {
+			if (logger.isDebugEnabled()) {
+				logger.logDebug("Unabled find datasource: " + poolName, e);
+			}
 			throw new SQLException("Unabled find datasource: " + poolName + ": " + e.getMessage());
-		} 
+		} finally {
+			Thread.currentThread().setContextClassLoader(restoreLoader);
+		}
 		
 		return result;
     }
