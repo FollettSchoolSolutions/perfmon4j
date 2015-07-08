@@ -44,11 +44,14 @@ import javassist.CtMethod;
 import javassist.LoaderClassPath;
 import javassist.NotFoundException;
 
+import javax.management.ObjectName;
+
 import org.perfmon4j.BootConfiguration;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
 import org.perfmon4j.XMLBootParser;
 import org.perfmon4j.XMLConfigurator;
+import org.perfmon4j.instrument.tomcat.TomcatDataSourceRegistry;
 import org.perfmon4j.remotemanagement.RemoteImpl;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
@@ -203,6 +206,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     
     public static class ValveHookInserter implements ClassFileTransformer {
     	final private String undertowDeployInfoClassName = "io/undertow/servlet/api/DeploymentInfo";
+    	final private String tomcatRegistryClassName =  System.getProperty("Perfmon4j.tomcatRegistry", "org.apache.tomcat.util.modeler.Registry").replaceAll("\\.", "/");
+    	
     	final private String engineClassName =  System.getProperty("Perfmon4j.catalinaEngine", "org.apache.catalina.core.StandardEngine").replaceAll("\\.", "/");
     	final private String valveClassName =  System.getProperty("Perfmon4j.webValve");
     	final private BootConfiguration.ServletValveConfig valveConfig;
@@ -220,8 +225,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
                 byte[] classfileBuffer) {
             byte[] result = null;
             
-            if (engineClassName.equals(className)  || undertowDeployInfoClassName.equals(className)) {
-	            try {
+            boolean installValve = engineClassName.equals(className)  || undertowDeployInfoClassName.equals(className);
+            boolean wrapTomcatRegistry = tomcatRegistryClassName.equals(className);
+            
+            if (installValve || wrapTomcatRegistry) {
+            	try {
 	            	ClassPool classPool;
 		            
 		            if (loader == null) {
@@ -236,10 +244,15 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		            if (clazz.isFrozen()) {
 		                clazz.defrost();
 		            }
-		            addSetValveHook(clazz);
+		            
+		            if (installValve) {
+		            	addSetValveHook(clazz);
+		            } else {
+		            	wrapTomcatRegistry(clazz, classPool);
+		            }
 		            result = clazz.toBytecode();
 	            } catch (Exception ex) {
-	            	logger.logError("Unable to insert addValveHook", ex);
+	            	logger.logError(installValve ? "Unable to insert addValveHook" : "Unable to wrap tomcat registry", ex);
 	            }
             }
 			return result;
@@ -328,6 +341,33 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	return undertowHanlderWrapperSingleton;
         }
         
+        public void wrapTomcatRegistry(CtClass clazz, ClassPool pool)  {
+//            public void registerComponent(Object bean, ObjectName oname, String type)
+//                    throws Exception      	
+        	try {
+	        	CtClass objectClazz = pool.getCtClass(Object.class.getName());
+	        	CtClass objectNameClazz = pool.getCtClass(ObjectName.class.getName());
+	           	CtClass stringClazz = pool.getCtClass(String.class.getName());
+	           	CtMethod methodRegisterComponent = clazz.getDeclaredMethod("registerComponent", new CtClass[]{objectClazz, objectNameClazz, stringClazz});
+	           	
+	           
+	           	final String codeToInsert = 
+		           	"{" +
+			        "  	if (($1 != null) && ($1 instanceof javax.sql.DataSource) && ($2 != null)) {" +
+			        "  		" + TomcatDataSourceRegistry.class.getName() + ".registerDataSource($2, (javax.sql.DataSource)$1);" +
+			        "  	}" +
+		           	"}";
+	           	
+	           	methodRegisterComponent.insertAfter(codeToInsert);
+	           	logger.logInfo("Perfmon4j found TomcatRegistry and installed Global DataSource registry");
+        	} catch (Exception ex) {
+        		if (logger.isDebugEnabled()) {
+        			logger.logError("Error instrumenting TomcatRegistry", ex);
+        		} else {
+        			logger.logError("Error instrumenting TomcatRegistry: " + ex.getMessage());
+        		}
+        	}
+        }
         
         public void addSetValveHook(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
         	if (clazz.getName().contains("undertow")) {
@@ -650,7 +690,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		}
     }
     
-    
+
     private static String getDisplayablePath(File file) {
     	String result = file.getAbsolutePath();
     	
