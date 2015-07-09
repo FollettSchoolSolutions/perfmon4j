@@ -238,6 +238,26 @@ public class BaseDatabaseSetup  {
 			JDBCHelper.closeNoThrow(stmt);
 		}
 	}
+
+	public void addMemoryPoolObservation(long systemID, long endTime, String instanceName) throws SQLException {
+		Map<String, Object> overrideValues = new HashMap<String, Object>();
+		
+		overrideValues.put("SYSTEMID", Long.valueOf(systemID));
+		overrideValues.put("STARTTIME", new Timestamp(endTime - 60000));
+		overrideValues.put("ENDTIME", new Timestamp(endTime));
+		overrideValues.put("INSTANCENAME", instanceName);
+		overrideValues.put("MEMORYTYPE", "Heap Memory");
+		
+		String sql = buildDefaultInsertStatement("P4JMemoryPool", overrideValues);
+		
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate(sql);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
 	
 	
 	

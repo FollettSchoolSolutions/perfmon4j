@@ -46,16 +46,24 @@ import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
+import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
+import web.org.perfmon4j.restdatasource.util.aggregators.decorator.ColumnValueFilterFactory;
 
-public class JVMDataProvider extends DataProvider {
-	private static final String TEMPLATE_NAME = "JVM";
-	private final JVMTemplate categoryTemplate;
-	private static final Logger logger = LoggerFactory.initLogger(JVMDataProvider.class);
+public class MemoryPoolDataProvider extends DataProvider {
+	private static final String TEMPLATE_NAME = "MemoryPool";
+	private final MemoryPoolTemplate categoryTemplate;
+	private static final Logger logger = LoggerFactory.initLogger(MemoryPoolDataProvider.class);
 	
-	public JVMDataProvider() {
+	public MemoryPoolDataProvider() {
 		super(TEMPLATE_NAME);
-		categoryTemplate = new JVMTemplate(TEMPLATE_NAME);
+		categoryTemplate = new MemoryPoolTemplate(TEMPLATE_NAME);
 	}
+	
+
+	@Override
+	public AggregatorFactory wrapWithCategoryLevelFilter(AggregatorFactory factory, String subCategoryName) {
+		return  new ColumnValueFilterFactory(factory, "InstanceName", new String[]{subCategoryName});
+	}	
 
 	@Override
 	public void processResults(Connection conn, RegisteredDatabaseConnections.Database db, ResultAccumulator accumulator, SeriesField[] fields, long start, 
@@ -67,8 +75,9 @@ public class JVMDataProvider extends DataProvider {
 		
 		String query =
 			"SELECT " + commaSeparate(selectList) + "\r\n"
-			+ "FROM " + schemaPrefix + "P4JVMSnapShot pid\r\n"
+			+ "FROM " + schemaPrefix + "P4JMemoryPool pid\r\n"
 			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
+			+ "AND pid.InstanceName IN "+ buildCategoryNameSet(fields) + "\r\n"
 			+ "AND pid.EndTime >= ?\r\n"
 			+ "AND pid.EndTime <= ?\r\n";
 		PreparedStatement stmt = null;
@@ -104,7 +113,7 @@ public class JVMDataProvider extends DataProvider {
 			String SQL = "SELECT SystemID, SystemName "
 				+ " FROM " + schema + "P4JSystem s "
 				+ " WHERE EXISTS (SELECT SystemID " 
-				+ " FROM " + schema + "P4JVMSnapShot pid WHERE pid.SystemID = s.SystemID "
+				+ " FROM " + schema + "P4JMemoryPool pid WHERE pid.SystemID = s.SystemID "
 				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
 			if (logger.isDebugEnabled()) {
 				logger.logDebug("getSystems SQL: " + SQL);
@@ -133,60 +142,49 @@ public class JVMDataProvider extends DataProvider {
 			throws SQLException {
 			Set<Category> result = new HashSet<Category>();
 		
-			PreparedStatement stmt = null;	
+			PreparedStatement stmt = null;
+			ResultSet rs = null;
 			try {
 				String schema = fixupSchema(db.getSchema());
 				
-				String SQL = "SELECT COUNT(*) "
-					+ " FROM " + schema + "P4JVMSnapShot pid "
+				String SQL = "SELECT DISTINCT(InstanceName) "
+					+ " FROM " + schema + "P4JMemoryPool pid "
 					+ "	WHERE pid.EndTime >= ? "
 					+ " AND pid.EndTime <= ?"
 					+ " AND pid.SystemID IN " + buildInArrayForSystems(systems);
 				if (logger.isDebugEnabled()) {
-					logger.logDebug("getSystems SQL: " + SQL);
+					logger.logDebug("getCategories SQL: " + SQL);
 				}
 				stmt = conn.prepareStatement(SQL);
 				stmt.setTimestamp(1, new Timestamp(start));
 				stmt.setTimestamp(2, new Timestamp(end));
-				if (JDBCHelper.getQueryCount(stmt) > 0) {
-					result.add(new Category(TEMPLATE_NAME, TEMPLATE_NAME));
+				rs = stmt.executeQuery();
+				while (rs.next()) {
+					result.add(new Category(TEMPLATE_NAME + "." + rs.getString(1).trim(), TEMPLATE_NAME));
 				}
 			} finally {
+				JDBCHelper.closeNoThrow(rs);
 				JDBCHelper.closeNoThrow(stmt);
 			}
 		
 		return result;
 	}
 
-	private static class JVMTemplate extends CategoryTemplate {
+	private static class MemoryPoolTemplate extends CategoryTemplate {
 
-		private JVMTemplate(String templateName) {
+		private MemoryPoolTemplate(String templateName) {
 			super(templateName, buildFields());
 		}
 		
 		private static final Field[] buildFields() {
 			List<Field> fields = new ArrayList<Field>();
 
-			fields.add(new ProviderField("currentClassLoadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentClassLoadCount", false));
-			fields.add(new ProviderField("pendingClassFinalizationCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PendingClassFinalizationCount", false));
-			fields.add(new ProviderField("currentThreadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentThreadCount", false));
-			fields.add(new ProviderField("currentDaemonThreadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentDaemonThreadCount", false));
-			fields.add(new ProviderField("heapMemUsedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemUsedMB", true));
-			fields.add(new ProviderField("heapMemCommittedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemCommitedMB", true));
-			fields.add(new ProviderField("heapMemMaxMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemMaxMB", true));
-			fields.add(new PercentProviderField("percentHeapMemInUse", "HeapMemUsedMB", "HeapMemMaxMB"));
-			fields.add(new PercentProviderField("percentHeapMemCommitted", "HeapMemCommitedMB", "HeapMemMaxMB"));
-			fields.add(new ProviderField("nonHeapMemUsedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemUsedMB", true));
-			fields.add(new ProviderField("nonHeapMemCommittedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemCommittedUsedMB", true));
-			fields.add(new ProviderField("nonHeapMemMaxMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemMaxUsedMB", true));
-			fields.add(new PercentProviderField("percentNonHeapMemInUse", "nonHeapMemUsedMB", "NonHeapMemMaxUsedMB"));
-			fields.add(new PercentProviderField("percentNonHeapMemCommitted", "NonHeapMemCommittedUsedMB", "NonHeapMemMaxUsedMB"));
-			fields.add(new ProviderField("systemCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "systemCpuLoad", true));
-			fields.add(new ProviderField("processCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "processCpuLoad", true));
-			fields.add(new NaturalPerMinuteProviderField("classLoadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassLoadCountPerMinute", "startTime", "endTime", "ClassLoadCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("classUnloadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassUnloadCountPerMinute", "startTime", "endTime", "ClassUnloadCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("threadStartCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ThreadStartCountPerMinute", "startTime", "endTime", "ThreadStartCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("compilationMillisPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "CompilationMillisPerMinute", "startTime", "endTime", "CompilationMillisInPeriod", true));
+			fields.add(new ProviderField("initialMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "InitialMB", true));
+			fields.add(new ProviderField("usedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "UsedMB", true));
+			fields.add(new ProviderField("committedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "CommittedMB", true));
+			fields.add(new ProviderField("maxMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "maxMB", true));
+			fields.add(new PercentProviderField("percentInUse", "UsedMB", "maxMB"));
+			fields.add(new PercentProviderField("percentCommitted", "CommittedMB", "maxMB"));
 			
 			return fields.toArray(new Field[]{});
 		}

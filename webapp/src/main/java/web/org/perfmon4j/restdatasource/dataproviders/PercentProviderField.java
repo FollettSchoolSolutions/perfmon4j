@@ -23,33 +23,23 @@ package web.org.perfmon4j.restdatasource.dataproviders;
 
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;
 import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
-import web.org.perfmon4j.restdatasource.util.aggregators.NaturalPerMinuteAggregatorFactory;
+import web.org.perfmon4j.restdatasource.util.aggregators.PercentAggregatorFactory;
 
-public class NaturalPerMinuteProviderField extends ProviderField {
-	protected String startTimeColumn;
-	protected String endTimeColumn;
-	protected String counterColumn;
+public class PercentProviderField extends ProviderField {
+	protected String numeratorColumn;
+	protected String denominatorColumn;
 
-	public NaturalPerMinuteProviderField(String name,
-			AggregationMethod[] aggregationMethods,
-			String databaseColumn, /* Only used if you specify an Aggregation method other than NATURAL */ 
-			String startTimeColumn,
-			String endTimeColumn,
-			String counterColumn,
-			boolean floatingPoint /* Only used if you specify an Aggregation method other than NATURAL */) {
-		super(name, aggregationMethods, AggregationMethod.NATURAL, databaseColumn,
-				floatingPoint);
-		this.startTimeColumn = startTimeColumn;
-		this.endTimeColumn = endTimeColumn;
-		this.counterColumn = counterColumn;
+	public PercentProviderField(String name,
+			String numeratorColumn,
+			String denominatorColumn) {
+		super(name, new AggregationMethod[]{AggregationMethod.NATURAL}, AggregationMethod.NATURAL, null,
+				true);
+		this.numeratorColumn = numeratorColumn;
+		this.denominatorColumn = denominatorColumn;
 	}
 
 	@Override
 	public AggregatorFactory buildFactory(AggregationMethod method) {
-		if (method.equals(AggregationMethod.NATURAL)) {
-			return new NaturalPerMinuteAggregatorFactory(startTimeColumn, endTimeColumn, counterColumn);
-		} else {
-			return super.buildFactory(method);
-		}
+		return new PercentAggregatorFactory(numeratorColumn, denominatorColumn);
 	}
 }
