@@ -63,6 +63,7 @@ import web.org.perfmon4j.restdatasource.data.query.advanced.Series;
 import web.org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultElement;
 import web.org.perfmon4j.restdatasource.data.query.category.Result;
 import web.org.perfmon4j.restdatasource.data.query.category.ResultElement;
+import web.org.perfmon4j.restdatasource.dataproviders.GarbageCollectionDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.IntervalDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.JVMDataProvider;
 import web.org.perfmon4j.restdatasource.util.DataProviderRegistry;
@@ -70,7 +71,6 @@ import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
 
-@SuppressWarnings("deprecation")
 @Path("/datasource")
 public class DataSourceRestImpl {
 	private static final Logger logger = LoggerFactory.initLogger(DataSourceRestImpl.class);
@@ -81,6 +81,7 @@ public class DataSourceRestImpl {
 	static {
 		registry.registerDataProvider(new IntervalDataProvider());
 		registry.registerDataProvider(new JVMDataProvider());
+		registry.registerDataProvider(new GarbageCollectionDataProvider());
 	}
 
 	@GET
@@ -430,9 +431,14 @@ public class DataSourceRestImpl {
 				if (!result.isEmpty()) {
 					result += "~";
 				}
-				result += s.getDatabaseID() + "." + s.getID();
+				result += s.toString();
 			}
 			return result;
+		}
+		
+		
+		public String toString() {
+			return getDatabaseID() + "." + getID();
 		}
 		
 		public String getDatabaseID() {

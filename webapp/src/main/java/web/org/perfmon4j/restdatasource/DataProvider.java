@@ -63,6 +63,9 @@ public abstract class DataProvider {
 	 * @return
 	 */
 	protected AggregatorFactory wrapWithCategoryLevelFilter(AggregatorFactory factory, String subCategoryName) {
+		// The base version does not wrap anything.
+		// However categories like GarbageCollection and IntervalData will want to provide an implementation.
+		// See IntervalDataProvider or GarbageCollectionDataProvider for examples of an override of this method.
 		return factory;
 	}	
 
@@ -78,11 +81,11 @@ public abstract class DataProvider {
 			ProviderField providerField = (ProviderField)seriesField.getField();
 			
 			AggregatorFactory aggregator = providerField.buildFactory(seriesField.getAggregationMethod());
-			AggregatorFactory categoryFilter = wrapWithCategoryLevelFilter(aggregator, getSubCategoryName(seriesField.getCategory().getName()));
-			AggregatorFactory systemIDFilter = new ColumnValueFilterFactory(categoryFilter, "SystemID", systemIDString.toArray(new String[]{}));
-			databaseColumnsToSelect.addAll(Arrays.asList(systemIDFilter.getDatabaseColumns()));
+			aggregator = wrapWithCategoryLevelFilter(aggregator, getSubCategoryName(seriesField.getCategory().getName()));
+			aggregator = new ColumnValueFilterFactory(aggregator, "SystemID", systemIDString.toArray(new String[]{}));
+			databaseColumnsToSelect.addAll(Arrays.asList(aggregator.getDatabaseColumns()));
 			
-			seriesField.setFactory(systemIDFilter);
+			seriesField.setFactory(aggregator);
 			accumulator.addSeries(seriesField);
 		}
 		

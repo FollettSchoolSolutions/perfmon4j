@@ -73,7 +73,7 @@ public class IntervalDataProvider extends DataProvider {
 		String schemaPrefix = fixupSchema(db.getSchema());
 		Set<String> selectList = buildSelectListAndPopulateAccumulators(accumulator, fields);
 		
-		selectList.add("EndTime");
+		selectList.add("endTime");
 		
 		String query =
 			"SELECT " + commaSeparate(selectList) + "\r\n"

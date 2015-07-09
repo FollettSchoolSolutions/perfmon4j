@@ -37,11 +37,11 @@ import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 
-public class JVMDataProviderTest extends TestCase {
+public class GarbageCollectionDataProviderTest extends TestCase {
 
 	private static String DATABASE_NAME = "Production";
 	private final BaseDatabaseSetup databaseSetup = new BaseDatabaseSetup();
-	private final JVMDataProvider provider = new JVMDataProvider();
+	private final GarbageCollectionDataProvider provider = new GarbageCollectionDataProvider();
 	private Connection conn = null;
 	private RegisteredDatabaseConnections.Database database = null;
 	private final DateTimeHelper helper = new DateTimeHelper();
@@ -67,7 +67,7 @@ public class JVMDataProviderTest extends TestCase {
 	}
 	
 	
-	public JVMDataProviderTest(String name) {
+	public GarbageCollectionDataProviderTest(String name) {
 		super(name);
 	}
 
@@ -88,19 +88,19 @@ public class JVMDataProviderTest extends TestCase {
 		try {
 			Set<MonitoredSystem> result = provider.lookupMonitoredSystems(conn, database, getStartTime(), getEndTime());
 			assertNotNull(result);
-			assertEquals("Should have no systems with JVM Results", 0, result.size());
+			assertEquals("Should have no systems with GC Results", 0, result.size());
 			
 			// Add a JVM Observation...
-			databaseSetup.addJVMObservation(1, System.currentTimeMillis());
+			databaseSetup.addGCObservation(1, System.currentTimeMillis(), "ConcurrentMarkSweep");
 			result = provider.lookupMonitoredSystems(conn, database, getStartTime(), getEndTime());
 			assertNotNull(result);
-			assertEquals("Should have one system with JVM Results", 1, result.size());
+			assertEquals("Should have one system with GC Results", 1, result.size());
 			
 			// Now check outside when the observation was recorded...
-			databaseSetup.addJVMObservation(1, System.currentTimeMillis());
+			databaseSetup.addGCObservation(1, System.currentTimeMillis(), "ConcurrentMarkSweep");
 			result = provider.lookupMonitoredSystems(conn, database, getStartTime("now-10H"), getEndTime("now-8H"));
 			assertNotNull(result);
-			assertEquals("Should have no systems within the time period JVM Results", 0, result.size());
+			assertEquals("Should have no systems within the time period GC Results", 0, result.size());
 		} finally {
 			tearDownDatabase();
 		}
@@ -120,19 +120,28 @@ public class JVMDataProviderTest extends TestCase {
 			
 			Set<Category> result = provider.lookupMonitoredCategories(conn, database, systems, getStartTime(), getEndTime());
 			assertNotNull(result);
-			assertEquals("Should have no categories with JVM Results", 0, result.size());
+			assertEquals("Should have no categories with GC Results", 0, result.size());
 			
 			// Add a JVM Observation...
-			databaseSetup.addJVMObservation(1, System.currentTimeMillis());
+			databaseSetup.addGCObservation(1, System.currentTimeMillis(), "ConcurrentMarkSweep");
 			result = provider.lookupMonitoredCategories(conn, database, systems, getStartTime(), getEndTime());
 			assertNotNull(result);
-			assertEquals("Should have one category with JVM Results", 1, result.size());
-			
+			assertEquals("Should have 1 category", 1, result.size());
+			Category cat = result.iterator().next();
+			assertEquals("GarbageCollection.ConcurrentMarkSweep", cat.getName());
+			assertEquals("GarbageCollection", cat.getTemplateName());
+		
+		
 			// Now check outside when the observation was recorded...
-			databaseSetup.addJVMObservation(1, System.currentTimeMillis());
 			result = provider.lookupMonitoredCategories(conn, database, systems, getStartTime("now-10H"), getEndTime("now-8H"));
 			assertNotNull(result);
-			assertEquals("Should have no category within the time period JVM Results", 0, result.size());
+			assertEquals("Should have no category within the time period GC Results", 0, result.size());
+
+			// Now add a different instance type.  Should get two categories back.
+			databaseSetup.addGCObservation(1, System.currentTimeMillis(), "Parallel");
+			result = provider.lookupMonitoredCategories(conn, database, systems, getStartTime(), getEndTime());
+			assertNotNull(result);
+			assertEquals("Should have 2 categories", 2, result.size());
 		} finally {
 			tearDownDatabase();
 		}
@@ -143,9 +152,10 @@ public class JVMDataProviderTest extends TestCase {
 		try {
 			DataSourceRestImpl impl = new DataSourceRestImpl();
 			String seriesDef = 
-				TestHelper.buildSeriesDefinitionWithAllFields(getDefaultSystemID(), "JVM", 
+				TestHelper.buildSeriesDefinitionWithAllFields(getDefaultSystemID(), "GarbageCollection.ConcurrentMarkSweep", 
 					provider.getCategoryTemplate());
 					
+			databaseSetup.addGCObservation(1, System.currentTimeMillis(), "ConcurrentMarkSweep");
 			
 			web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult result = 
 					impl.getQueryObservations(database.getID(), seriesDef, "now-1H", "now", "");
@@ -153,7 +163,7 @@ public class JVMDataProviderTest extends TestCase {
 		} finally {
 			tearDownDatabase();
 		}
-	}	
+	}
 	
 	private long getStartTime() {
 		return getStartTime("now-8H");

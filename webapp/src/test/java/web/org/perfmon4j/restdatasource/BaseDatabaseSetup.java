@@ -219,6 +219,26 @@ public class BaseDatabaseSetup  {
 			JDBCHelper.closeNoThrow(stmt);
 		}
 	}
+
+	public void addGCObservation(long systemID, long endTime, String instanceName) throws SQLException {
+		Map<String, Object> overrideValues = new HashMap<String, Object>();
+		
+		overrideValues.put("SYSTEMID", Long.valueOf(systemID));
+		overrideValues.put("STARTTIME", new Timestamp(endTime - 60000));
+		overrideValues.put("ENDTIME", new Timestamp(endTime));
+		overrideValues.put("INSTANCENAME", instanceName);
+		
+		String sql = buildDefaultInsertStatement("P4JGarbageCollection", overrideValues);
+		
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate(sql);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
+	
 	
 	
 	private String buildDefaultInsertStatement(String tableName, Map<String, Object> overrideValues) throws SQLException {
