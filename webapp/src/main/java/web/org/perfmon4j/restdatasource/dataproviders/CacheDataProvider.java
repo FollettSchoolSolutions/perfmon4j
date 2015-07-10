@@ -46,29 +46,53 @@ import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
+import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
+import web.org.perfmon4j.restdatasource.util.aggregators.decorator.ColumnValueFilterFactory;
 
-public class JVMDataProvider extends DataProvider {
-	private static final String TEMPLATE_NAME = "JVM";
-	private final JVMTemplate categoryTemplate;
-	private static final Logger logger = LoggerFactory.initLogger(JVMDataProvider.class);
+public class CacheDataProvider extends DataProvider {
+	private static final String TEMPLATE_NAME = "Cache";
+	private final CacheTemplate categoryTemplate;
+	private static final Logger logger = LoggerFactory.initLogger(CacheDataProvider.class);
 	
-	public JVMDataProvider() {
+	public CacheDataProvider() {
 		super(TEMPLATE_NAME);
-		categoryTemplate = new JVMTemplate(TEMPLATE_NAME);
+		categoryTemplate = new CacheTemplate(TEMPLATE_NAME);
 	}
+	
 
+	@Override
+	public AggregatorFactory wrapWithCategoryLevelFilter(AggregatorFactory factory, String subCategoryName) {
+		return  new ColumnValueFilterFactory(factory, "InstanceName", new String[]{subCategoryName});
+	}	
+
+	private Set<String> handledCalculatedField(Set<String> selectColumns) {
+		Set<String> result = new HashSet<String>();
+		for (String s : selectColumns) {
+			if ("CalculatedHitsPlusMisses".equals(s)) {
+				s = "(HitCount + MissCount) AS " + s;
+			}
+			result.add(s);
+		}
+		return result;
+	}
+	
+	
 	@Override
 	public void processResults(Connection conn, RegisteredDatabaseConnections.Database db, ResultAccumulator accumulator, SeriesField[] fields, long start, 
 			long end) throws SQLException {
 		String schemaPrefix = fixupSchema(db.getSchema());
 		Set<String> selectList = buildSelectListAndPopulateAccumulators(accumulator, fields);
+		selectList = handledCalculatedField(selectList);
 		
 		selectList.add("endTime");
+		String str[] = buildSubSubCategoryNameSets(fields);
 		
 		String query =
 			"SELECT " + commaSeparate(selectList) + "\r\n"
-			+ "FROM " + schemaPrefix + "P4JVMSnapShot pid\r\n"
+			+ "FROM " + schemaPrefix + "P4JCache pid\r\n"
 			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
+			+ "AND pid.CacheType IN "+ str[0] + "\r\n"
+			+ "AND pid.InstanceName IN "+ str[1] + "\r\n"
 			+ "AND pid.EndTime >= ?\r\n"
 			+ "AND pid.EndTime <= ?\r\n";
 		PreparedStatement stmt = null;
@@ -104,7 +128,7 @@ public class JVMDataProvider extends DataProvider {
 			String SQL = "SELECT SystemID, SystemName "
 				+ " FROM " + schema + "P4JSystem s "
 				+ " WHERE EXISTS (SELECT SystemID " 
-				+ " FROM " + schema + "P4JVMSnapShot pid WHERE pid.SystemID = s.SystemID "
+				+ " FROM " + schema + "P4JCache pid WHERE pid.SystemID = s.SystemID "
 				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
 			if (logger.isDebugEnabled()) {
 				logger.logDebug("getSystems SQL: " + SQL);
@@ -133,60 +157,51 @@ public class JVMDataProvider extends DataProvider {
 			throws SQLException {
 			Set<Category> result = new HashSet<Category>();
 		
-			PreparedStatement stmt = null;	
+			PreparedStatement stmt = null;
+			ResultSet rs = null;
 			try {
 				String schema = fixupSchema(db.getSchema());
 				
-				String SQL = "SELECT COUNT(*) "
-					+ " FROM " + schema + "P4JVMSnapShot pid "
+				String SQL = "SELECT CacheType, InstanceName "
+					+ " FROM " + schema + "P4JCache pid "
 					+ "	WHERE pid.EndTime >= ? "
 					+ " AND pid.EndTime <= ?"
-					+ " AND pid.SystemID IN " + buildInArrayForSystems(systems);
+					+ " AND pid.SystemID IN " + buildInArrayForSystems(systems)
+					+ " GROUP BY CacheType, InstanceName";
 				if (logger.isDebugEnabled()) {
-					logger.logDebug("getSystems SQL: " + SQL);
+					logger.logDebug("getCategories SQL: " + SQL);
 				}
 				stmt = conn.prepareStatement(SQL);
 				stmt.setTimestamp(1, new Timestamp(start));
 				stmt.setTimestamp(2, new Timestamp(end));
-				if (JDBCHelper.getQueryCount(stmt) > 0) {
-					result.add(new Category(TEMPLATE_NAME, TEMPLATE_NAME));
+				rs = stmt.executeQuery();
+				while (rs.next()) {
+					String cacheType = rs.getString(1).trim();
+					String instanceName = rs.getString(2).trim();
+					result.add(new Category(TEMPLATE_NAME + "." + cacheType + "." + instanceName, TEMPLATE_NAME));
 				}
 			} finally {
+				JDBCHelper.closeNoThrow(rs);
 				JDBCHelper.closeNoThrow(stmt);
 			}
 		
 		return result;
 	}
+	
+	
+	private static class CacheTemplate extends CategoryTemplate {
 
-	private static class JVMTemplate extends CategoryTemplate {
-
-		private JVMTemplate(String templateName) {
+		private CacheTemplate(String templateName) {
 			super(templateName, buildFields());
 		}
 		
 		private static final Field[] buildFields() {
 			List<Field> fields = new ArrayList<Field>();
 
-			fields.add(new ProviderField("currentClassLoadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentClassLoadCount", false));
-			fields.add(new ProviderField("pendingClassFinalizationCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PendingClassFinalizationCount", false));
-			fields.add(new ProviderField("currentThreadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentThreadCount", false));
-			fields.add(new ProviderField("currentDaemonThreadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentDaemonThreadCount", false));
-			fields.add(new ProviderField("heapMemUsedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemUsedMB", true));
-			fields.add(new ProviderField("heapMemCommittedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemCommitedMB", true));
-			fields.add(new ProviderField("heapMemMaxMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemMaxMB", true));
-			fields.add(new PercentProviderField("percentHeapMemInUse", "HeapMemUsedMB", "HeapMemMaxMB"));
-			fields.add(new PercentProviderField("percentHeapMemCommitted", "HeapMemCommitedMB", "HeapMemMaxMB"));
-			fields.add(new ProviderField("nonHeapMemUsedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemUsedMB", true));
-			fields.add(new ProviderField("nonHeapMemCommittedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemCommittedUsedMB", true));
-			fields.add(new ProviderField("nonHeapMemMaxMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemMaxUsedMB", true));
-			fields.add(new PercentProviderField("percentNonHeapMemInUse", "nonHeapMemUsedMB", "NonHeapMemMaxUsedMB"));
-			fields.add(new PercentProviderField("percentNonHeapMemCommitted", "NonHeapMemCommittedUsedMB", "NonHeapMemMaxUsedMB"));
-			fields.add(new ProviderField("systemCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "systemCpuLoad", true));
-			fields.add(new ProviderField("processCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "processCpuLoad", true));
-			fields.add(new NaturalPerMinuteProviderField("classLoadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassLoadCountPerMinute", "startTime", "endTime", "ClassLoadCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("classUnloadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassUnloadCountPerMinute", "startTime", "endTime", "ClassUnloadCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("threadStartCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ThreadStartCountPerMinute", "startTime", "endTime", "ThreadStartCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("compilationMillisPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "CompilationMillisPerMinute", "startTime", "endTime", "CompilationMillisInPeriod", true));
+			fields.add(new ProviderField("hitCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "HitCount", false));
+			fields.add(new ProviderField("missCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "MissCount", false));
+			fields.add(new ProviderField("putCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PutCount", false));
+			fields.add(new RatioProviderField("hitRatio", "HitCount", "CalculatedHitsPlusMisses"));
 			
 			return fields.toArray(new Field[]{});
 		}

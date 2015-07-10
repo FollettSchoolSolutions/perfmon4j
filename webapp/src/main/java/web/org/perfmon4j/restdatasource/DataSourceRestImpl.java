@@ -63,9 +63,11 @@ import web.org.perfmon4j.restdatasource.data.query.advanced.Series;
 import web.org.perfmon4j.restdatasource.data.query.category.IntervalQueryResultElement;
 import web.org.perfmon4j.restdatasource.data.query.category.Result;
 import web.org.perfmon4j.restdatasource.data.query.category.ResultElement;
+import web.org.perfmon4j.restdatasource.dataproviders.CacheDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.GarbageCollectionDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.IntervalDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.JVMDataProvider;
+import web.org.perfmon4j.restdatasource.dataproviders.MemoryPoolDataProvider;
 import web.org.perfmon4j.restdatasource.util.DataProviderRegistry;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
@@ -82,6 +84,8 @@ public class DataSourceRestImpl {
 		registry.registerDataProvider(new IntervalDataProvider());
 		registry.registerDataProvider(new JVMDataProvider());
 		registry.registerDataProvider(new GarbageCollectionDataProvider());
+		registry.registerDataProvider(new MemoryPoolDataProvider());
+		registry.registerDataProvider(new CacheDataProvider());
 	}
 
 	@GET
