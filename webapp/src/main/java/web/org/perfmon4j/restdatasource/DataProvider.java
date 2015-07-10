@@ -171,7 +171,7 @@ public abstract class DataProvider {
 		return toSQLSet(systemIDs, false);
 	}
 	
-	protected String buildCategoryNameSet(SeriesField[] fields) {
+	protected String buildSubCategoryNameSet(SeriesField[] fields) {
 		Set<String> categories = new HashSet<String>();
 		
 		for (SeriesField field : fields) {
@@ -181,6 +181,38 @@ public abstract class DataProvider {
 		
 		return toSQLSet(categories, true);
 	}
+
+	
+	public String[] splitSubCategory(String subCategory) {
+		String partA = "";
+		String partB = "";
+		
+		if (subCategory != null && !subCategory.isEmpty()) {
+			partA = subCategory;
+			int offset = subCategory.indexOf(".");
+			if (offset >= 0) {
+				partA = subCategory.substring(0, offset);
+				partB = subCategory.substring(offset+1);
+			}
+		}
+		return new String[]{partA, partB};
+	}
+	
+	
+	protected String[] buildSubSubCategoryNameSets(SeriesField[] fields) {
+		Set<String> firstCat = new HashSet<String>();
+		Set<String> secondCat = new HashSet<String>();
+		
+		for (SeriesField field : fields) {
+			String shortenedCategoryName = getSubCategoryName(field.getCategory().getName());
+			String[] str = splitSubCategory(shortenedCategoryName);
+			firstCat.add(str[0]);
+			secondCat.add(str[1]);
+		}
+		
+		return new String[]{toSQLSet(firstCat, true), toSQLSet(secondCat, true)};
+	}
+	
 	
 	protected String commaSeparate(Set<String> set) {
 		boolean first = true;

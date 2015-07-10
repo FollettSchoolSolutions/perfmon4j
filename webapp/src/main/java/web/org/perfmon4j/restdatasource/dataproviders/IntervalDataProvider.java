@@ -80,7 +80,7 @@ public class IntervalDataProvider extends DataProvider {
 			+ "FROM " + schemaPrefix + "P4JIntervalData pid\r\n"
 			+ "JOIN " + schemaPrefix + "P4JCategory cat ON cat.categoryID = pid.CategoryID\r\n"
 			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
-			+ "AND cat.categoryName IN "+ buildCategoryNameSet(fields) + "\r\n"
+			+ "AND cat.categoryName IN "+ buildSubCategoryNameSet(fields) + "\r\n"
 			+ "AND pid.EndTime >= ?\r\n"
 			+ "AND pid.EndTime <= ?\r\n";
 		PreparedStatement stmt = null;

@@ -259,6 +259,25 @@ public class BaseDatabaseSetup  {
 		}
 	}
 	
+	public void addCacheObservation(long systemID, long endTime, String cacheType, String instanceName) throws SQLException {
+		Map<String, Object> overrideValues = new HashMap<String, Object>();
+		
+		overrideValues.put("SYSTEMID", Long.valueOf(systemID));
+		overrideValues.put("STARTTIME", new Timestamp(endTime - 60000));
+		overrideValues.put("ENDTIME", new Timestamp(endTime));
+		overrideValues.put("INSTANCENAME", instanceName);
+		overrideValues.put("CACHETYPE", cacheType);
+		
+		String sql = buildDefaultInsertStatement("P4JCache", overrideValues);
+		
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate(sql);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
 	
 	
 	private String buildDefaultInsertStatement(String tableName, Map<String, Object> overrideValues) throws SQLException {

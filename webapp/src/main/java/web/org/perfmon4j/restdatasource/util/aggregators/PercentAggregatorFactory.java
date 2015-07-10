@@ -29,12 +29,19 @@ import java.sql.SQLException;
 public class PercentAggregatorFactory implements AggregatorFactory {
 	private final String databaseColumnNumerator;
 	private final String databaseColumnDenominator;
-	
+	private final int percentMultiplier;
 	
 	public PercentAggregatorFactory(String databaseColumnNumerator, String databaseColumnDenominator) {
+		this(databaseColumnNumerator, databaseColumnDenominator, false);
+	}
+
+	public PercentAggregatorFactory(String databaseColumnNumerator, String databaseColumnDenominator, boolean displayAsRatio) {
 		this.databaseColumnNumerator = databaseColumnNumerator;
 		this.databaseColumnDenominator = databaseColumnDenominator;
+		percentMultiplier = displayAsRatio ? 1 : 100;
 	}
+	
+	
 	
 	@Override
 	public Aggregator newAggregator() {
@@ -71,7 +78,7 @@ public class PercentAggregatorFactory implements AggregatorFactory {
 			Double result = null;
 
 			if (accumulatorDenominator.longValue() != 0) {
-				result = Double.valueOf(accumulatorNumerator.divide(accumulatorDenominator, 4, RoundingMode.HALF_UP).doubleValue()  * 100);
+				result = Double.valueOf(accumulatorNumerator.divide(accumulatorDenominator, 4, RoundingMode.HALF_UP).doubleValue()  * percentMultiplier);
 			}
 			
 			return result;

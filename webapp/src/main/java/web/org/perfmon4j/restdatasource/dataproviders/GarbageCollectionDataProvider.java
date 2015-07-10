@@ -77,7 +77,7 @@ public class GarbageCollectionDataProvider extends DataProvider {
 			"SELECT " + commaSeparate(selectList) + "\r\n"
 			+ "FROM " + schemaPrefix + "P4JGarbageCollection pid\r\n"
 			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
-			+ "AND pid.InstanceName IN "+ buildCategoryNameSet(fields) + "\r\n"
+			+ "AND pid.InstanceName IN "+ buildSubCategoryNameSet(fields) + "\r\n"
 			+ "AND pid.EndTime >= ?\r\n"
 			+ "AND pid.EndTime <= ?\r\n";
 		PreparedStatement stmt = null;
