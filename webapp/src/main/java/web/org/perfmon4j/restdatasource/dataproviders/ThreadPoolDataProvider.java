@@ -190,7 +190,7 @@ public class ThreadPoolDataProvider extends DataProvider {
 
 			fields.add(new ProviderField("threadsBusy", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentThreadsBusy", false));
 			fields.add(new ProviderField("totalThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentThreadCount", false));
-			fields.add(new PercentProviderField("threadsBusyPercent", "CurrentThreadsBusy", "CurrentThreadCount"));
+			fields.add(new PercentProviderField("threadsBusyPercent", "CurrentThreadsBusy", "CurrentThreadCount").makePrimary());
 			
 			return fields.toArray(new Field[]{});
 		}

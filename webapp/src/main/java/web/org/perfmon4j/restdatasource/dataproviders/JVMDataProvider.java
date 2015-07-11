@@ -169,20 +169,20 @@ public class JVMDataProvider extends DataProvider {
 
 			fields.add(new ProviderField("currentClassLoadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentClassLoadCount", false));
 			fields.add(new ProviderField("pendingClassFinalizationCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PendingClassFinalizationCount", false));
-			fields.add(new ProviderField("currentThreadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentThreadCount", false));
+			fields.add(new ProviderField("currentThreadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentThreadCount", false).makePrimary());
 			fields.add(new ProviderField("currentDaemonThreadCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentDaemonThreadCount", false));
 			fields.add(new ProviderField("heapMemUsedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemUsedMB", true));
 			fields.add(new ProviderField("heapMemCommittedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemCommitedMB", true));
 			fields.add(new ProviderField("heapMemMaxMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "HeapMemMaxMB", true));
-			fields.add(new PercentProviderField("percentHeapMemInUse", "HeapMemUsedMB", "HeapMemMaxMB"));
+			fields.add(new PercentProviderField("percentHeapMemInUse", "HeapMemUsedMB", "HeapMemMaxMB").makePrimary());
 			fields.add(new PercentProviderField("percentHeapMemCommitted", "HeapMemCommitedMB", "HeapMemMaxMB"));
 			fields.add(new ProviderField("nonHeapMemUsedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemUsedMB", true));
 			fields.add(new ProviderField("nonHeapMemCommittedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemCommittedUsedMB", true));
 			fields.add(new ProviderField("nonHeapMemMaxMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "NonHeapMemMaxUsedMB", true));
-			fields.add(new PercentProviderField("percentNonHeapMemInUse", "nonHeapMemUsedMB", "NonHeapMemMaxUsedMB"));
+			fields.add(new PercentProviderField("percentNonHeapMemInUse", "nonHeapMemUsedMB", "NonHeapMemMaxUsedMB").makePrimary());
 			fields.add(new PercentProviderField("percentNonHeapMemCommitted", "NonHeapMemCommittedUsedMB", "NonHeapMemMaxUsedMB"));
-			fields.add(new ProviderField("systemCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "systemCpuLoad", true));
-			fields.add(new ProviderField("processCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "processCpuLoad", true));
+			fields.add(new ProviderField("systemCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "systemCpuLoad", true).makePrimary());
+			fields.add(new ProviderField("processCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "processCpuLoad", true).makePrimary());
 			fields.add(new NaturalPerMinuteProviderField("classLoadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassLoadCountPerMinute", "startTime", "endTime", "ClassLoadCountInPeriod", true));
 			fields.add(new NaturalPerMinuteProviderField("classUnloadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassUnloadCountPerMinute", "startTime", "endTime", "ClassUnloadCountInPeriod", true));
 			fields.add(new NaturalPerMinuteProviderField("threadStartCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ThreadStartCountPerMinute", "startTime", "endTime", "ThreadStartCountInPeriod", true));

@@ -183,7 +183,7 @@ public class MemoryPoolDataProvider extends DataProvider {
 			fields.add(new ProviderField("usedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "UsedMB", true));
 			fields.add(new ProviderField("committedMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "CommittedMB", true));
 			fields.add(new ProviderField("maxMB", AggregationMethod.DEFAULT, AggregationMethod.MAX, "maxMB", true));
-			fields.add(new PercentProviderField("percentInUse", "UsedMB", "maxMB"));
+			fields.add(new PercentProviderField("percentInUse", "UsedMB", "maxMB").makePrimary());
 			fields.add(new PercentProviderField("percentCommitted", "CommittedMB", "maxMB"));
 			
 			return fields.toArray(new Field[]{});

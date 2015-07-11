@@ -1,10 +1,16 @@
 language: java
+branches:
+  only:
+    - master
+    - develop
+
 env:
   global:
   - secure: T7QOqfTx3GXwIe+xBsYPu0YzCuxdcRJBe8ea2RMKNDT3KuQalzvxncQpHsupZKPURZgUPRj8Uq2qTXKpiVzFFc0rsaubJnOnxkBP/urmIvCvTP18DJDedupW/nvujPyTv0LB2f0cJM9n/59wlEXlT7L4MAMLJc2NelIlvvrMKP0=
   - secure: aFw9EJxLaMCgBcuR2S7tucg7S7C46tpVY3fOLPCWZayUWT/jaB9wNiewz/pHxU1L9J/EVe4wMzqFemzT4x9f5uSMiwQl+nOGWaJJUxzuEzKnA8LJL02v5xJI5eHeuwgun9BxG5w6taZ9FtBZ9RQD7WrQLCSqsEeLx7scy3SjLQ8=
 # BINTRAY_API_KEY
   - secure: gowQQCz6eJ5kDKmJTcdY8otBuINuVtQhnrxlEEBEseyY1QMShJT7uBA9SD1DQjOxKyCqBVETAZqL1VmMqn8DW3yoYGDmrkvGysw7pEYh80D/yAn5SRCAmfutLpFrVVhckqbsRqTLvVJrldRikc/55JibZLmQKwOKpb9Q+zP70fM=
+
 after_success:
 - mvn deploy --settings ./settings.xml -DskipTests=true
 - mvn assembly:assembly -DskipTests=true
