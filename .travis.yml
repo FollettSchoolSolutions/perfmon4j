@@ -14,3 +14,4 @@ env:
 after_success:
 - mvn deploy --settings ./settings.xml -DskipTests=true
 - mvn assembly:assembly -DskipTests=true
+- .bintray/publishToBintray.sh
