@@ -34,7 +34,7 @@ public class CategoryTemplate {
 	public CategoryTemplate(String name, Field[] fields) {
 		super();
 		this.name = name;
-		this.fields = fields;
+		this.setFields(fields);
 	}
 	
 	public String getName() {
@@ -50,6 +50,7 @@ public class CategoryTemplate {
 	}
 	
 	public void setFields(Field[] fields) {
+		Arrays.sort(fields);
 		this.fields = fields;
 	}
 

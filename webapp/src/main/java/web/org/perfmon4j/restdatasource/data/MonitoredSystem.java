@@ -21,7 +21,7 @@
 
 package web.org.perfmon4j.restdatasource.data;
 
-public class MonitoredSystem {
+public class MonitoredSystem implements Comparable<MonitoredSystem> {
 	private String name;
 	private String id;
 	
@@ -82,6 +82,9 @@ public class MonitoredSystem {
 			return false;
 		return true;
 	}
-	
-	
+
+	@Override
+	public int compareTo(MonitoredSystem o) {
+		return name.compareTo(o.getName());
+	}
 }

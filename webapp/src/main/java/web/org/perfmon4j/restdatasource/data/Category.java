@@ -21,7 +21,7 @@
 
 package web.org.perfmon4j.restdatasource.data;
 
-public class Category {
+public class Category implements Comparable<Category> {
 	private String name;
 	private String templateName;
 
@@ -86,5 +86,10 @@ public class Category {
 	public String toString() {
 		return "Category [name=" + name + ", templateName=" + templateName
 				+ "]";
+	}
+
+	@Override
+	public int compareTo(Category o) {
+		return name.compareTo(o.getName());
 	}
 }

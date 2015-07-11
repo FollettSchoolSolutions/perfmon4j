@@ -179,8 +179,10 @@ public class GarbageCollectionDataProvider extends DataProvider {
 		private static final Field[] buildFields() {
 			List<Field> fields = new ArrayList<Field>();
 
-			fields.add(new NaturalPerMinuteProviderField("collectionCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "NumCollectionsPerMinute", "startTime", "endTime", "NumCollections", true));
-			fields.add(new NaturalPerMinuteProviderField("collectionMillisPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "CollectionMillisPerMinute", "startTime", "endTime", "CollectionMillis", true));
+			fields.add(new NaturalPerMinuteProviderField("collectionCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "NumCollectionsPerMinute", 
+					"startTime", "endTime", "NumCollections", true));
+			fields.add(new NaturalPerMinuteProviderField("collectionMillisPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "CollectionMillisPerMinute", 
+					"startTime", "endTime", "CollectionMillis", true).makePrimary());
 			
 			return fields.toArray(new Field[]{});
 		}

@@ -26,11 +26,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -119,7 +119,7 @@ public class DataSourceRestImpl {
 		@QueryParam("timeStart") @DefaultValue("now-8H") String timeStart,
 		@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 
-		Set<MonitoredSystem> result = new HashSet<MonitoredSystem>();
+		Set<MonitoredSystem> result = new TreeSet<MonitoredSystem>();
 		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
  		
 		Connection conn = null;
@@ -153,7 +153,7 @@ public class DataSourceRestImpl {
 			@QueryParam("timeEnd") @DefaultValue("now") String timeEnd) {
 		
 		
-		Set<Category> result = new HashSet<Category>();
+		Set<Category> result = new TreeSet<Category>();
 		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
 		SystemID ids[] = SystemID.parse(systemID, db.getID());
 		Connection conn = null;

@@ -114,16 +114,19 @@ public class IntervalDataProvider extends DataProvider {
 		private static final Field[] buildFields() {
 			List<Field> fields = new ArrayList<Field>();
 			
-			fields.add(new ProviderField("maxActiveThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "MaxActiveThreads", false));
+			fields.add(new ProviderField("maxActiveThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "MaxActiveThreads", false).makePrimary());
 			fields.add(new ProviderField("maxDuration", AggregationMethod.DEFAULT, AggregationMethod.MAX, "MaxDuration", false));
 			fields.add(new ProviderField("minDuration", AggregationMethod.DEFAULT, AggregationMethod.MIN, "MinDuration", false));
-			fields.add(new NaturalPerMinuteProviderField("throughputPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "NormalizedThroughputPerMinute", "startTime", "endTime", "TotalCompletions", true));
-			fields.add(new NaturalAverageProviderField("averageDuration", AggregationMethod.DEFAULT_WITH_NATURAL, "AverageDuration", "DurationSum", "TotalCompletions",  true));
+			fields.add(new NaturalPerMinuteProviderField("throughputPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, 
+					"NormalizedThroughputPerMinute", "startTime", "endTime", "TotalCompletions", true).makePrimary());
+			fields.add(new NaturalAverageProviderField("averageDuration", AggregationMethod.DEFAULT_WITH_NATURAL, "AverageDuration", 
+					"DurationSum", "TotalCompletions",  true).makePrimary());
 			fields.add(new ProviderField("medianDuration", AggregationMethod.DEFAULT, AggregationMethod.AVERAGE, "MedianDuration", true));
 			fields.add(new NaturalStdDevProviderField("standardDeviation", AggregationMethod.DEFAULT_WITH_NATURAL, "StandardDeviation", "DurationSum", "DurationSumOfSquares", "TotalCompletions", true));
 			fields.add(new ProviderField("sqlMaxDuration", AggregationMethod.DEFAULT, AggregationMethod.MAX, "SQLMaxDuration", false));
 			fields.add(new ProviderField("sqlLMinDuration", AggregationMethod.DEFAULT, AggregationMethod.MIN, "SQLMinDuration", false));
-			fields.add(new NaturalAverageProviderField("sqlAverageDuration", AggregationMethod.DEFAULT_WITH_NATURAL, "SQLAverageDuration", "SQLDurationSum", "TotalCompletions", true));
+			fields.add(new NaturalAverageProviderField("sqlAverageDuration", AggregationMethod.DEFAULT_WITH_NATURAL, 
+					"SQLAverageDuration", "SQLDurationSum", "TotalCompletions", true));
 			fields.add(new NaturalStdDevProviderField("sqlStandardDeviation", AggregationMethod.DEFAULT_WITH_NATURAL, "StandardDeviation", "SQLDurationSum", "SQLDurationSumOfSquares", "TotalCompletions", true));
 			
 			return fields.toArray(new Field[]{});

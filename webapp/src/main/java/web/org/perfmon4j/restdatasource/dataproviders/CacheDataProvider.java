@@ -204,7 +204,7 @@ public class CacheDataProvider extends DataProvider {
 			fields.add(new ProviderField("hitCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "HitCount", false));
 			fields.add(new ProviderField("missCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "MissCount", false));
 			fields.add(new ProviderField("putCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PutCount", false));
-			fields.add(new PercentProviderField("hitPercent", "HitCount", "CalculatedHitsPlusMisses"));
+			fields.add(new PercentProviderField("hitPercent", "HitCount", "CalculatedHitsPlusMisses").makePrimary());
 			
 			return fields.toArray(new Field[]{});
 		}
