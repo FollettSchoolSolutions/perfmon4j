@@ -167,6 +167,26 @@ public class JDBCHelper {
 		return result;
 	}
 	
+	public static boolean databaseChangeSetExists(Connection conn, String schema, String changeSetID) throws SQLException {
+		boolean result = false;
+		schema = (schema == null ? "" : (schema + "."));
+		String SQL = "SELECT COUNT(*) FROM " + schema + "DATABASECHANGELOG WHERE ID=?";
+		
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = conn.prepareStatement(SQL);
+			stmt.setString(1, changeSetID);
+			rs = stmt.executeQuery();
+			if (rs.next()) {
+				result = rs.getLong(1) > 0;
+			}
+		} finally {
+			closeNoThrow(rs);
+			closeNoThrow(stmt);
+		}
+		return result;
+	}
 	
 	public static long getQueryCount(Connection conn, String sql) throws SQLException {
 		long result = 0;

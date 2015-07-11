@@ -114,7 +114,8 @@ public class UpdateOrCreateDb {
 				closeNoThrow(conn);
 			}
 		} else {
-			System.err.println("Usage: java -jar perfmon4j-dbupgrader.jar driverClass=my.jdbc.Driver jdbcURL=jdbc://myurl driverJarFile=./myjdbc.jar [userName=dbuser] [password=dbpassword] [schema=myschema] [sqlOutputScript=./upgrade.sql]");
+			System.err.println("Usage: java -jar perfmon4j-dbupgrader.jar driverClass=my.jdbc.Driver jdbcURL=jdbc://myurl driverJarFile=./myjdbc.jar");
+			System.err.println("[userName=dbuser] [password=dbpassword] [schema=myschema] [sqlOutputScript=./upgrade.sql]");
 			System.err.println("\tNote: [] indicates optional parameters.");
 			System.err.println("\t      * Providing a sqlOutputScript parameter will create an");
 			System.err.println("\t        upgrade script that can be used to manually upgrade");
@@ -208,7 +209,7 @@ public class UpdateOrCreateDb {
 		private String driverJarFile;
 		private String schema;
 		private String sqlOutputScript;
-		private boolean clearChecksums = false;
+		private boolean clearChecksums = true;
 		private final List<String> badParameters = new ArrayList<String>();
 		private final Set<String> thirdPartyExtensions = new HashSet<String>(); 
 		private boolean insufficentParameters = false;

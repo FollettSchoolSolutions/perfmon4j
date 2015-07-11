@@ -29,10 +29,42 @@ public class NaturalPerMinuteProviderField extends ProviderField {
 	protected String startTimeColumn;
 	protected String endTimeColumn;
 	protected String counterColumn;
+	private final boolean tableHasPerMinuteCalculatedField;
 
+	/**
+	 * Use this constructor only when the table DOES NOT contains its' own perMinute field.
+	 * @param name
+	 * @param startTimeColumn
+	 * @param endTimeColumn
+	 * @param counterColumn
+	 * @param floatingPoint
+	 */
+	public NaturalPerMinuteProviderField(String name,
+			String startTimeColumn,
+			String endTimeColumn,
+			String counterColumn) {
+		super(name, new AggregationMethod[]{AggregationMethod.NATURAL}, AggregationMethod.NATURAL, null,
+				true);
+		this.startTimeColumn = startTimeColumn;
+		this.endTimeColumn = endTimeColumn;
+		this.counterColumn = counterColumn;
+		this.tableHasPerMinuteCalculatedField = false;
+	}
+
+
+	/**
+	 * Use this constructor only when the table contains its' own perMinute field.
+	 * @param name
+	 * @param aggregationMethods
+	 * @param databaseColumn
+	 * @param startTimeColumn
+	 * @param endTimeColumn
+	 * @param counterColumn
+	 * @param floatingPoint
+	 */
 	public NaturalPerMinuteProviderField(String name,
 			AggregationMethod[] aggregationMethods,
-			String databaseColumn, /* Only used if you specify an Aggregation method other than NATURAL */ 
+			String databaseColumn, /* Tables perMinute field. Only used if you specify an Aggregation method other than NATURAL */ 
 			String startTimeColumn,
 			String endTimeColumn,
 			String counterColumn,
@@ -42,6 +74,7 @@ public class NaturalPerMinuteProviderField extends ProviderField {
 		this.startTimeColumn = startTimeColumn;
 		this.endTimeColumn = endTimeColumn;
 		this.counterColumn = counterColumn;
+		this.tableHasPerMinuteCalculatedField = false;
 	}
 
 	@Override
@@ -49,7 +82,11 @@ public class NaturalPerMinuteProviderField extends ProviderField {
 		if (method.equals(AggregationMethod.NATURAL)) {
 			return new NaturalPerMinuteAggregatorFactory(startTimeColumn, endTimeColumn, counterColumn);
 		} else {
-			return super.buildFactory(method);
+			if (tableHasPerMinuteCalculatedField) {
+				return super.buildFactory(method);
+			}  else {
+				throw new RuntimeException("Aggregation method not supported: " + method);
+			}
 		}
 	}
 }

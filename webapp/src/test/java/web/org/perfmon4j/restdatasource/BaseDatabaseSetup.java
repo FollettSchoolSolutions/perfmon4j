@@ -29,7 +29,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb;
 import org.perfmon4j.util.JDBCHelper;
@@ -50,14 +52,25 @@ public class BaseDatabaseSetup  {
 	}
 
 	public void setUpDatabase() throws Exception {
+		setUpDatabase(null);
+	}
+
+	
+	public void setUpDatabase(String thirdPartyExtensions) throws Exception {
 		connection = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, JDBC_DRIVER, null, JDBC_URL + ";create=true", null, null);
 		connection.setAutoCommit(true);		
 		
+		Set<String> parameters = new HashSet<String>();
+		parameters.add("driverClass=org.apache.derby.jdbc.EmbeddedDriver");
+		parameters.add("jdbcURL=" + JDBC_URL);
+		parameters.add("driverJarFile=EMBEDDED");
+		
+		if (thirdPartyExtensions != null) {
+			parameters.add("thirdPartyExtensions=" + thirdPartyExtensions);
+		}
+		
 		// Start with an empty database...
-		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-				"jdbcURL=" + JDBC_URL,
-				"driverJarFile=EMBEDDED"
-		});
+		UpdateOrCreateDb.main(parameters.toArray(new String[]{}));
 		
 //		new dblook(new String[]{"-d", JDBC_URL, "-verbose"});
 		
@@ -239,6 +252,26 @@ public class BaseDatabaseSetup  {
 		}
 	}
 
+	public void addFSSFetchPolicyObservation(long systemID, long endTime, String instanceName) throws SQLException {
+		Map<String, Object> overrideValues = new HashMap<String, Object>();
+		
+		overrideValues.put("SYSTEMID", Long.valueOf(systemID));
+		overrideValues.put("STARTTIME", new Timestamp(endTime - 60000));
+		overrideValues.put("ENDTIME", new Timestamp(endTime));
+		overrideValues.put("INSTANCENAME", instanceName);
+		
+		String sql = buildDefaultInsertStatement("FSSFetchPolicySnapshot", overrideValues);
+		
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate(sql);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
+	
+	
 	public void addMemoryPoolObservation(long systemID, long endTime, String instanceName) throws SQLException {
 		Map<String, Object> overrideValues = new HashMap<String, Object>();
 		
@@ -258,6 +291,27 @@ public class BaseDatabaseSetup  {
 			JDBCHelper.closeNoThrow(stmt);
 		}
 	}
+
+	public void addThreadPoolObservation(long systemID, long endTime, String threadPoolOwner, String instanceName) throws SQLException {
+		Map<String, Object> overrideValues = new HashMap<String, Object>();
+		
+		overrideValues.put("SYSTEMID", Long.valueOf(systemID));
+		overrideValues.put("STARTTIME", new Timestamp(endTime - 60000));
+		overrideValues.put("ENDTIME", new Timestamp(endTime));
+		overrideValues.put("THREADPOOLOWNER", threadPoolOwner);
+		overrideValues.put("INSTANCENAME", instanceName);
+		
+		String sql = buildDefaultInsertStatement("P4JThreadPoolMonitor", overrideValues);
+		
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate(sql);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
+	
 	
 	public void addCacheObservation(long systemID, long endTime, String cacheType, String instanceName) throws SQLException {
 		Map<String, Object> overrideValues = new HashMap<String, Object>();

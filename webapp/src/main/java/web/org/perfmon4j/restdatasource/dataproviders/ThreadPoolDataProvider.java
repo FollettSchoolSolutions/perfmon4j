@@ -49,14 +49,14 @@ import web.org.perfmon4j.restdatasource.util.SeriesField;
 import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 import web.org.perfmon4j.restdatasource.util.aggregators.decorator.ColumnValueFilterFactory;
 
-public class CacheDataProvider extends DataProvider {
-	private static final String TEMPLATE_NAME = "Cache";
-	private final CacheTemplate categoryTemplate;
-	private static final Logger logger = LoggerFactory.initLogger(CacheDataProvider.class);
+public class ThreadPoolDataProvider extends DataProvider {
+	private static final String TEMPLATE_NAME = "ThreadPool";
+	private final ThreadPoolTemplate categoryTemplate;
+	private static final Logger logger = LoggerFactory.initLogger(ThreadPoolDataProvider.class);
 	
-	public CacheDataProvider() {
+	public ThreadPoolDataProvider() {
 		super(TEMPLATE_NAME);
-		categoryTemplate = new CacheTemplate(TEMPLATE_NAME);
+		categoryTemplate = new ThreadPoolTemplate(TEMPLATE_NAME);
 	}
 	
 
@@ -64,20 +64,8 @@ public class CacheDataProvider extends DataProvider {
 	public AggregatorFactory wrapWithCategoryLevelFilter(AggregatorFactory factory, String subCategoryName) {
 		String[] subCats = splitSubCategory(subCategoryName);
 		
-		factory = new ColumnValueFilterFactory(factory, "CacheType", new String[]{subCats[0]}); 
-		return  new ColumnValueFilterFactory(factory, "InstanceName", new String[]{subCats[1]});
-	}	
-
-	private Set<String> handledCalculatedField(Set<String> selectColumns) {
-		Set<String> result = new HashSet<String>();
-		for (String s : selectColumns) {
-			if ("CalculatedHitsPlusMisses".equals(s)) {
-				s = "(HitCount + MissCount) AS " + s;
-			}
-			result.add(s);
-		}
-		return result;
-	}
+		factory = new ColumnValueFilterFactory(factory, "ThreadPoolOwner", new String[]{subCats[0]}); 
+		return  new ColumnValueFilterFactory(factory, "InstanceName", new String[]{subCats[1]});	}	
 	
 	
 	@Override
@@ -85,16 +73,15 @@ public class CacheDataProvider extends DataProvider {
 			long end) throws SQLException {
 		String schemaPrefix = fixupSchema(db.getSchema());
 		Set<String> selectList = buildSelectListAndPopulateAccumulators(accumulator, fields);
-		selectList = handledCalculatedField(selectList);
 		
 		selectList.add("endTime");
 		String str[] = buildSubSubCategoryNameSets(fields);
 		
 		String query =
 			"SELECT " + commaSeparate(selectList) + "\r\n"
-			+ "FROM " + schemaPrefix + "P4JCache pid\r\n"
+			+ "FROM " + schemaPrefix + "P4JThreadPoolMonitor pid\r\n"
 			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
-			+ "AND pid.CacheType IN "+ str[0] + "\r\n"
+			+ "AND pid.ThreadPoolOwner IN "+ str[0] + "\r\n"
 			+ "AND pid.InstanceName IN "+ str[1] + "\r\n"
 			+ "AND pid.EndTime >= ?\r\n"
 			+ "AND pid.EndTime <= ?\r\n";
@@ -131,7 +118,7 @@ public class CacheDataProvider extends DataProvider {
 			String SQL = "SELECT SystemID, SystemName "
 				+ " FROM " + schema + "P4JSystem s "
 				+ " WHERE EXISTS (SELECT SystemID " 
-				+ " FROM " + schema + "P4JCache pid WHERE pid.SystemID = s.SystemID "
+				+ " FROM " + schema + "P4JThreadPoolMonitor pid WHERE pid.SystemID = s.SystemID "
 				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
 			if (logger.isDebugEnabled()) {
 				logger.logDebug("getSystems SQL: " + SQL);
@@ -165,12 +152,12 @@ public class CacheDataProvider extends DataProvider {
 			try {
 				String schema = fixupSchema(db.getSchema());
 				
-				String SQL = "SELECT CacheType, InstanceName "
-					+ " FROM " + schema + "P4JCache pid "
+				String SQL = "SELECT ThreadPoolOwner, InstanceName "
+					+ " FROM " + schema + "P4JThreadPoolMonitor pid "
 					+ "	WHERE pid.EndTime >= ? "
 					+ " AND pid.EndTime <= ?"
 					+ " AND pid.SystemID IN " + buildInArrayForSystems(systems)
-					+ " GROUP BY CacheType, InstanceName";
+					+ " GROUP BY ThreadPoolOwner, InstanceName";
 				if (logger.isDebugEnabled()) {
 					logger.logDebug("getCategories SQL: " + SQL);
 				}
@@ -179,9 +166,9 @@ public class CacheDataProvider extends DataProvider {
 				stmt.setTimestamp(2, new Timestamp(end));
 				rs = stmt.executeQuery();
 				while (rs.next()) {
-					String cacheType = rs.getString(1).trim();
+					String threadPoolOwner = rs.getString(1).trim();
 					String instanceName = rs.getString(2).trim();
-					result.add(new Category(TEMPLATE_NAME + "." + cacheType + "." + instanceName, TEMPLATE_NAME));
+					result.add(new Category(TEMPLATE_NAME + "." + threadPoolOwner + "." + instanceName, TEMPLATE_NAME));
 				}
 			} finally {
 				JDBCHelper.closeNoThrow(rs);
@@ -192,19 +179,18 @@ public class CacheDataProvider extends DataProvider {
 	}
 	
 	
-	private static class CacheTemplate extends CategoryTemplate {
+	private static class ThreadPoolTemplate extends CategoryTemplate {
 
-		private CacheTemplate(String templateName) {
+		private ThreadPoolTemplate(String templateName) {
 			super(templateName, buildFields());
 		}
 		
 		private static final Field[] buildFields() {
 			List<Field> fields = new ArrayList<Field>();
 
-			fields.add(new ProviderField("hitCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "HitCount", false));
-			fields.add(new ProviderField("missCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "MissCount", false));
-			fields.add(new ProviderField("putCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PutCount", false));
-			fields.add(new PercentProviderField("hitPercent", "HitCount", "CalculatedHitsPlusMisses"));
+			fields.add(new ProviderField("threadsBusy", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentThreadsBusy", false));
+			fields.add(new ProviderField("totalThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "CurrentThreadCount", false));
+			fields.add(new PercentProviderField("threadsBusyPercent", "CurrentThreadsBusy", "CurrentThreadCount"));
 			
 			return fields.toArray(new Field[]{});
 		}
