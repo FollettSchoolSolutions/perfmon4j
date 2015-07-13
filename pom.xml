@@ -7,8 +7,28 @@
 	<version>1.2.2</version>
 	<packaging>pom</packaging>
 
-	<name>perfmon4j-project</name>
-	<url>http://perfmon4j.org</url>
+	<name>org.perfmon4j:perfmon4j-project</name>
+	<description>A java instrumentation agent to monitor server performance in production application servers</description>
+	<url>https://github.com/FollettSchoolSolutions/perfmon4j</url>
+	<licenses>
+		<license>
+			<name>The GNU Lesser General Public License, version 3.0</name>
+			<url>http://opensource.org/licenses/LGPL-3.0</url>
+		</license>
+	</licenses>
+	<developers>
+    	<developer>
+      		<name>David Deuchert</name>
+      		<email>perfmon4j@fsc.follett.com</email>
+      		<organization>Follett School Solutions</organization>
+      		<organizationUrl>https://www.follett.com/</organizationUrl>
+    	</developer>
+	</developers>
+	<scm>
+  		<connection>git@github.com:FollettSchoolSolutions/perfmon4j.git</connection>
+		<developerConnection>git@github.com:FollettSchoolSolutions/perfmon4j.git</developerConnection>
+		<url>https://github.com/FollettSchoolSolutions/perfmon4j</url>
+	</scm>
 
 	<modules>
 		<module>dbupgrader</module>
@@ -22,18 +42,15 @@
 		<module>utils</module>
 		<module>webapp</module>
 		<module>wildfly8</module>
-  </modules>
+ 	</modules>
 
 	<build>
 		<plugins>
-		      <plugin>
-			<groupId>org.apache.maven.plugins</groupId>
-			<artifactId>maven-release-plugin</artifactId>
-			<version>2.5.1</version>
-			<configuration>
-			  <tagBase>scm:svn:svn+ssh://ddeucher@svn.code.sf.net/p/perfmon4j/code/tags</tagBase>
-			</configuration>
-		      </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.5.1</version>
+			</plugin>
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -54,6 +71,44 @@
 						<goals>
 							<goal>jar</goal>
 						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.3</version>
+				<configuration>
+					<doctitle>${project.name} ${project.version}</doctitle>
+					<windowtitle>${project.name} ${project.version}</windowtitle>        					
+				</configuration>
+				<executions>
+					<execution>
+					<id>attach-sources</id>
+					<goals>
+						<goal>jar</goal>
+					</goals>
+				</execution>
+				</executions>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.6</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+						<configuration>
+							<passpharse>${PGP_PASSPHRASE}</passphrase>
+							<homedir>./.travis</homedir>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

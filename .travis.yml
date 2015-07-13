@@ -1,15 +1,19 @@
 language: java
 branches:
   only:
-    - master
-    - develop
-
+  - master
+  - develop
 env:
   global:
   - secure: T7QOqfTx3GXwIe+xBsYPu0YzCuxdcRJBe8ea2RMKNDT3KuQalzvxncQpHsupZKPURZgUPRj8Uq2qTXKpiVzFFc0rsaubJnOnxkBP/urmIvCvTP18DJDedupW/nvujPyTv0LB2f0cJM9n/59wlEXlT7L4MAMLJc2NelIlvvrMKP0=
   - secure: aFw9EJxLaMCgBcuR2S7tucg7S7C46tpVY3fOLPCWZayUWT/jaB9wNiewz/pHxU1L9J/EVe4wMzqFemzT4x9f5uSMiwQl+nOGWaJJUxzuEzKnA8LJL02v5xJI5eHeuwgun9BxG5w6taZ9FtBZ9RQD7WrQLCSqsEeLx7scy3SjLQ8=
-# BINTRAY_API_KEY
   - secure: gowQQCz6eJ5kDKmJTcdY8otBuINuVtQhnrxlEEBEseyY1QMShJT7uBA9SD1DQjOxKyCqBVETAZqL1VmMqn8DW3yoYGDmrkvGysw7pEYh80D/yAn5SRCAmfutLpFrVVhckqbsRqTLvVJrldRikc/55JibZLmQKwOKpb9Q+zP70fM=
+  - secure: T3QzKMEv/cCcdrnpn6/AiWNOHRUxr3xvpBYVQnzTcVeL91rQITiCDTKBDw5EyD9f62Sd6cYN99WjEEkIBaAfZqlEYMh1D2KGNUPwNT5Pg+luKwCwLbBX+QcGVIrVkdviZCk+Oxesv7NK1NYfly1rnvk/CibU0Phd+BKQn3Z0LwQ=
+  - secure: L5a8vwtCopSe86gyuFziDNLviCo8Y64WbWiN7sdDqOzxF2PMUiWYsr5WBSemboQF07JULFygXVAKtekpJciEAqwWuyUWVTURMzM5BM9vvOIs46OmBz2nr4CX3dJxgDa/CD81ockexSStTBpcHrmWAbbNRAkKGJYzqFhrqcC5cRQ=E
+
+
+before_install:
+- openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc -out .travis/secring.gpg -d
 
 after_success:
 - mvn deploy --settings ./settings.xml -DskipTests=true
