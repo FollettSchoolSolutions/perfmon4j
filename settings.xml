@@ -6,4 +6,16 @@
       <password>${OSSRH_PASSWORD}</password>
     </server>
   </servers>
+  <profiles>
+  	<profile>
+     	<id>ossrh</id>
+      	<activation>
+        	<activeByDefault>true</activeByDefault>
+      	</activation>
+      	<properties>
+        	<gpg.executable>gpg</gpg.executable>
+        	<gpg.passphrase>${PGP_PASSPHRASE}</gpg.passphrase>
+      	</properties>
+    </profile>
+  </profiles>
 </settings>

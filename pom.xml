@@ -106,7 +106,6 @@
 							<goal>sign</goal>
 						</goals>
 						<configuration>
-							<passphrase>${PGP_PASSPHRASE}</passphrase>
 							<homedir>./.travis</homedir>
 						</configuration>
 					</execution>
