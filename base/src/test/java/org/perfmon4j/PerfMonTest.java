@@ -1341,7 +1341,7 @@ public class PerfMonTest extends TestCase {
             + " durationEnabledRun3=" + durationEnabledRun3 
             + " durationDisabled=" + durationDisabled);
     }
-
+    
     /*----------------------------------------------------------------------------*/
     private static class TestPerfMonThread extends Thread {
         final String monitorKey;

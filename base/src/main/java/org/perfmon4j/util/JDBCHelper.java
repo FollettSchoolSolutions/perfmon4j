@@ -40,7 +40,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
+
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.instrument.tomcat.TomcatDataSourceRegistry;
 import org.perfmon4j.util.vo.ResponseInfo;
 import org.perfmon4j.util.vo.ResponseInfoImpl;
 
@@ -111,6 +117,74 @@ public class JDBCHelper {
 			closeNoThrow(rs);
 		}
 		
+		return result;
+	}
+	
+	public static String getDatabaseIdentity(Connection conn, String schema) throws SQLException {
+		String result = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		final String tableName = (schema != null ? schema + "." : "") + "P4JDatabaseIdentity";
+		
+		try {
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery("SELECT DatabaseID FROM " + tableName);
+			if (rs.next()) {
+				result = rs.getString(1);
+			}
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmt);
+		}
+		
+		return result;
+	}
+	
+	public static double getDatabaseVersion(Connection conn, String dbSchema) throws SQLException {
+		double result = 0.0;
+		
+		if (conn != null) {
+			Statement stmt = null;
+			ResultSet rs = null;
+			try {
+				String s = (dbSchema == null) ? "" : (dbSchema + ".");
+				String sql = "SELECT ID FROM " + s + "DATABASECHANGELOG WHERE author = 'databaseLabel' ORDER BY ID DESC";
+				stmt = conn.createStatement();
+				rs = stmt.executeQuery(sql);
+				if (rs.next()) {
+					try {
+						result = Double.parseDouble(rs.getString(1));
+					} catch (NumberFormatException nfe) {
+						// Nothing to do... Just return default version..
+					}
+				}
+			} finally {
+				JDBCHelper.closeNoThrow(rs);
+				JDBCHelper.closeNoThrow(stmt);
+			}
+		}
+		
+		return result;
+	}
+	
+	public static boolean databaseChangeSetExists(Connection conn, String schema, String changeSetID) throws SQLException {
+		boolean result = false;
+		schema = (schema == null ? "" : (schema + "."));
+		String SQL = "SELECT COUNT(*) FROM " + schema + "DATABASECHANGELOG WHERE ID=?";
+		
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = conn.prepareStatement(SQL);
+			stmt.setString(1, changeSetID);
+			rs = stmt.executeQuery();
+			if (rs.next()) {
+				result = rs.getLong(1) > 0;
+			}
+		} finally {
+			closeNoThrow(rs);
+			closeNoThrow(stmt);
+		}
 		return result;
 	}
 	
@@ -226,6 +300,9 @@ public class JDBCHelper {
 	}
 	
 	public static final class DriverCache {
+		public static final DriverCache DEFAULT = new DriverCache();
+		
+		
 		private final Map<String, WeakReference<Driver>> cache =
 			new HashMap<String, WeakReference<Driver>>();
 		
@@ -388,4 +465,54 @@ public class JDBCHelper {
     	}
     	return result;
     }
-}
+
+    private static Context getInitialContext(String contextFactory, String urlPkgs) throws NamingException {
+    	try {
+    		// Try first with the Thread's contextClassLoader
+    		return getInitialContext(contextFactory, urlPkgs, null);
+    	} catch (NamingException ne) {
+    		// If that does not work, try with the Perfmon4j global class loader.
+    		return getInitialContext(contextFactory, urlPkgs, GlobalClassLoader.getClassLoader());
+    	}
+    }
+    
+    private static Context getInitialContext(String contextFactory, String urlPkgs, ClassLoader loader) throws NamingException {
+    	Thread current = Thread.currentThread();
+    	ClassLoader restoreClassLoader = current.getContextClassLoader();
+    	if (loader != null) {
+    		current.setContextClassLoader(loader);
+    	}
+    	try {
+	        Properties props = new Properties();
+	        if (contextFactory != null) {
+	        	props.put(Context.INITIAL_CONTEXT_FACTORY, contextFactory);
+	        }
+	        if (urlPkgs != null) {
+	        	props.put("java.naming.factory.url.pkgs", urlPkgs);
+	        }
+	       return new InitialContext(props);
+    	} finally {
+    		current.setContextClassLoader(restoreClassLoader);
+    	}
+    }
+    
+    public static DataSource lookupDataSource(String poolName, String contextFactory, String urlPkgs) throws SQLException {
+    	DataSource result; 
+    	try {
+            Context context = getInitialContext(contextFactory, urlPkgs);
+    		result = (DataSource)context.lookup(poolName);
+    	} catch (Exception e) {
+    		// Try finding a tomcat global DataSource.
+    		result = TomcatDataSourceRegistry.lookupTomcatDataSource(poolName);
+    		if (result == null) {
+    			if (logger.isDebugEnabled()) {
+    				// If debug is enabled include the original exception...
+    				throw new SQLException("Unabled find datasource: " + poolName , e);
+    			} else {
+    				throw new SQLException("Unabled find datasource: " + poolName + ": " + e.getMessage());
+    			}
+    		}
+    	} 
+    	return result;
+    }
+ }
