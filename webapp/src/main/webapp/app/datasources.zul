@@ -1,0 +1,43 @@
+<?page title="Perfmon4j Console - Data Sources" contentType="text/html;charset=UTF-8"?>
+<zk xmlns:html="native">
+	<div id="dataSourcesWindow" height="100%" width="100%" apply="web.org.perfmon4j.console.app.DataSourcesController">
+		<borderlayout>
+			<north>
+				<include src="/app/header.zul"/>
+			</north>
+			<center>
+				<vlayout hflex="1" vflex="1" style="overflow-y: auto !important; overflow-x: auto !important;">
+					<html:h2>Configure Data Sources</html:h2>
+					<groupbox > 
+						<checkbox id="enableDataSourcesCheckBox" label="Enable rest based access"/>
+						<separator/>
+						<hlayout><separator/><checkbox id="allowAnonymousCheckBox" label="Allow Anonymous access"/></hlayout>
+					</groupbox>
+					<html:h3>Databases</html:h3>
+					<grid id="databaseGrid" width="400px" mold="paging" pageSize="5">
+						<columns>
+							<column label="ID"/>
+							<column label="Name"/>
+							<column label="Version"/>
+						</columns>
+						<rows/>
+					</grid>
+					<html:h3>Oauth Access Tokens</html:h3>
+					<button id="createOauthTokenButton" label="Create Oauth Token"/>
+					<separator/>
+					<grid id="oauthGrid" width="400px" mold="paging" pageSize="5">
+						<columns>
+							<column label="Application Name"/>
+							<column label="Oauth Key"/>
+							<column label="Actions"/>
+						</columns>
+						<rows/>
+					</grid>
+				</vlayout>
+			</center>
+			<south>
+				<include src="/app/footer.zul"/>
+			</south>
+		</borderlayout>
+	</div>
+</zk>

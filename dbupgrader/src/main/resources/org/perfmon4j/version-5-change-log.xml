@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+	
+	<changeSet author="ddeucher" id="createDatabaseIdentityTable">
+		<createTable tableName="P4JDatabaseIdentity">
+			<column name="DatabaseID" type="CHAR(9)" >
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+		<insert tableName="P4JDatabaseIdentity">
+		 	<column name="DatabaseID">${DatabaseIdentifier}</column>
+		</insert>
+		
+		
+		
+	</changeSet>	
+
+	<changeSet author="databaseLabel" id="0005.0"/>
+</databaseChangeLog>

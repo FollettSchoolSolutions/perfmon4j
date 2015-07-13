@@ -3,7 +3,6 @@
 	<id>bin</id>
 	<formats>
 		<format>zip</format>
-		<format>tar.gz</format>
 	</formats>
 	
 	<includeSiteDirectory>false</includeSiteDirectory>
@@ -40,6 +39,10 @@
 	
 	<files>
 		<file>
+			<source>${M2_REPO}/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</source>
+			<destName>3rd-party/javassist/${javassist.version}/javassist.jar</destName>
+		</file>
+		<file>
 			<source>${basedir}/base/target/perfmon4j-${project.version}.jar</source>
 			<destName>perfmon4j.jar</destName>
 		</file>
@@ -75,6 +78,10 @@
 			<source>${basedir}/wildfly8/target/perfmon4j-wildfly8-${project.version}.jar</source>
 			<destName>perfmon4j-widlfly8.jar</destName>
 		</file>
+		<file>
+			<source>${basedir}/webapp/target/perfmon4j.war</source>
+			<destName>perfmon4j.war</destName>
+		</file>	
         </files>
 	
 	<dependencySets>

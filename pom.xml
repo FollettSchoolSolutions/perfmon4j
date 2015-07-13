@@ -4,7 +4,7 @@
   
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>1.2.1-SNAPSHOT</version>
+	<version>1.2.2</version>
 	<packaging>pom</packaging>
 
 	<name>perfmon4j-project</name>
@@ -20,13 +20,9 @@
 		<module>sunjava6</module>
 		<module>reportconsole</module>
 		<module>utils</module>
+		<module>webapp</module>
 		<module>wildfly8</module>
-<!--		<module>perfmon4jweb</module> -->
-	</modules>
-
-	<scm>
-		<developerConnection>scm:svn:svn+ssh://ddeucher@svn.code.sf.net/p/perfmon4j/code/trunk</developerConnection>
-	</scm>
+  </modules>
 
 	<build>
 		<plugins>
@@ -138,15 +134,13 @@
 	</dependencies>
 	
 	<distributionManagement>
-		<repository>
-			<id>fsc-internal</id>
-			<name>FSC Release Repository</name>
-			<url>http://nexus.fsc.follett.com/nexus/content/repositories/fsc-internal</url>
-		</repository>
 		<snapshotRepository>
-			<id>fsc-internal-snapshot</id>
-			<name>FSC Snapshot Repository</name>
-			<url>http://nexus.fsc.follett.com/nexus/content/repositories/fsc-internal-snapshot</url>
-		</snapshotRepository>
-	</distributionManagement>	
+	    		<id>ossrh</id>
+	    		<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+	  	</snapshotRepository>
+	  	<repository>
+	    		<id>ossrh</id>
+	    		<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+	  	</repository>
+	</distributionManagement>
 </project>
