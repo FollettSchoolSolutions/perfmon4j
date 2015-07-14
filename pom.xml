@@ -49,7 +49,7 @@
 			<id>release</id>
 			<activation>
       			<property>
-        			<name>${env.TRAVIS_BUILD_DIR}</name>
+        			<name>env.TRAVIS_BUILD_DIR</name>
       			</property>
     		</activation>
 			<build>
