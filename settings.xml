@@ -6,4 +6,20 @@
       <password>${OSSRH_PASSWORD}</password>
     </server>
   </servers>
+
+<!--
+  <profiles>
+  	<profile>
+     	<id>gpg-settings</id>
+      	<activation>
+        	<activeByDefault>true</activeByDefault>
+      	</activation>
+      	<properties>
+			<gpg.executable>gpg2</gpg.executable>
+        	<gpg.passphrase>${PGP_PASSPHRASE}</gpg.passphrase>
+        	<gpg.homedir>${TRAVIS_BUILD_DIR}/.travis</gpg.homedir>
+      	</properties>
+    </profile>
+  </profiles>
+-->
 </settings>
