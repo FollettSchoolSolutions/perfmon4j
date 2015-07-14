@@ -10,9 +10,14 @@ env:
   - secure: gowQQCz6eJ5kDKmJTcdY8otBuINuVtQhnrxlEEBEseyY1QMShJT7uBA9SD1DQjOxKyCqBVETAZqL1VmMqn8DW3yoYGDmrkvGysw7pEYh80D/yAn5SRCAmfutLpFrVVhckqbsRqTLvVJrldRikc/55JibZLmQKwOKpb9Q+zP70fM=
   - secure: T3QzKMEv/cCcdrnpn6/AiWNOHRUxr3xvpBYVQnzTcVeL91rQITiCDTKBDw5EyD9f62Sd6cYN99WjEEkIBaAfZqlEYMh1D2KGNUPwNT5Pg+luKwCwLbBX+QcGVIrVkdviZCk+Oxesv7NK1NYfly1rnvk/CibU0Phd+BKQn3Z0LwQ=
   - secure: Jb1GWwCUS6iDjoT61uTjvcUNrZBx2NHofGJAoA0SVwrkIG+LPo32fgn1eLQqfyjWFmTKDg5yLvl4v7PUQDQAaawbfF/64Nq+dD3uNqOZg9gwic0bCjilm7PTIzcnFD2JkF9X2zKKsY25pwH+VrwecCVV8iDPKKETH8IQMaWvecs=
+
 before_install:
 - openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc
   -out .travis/secring.gpg -d
+
+script:
+	mvn install --settings ./settings.xml -DskipTests=true 
+
 after_success:
 - mvn deploy --settings ./settings.xml -DskipTests=true
 - mvn assembly:assembly -DskipTests=true

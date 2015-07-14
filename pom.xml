@@ -44,6 +44,67 @@
 		<module>wildfly8</module>
  	</modules>
 
+	<profiles>
+	 	<profile> 
+			<id>release</id>
+			<activation>
+      			<property>
+        			<name>env.TRAVIS</name>
+      			</property>
+    		</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<version>2.10.3</version>
+						<configuration>
+							<doctitle>${project.name} ${project.version}</doctitle>
+							<windowtitle>${project.name} ${project.version}</windowtitle>        					
+						</configuration>
+						<executions>
+							<execution>
+							<id>attach-sources</id>
+							<goals>
+								<goal>jar</goal>
+							</goals>
+						</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>attach-sources</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.6</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+			</build>
+	  	</profile>
+	</profiles>
+	
 	<build>
 		<plugins>
 			<plugin>
@@ -61,79 +122,10 @@
 					<target>1.5</target>
 				</configuration>
 			</plugin>
-			
+
+	
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>attach-sources</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>2.10.3</version>
-				<configuration>
-					<doctitle>${project.name} ${project.version}</doctitle>
-					<windowtitle>${project.name} ${project.version}</windowtitle>        					
-				</configuration>
-				<executions>
-					<execution>
-					<id>attach-sources</id>
-					<goals>
-						<goal>jar</goal>
-					</goals>
-				</execution>
-				</executions>
-			</plugin>
-
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-gpg-plugin</artifactId>
-				<version>1.6</version>
-				<executions>
-					<execution>
-						<id>sign-artifacts</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>sign</goal>
-						</goals>
-						<configuration>
-							<homedir>./.travis</homedir>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-			<!--  Unable to get this working to build the "*.nbm" plugin module: 11/21/11 -->
-			<!--
-			
-			 <plugin>
-				<artifactId>maven-antrun-plugin</artifactId>
-				<version>1.7</version>
-				<executions>
-					<execution>
-						<phase>generate-sources</phase>
-						<configuration>
-							<tasks>
-								<ant dir="G:/projects/NetBeansProjects/Perfmon4jMonitor">
-								</ant>
-							</tasks>
-						</configuration>
-						<goals>
-							<goal>run</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			-->
-			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.4.1</version>
 				<configuration>
@@ -143,8 +135,7 @@
 					</descriptors>
 					<appendAssemblyId>true</appendAssemblyId>
 				</configuration>
-				<executions>
-				</executions>
+				<executions/>
 			</plugin>
 		</plugins>
 	</build>
