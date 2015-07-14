@@ -9,7 +9,7 @@ env:
   - secure: aFw9EJxLaMCgBcuR2S7tucg7S7C46tpVY3fOLPCWZayUWT/jaB9wNiewz/pHxU1L9J/EVe4wMzqFemzT4x9f5uSMiwQl+nOGWaJJUxzuEzKnA8LJL02v5xJI5eHeuwgun9BxG5w6taZ9FtBZ9RQD7WrQLCSqsEeLx7scy3SjLQ8=
   - secure: gowQQCz6eJ5kDKmJTcdY8otBuINuVtQhnrxlEEBEseyY1QMShJT7uBA9SD1DQjOxKyCqBVETAZqL1VmMqn8DW3yoYGDmrkvGysw7pEYh80D/yAn5SRCAmfutLpFrVVhckqbsRqTLvVJrldRikc/55JibZLmQKwOKpb9Q+zP70fM=
   - secure: T3QzKMEv/cCcdrnpn6/AiWNOHRUxr3xvpBYVQnzTcVeL91rQITiCDTKBDw5EyD9f62Sd6cYN99WjEEkIBaAfZqlEYMh1D2KGNUPwNT5Pg+luKwCwLbBX+QcGVIrVkdviZCk+Oxesv7NK1NYfly1rnvk/CibU0Phd+BKQn3Z0LwQ=
-  - secure: EkGtebilQVGLmMw2np4bUUkG7EbXJyyYFeTn4P5JKOJp/jGluw3ZZ0Zlwfh7/8+30HN98c1KPXYvqhMF7ljV+gPHOFp7yuzChlJo6/SQH05Gmj+phuqiLDD4Fgk9eRqYnmCldJ+n2hC2oNqboYhdLM+k5jvYIiCmb5Jfil2JYbU=
+  - secure: FijCmfZLpficmjey21adBOBznG1YuxJpdduO9DGkopYrr6G/iIUvbr+Lh3wZXyqNtoQbEqUHtSXF/aMaulnIWyDqPGQbsBiLlgFRWGn9vV+4tzLKCIUe/HWPnQI7s097JSfVDoouv7wGwrn2sRc7ZT4nW3H0qk5IY/JCrWb5+vI=
 before_install:
 - openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc
   -out .travis/secring.gpg -d
