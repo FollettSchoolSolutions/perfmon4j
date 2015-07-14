@@ -1,8 +1,9 @@
 language: java
 branches:
   only:
-  - master
-  - develop
+  	- master
+  	- develop
+
 env:
   global:
   - secure: T7QOqfTx3GXwIe+xBsYPu0YzCuxdcRJBe8ea2RMKNDT3KuQalzvxncQpHsupZKPURZgUPRj8Uq2qTXKpiVzFFc0rsaubJnOnxkBP/urmIvCvTP18DJDedupW/nvujPyTv0LB2f0cJM9n/59wlEXlT7L4MAMLJc2NelIlvvrMKP0=
@@ -12,12 +13,12 @@ env:
   - secure: Jb1GWwCUS6iDjoT61uTjvcUNrZBx2NHofGJAoA0SVwrkIG+LPo32fgn1eLQqfyjWFmTKDg5yLvl4v7PUQDQAaawbfF/64Nq+dD3uNqOZg9gwic0bCjilm7PTIzcnFD2JkF9X2zKKsY25pwH+VrwecCVV8iDPKKETH8IQMaWvecs=
 
 before_install:
-- openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc -out .travis/secring.gpg -d
+	- openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc -out .travis/secring.gpg -d
 
 script:
--	mvn install --settings ./settings.xml -DskipTests=true 
+	- mvn install --settings ./settings.xml -DskipTests=true 
 
 after_success:
-- mvn deploy --settings ./settings.xml -DskipTests=true
-- mvn assembly:assembly -DskipTests=true
-- .bintray/publishToBintray.sh
+	- mvn deploy --settings ./settings.xml -DskipTests=true
+	- mvn assembly:assembly -DskipTests=true
+	- .bintray/publishToBintray.sh
