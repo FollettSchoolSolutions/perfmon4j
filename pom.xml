@@ -91,7 +91,7 @@
 						<artifactId>maven-gpg-plugin</artifactId>
 						<version>1.6</version>
 						<configuration>
-							<passphrase>env.PGP_PASSPHRASE</passphrase>
+							<passphrase>${env.PGP_PASSPHRASE}</passphrase>
 							<homedir>${env.TRAVIS_BUILD_DIR}/.travis</homedir>
 						</configuration>
 						<executions>
