@@ -15,8 +15,8 @@ env:
 before_install:
 	- openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc -out .travis/secring.gpg -d
 
-script:
-	- mvn install --settings ./settings.xml -DskipTests=true 
+#script:
+#	- mvn install --settings ./settings.xml -DskipTests=true 
 
 after_success:
 	- mvn deploy --settings ./settings.xml -DskipTests=true
