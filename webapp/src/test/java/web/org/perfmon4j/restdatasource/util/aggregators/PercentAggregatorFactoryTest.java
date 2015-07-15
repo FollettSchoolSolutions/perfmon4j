@@ -76,6 +76,6 @@ public class PercentAggregatorFactoryTest extends TestCase {
 		ag.aggreagate(rs);
 
 		Number result = ag.getResult();
-		assertNull("Denominator is 0, we should return null", ag.getResult());
+		assertEquals("Denominator is 0, we should return 0.0", 0, result.longValue());
 	}
 }

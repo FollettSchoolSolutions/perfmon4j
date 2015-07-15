@@ -67,6 +67,7 @@ public class PercentAggregatorFactory implements AggregatorFactory {
 			if (!rs.wasNull()) { // If numerator is null don't use.
 				long denominator = rs.getLong(databaseColumnDenominator);
 				if (!rs.wasNull()) { // If denominator is null don't use.
+					hasValue = true;
 					accumulatorNumerator = accumulatorNumerator.add(new BigDecimal(numerator));
 					accumulatorDenominator = accumulatorDenominator.add(new BigDecimal(denominator));
 				}
@@ -77,8 +78,12 @@ public class PercentAggregatorFactory implements AggregatorFactory {
 		public Number getResult() {
 			Double result = null;
 
-			if (accumulatorDenominator.longValue() != 0) {
-				result = Double.valueOf(accumulatorNumerator.divide(accumulatorDenominator, 4, RoundingMode.HALF_UP).doubleValue()  * percentMultiplier);
+			if (hasValue) {
+				if (accumulatorDenominator.longValue() != 0) {
+					result = Double.valueOf(accumulatorNumerator.divide(accumulatorDenominator, 4, RoundingMode.HALF_UP).doubleValue()  * percentMultiplier);
+				} else {
+					result = Double.valueOf(0.0);
+				}
 			}
 			
 			return result;
