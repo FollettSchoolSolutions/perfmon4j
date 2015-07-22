@@ -183,10 +183,10 @@ public class JVMDataProvider extends DataProvider {
 			fields.add(new PercentProviderField("percentNonHeapMemCommitted", "NonHeapMemCommittedUsedMB", "NonHeapMemMaxUsedMB"));
 			fields.add(new ProviderField("systemCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "systemCpuLoad", true).makePrimary());
 			fields.add(new ProviderField("processCpuLoad", AggregationMethod.DEFAULT, AggregationMethod.MAX, "processCpuLoad", true).makePrimary());
-			fields.add(new NaturalPerMinuteProviderField("classLoadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassLoadCountPerMinute", "startTime", "endTime", "ClassLoadCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("classUnloadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassUnloadCountPerMinute", "startTime", "endTime", "ClassUnloadCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("threadStartCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ThreadStartCountPerMinute", "startTime", "endTime", "ThreadStartCountInPeriod", true));
-			fields.add(new NaturalPerMinuteProviderField("compilationMillisPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "CompilationMillisPerMinute", "startTime", "endTime", "CompilationMillisInPeriod", true));
+			fields.add(new NaturalPerMinuteProviderField("classLoadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassLoadCountPerMinute", "systemID", "startTime", "endTime", "ClassLoadCountInPeriod", true));
+			fields.add(new NaturalPerMinuteProviderField("classUnloadCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ClassUnloadCountPerMinute", "systemID", "startTime", "endTime", "ClassUnloadCountInPeriod", true));
+			fields.add(new NaturalPerMinuteProviderField("threadStartCountPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "ThreadStartCountPerMinute", "systemID", "startTime", "endTime", "ThreadStartCountInPeriod", true));
+			fields.add(new NaturalPerMinuteProviderField("compilationMillisPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, "CompilationMillisPerMinute", "systemID", "startTime", "endTime", "CompilationMillisInPeriod", true));
 			
 			return fields.toArray(new Field[]{});
 		}
