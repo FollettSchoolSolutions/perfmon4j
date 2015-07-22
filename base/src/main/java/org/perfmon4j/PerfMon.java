@@ -30,7 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
+import java.util.TreeSet;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -88,7 +90,7 @@ public class PerfMon {
     private static final Timer priorityTimer = new Timer("PerfMon.priorityTimer", true);
     public static final Timer utilityTimer = new Timer("PerfMon.utilityTimer", true);
     
-    private static long nextMonitorID;
+    private static AtomicLong nextMonitorID = new AtomicLong(0);
     private static final PerfMon rootMonitor;
     private static ClassLoader classLoader = GlobalClassLoader.getClassLoader();
 
@@ -104,7 +106,6 @@ public class PerfMon {
     
     static {
         // Order of these is important....
-        nextMonitorID = 0;
         ROOT_MONITOR_NAME = "<ROOT>";
         rootMonitor = new PerfMon(null, ROOT_MONITOR_NAME);
         
@@ -139,8 +140,13 @@ public class PerfMon {
     /**
      * Make sure to synchronize on the mapMonitorLockToken when you access
      * the mapMonitors Map...
+     * 
+     * 
+     * Very important that mapMonitors and mapMonitorsByID  are kept synchronized
      */
     private static Map<String, PerfMon> mapMonitors = new HashMap<String, PerfMon>();
+    private static Map<Long, PerfMon> mapMonitorsByID = new HashMap<Long, PerfMon>();
+    
     
     private static final Lock mapMonitorLock = new ReentrantLock();
     private static final Set<String> monitorsWithThreadTraceConfigAttached = Collections.synchronizedSet(new HashSet<String>());
@@ -189,10 +195,13 @@ public class PerfMon {
          }
     };
     
+    private static final Map<Thread, Set<ReferenceCount>> referenceCountsByThread = new WeakHashMap<Thread, Set<ReferenceCount>>();
+    
+    
 /*----------------------------------------------------------------------------*/    
     private PerfMon(PerfMon parent, String name) {
         this.name = parent == null ? ROOT_MONITOR_NAME : name;
-        monitorID = new Long(++nextMonitorID);
+        monitorID = new Long(nextMonitorID.addAndGet(1L));
         
         this.parent = parent;
         if (parent != null) {
@@ -360,6 +369,7 @@ public class PerfMon {
                 if (!isDynamicPath || parent.shouldChildBeDynamicallyCreated()) {
                 	result = new PerfMon(parent, key);
                 	mapMonitors.put(key, result);
+                	mapMonitorsByID.put(result.monitorID, result);
                 } else {
                 	result = parent;
                 }
@@ -368,6 +378,16 @@ public class PerfMon {
         	mapMonitorLock.unlock();
         }
         return result;
+    }
+
+    
+    private static PerfMon getMonitorByID(Long monitorID) {
+        mapMonitorLock.lock();
+        try {
+        	return mapMonitorsByID.get(monitorID);
+        } finally {
+        	mapMonitorLock.unlock();
+        }
     }
     
 /*----------------------------------------------------------------------------*/ 
@@ -565,12 +585,75 @@ public class PerfMon {
         // No need to synchronize here since this is a thread local object...
         ReferenceCount count = map.get(monitorID);
         if (count == null) {
-            count = new ReferenceCount();
+            count = new ReferenceCount(monitorID);
             map.put(monitorID, count);
+            Thread currentThread = Thread.currentThread();
+            Set<ReferenceCount> refs = referenceCountsByThread.get(currentThread);
+            if (refs == null) {
+            	refs = new HashSet<PerfMon.ReferenceCount>();
+                synchronized (referenceCountsByThread) {
+                	referenceCountsByThread.put(currentThread, refs);
+                }
+            }
+            synchronized (refs) {
+            	refs.add(count);
+            }
         }
         return count;
     }
-    
+
+	static public String dumpActiveMonitorThreads() {
+		StringBuilder builder = new StringBuilder();
+		
+		Set<Thread> threads;
+		synchronized (referenceCountsByThread) {
+			threads = new HashSet<Thread>(referenceCountsByThread.keySet());
+		}
+		for (Thread th : threads) {
+			String result = dumpActiveMonitors(th, true);
+			if (result != null) {
+				builder.append(result)
+					.append("\r\n");
+			}
+		}
+		
+		return builder.toString();
+	}
+	
+	static public String dumpActiveMonitors(Thread thread) {
+		return  dumpActiveMonitors(thread, false);
+	}
+	
+	static public String dumpActiveMonitors(Thread thread, boolean onlyIfAction) {
+		StringBuilder result = new StringBuilder();
+		result.append(thread)
+			.append(" - Active Perfmon4j monitors:\r\n");
+		Set<ReferenceCount> refs = referenceCountsByThread.get(thread);
+		if (refs != null) {
+			Set<ReferenceCountDescription> tmp = null;
+			synchronized (refs) {
+				tmp = new TreeSet<PerfMon.ReferenceCountDescription>();
+				for (ReferenceCount r : refs) {
+					ReferenceCountDescription desc = r.getDescription();
+					if (desc != null) {
+						tmp.add(desc);				 
+					}
+				}
+			}
+			if (tmp.size() > 0) {
+				long now = MiscHelper.currentTimeWithMilliResolution();
+				for (ReferenceCountDescription d : tmp) {
+					result.append("\t")
+						.append(d.describe(now))
+						.append("\r\n");
+				}
+			} else {
+				return null;
+			}
+		}
+		return result.toString();
+	}
+	
 /*----------------------------------------------------------------------------*/    
     private static String removeTrailingPeriods(String val) {
         while (val.endsWith(".") && val.length() > 1) {
@@ -610,17 +693,25 @@ public class PerfMon {
     
 /*----------------------------------------------------------------------------*/    
     private static class ReferenceCount {
+    	private static AtomicLong indexNumber = new AtomicLong();
+    	private final Long monitorID;
+    	private long sortOrder = 0;
         private int refCount = 0;
         private long startTime;
         private long sqlStartMillis = 0;
         boolean hasInternalThreadTrace = false;
         boolean hasExternalThreadTrace = false;
         
+        public ReferenceCount(Long monitorID) {
+        	this.monitorID = monitorID;
+        }
+        
         /**
          * @return The updated (incremented value of refCount)
          */
         private int inc(long startTime) {
             if (refCount == 0) {
+            	this.sortOrder = indexNumber.addAndGet(1L);
                 this.startTime = startTime;
                 this.sqlStartMillis = SQLTime.getSQLTime(); // Will always be 0 of SQLtime is NOT enabled.
             }
@@ -641,8 +732,107 @@ public class PerfMon {
        private long getSQLStartMillis() {
     	   return sqlStartMillis;
        }
+       
+       private ReferenceCountDescription getDescription() {
+    	   if (refCount > 0) {
+        	   return new ReferenceCountDescription(this);
+    	   } else {
+    		   return null;
+    	   }
+       }
+
+		/**
+		 * This hashCode ONLY works because we only store these
+		 * in a Hash set that contains entries for a single thread!
+		 * It would not work for a more general purpose solution.
+		 */
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result
+					+ ((monitorID == null) ? 0 : monitorID.hashCode());
+			return result;
+		}
+	
+		/**
+		 * This equals ONLY works because we only store these
+		 * in a Hash set that contains entries for a single thread!
+		 * It would not work for a more general purpose solution.
+		 */
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ReferenceCount other = (ReferenceCount) obj;
+			if (monitorID == null) {
+				if (other.monitorID != null)
+					return false;
+			} else if (!monitorID.equals(other.monitorID))
+				return false;
+			return true;
+		}
     }
 
+    /*----------------------------------------------------------------------------*/    
+    private static class ReferenceCountDescription implements Comparable<ReferenceCountDescription>{
+    	private final Long monitorID;
+        private final long startTime;
+        private final Long sortOrder;
+        
+        public ReferenceCountDescription(ReferenceCount count) {
+        	this.monitorID = count.monitorID;
+        	this.startTime = count.startTime;
+        	this.sortOrder = Long.valueOf(count.sortOrder);
+        }
+        
+        public String describe(long now) {
+        	String monitorName = "(Uknown)";
+        	PerfMon mon = getMonitorByID(monitorID);
+        	
+        	if (mon != null) {
+        		monitorName = mon.getName();
+        	}
+        	return monitorName + " (" + (now - startTime) + " ms)"; 
+        }
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result
+					+ ((monitorID == null) ? 0 : monitorID.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ReferenceCountDescription other = (ReferenceCountDescription) obj;
+			if (monitorID == null) {
+				if (other.monitorID != null)
+					return false;
+			} else if (!monitorID.equals(other.monitorID))
+				return false;
+			return true;
+		}
+
+		public int compareTo(ReferenceCountDescription o) {
+			return o.sortOrder.compareTo(sortOrder); // We want a descending sort.
+		}
+		
+    }
+    
+    
 /*----------------------------------------------------------------------------*/    
     public int getTotalCompletions() {
         return totalCompletions;
@@ -1109,6 +1299,7 @@ public class PerfMon {
     	mapMonitorLock.lock();
     	try {
     		mapMonitors.clear();
+    		mapMonitorsByID.clear();
 		} finally {
 			mapMonitorLock.unlock();
 		}

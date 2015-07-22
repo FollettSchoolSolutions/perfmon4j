@@ -152,7 +152,7 @@ public class RuntimeTimerInjector {
         List<PendingTimer> pendingTimers = new ArrayList<PendingTimer>();
         boolean extremeSQLClass = false;
         
-        logger.logDebug("Injecting timer into: " + clazz.getName());
+        logger.logDebug("Evaluation class for potential timer injection: " + clazz.getName());
         
         if (!clazz.isInterface()) {
             if (params != null) {
@@ -188,7 +188,8 @@ public class RuntimeTimerInjector {
             }
             
             if ((mode != TransformerParams.MODE_NONE) || extremeSQLClass) {
-            	boolean mustMaintainSerialVersion = false;
+                logger.logDebug("Injecting timer into: " + clazz.getName() + (beingRedefined ? " (REDEFINED CLASS)" : ""));
+                boolean mustMaintainSerialVersion = false;
             
              	SerialVersionUIDHelper serialVersionHelper = SerialVersionUIDHelper.getHelper();
                 /**

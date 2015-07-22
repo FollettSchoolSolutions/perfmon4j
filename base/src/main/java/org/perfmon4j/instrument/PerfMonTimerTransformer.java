@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 import java.lang.reflect.Method;
 import java.rmi.RemoteException;
 import java.security.ProtectionDomain;
@@ -498,6 +499,12 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     		}
         }
 
+        /** todo:  Make this a parameter
+         */
+        StackTraceEnhancer stackTraceEnhancer = new StackTraceEnhancer();
+        inst.addTransformer(stackTraceEnhancer);
+        
+        
         if (t.params.isInstallServletValve()) {
         	BootConfiguration.ServletValveConfig valveConfig = null;
         	String configFile = t.params.getXmlFileToConfig();
@@ -528,27 +535,17 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	logger.logInfo("Perfmon4j bootstrap implementation disabled.  Add -btrue to javaAgent parameters to enable.");
         	if (disabler != null) {
         		try {
-	        		Class<?> clazz = System.class;       		
-	                ClassLoader loader = clazz.getClassLoader();
-	                if (loader == null) {
-	                    loader = ClassLoader.getSystemClassLoader();
-	                }
-	                String resourceName =  clazz.getName().replace('.', '/') + ".class";
-	                InputStream stream = loader.getResourceAsStream(resourceName);
-	                if (stream == null) {
-	                    logger.logError("Unable to load bytes for resourcename: " + resourceName 
-	                        + " from loader: " + loader.toString());
-	                } else {
-	                    ByteArrayOutputStream o = new ByteArrayOutputStream();
-	                    int c = 0;
-	                    while ((c = stream.read()) != -1) {
-	                        o.write(c);
-	                    }
-	                    ClassDefinition def = new ClassDefinition(clazz, o.toByteArray()); 
-	                    inst.redefineClasses(new ClassDefinition[]{def});
-	                }
+        			forceInstrumentLoadedClass(System.class, inst);
         		} catch (Exception ex) {
         			logger.logError("Perfmon4j failed disabling System.gc()", ex);
+        		}
+        	}
+        	if (stackTraceEnhancer != null) {
+        		try {
+        			forceInstrumentLoadedClass(Throwable.class, inst);
+        			forceInstrumentLoadedClass(StackTraceElement.class, inst);
+        		} catch (Exception ex) {
+        			logger.logError("Perfmon4j failed installing StackTraceEnhancer", ex);
         		}
         	}
         } else {
@@ -703,5 +700,36 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	return result;
     }
     
+    private static void forceInstrumentLoadedClass(Class<?> clazz, Instrumentation inst) throws IOException, ClassNotFoundException, UnmodifiableClassException {
+        ClassLoader loader = clazz.getClassLoader();
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader();
+        }
+        String resourceName =  clazz.getName().replace('.', '/') + ".class";
+        InputStream stream = null;
+        ByteArrayOutputStream out = null;
+        try {
+	        stream = loader.getResourceAsStream(resourceName);
+	        if (stream == null) {
+	            logger.logError("Unable to load bytes for resourcename: " + resourceName 
+	                + " from loader: " + loader.toString());
+	        } else {
+	            out = new ByteArrayOutputStream();
+	            int c = 0;
+	            while ((c = stream.read()) != -1) {
+	                out.write(c);
+	            }
+	            ClassDefinition def = new ClassDefinition(clazz, out.toByteArray());
+	            inst.redefineClasses(new ClassDefinition[]{def});
+	        }
+        } finally {
+        	if (stream != null) {
+        		try { stream.close(); } catch (IOException io) {/*ignore*/};
+        	}
+        	if (out != null) {
+        		try { out.close(); } catch (IOException io) {/*ignore*/};
+        	}
+        }
+    }
 }
 

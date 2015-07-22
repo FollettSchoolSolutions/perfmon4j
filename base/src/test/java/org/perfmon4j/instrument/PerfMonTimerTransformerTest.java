@@ -46,6 +46,7 @@ import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
@@ -76,6 +77,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
         Properties props = new Properties();	
 		props.setProperty("Premain-Class", "org.perfmon4j.instrument.PerfMonTimerTransformer");
 		props.setProperty("Can-Redefine-Classes", "true");
+		props.setProperty("Can-Retransform-Classes", "true");
 		
 		File classesFolder = new File("./target/classes");
 		if (!classesFolder.exists()) {
@@ -159,9 +161,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
     /*----------------------------------------------------------------------------*/    
     public void testAnnotateSystemClass() throws Exception {
     	String output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "-dtrue,-ejava.lang.System,-btrue", perfmon4jJar);
-
     	final String validationString = "BootStrapMonitor: java.lang.System.checkKey";
-    	
     	assertTrue("Should have added a bootstrap monitor: " + output,
     			output.contains(validationString));
     }
@@ -865,8 +865,84 @@ System.out.println(output);
     	assertTrue("Should have included SQL time specification", m.find());
      }
     
+    public static class EnhancedStackDumpTest implements Runnable {
+    	public volatile int nextVal;
+    	
+    	public void doSomethingSmall() {
+//    		synchronized (this) {
+    			try {Thread.sleep(1);} catch (Exception ex){};
+        		nextVal++;
+//			}
+    	}
+    	
+    	private void printStackTrace() {
+    		System.out.println(PerfMon.dumpActiveMonitorThreads());
+    		
+//    		Thread.dumpStack();
+//    		
+//    		Thread.getAllStackTraces();
+    		
+    	}
+    	
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorName = "WebRequest";
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorName);
+				config.defineMonitor(this.getClass().getName());
+				config.defineAppender(appenderName, TextAppender.class.getName(), "1 minute");
+				config.attachAppenderToMonitor(monitorName, appenderName, "./*");
+				config.attachAppenderToMonitor(this.getClass().getName(), appenderName, "/*");
+				PerfMon.configure(config);
+				
+				for (int i = 0; i < 100; i++) {
+					Thread th = new Thread(new Runnable() {
+						
+						public void run() {
+							while (true) {
+								PerfMonTimer timer = PerfMonTimer.start("WebRequest.daemon.asdf");
+								try {
+									doSomethingSmall();
+								} finally {
+									PerfMonTimer.stop(timer);
+								}
+							}
+						}
+					});
+					th.setDaemon(true);
+					th.start();
+				}
+				
+				Thread.sleep(100);
+	
+				PerfMonTimer timer = PerfMonTimer.start("WebRequest.main");
+				try {
+					printStackTrace();
+				} finally {
+					PerfMonTimer.stop(timer);
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+    }
     
     
+    
+    
+    public void testEnhancedStackDump() throws Exception {
+    	new StackTraceEnhancer();
+    	
+    	
+//    	Runtime.getRuntime().traceMethodCalls(true);
+    	String output = LaunchRunnableInVM.run(EnhancedStackDumpTest.class, "-eorg.perfmon4j,-btrue", "", perfmon4jJar);
+    	System.out.println(output);
+    	
+//    	new TestEnhancedStackDump().run();
+    	
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

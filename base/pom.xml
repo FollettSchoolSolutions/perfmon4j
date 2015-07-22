@@ -44,6 +44,7 @@
 						<manifestEntries>
 							<premain-class>org.perfmon4j.instrument.PerfMonTimerTransformer</premain-class>
 							<Can-Redefine-Classes>true</Can-Redefine-Classes>
+							<Can-Retransform-Classes>true</Can-Retransform-Classes>
 							<Boot-Class-Path>javassist.jar</Boot-Class-Path>
 						</manifestEntries>
 					</archive>
