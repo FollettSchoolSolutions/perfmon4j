@@ -80,7 +80,7 @@ public class PercentAggregatorFactory implements AggregatorFactory {
 
 			if (hasValue) {
 				if (accumulatorDenominator.longValue() != 0) {
-					result = Double.valueOf(accumulatorNumerator.divide(accumulatorDenominator, 4, RoundingMode.HALF_UP).doubleValue()  * percentMultiplier);
+					result = Double.valueOf(accumulatorNumerator.divide(accumulatorDenominator, 2, RoundingMode.HALF_UP).doubleValue()  * percentMultiplier);
 				} else {
 					result = Double.valueOf(0.0);
 				}
