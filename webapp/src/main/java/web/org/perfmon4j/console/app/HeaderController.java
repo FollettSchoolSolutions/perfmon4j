@@ -63,6 +63,10 @@ public class HeaderController extends SelectorComposer<Component> {
 		Executions.sendRedirect("/app/datasources.zul");
 	}
 
+	@Listen("onClick = #jmxExplorer")
+	public void jmxExplorer() {
+		Executions.sendRedirect("/app/jmxExplorer.zul");
+	}
 	
 	
 	@Listen("onClick = #systemInfoMenuItem")

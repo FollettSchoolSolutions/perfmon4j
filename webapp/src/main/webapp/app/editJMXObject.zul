@@ -1,0 +1,22 @@
+<?page title="Edit JMX Object" contentType="text/html;charset=UTF-8"?>
+<zk>
+   <zscript>
+   		String oName = Executions.getCurrent().getParameter("objectName");
+   </zscript>
+<window id="editJMXObjectDialog" title="Edit JMX Object" border="none" apply="web.org.perfmon4j.console.app.EditJMXObjectController" 
+	xmlns:html="native">
+	<vlayout>
+		<hlayout><image src="/app/images/perfmon4j-logo.png"/><html:h2>${oName}</html:h2></hlayout>
+		<label>Attributes</label>
+		<grid id="attributesGrid" width="100%" height="100%" mold="paging" pageSize="10">
+			<columns>
+				<column label="Name"/>
+				<column label="Value"/>
+				<column label="Type"/>
+				<column label="Description"/>
+			</columns>
+			<rows/>
+		</grid>
+	</vlayout>
+</window>
+</zk>

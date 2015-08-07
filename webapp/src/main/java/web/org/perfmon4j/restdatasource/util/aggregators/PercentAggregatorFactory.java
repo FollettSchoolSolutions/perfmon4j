@@ -41,8 +41,6 @@ public class PercentAggregatorFactory implements AggregatorFactory {
 		percentMultiplier = displayAsRatio ? 1 : 100;
 	}
 	
-	
-	
 	@Override
 	public Aggregator newAggregator() {
 		return new PercentAggregator();

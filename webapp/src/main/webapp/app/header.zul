@@ -20,6 +20,11 @@
                    			<menuitem id="configureDataSources" label="Configure Data Sources" />
                			</menupopup>
            			</menu>       				
+					<menu label="Tools">
+               			<menupopup>
+                   			<menuitem id="jmxExplorer" label="JMX Explorer" />
+               			</menupopup>
+           			</menu>       				
 					<menu label="Help">
                			<menupopup>
                    			<menuitem id="aboutMenuItem" label="About.." />
