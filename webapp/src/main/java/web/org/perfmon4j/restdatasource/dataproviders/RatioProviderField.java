@@ -26,20 +26,23 @@ import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 import web.org.perfmon4j.restdatasource.util.aggregators.PercentAggregatorFactory;
 
 public class RatioProviderField extends ProviderField {
+	protected String systemIDColumn;
 	protected String numeratorColumn;
 	protected String denominatorColumn;
 
 	public RatioProviderField(String name,
+			String systemIDColumn,
 			String numeratorColumn,
 			String denominatorColumn) {
-		super(name, new AggregationMethod[]{AggregationMethod.NATURAL}, AggregationMethod.NATURAL, null,
+		super(name, new AggregationMethod[]{AggregationMethod.NATURAL, AggregationMethod.MAX, AggregationMethod.MIN}, AggregationMethod.NATURAL, null,
 				true);
+		this.systemIDColumn = systemIDColumn;
 		this.numeratorColumn = numeratorColumn;
 		this.denominatorColumn = denominatorColumn;
 	}
 
 	@Override
 	public AggregatorFactory buildFactory(AggregationMethod method) {
-		return new PercentAggregatorFactory(numeratorColumn, denominatorColumn, true);
+		return new PercentAggregatorFactory(systemIDColumn, numeratorColumn, denominatorColumn, method, true);
 	}
 }
