@@ -23,6 +23,7 @@ package web.org.perfmon4j.console.app;
 
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.management.MBeanAttributeInfo;
@@ -42,7 +43,10 @@ import org.zkoss.zul.Label;
 import org.zkoss.zul.ListModelArray;
 import org.zkoss.zul.Row;
 import org.zkoss.zul.RowRenderer;
+import org.zkoss.zul.Vlayout;
 import org.zkoss.zul.Window;
+
+import web.org.perfmon4j.console.app.util.openmbean.TabularDataHelper;
 
 public class EditJMXObjectController extends SelectorComposer<Component> {
 	private static final long serialVersionUID = 1L;
@@ -57,22 +61,29 @@ public class EditJMXObjectController extends SelectorComposer<Component> {
 	@Wire
 	private Grid attributesGrid;
 
+	@Wire
+	private Grid operationsGrid;
+	
 	@Override
 	public void doAfterCompose(Component comp) throws Exception {
 		super.doAfterCompose(comp);
 		
 		String oName = Executions.getCurrent().getParameter("objectName");
 		objectName = new ObjectName(oName);
-		
 
 		MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 		MBeanInfo info = server.getMBeanInfo(objectName);
 		attributes = info.getAttributes();
 		operations = info.getOperations();
+		
 
 		attributesGrid.setModel(new ListModelArray<MBeanAttributeInfo>(
 				attributes, false));
 		attributesGrid.setRowRenderer(new AttributesRowRender());
+		
+		operationsGrid.setModel(new ListModelArray<MBeanOperationInfo>(
+				operations, false));
+		operationsGrid.setRowRenderer(new OperationsRowRender());
 	}
 
 	public static void openTab(Component parent, ObjectName objectName) {
@@ -97,23 +108,74 @@ public class EditJMXObjectController extends SelectorComposer<Component> {
 //		window.doModal();
 	}
 
+	private class OperationsRowRender implements RowRenderer<MBeanOperationInfo> {
+
+		@Override
+		public void render(Row row, MBeanOperationInfo operation, int whatIsThis)
+				throws Exception {
+			
+			row.appendChild(new Label(operation.getName()));
+			row.appendChild(new Label(operation.getReturnType()));
+			row.appendChild(new Label(operation.getDescription()));
+		}
+	}
+	
+	
 	private class AttributesRowRender implements
 			RowRenderer<MBeanAttributeInfo> {
 
 		@Override
 		public void render(Row row, MBeanAttributeInfo attr, int whatIsThis)
 				throws Exception {
-			boolean readable = attr.isReadable();
-			boolean writeable = attr.isWritable();
+			final boolean readable = attr.isReadable();
+			final boolean writeable = attr.isWritable();
 			
 			String description = attr.getDescription();
 			
-			MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-			Object obj = server.getAttribute(objectName, attr.getName());
 			
+			MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+			Object obj = null;
+			try {
+				obj = server.getAttribute(objectName, attr.getName());
+			} catch (Exception ex) {
+				ex.printStackTrace();
+				System.err.println("Error reading attribute: " + attr.getName() + " Message: " + ex.getMessage() );
+			}
+			
+			if (obj != null && obj.getClass().getName().contains("TabularData")) {
+				try {
+					List<String> values = new TabularDataHelper().extractTabularData(obj);
+					if (values != null) {
+						obj = values.toArray();
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace();
+					// Ignore we might not have the openmbeans classes loades.
+				}
+			}
+			
+			final boolean isArray = obj != null && obj.getClass().isArray();
+			
+			// Column 1 is the Name (i.e. LoggerNames)
 			row.appendChild(new Label(attr.getName()));
-			row.appendChild(buildLabel(obj));
-			row.appendChild(new Label(attr.getType()));
+
+			
+			// Column 2 is the Value 
+			if (isArray) {
+				row.appendChild(buildLabelForArray(obj));
+			} else {
+				row.appendChild(buildLabel(obj));
+			}
+
+			String type = attr.getType();
+			if (type.startsWith("[L") && type.endsWith(";")) {
+				type = type.substring(2, type.length()-1);
+				type += "[]";
+			}
+			
+			row.appendChild(new Label(type));
+			
+			
 			row.appendChild(new Label(description));
 		}
 	}
@@ -127,4 +189,15 @@ public class EditJMXObjectController extends SelectorComposer<Component> {
 		return result;
 	}
 
+	private Vlayout buildLabelForArray(Object attribute) {
+		Vlayout layout = new Vlayout();
+
+		for (Object o : (Object[])attribute) {
+			layout.appendChild(buildLabel(o));
+		}
+		
+		return layout;
+	}
+	
+	
 }

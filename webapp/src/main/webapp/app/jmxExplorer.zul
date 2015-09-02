@@ -8,7 +8,15 @@
 			<center>
 				<vlayout hflex="1" vflex="1" style="overflow-y: auto !important; overflow-x: auto !important;">
 					<html:h2>JMX Explorer</html:h2>
-					<hlayout><label>Filter:</label> <textbox id="filterTextBox"/><button label="Apply" id="applyFilterButton" /></hlayout>
+					<groupbox>
+						<caption>Filter MBeans</caption>
+						<vlayout>
+							<checkbox id="hasAttributesXBox" label="Has Attributes"/>
+							<checkbox id="hasOperationsXBox" label="Has Operations"/>
+							<hlayout><label>Contains String: </label><textbox id="filterTextBox"/></hlayout>
+							<button label="Apply" id="applyFilterButton" />
+						</vlayout>
+					</groupbox>
 					<tree id="jmxTree" width="100%" >
 	        			<treecols>
 	            			<treecol label="JMX Object" />       

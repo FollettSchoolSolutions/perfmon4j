@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
@@ -38,6 +39,7 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
+import org.zkoss.zul.Checkbox;
 import org.zkoss.zul.DefaultTreeModel;
 import org.zkoss.zul.DefaultTreeNode;
 import org.zkoss.zul.Label;
@@ -55,6 +57,7 @@ import web.org.perfmon4j.console.app.zk.RefreshableComposer;
 public class JMXExplorerController extends RefreshableComposer<Component>  {
 	private static final long serialVersionUID = 1L;
 
+	private MBeanServer server = ManagementFactory.getPlatformMBeanServer(); 
 	
 	@Wire
 	private Component jmxExplorerWindow;
@@ -64,6 +67,12 @@ public class JMXExplorerController extends RefreshableComposer<Component>  {
 	
 	@Wire 
 	private Textbox filterTextBox;
+	
+	@Wire
+	private Checkbox hasAttributesXBox;
+	
+	@Wire
+	private Checkbox hasOperationsXBox;
 	
 	private JMXDomain rootDomain;
 	
@@ -84,14 +93,12 @@ public class JMXExplorerController extends RefreshableComposer<Component>  {
 	
 	@Listen("onClick = #applyFilterButton")
 	public void createOauthToken(Event event) {
-		rootDomain.applyFilter(filterTextBox.getText());
+		rootDomain.applyFilter(filterTextBox.getText(), hasAttributesXBox.isChecked(), hasOperationsXBox.isChecked());
 		handleRefreshEvent(event);
 	}	
 	
 	private JMXDomain generateDomainHierarchy() throws Exception {
 		JMXDomain result = new JMXDomain("root");
-		
-		MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 		
 		Set<ObjectName> set = server.queryNames(new ObjectName("*:*"), null);
 		for (ObjectName i : set) {
@@ -156,7 +163,7 @@ public class JMXExplorerController extends RefreshableComposer<Component>  {
 			return result;
 		}
 
-		public abstract void applyFilter(String filter);
+		public abstract void applyFilter(String filter, boolean hasAttributes, boolean hasOperations);
 
 		public abstract boolean isVisible();
 		
@@ -213,9 +220,9 @@ public class JMXExplorerController extends RefreshableComposer<Component>  {
 		}
 
 		@Override
-		public void applyFilter(String filter) {
+		public void applyFilter(String filter, boolean hasAttributes, boolean hasOperations) {
 			for (JMXElement element : children) {
-				element.applyFilter(filter);
+				element.applyFilter(filter, hasAttributes, hasOperations);
 			}
 		}
 
@@ -232,13 +239,21 @@ public class JMXExplorerController extends RefreshableComposer<Component>  {
 		}
 	}
 	
-	private static class JMXObject extends JMXElement {
+	private class JMXObject extends JMXElement {
+		private final MBeanInfo info;
 		private final ObjectName objectName;
 		private boolean visible = true;
 		
 		public JMXObject(ObjectName objectName) {
 			super(objectName.toString());
 			this.objectName = objectName;
+			MBeanInfo i = null;
+			try {
+				i = server.getMBeanInfo(objectName);
+			} catch (Exception e) {
+				// ignore
+			} 
+			this.info = i;
 		}
 
 		public ObjectName getObjectName() {
@@ -250,8 +265,14 @@ public class JMXExplorerController extends RefreshableComposer<Component>  {
 		}
 
 		@Override
-		public void applyFilter(String filter) {
+		public void applyFilter(String filter, boolean hasAttributes, boolean hasOperations) {
 			visible = filter == null || filter.isEmpty() || this.getName().toLowerCase().contains(filter.toLowerCase());
+			if (visible && hasAttributes) {
+				visible = (info != null) && info.getAttributes().length > 0;
+			}
+			if (visible && hasOperations) {
+				visible = (info != null) && info.getOperations().length > 0;
+			}
 		}
 
 		@Override
