@@ -354,6 +354,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 				"schema=" + SCHEMA,
 				"thirdPartyExtensions=FSS"});
 		
+		assertTrue("Should have a FSSFetchThreadPoolSnapshot table", UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchThreadPoolSnapshot"));
 		assertTrue("Should have a FSSFetchPolicySnapshot table", UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchPolicySnapshot"));
 		
 		System.out.println(dumpQuery(conn, "SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG"));
