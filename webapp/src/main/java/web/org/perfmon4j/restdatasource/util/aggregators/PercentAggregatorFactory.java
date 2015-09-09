@@ -34,25 +34,27 @@ public class PercentAggregatorFactory implements AggregatorFactory {
 	private final String databaseColumnNumerator;
 	private final String databaseColumnDenominator;
 	private final String databaseColumnSystemID;
+	private final boolean invertRatio;
 
 	private final int percentMultiplier;
 	private final AggregationMethod aggregationMethod;
 	
 	public PercentAggregatorFactory(String databaseColumnSystemID, String databaseColumnNumerator, String databaseColumnDenominator) {
-		this(databaseColumnSystemID, databaseColumnNumerator, databaseColumnDenominator, AggregationMethod.NATURAL, false);
+		this(databaseColumnSystemID, databaseColumnNumerator, databaseColumnDenominator, AggregationMethod.NATURAL, false, false);
 	}
 	
 	public PercentAggregatorFactory(String databaseColumnSystemID, String databaseColumnNumerator, String databaseColumnDenominator, 
 			AggregationMethod aggregationMethod) {
-		this(databaseColumnSystemID, databaseColumnNumerator, databaseColumnDenominator, aggregationMethod, false);
+		this(databaseColumnSystemID, databaseColumnNumerator, databaseColumnDenominator, aggregationMethod, false, false);
 	}
 
-	public PercentAggregatorFactory(String databaseColumnSystemID, String databaseColumnNumerator, String databaseColumnDenominator, AggregationMethod aggregationMethod,  boolean displayAsRatio) {
+	public PercentAggregatorFactory(String databaseColumnSystemID, String databaseColumnNumerator, String databaseColumnDenominator, AggregationMethod aggregationMethod,  boolean displayAsRatio, boolean invertRatio) {
 		this.databaseColumnSystemID = databaseColumnSystemID;
 		this.databaseColumnNumerator = databaseColumnNumerator;
 		this.databaseColumnDenominator = databaseColumnDenominator;
 		percentMultiplier = displayAsRatio ? 1 : 100;
 		this.aggregationMethod = aggregationMethod;
+		this.invertRatio = invertRatio;
 		
 		if (aggregationMethod != AggregationMethod.NATURAL 
 			&& aggregationMethod != AggregationMethod.MAX
@@ -107,6 +109,9 @@ public class PercentAggregatorFactory implements AggregatorFactory {
 					result = Double.valueOf(accumulatorNumerator.divide(accumulatorDenominator, 2, RoundingMode.HALF_UP).doubleValue()  * percentMultiplier);
 				} else {
 					result = Double.valueOf(0.0);
+				}
+				if (invertRatio) {
+					result = Double.valueOf((1.0 * percentMultiplier) - result.doubleValue());
 				}
 			}
 			

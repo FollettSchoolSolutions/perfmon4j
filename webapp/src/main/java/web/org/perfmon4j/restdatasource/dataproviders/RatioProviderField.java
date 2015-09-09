@@ -43,6 +43,6 @@ public class RatioProviderField extends ProviderField {
 
 	@Override
 	public AggregatorFactory buildFactory(AggregationMethod method) {
-		return new PercentAggregatorFactory(systemIDColumn, numeratorColumn, denominatorColumn, method, true);
+		return new PercentAggregatorFactory(systemIDColumn, numeratorColumn, denominatorColumn, method, true, false);
 	}
 }

@@ -152,5 +152,31 @@ public class PercentAggregatorFactoryTest extends TestCase {
 		assertEquals("Should display system 2 since system 1 had no activity", 20, result.longValue());
 	}
 	
+	/**
+	 * In this example, in the database we have a queueCapacity and queueFree counters.
+	 * However we want to display a queueInUse percentage.  To do this we set invertRatio=true
+	 * on the PercentAggregatorFactory constructor.  
+	 * @throws Exception
+	 */
+	public void testSimpleInvertRatio() throws Exception {
+		ResultSet rs = Mockito.mock(ResultSet.class);
+		
+		Mockito.when(rs.getString("systemID")).thenReturn("1");
+		
+		Aggregator ag = new PercentAggregatorFactory("systemID", "queueFree", "queueCapacity", AggregationMethod.NATURAL, false, true).newAggregator();
+		assertNull("We dont have any data should return null", ag.getResult());
+		
+		Mockito.when(rs.getLong("queueFree")).thenReturn(Long.valueOf(2));
+		Mockito.when(rs.getLong("queueCapacity")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+
+		Mockito.when(rs.getLong("queueFree")).thenReturn(Long.valueOf(3));
+		Mockito.when(rs.getLong("queueCapacity")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+		
+		Number result = ag.getResult();
+		assertTrue("Should be a double value", result instanceof Double);
+		assertEquals("Should invert the percentage", 75, result.longValue());
+	}
 	
 }

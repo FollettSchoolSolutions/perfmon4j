@@ -29,20 +29,31 @@ public class PercentProviderField extends ProviderField {
 	protected String systemIDColumn;
 	protected String numeratorColumn;
 	protected String denominatorColumn;
+	protected boolean invertRatio;
 
 	public PercentProviderField(String name,
 			String systemIDColumn,
 			String numeratorColumn,
 			String denominatorColumn) {
+		this(name, systemIDColumn, numeratorColumn, denominatorColumn, false);
+	}
+
+	public PercentProviderField(String name,
+			String systemIDColumn,
+			String numeratorColumn,
+			String denominatorColumn,
+			boolean invertRatio) {
 		super(name, new AggregationMethod[]{AggregationMethod.NATURAL, AggregationMethod.MAX, AggregationMethod.MIN}, AggregationMethod.NATURAL, null,
 				true);
 		this.systemIDColumn = systemIDColumn;
 		this.numeratorColumn = numeratorColumn;
 		this.denominatorColumn = denominatorColumn;
+		this.invertRatio = invertRatio;
 	}
-
+	
+	
 	@Override
 	public AggregatorFactory buildFactory(AggregationMethod method) {
-		return new PercentAggregatorFactory(systemIDColumn, numeratorColumn, denominatorColumn, method);
+		return new PercentAggregatorFactory(systemIDColumn, numeratorColumn, denominatorColumn, method, false, invertRatio);
 	}
 }

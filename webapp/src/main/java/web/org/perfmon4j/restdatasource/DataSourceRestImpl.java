@@ -70,6 +70,7 @@ import web.org.perfmon4j.restdatasource.dataproviders.JVMDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.MemoryPoolDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.ThreadPoolDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.thirdparty.FSSFetchPolicyDataProvider;
+import web.org.perfmon4j.restdatasource.dataproviders.thirdparty.FSSFetchThreadPoolDataProvider;
 import web.org.perfmon4j.restdatasource.util.DataProviderRegistry;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
@@ -90,6 +91,7 @@ public class DataSourceRestImpl {
 		registry.registerDataProvider(new CacheDataProvider());
 		registry.registerDataProvider(new ThreadPoolDataProvider());
 		registry.registerDataProvider(new FSSFetchPolicyDataProvider());
+		registry.registerDataProvider(new FSSFetchThreadPoolDataProvider());
 	}
 
 	@GET
