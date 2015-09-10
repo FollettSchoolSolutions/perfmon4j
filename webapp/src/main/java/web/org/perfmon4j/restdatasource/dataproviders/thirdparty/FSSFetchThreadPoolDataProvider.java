@@ -178,11 +178,11 @@ public class FSSFetchThreadPoolDataProvider extends DataProvider {
 		private static final Field[] buildFields() {
 			List<Field> fields = new ArrayList<Field>();
 			
-			fields.add(new ProviderField("minThreads", AggregationMethod.DEFAULT, AggregationMethod.MIN, "MINTHREADS", false));
-			fields.add(new ProviderField("maxThreads", AggregationMethod.DEFAULT, AggregationMethod.MAX, "MAXTHREADS", false));
+			fields.add(new ProviderField("minThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "MINTHREADS", false));
+			fields.add(new ProviderField("maxThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "MAXTHREADS", false));
 			fields.add(new ProviderField("activeThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "ACTIVETHREADS", false));
 			fields.add(new ProviderField("poolThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "POOLTHREADS", false));
-			fields.add(new ProviderField("peakThreads", AggregationMethod.DEFAULT, AggregationMethod.MAX, "PEAKTHREADS", false));
+			fields.add(new ProviderField("peakThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PEAKTHREADS", false));
 			fields.add(new ProviderField("queueCapacity", AggregationMethod.DEFAULT, AggregationMethod.SUM, "QUEUECAPACITY", false));
 			fields.add(new ProviderField("queueRemaining", AggregationMethod.DEFAULT, AggregationMethod.SUM, "QUEUEREMAINING", false));
 			fields.add(new ProviderField("tasksPending", AggregationMethod.DEFAULT, AggregationMethod.SUM, "TASKSPENDING", false));
