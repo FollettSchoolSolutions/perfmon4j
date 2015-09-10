@@ -35,6 +35,8 @@ import web.org.perfmon4j.restdatasource.BaseDatabaseSetup;
 import web.org.perfmon4j.restdatasource.DataSourceRestImpl;
 import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.Category;
+import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
+import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.dataproviders.TestHelper;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
@@ -90,6 +92,16 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 		try {
 			stmt = conn.createStatement();
 			stmt.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID='" + FSSFetchPolicyDataProvider.REQUIRED_DATABASE_CHANGESET + "'");
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
+
+	private void deleteChangeLogEntryForProviderAsyncCount() throws SQLException {
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+			stmt.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID='" + FSSFetchPolicyDataProvider.ADD_ASYNC_COLUMN_CHANGESET + "'");
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 		}
@@ -206,4 +218,32 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 		return helper.parseDateTime(value).getTimeForEnd();
 	}
 
+	
+	public void testLimitFieldsBasedOnChangeSet() throws Exception{
+		setUpDatabase();
+		try {
+			DataSourceRestImpl impl = new DataSourceRestImpl();
+
+			CategoryTemplate template = impl.getCategoryTemplate(database.getID(), "FSSFetchPolicy")[0];
+			assertNotNull("Should have the providerAsyncCount field", findField(template, "providerAsyncCount"));
+			
+			deleteChangeLogEntryForProviderAsyncCount();
+			template = impl.getCategoryTemplate(database.getID(), "FSSFetchPolicy")[0];
+			assertNull("ChangeLog not present for providerAsyncCount", findField(template, "providerAsyncCount"));
+		} finally {
+			tearDownDatabase();
+		}
+	}
+	
+	
+	private Field findField(CategoryTemplate template, String fieldName) {
+		for (Field f : template.getFields()) {
+			if (fieldName.equals(f.getName())) {
+				return f;
+			}
+		}
+		return null;
+	}
+	
+	
 }

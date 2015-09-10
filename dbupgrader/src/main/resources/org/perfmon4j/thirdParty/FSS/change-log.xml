@@ -200,7 +200,15 @@
 			onUpdate="NO ACTION" referencedColumnNames="SystemID"
 			referencedTableName="P4JSystem" />
 	</changeSet>
-
+	
+	
+	<changeSet author="ddeucher" id="FSS-addProviderAsyncCountColumn">
+		<addColumn tableName="FSSFetchPolicySnapshot">
+			<column name="providerAsyncCount" type="BIGINT" defaultValueNumeric="0">
+				<constraints nullable="false" />
+			</column>
+		</addColumn>
+	</changeSet>
 
 	<!--  DO NOT UPDATE THE DATABASE VERSION IN thirdpartyExtensions -->
 </databaseChangeLog>

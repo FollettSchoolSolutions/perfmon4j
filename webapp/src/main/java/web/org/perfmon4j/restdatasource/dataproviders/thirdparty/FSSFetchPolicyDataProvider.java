@@ -55,6 +55,7 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 	private static final String TEMPLATE_NAME = "FSSFetchPolicy";
 	private final FSSFetchPolicy categoryTemplate;
 	static final String REQUIRED_DATABASE_CHANGESET = "FSS-P4JFetchPolicySnapshot-tableCreate";
+	static final String ADD_ASYNC_COLUMN_CHANGESET = "FSS-addProviderAsyncCountColumn";
 	private static final Logger logger = LoggerFactory.initLogger(FSSFetchPolicyDataProvider.class);
 	
 	public FSSFetchPolicyDataProvider() {
@@ -182,7 +183,6 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 	}
 
 	private static class FSSFetchPolicy extends CategoryTemplate {
-
 		private FSSFetchPolicy(String templateName) {
 			super(templateName, buildFields());
 		}
@@ -223,6 +223,10 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 			fields.add(new ProviderField("promiseBlockedThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROMISEBLOCKEDTHREADS", false).makePrimary());
 			fields.add(new ProviderField("promiseExpirations", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROMISEEXPIRATIONS", false));
 			fields.add(new ProviderField("promiseCancellations", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROMISECANCELLATIONS", false));
+		
+			fields.add(new ProviderField("providerAsyncCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROVIDERASYNCCOUNT", false)
+				.requiresChangeSet(ADD_ASYNC_COLUMN_CHANGESET)
+				.makePrimary());
 			
 			return fields.toArray(new Field[]{});
 		}

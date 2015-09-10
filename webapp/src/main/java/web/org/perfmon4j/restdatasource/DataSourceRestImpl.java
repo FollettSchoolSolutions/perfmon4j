@@ -55,6 +55,7 @@ import org.perfmon4j.util.LoggerFactory;
 import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
 import web.org.perfmon4j.restdatasource.data.Database;
+import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult;
 import web.org.perfmon4j.restdatasource.data.query.advanced.C3DataResult;
@@ -190,7 +191,8 @@ public class DataSourceRestImpl {
 		if (provider == null) {
 			throw new NotFoundException("Category template not found: " + template);
 		}
-		return new CategoryTemplate[] {provider.getCategoryTemplate()};
+		RegisteredDatabaseConnections.Database db = getDatabase(databaseID);
+		return new CategoryTemplate[] {filterFieldsBasedOnDatabaseChangeSet(db, provider.getCategoryTemplate())};
 	}
 	
 //	http://127.0.0.1/perfmon4j/datasoure/databases/databaseID/categories/category/observations?systemId=systemId&timeStart=`now-480'&timeEnd=timeEnd&maxObservations=1440
@@ -385,6 +387,42 @@ public class DataSourceRestImpl {
 	private Double roundOff(double value) {
 		return Double.valueOf(Math.round(value * 100)/100.00);
 	}
+	
+	private CategoryTemplate filterFieldsBasedOnDatabaseChangeSet(RegisteredDatabaseConnections.Database db, CategoryTemplate unFiltered) {
+			CategoryTemplate result = unFiltered;
+			
+			// First check to see if we have any fields that are dependent on a specific database changeset.
+			boolean hasFieldsToFilter = false;
+			for (Field f : unFiltered.getFields()) {
+				if (f.getRequiredChangSet() != null) {
+					hasFieldsToFilter = true;
+					break;
+				}
+			}
+	
+			if (hasFieldsToFilter) {
+				List<Field> filteredFields = new ArrayList<Field>();
+				Connection conn = null;
+				try {
+					conn = db.openConnection();
+					for (Field f : unFiltered.getFields()) {
+						String changeSet = f.getRequiredChangSet();
+						if (changeSet == null ||(JDBCHelper.databaseChangeSetExists(conn, db.getSchema(), changeSet))) {
+							filteredFields.add(f);
+						}
+					}
+					result = new CategoryTemplate(unFiltered.getName(), filteredFields.toArray(new Field[]{}));
+				} catch (SQLException e) {
+					logger.logDebug("filterFieldsBasedOnDatabaseChangeSet", e);
+					throw new InternalServerErrorException(e);
+				} finally {
+					JDBCHelper.closeNoThrow(conn);
+				}
+			}
+			
+			return result;
+		}
+
 	
 	public static final class SystemID {
 		private static final Pattern pattern = Pattern.compile("(\\w{4}\\-\\w{4})\\.(\\d+)"); 
