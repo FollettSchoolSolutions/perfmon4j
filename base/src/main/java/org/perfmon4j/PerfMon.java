@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.WeakHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -452,7 +451,7 @@ public class PerfMon {
                     for (int i = 0; i < appenders.length; i++) {
                         Appender appender = Appender.getAppender(appenders[i]);
                         if (appender != null) {
-                        	utilityTimer.schedule(new AsynchOutputDataTask(appender, data), 0);
+                        	appender.appendData(data);
                         }
                     }
                 }
@@ -1466,20 +1465,4 @@ public class PerfMon {
 	public long getSumOfSQLSquares() {
 		return sumOfSQLSquares;
 	}
-	
-	private static class AsynchOutputDataTask extends TimerTask {
-		private final Appender appender;
-		private final PerfMonData data;
-		
-		public AsynchOutputDataTask(Appender appender, PerfMonData data) {
-			this.appender = appender;
-			this.data = data;
-		}
-		
-		@Override
-		public void run() {
-			appender.outputData(data);
-		}
-	}
-	
 }

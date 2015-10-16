@@ -540,7 +540,7 @@ System.out.println(trace.toAppenderString());
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
         traceMonitor.setInternalThreadTraceConfig(config);
         
-        for (int x = 0; x < 10; x++) {
+        for (int x = 0; x < 5; x++) {
             new Thread(new ThreadTraceRunnable(MONITOR_KEY)).start();
         }
         Thread.sleep(50);
@@ -551,7 +551,7 @@ System.out.println(trace.toAppenderString());
         Thread.sleep(50);
         
         int count = TestAppender.getOutputCount();
-        assertTrue("Total descendents expected at least 950 but was: " + count,  count >= 950);
+        assertTrue("Total descendents expected at least 950 but was: " + count,  count >= 450);
     }
     
     private static class ThreadTraceRunnable implements Runnable {
@@ -591,6 +591,7 @@ System.out.println(trace.toAppenderString());
     private static class TestAppender extends Appender {
         static private ThreadTraceData lastResult = null;
         static private int outputCount = 0;
+        static private Long outputDelayMillis = null;
         
         public static ThreadTraceData getLastResult() throws Exception {
             Appender.getOrCreateAppender(getAppenderID()).flush();
@@ -604,7 +605,8 @@ System.out.println(trace.toAppenderString());
 
         
         public static void clearResult() {
-            outputCount = 0;
+        	outputDelayMillis = null;
+        	outputCount = 0;
             lastResult = null;
         }
         
@@ -617,10 +619,45 @@ System.out.println(trace.toAppenderString());
         }
         
         public void outputData(PerfMonData data) {
+        	if (outputDelayMillis != null) {
+        		long millis = outputDelayMillis.longValue();
+        		try {
+					Thread.sleep(millis);
+				} catch (InterruptedException e) {
+					// Ignore...
+				}
+        		
+        	}
             outputCount++;
             lastResult = (ThreadTraceData)data;
         }
     }    
+
+    public void testThreadTraceAppenderIsAsync() throws Exception {
+        final String MONITOR_KEY = "testThreadTraceAppenderIsAsync";
+        final long sleepDurationMillis = 1000;
+        
+        TestAppender.outputDelayMillis = Long.valueOf(sleepDurationMillis);
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        
+        PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
+        mon.setInternalThreadTraceConfig(config);
+        
+        PerfMonTimer timer = null;
+        long now = System.currentTimeMillis();
+        try {
+            timer = PerfMonTimer.start(MONITOR_KEY);
+        } finally {
+            PerfMonTimer.stop(timer);
+        }
+        long duration = System.currentTimeMillis() - now;
+        assertTrue("Should not have waited for appender to write the output", duration < sleepDurationMillis);
+
+        assertNotNull("Output should have been written by asynch thread", TestAppender.getOutputCount());
+    }
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
