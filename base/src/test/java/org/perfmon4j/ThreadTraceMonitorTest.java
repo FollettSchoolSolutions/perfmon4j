@@ -456,7 +456,91 @@ System.out.println(trace.toAppenderString());
         assertTimesClose("traceInner end", traceTimerInnerEnd, traceInner.getEndTime());
     }
 
+    /**
+     * Thread traces are displayed like a call stack.
+     * When using extreme method level, or method annotation monitors you are assured that
+     * a proper call stack pattern will be in place.  That is monitors will be started and 
+     * stopped in a predictable order. i.e.: 
+     * 			Monitor1 - Start
+     * 				Monitor2 - Start
+     * 				Monitor2 - End
+     * 			Monitor1 - End
+     * 
+     * However with manual timers it is possible to circumvent this order. i.e.:
+     * 			Monitor1 - Start
+     * 				Monitor2 - Start
+     * 			Monitor1 - End
+     * 				Monitor2 - End
+     * 		
+     * Since this is not a correct call stack, perfmon4j will discard the offending
+     * monitor (based on the above example -- Monitor1).  
+     * 
+     * @throws Exception
+     */
+    public void testShouldIgnoreMissNestedMonitor() throws Exception {
+        final String MONITOR_KEY = "testSimpleDiscovery";
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        
+        PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
+        traceMonitor.setInternalThreadTraceConfig(config);
+        
+        PerfMonTimer traceTimer = null;
+        PerfMonTimer traceMissNested = null;
+        PerfMonTimer startedWhileInMissNested = null;
+        
+        // Starting threadtrace.
+        traceTimer = PerfMonTimer.start(MONITOR_KEY);
+        
+        // Start a timer that will be miss nested.  That means it will stop before it's child.
+        traceMissNested = PerfMonTimer.start("missNested");
+        PerfMonTimer.stop(PerfMonTimer.start("Checkpoint-A"));
 
+        
+        // So the top of the stack is now the missNested timer... 
+        startedWhileInMissNested = PerfMonTimer.start("startedInMissNested");
+        PerfMonTimer.stop(PerfMonTimer.start("Checkpoint-B"));
+        
+        
+        PerfMonTimer.stop(traceMissNested);
+        PerfMonTimer.stop(PerfMonTimer.start("Checkpoint-C"));
+        	
+        
+        PerfMonTimer.stop(startedWhileInMissNested);
+        PerfMonTimer.stop(PerfMonTimer.start("Checkpoint-D"));
+        	
+    	PerfMonTimer.stop(traceTimer);
+    
+        ThreadTraceData trace = TestAppender.getLastResult();
+        String appenderString = trace.toAppenderString();
+        
+//System.out.println(appenderString);
+		
+		// Remove times/durations and line feeds for easy compare.
+		appenderString = appenderString.replaceAll("\\d+", "X");
+		appenderString = appenderString.replaceAll("\r", "");
+		appenderString = appenderString.replaceAll("\n", "");
+		
+		final String expectedOutput = "********************************************************************************" +
+				"+-X:X:X:X (X) testSimpleDiscovery" +
+				"|	+-X:X:X:X (X) Checkpoint-A" +
+				"|	+-X:X:X:X Checkpoint-A" +
+				"|	+-X:X:X:X (X) startedInMissNested" +
+				"|	|	+-X:X:X:X (X) Checkpoint-B" +
+				"|	|	+-X:X:X:X Checkpoint-B" +
+				"|	|	+-X:X:X:X (X) Checkpoint-C" +
+				"|	|	+-X:X:X:X Checkpoint-C" +
+				"|	+-X:X:X:X startedInMissNested" +
+				"|	+-X:X:X:X (X) Checkpoint-D" +
+				"|	+-X:X:X:X Checkpoint-D" +
+				"+-X:X:X:X testSimpleDiscovery" +
+				"********************************************************************************";
+		assertEquals("Expected output should ignore the monitor 'missNested'", expectedOutput, appenderString);
+    }
+
+    
+    
     /*----------------------------------------------------------------------------*/
     public void testHandleNestedTimerStartAndStops() throws Exception {
         final String MONITOR_KEY = "testHandleNestedStarts";

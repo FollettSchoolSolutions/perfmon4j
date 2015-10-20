@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MiscHelper;
@@ -40,6 +41,7 @@ import org.perfmon4j.util.MiscHelper;
 
 public class ThreadTraceData implements PerfMonData, SQLWriteable {
     private ThreadTraceData parent;
+    private final UniqueThreadTraceTimerKey key;
     private final String name;
     private final List<ThreadTraceData> children = new Vector<ThreadTraceData>();
     private final int depth;
@@ -49,12 +51,13 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     private long sqlEndTime = -1;
     private boolean overflow;
     
-    ThreadTraceData(String name, long startTime) {
-        this(name, null, startTime);
+    ThreadTraceData(UniqueThreadTraceTimerKey key, long startTime) {
+        this(key, null, startTime);
     }
 
-    ThreadTraceData(String name, ThreadTraceData parent, long startTime) {
-        this.name = name;
+    ThreadTraceData(UniqueThreadTraceTimerKey key, ThreadTraceData parent, long startTime) {
+        this.key = key;
+        this.name = key.getMonitorName();
         this.parent = parent;
         this.startTime = startTime;
         this.sqlStartTime = SQLTime.getSQLTime();
@@ -131,6 +134,10 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     public String getName() {
         return name;
     }
+    
+    public UniqueThreadTraceTimerKey getKey() {
+    	return key;
+    }
 
     void setEndTime(long endTime) {
         this.endTime = endTime;
@@ -141,12 +148,23 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     }
 
     void seperateFromParent() {
+    	seperateFromParent(false);
+    }
+
+    void seperateFromParent(boolean relocateChildren) {
         if (parent != null) {
             parent.children.remove(this);
+            if (relocateChildren) {
+            	// Todo... Must reset the depth of all the children!!!!!
+            	for (ThreadTraceData child : children) {
+            		child.parent = parent;
+            		parent.children.add(child);
+            	}
+            }
             parent = null;
         }
     }
-
+    
 	private void writeToSQL(Long parentRowID, ThreadTraceData data, 
 			Connection conn, String schema,
 			Map categoryNameCache, long systemID) throws SQLException {
