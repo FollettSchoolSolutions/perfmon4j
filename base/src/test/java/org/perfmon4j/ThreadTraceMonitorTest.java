@@ -446,7 +446,7 @@ System.out.println("outputCount: " + outputCount);
         PerfMonTimer.stop(traceTimer);
         
         ThreadTraceData trace = TestAppender.getLastResult();
-System.out.println(trace.toAppenderString());      
+//System.out.println(trace.toAppenderString());      
 
         assertTimesClose("traceTimer start", traceTimerStart, trace.getStartTime());
         assertTimesClose("traceTimer end", traceTimerEnd, trace.getEndTime());
@@ -537,6 +537,45 @@ System.out.println(trace.toAppenderString());
 				"+-X:X:X:X testSimpleDiscovery" +
 				"********************************************************************************";
 		assertEquals("Expected output should ignore the monitor 'missNested'", expectedOutput, appenderString);
+    }
+
+
+    
+    public void testThreadDepthCleanedUpBasedOnMissNestedMonitor() throws Exception {
+        final String MONITOR_KEY = "testThreadDepthCleanedUpBasedOnMissNestedMonitor";
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        config.setMaxDepth(3);
+        
+        PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
+        traceMonitor.setInternalThreadTraceConfig(config);
+        
+        PerfMonTimer traceTimer = null;
+        PerfMonTimer traceMissNested = null;
+        PerfMonTimer level1 = null;
+        PerfMonTimer level2 = null;
+        
+        // Starting threadtrace.
+        traceTimer = PerfMonTimer.start(MONITOR_KEY);
+        
+        // Start a timer that will be miss nested.  That means it will stop before it's child.
+        traceMissNested = PerfMonTimer.start("missNested");
+        level1 = PerfMonTimer.start("level1");
+        PerfMonTimer.stop(traceMissNested);
+        
+        level2 = PerfMonTimer.start("Level2");
+        PerfMonTimer.stop(PerfMonTimer.start("Level3"));
+        
+        PerfMonTimer.stop(level2);
+        PerfMonTimer.stop(level1);
+    	PerfMonTimer.stop(traceTimer);
+    
+        ThreadTraceData trace = TestAppender.getLastResult();
+        String appenderString = trace.toAppenderString();
+        
+//System.out.println(appenderString);
+		assertTrue("Level3 should have been included in output", appenderString.contains("Level3"));
     }
 
     

@@ -44,7 +44,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     private final UniqueThreadTraceTimerKey key;
     private final String name;
     private final List<ThreadTraceData> children = new Vector<ThreadTraceData>();
-    private final int depth;
+    private int depth;
     private final long startTime;
     private long endTime = -1;
     private final long sqlStartTime;
@@ -155,15 +155,23 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
         if (parent != null) {
             parent.children.remove(this);
             if (relocateChildren) {
-            	// Todo... Must reset the depth of all the children!!!!!
             	for (ThreadTraceData child : children) {
             		child.parent = parent;
+            		reduceDepth(child);
             		parent.children.add(child);
             	}
             }
             parent = null;
         }
     }
+    
+    private void reduceDepth(ThreadTraceData data) {
+    	data.depth--;
+    	for (ThreadTraceData child : data.children) {
+    		reduceDepth(child);
+    	}
+    }
+    
     
 	private void writeToSQL(Long parentRowID, ThreadTraceData data, 
 			Connection conn, String schema,
