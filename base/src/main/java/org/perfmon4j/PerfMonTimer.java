@@ -115,7 +115,17 @@ public class PerfMonTimer {
         
         try {
             if (PerfMon.isConfigured() || ExternalAppender.isActive()) {
-                result = start(PerfMon.getMonitor(key, isDynamicKey));
+            	if (!isDynamicKey) {
+            		setLastFullyQualifiedStartNameForThread(key);
+            	}
+            	try {
+                    result = start(PerfMon.getMonitor(key, isDynamicKey));
+            	} finally {
+            		// Always clear the lastFullyQualifiedName.
+            		if (!isDynamicKey) {
+            			setLastFullyQualifiedStartNameForThread(null);
+            		}
+            	}
             }
         } catch (ThreadDeath th) {
             throw th;   // Always rethrow this error
@@ -214,5 +224,32 @@ public class PerfMonTimer {
         protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
             return uniqueExternalThreadTraceTimerKey;
         }
+    }
+    
+    private static class FullyQualifiedTimerStartName {
+    	private String fullName;
+
+		public String getFullName() {
+			return fullName;
+		}
+
+		public void setFullName(String fullName) {
+			this.fullName = fullName;
+		}
+    }
+    
+    static private final ThreadLocal<FullyQualifiedTimerStartName> last = new ThreadLocal<PerfMonTimer.FullyQualifiedTimerStartName>() {
+        protected FullyQualifiedTimerStartName initialValue() {
+            return new FullyQualifiedTimerStartName();
+        }
+    };
+    
+    // Package Level...
+    static String getLastFullyQualifiedStartNameForThread() {
+    	return last.get().getFullName();
+    }
+    
+    static private void setLastFullyQualifiedStartNameForThread(String key) {
+    	last.get().setFullName(key);
     }
 }

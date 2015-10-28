@@ -57,7 +57,22 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 
     ThreadTraceData(UniqueThreadTraceTimerKey key, ThreadTraceData parent, long startTime) {
         this.key = key;
-        this.name = key.getMonitorName();
+        String nameToUse = key.getMonitorName();
+        
+        // If this is the outermost monitor.  We want to use the fully qualified monitor for
+        // the display name.  For instance - We could of configured thread traces to
+        // capture "WebRequest" but we were actually started by "WebRequest.rest.circulation".  
+        // In that case we want to display the fully qualified name.
+        if (parent == null) {
+        	// PerfMonTimer stores the last PerfMonTimer.start(String key) key name
+        	// on the thread.
+        	String lastNameOnThread = PerfMonTimer.getLastFullyQualifiedStartNameForThread();
+        	if (lastNameOnThread != null) {
+        		nameToUse = lastNameOnThread;
+        	}
+        }
+        this.name = nameToUse;
+        
         this.parent = parent;
         this.startTime = startTime;
         this.sqlStartTime = SQLTime.getSQLTime();

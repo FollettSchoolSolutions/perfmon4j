@@ -289,13 +289,13 @@ System.out.println("outputCount: " + outputCount);
         
         PerfMonTimer timer = null;
         try {
-            timer = PerfMonTimer.start(MONITOR_KEY + ".child");
+            timer = PerfMonTimer.start(MONITOR_KEY + ".child", true);
             Thread.sleep(30);
         } finally {
             PerfMonTimer.stop(timer);
         }
         assertNotNull("Should have written output to appender", TestAppender.getLastResult());
-        System.out.println(TestAppender.getLastResult());
+        System.out.println(TestAppender.getLastResult().toAppenderString());
         
         assertEquals("CheckPoint name", MONITOR_KEY, TestAppender.getLastResult().getName());
     }
@@ -577,8 +577,6 @@ System.out.println("outputCount: " + outputCount);
 //System.out.println(appenderString);
 		assertTrue("Level3 should have been included in output", appenderString.contains("Level3"));
     }
-
-    
     
     /*----------------------------------------------------------------------------*/
     public void testHandleNestedTimerStartAndStops() throws Exception {
@@ -611,6 +609,59 @@ System.out.println("outputCount: " + outputCount);
         ThreadTraceData trace = TestAppender.getLastResult();
         assertEquals("countDescendents", 3, countDescendents(trace));
     }
+    
+
+    /*----------------------------------------------------------------------------*/
+    public void testThreadTraceDisplaysFullMonitorNameOnStart() throws Exception {
+        final String MONITOR_KEY = "testThreadTraceDisplaysFullMonitorNameOnStart";
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        
+        PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
+        traceMonitor.setInternalThreadTraceConfig(config);
+        
+        PerfMonTimer traceTimer = null;
+
+        String fullyQualifiedName = MONITOR_KEY + ".SubMonitor";
+        
+        traceTimer = PerfMonTimer.start(fullyQualifiedName);
+        PerfMonTimer.stop(traceTimer);
+        
+        
+        ThreadTraceData trace = TestAppender.getLastResult();
+        String appenderString = trace.toAppenderString();
+System.out.println(appenderString);    
+        
+        assertTrue("Fully qualified name should appear in the thread trace.", appenderString.contains(fullyQualifiedName));
+    }
+    
+
+    public void testDynamicThreadTraceDoesNOTDisplaysFullMonitorNameOnStart() throws Exception {
+        final String MONITOR_KEY = "testThreadTraceDisplaysFullMonitorNameOnStart";
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        
+        PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
+        traceMonitor.setInternalThreadTraceConfig(config);
+        
+        PerfMonTimer traceTimer = null;
+
+        String fullyQualifiedName = MONITOR_KEY + ".SubMonitor";
+        
+        traceTimer = PerfMonTimer.start(fullyQualifiedName, true);  // Flagged as dynamic monitor.
+        PerfMonTimer.stop(traceTimer);
+        
+        
+        ThreadTraceData trace = TestAppender.getLastResult();
+        String appenderString = trace.toAppenderString();
+System.out.println(appenderString);    
+        
+        assertFalse("For a dynamic monitor we MUST not add overhead of logging each category", 
+        		appenderString.contains(fullyQualifiedName));
+    }
+    
     
     
 /*----------------------------------------------------------------------------*/
