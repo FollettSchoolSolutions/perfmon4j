@@ -136,5 +136,79 @@
 			referencedTableName="P4JSystem" />
 	</changeSet>
 
+	<changeSet author="rlancaster" id="FSS-FSSFetchThreadPoolSnapshot-tableCreate">
+		<createTable tableName="FSSFetchThreadPoolSnapshot">
+			<column defaultValueNumeric="1" name="SystemID" type="INT">
+				<constraints nullable="false" />
+			</column>
+			<column name="StartTime" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			<column name="EndTime" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			<column name="Duration" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="minThreads" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="maxThreads" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="activeThreads" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="poolThreads" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="peakThreads" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="ratioCurrentThreadsInUse" type="DECIMAL(18,2)">
+				<constraints nullable="false" />
+			</column>
+			<column name="ratioMaxThreadsInUse" type="DECIMAL(18,2)">
+				<constraints nullable="false" />
+			</column>
+			<column name="queueCapacity" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="queueRemaining" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="tasksPending" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="tasksCompleted" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="tasksRejected" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+			<column name="ratioQueueInUse" type="DECIMAL(18,2)">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+	
+		<addPrimaryKey columnNames="SystemID, StartTime, EndTime"
+			constraintName="fssfetchthreadpoolsnapshot_pk" tableName="FSSFetchThreadPoolSnapshot" />
+			
+		<addForeignKeyConstraint baseColumnNames="SystemID"
+			baseTableName="FSSFetchThreadPoolSnapshot" constraintName="fssfetchthreadpoolsnapshot_systemid_fk"
+			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
+			onUpdate="NO ACTION" referencedColumnNames="SystemID"
+			referencedTableName="P4JSystem" />
+	</changeSet>
+	
+	
+	<changeSet author="ddeucher" id="FSS-addProviderAsyncCountColumn">
+		<addColumn tableName="FSSFetchPolicySnapshot">
+			<column name="providerAsyncCount" type="BIGINT" defaultValueNumeric="0">
+				<constraints nullable="false" />
+			</column>
+		</addColumn>
+	</changeSet>
+
 	<!--  DO NOT UPDATE THE DATABASE VERSION IN thirdpartyExtensions -->
 </databaseChangeLog>

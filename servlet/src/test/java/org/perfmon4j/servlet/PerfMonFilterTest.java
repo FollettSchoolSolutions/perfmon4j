@@ -138,6 +138,8 @@ public class PerfMonFilterTest extends TestCase {
 		configurePerfMon(new ThreadTraceConfig());
 		MyChain chain = runRequestThroughChain(false);
 		
+		Appender.flushAllAppenders();
+		
 		assertEquals("Request should have created stack trace", 1, TestAppender.threadTraceOutputCount);
 		assertEquals("Should not put any validators on the thread when we do not have active thread traces", 0, chain.validators.length);
 	}

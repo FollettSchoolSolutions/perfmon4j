@@ -865,8 +865,78 @@ System.out.println(output);
     	assertTrue("Should have included SQL time specification", m.find());
      }
     
-    
-    
+	public static class UnbalancedThreadTraceTest implements Runnable {
+		private static String THREAD_TRACE_CATEGORY = "ThreadTrace";
+		public static final class BogusAppender extends Appender {
+			public BogusAppender(AppenderID id) {
+				super(id);
+			}
+			
+			@Override
+			public void outputData(PerfMonData data) {
+				System.out.println(data.toAppenderString());
+			}
+		}
+		
+		// This creates an unbalanced thread trace.
+		public PerfMonTimer startMonitor() {
+			return PerfMonTimer.start(THREAD_TRACE_CATEGORY);
+		}
+		
+		public void methodA() {
+			methodB();
+		}
+			
+		public void methodB() {
+		}
+		
+		
+		public void test() {
+			PerfMonTimer timer = startMonitor();
+			try {
+				methodA();
+				methodB();
+			} finally {
+				PerfMonTimer.stop(timer);
+			}
+		}
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String appenderName = "bogus";
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				
+				ThreadTraceConfig tcConfig = new ThreadTraceConfig();
+				tcConfig.addAppender(config.getAppenderForName(appenderName));
+				
+				// Put the thread trace on the test method.
+				config.addThreadTraceConfig(this.getClass().getName() + ".test", tcConfig);
+				
+				PerfMon.configure(config);
+				
+				test();
+				Appender.flushAllAppenders();
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * The manual timer contained in the startMonitor method 
+	 * creates an unbalanced call stack for the thread trace.
+	 * To clean this up the call to startMonitor should NOT be part of
+	 * the thread trace output. 
+	 * @throws Exception
+	 */
+    public void testUnbalancedThreadTrace() throws Exception {
+    	String output = LaunchRunnableInVM.run(UnbalancedThreadTraceTest.class, "-eorg.perfmon4j", "", perfmon4jJar);
+    	System.out.println(output);
+    	
+    	assertTrue("Should not display the startMonitor method", !output.contains(".startMonitor"));
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

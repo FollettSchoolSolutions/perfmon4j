@@ -50,9 +50,9 @@ public class NaturalPerMinuteAggregatorFactoryTest extends TestCase {
 		long twoMinutesAgo = minuteAgo - 60000;
 		long threeMinutesAgo = twoMinutesAgo - 60000;
 		
-		Mockito.when(rs.getString("systemID")).thenReturn("1");
+		Mockito.when(rs.getLong("systemID")).thenReturn(1L);
 		
-		Aggregator ag = new NaturalPerMinuteAggregatorFactory("startTime", "endTime", "counter").newAggregator();
+		Aggregator ag = new NaturalPerMinuteAggregatorFactory("systemID", "startTime", "endTime", "counter").newAggregator();
 		assertNull("We dont have any data should return null", ag.getResult());
 		
 		Mockito.when(rs.getTimestamp("startTime")).thenReturn(new Timestamp(threeMinutesAgo));
@@ -91,21 +91,28 @@ public class NaturalPerMinuteAggregatorFactoryTest extends TestCase {
 		long now = System.currentTimeMillis();
 		long minuteAgo = now - 60000;
 		
-		Mockito.when(rs.getTimestamp("startTime")).thenReturn(new Timestamp(minuteAgo));
-		Mockito.when(rs.getTimestamp("endTime")).thenReturn(new Timestamp(now));
 		
-		Aggregator ag = new NaturalPerMinuteAggregatorFactory("startTime", "endTime", "counter").newAggregator();
+		Aggregator ag = new NaturalPerMinuteAggregatorFactory("systemID", "startTime", "endTime", "counter").newAggregator();
 		assertNull("We dont have any data should return null", ag.getResult());
 		
 		// System1
+		Mockito.when(rs.getLong("systemID")).thenReturn(1L);
+		Mockito.when(rs.getTimestamp("startTime")).thenReturn(new Timestamp(minuteAgo - 10)); // With perfmon4j all systems will not report exactly at the same time.
+		Mockito.when(rs.getTimestamp("endTime")).thenReturn(new Timestamp(now - 10));
 		Mockito.when(rs.getLong("counter")).thenReturn(Long.valueOf(800));
 		ag.aggreagate(rs);
 		
 		// System2
+		Mockito.when(rs.getLong("systemID")).thenReturn(2L);
+		Mockito.when(rs.getTimestamp("startTime")).thenReturn(new Timestamp(minuteAgo - 15));
+		Mockito.when(rs.getTimestamp("endTime")).thenReturn(new Timestamp(now - 15));
 		Mockito.when(rs.getLong("counter")).thenReturn(Long.valueOf(900));
 		ag.aggreagate(rs);
 
 		// System3
+		Mockito.when(rs.getLong("systemID")).thenReturn(3L);
+		Mockito.when(rs.getTimestamp("startTime")).thenReturn(new Timestamp(minuteAgo - 30));
+		Mockito.when(rs.getTimestamp("endTime")).thenReturn(new Timestamp(now - 30));
 		Mockito.when(rs.getLong("counter")).thenReturn(Long.valueOf(1000));
 		ag.aggreagate(rs);
 		

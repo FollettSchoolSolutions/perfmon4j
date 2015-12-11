@@ -118,7 +118,7 @@ public class IntervalDataProvider extends DataProvider {
 			fields.add(new ProviderField("maxDuration", AggregationMethod.DEFAULT, AggregationMethod.MAX, "MaxDuration", false));
 			fields.add(new ProviderField("minDuration", AggregationMethod.DEFAULT, AggregationMethod.MIN, "MinDuration", false));
 			fields.add(new NaturalPerMinuteProviderField("throughputPerMinute", AggregationMethod.DEFAULT_WITH_NATURAL, 
-					"NormalizedThroughputPerMinute", "startTime", "endTime", "TotalCompletions", true).makePrimary());
+					"NormalizedThroughputPerMinute", "systemID", "startTime", "endTime", "TotalCompletions", true).makePrimary());
 			fields.add(new NaturalAverageProviderField("averageDuration", AggregationMethod.DEFAULT_WITH_NATURAL, "AverageDuration", 
 					"DurationSum", "TotalCompletions",  true).makePrimary());
 			fields.add(new ProviderField("medianDuration", AggregationMethod.DEFAULT, AggregationMethod.AVERAGE, "MedianDuration", true));

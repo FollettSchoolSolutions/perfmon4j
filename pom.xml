@@ -4,7 +4,7 @@
   
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>1.2.2</version>
+	<version>1.2.3</version>
 	<packaging>pom</packaging>
 
 	<name>org.perfmon4j:perfmon4j-project</name>
@@ -49,7 +49,7 @@
 			<id>release</id>
 			<activation>
       			<property>
-        			<name>env.TRAVIS</name>
+        			<name>env.TRAVIS_BUILD_DIR</name>
       			</property>
     		</activation>
 			<build>
@@ -162,6 +162,7 @@
 		java.lang.ClassFormatError: Invalid length ??? in LocalVariableTable in class file ???
 		-->
 		<javassist.version>3.10.0.GA</javassist.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<dependencies>

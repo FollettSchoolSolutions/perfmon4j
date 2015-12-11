@@ -132,7 +132,7 @@ class ThreadTraceMonitor {
         }
         
         void start(String monitorName, int maxDepth, int minDurationToCapture, long startTime) {
-            ThreadTraceData rootElement = new ThreadTraceData(monitorName, startTime);
+            ThreadTraceData rootElement = new ThreadTraceData(new UniqueThreadTraceTimerKey(monitorName), startTime);
             threadDataMap.put(monitorName, new PointerToHead(rootElement, maxDepth, minDurationToCapture));
             active = true;
             activeThreadTraceFlag.get().incActive();
@@ -181,7 +181,7 @@ class ThreadTraceMonitor {
 	                        		head.rootElement.setOverflow(true);
 	                        		head.checkpointsIgnoredDueToOverflow++;
 	                        	} else {
-	                        		head.topOfTheStackElement = new ThreadTraceData(timerMonitorName, head.topOfTheStackElement, startTime);
+	                        		head.topOfTheStackElement = new ThreadTraceData(result, head.topOfTheStackElement, startTime);
 	                        	}
 	                        }
 	                    }
@@ -193,6 +193,24 @@ class ThreadTraceMonitor {
             return result;
         }
 
+        private boolean purgeMissNestedElement(ThreadTraceData data, UniqueThreadTraceTimerKey key) {
+        	boolean result = false;
+        	
+        	ThreadTraceData parent = data;
+        	while (parent != null && !result) {
+        		data = parent.getParent();
+        		if (data != null && key.equals(data.getKey())) {
+        			result = true;
+        			data.seperateFromParent(true);
+        		} else {
+        			parent = data;
+        		}
+        	}
+        	
+        	return result;
+        }
+        
+        
         void exitCheckpoint(UniqueThreadTraceTimerKey timerKey) {
         	if (!insideThreadTracesOnStack) {
         		insideThreadTracesOnStack = true;
@@ -215,13 +233,20 @@ class ThreadTraceMonitor {
                                 // That is removed via stop...  If for some reason we became 
                                 // unbalanced and we are at the root element DO NOTHING.
                                 if (!head.isTopOfTheStackOnRootElement()) {
+                                	boolean missNestedElementPurged = false;
                                     ThreadTraceData exitTraceData = head.topOfTheStackElement;
-                                    exitTraceData.stop();
-                                    head.topOfTheStackElement = exitTraceData.getParent();
-                                    if (head.minDuratinToCapture > 0 &&
-                                        head.minDuratinToCapture > (exitTraceData.getEndTime() - exitTraceData.getStartTime())) {
+                                    if (!timerKey.equals(exitTraceData.getKey())) {
+                                    	missNestedElementPurged = purgeMissNestedElement(exitTraceData, timerKey);
                                     	head.numElements--;
-                                        exitTraceData.seperateFromParent();
+                                    }
+                                    if (!missNestedElementPurged) {
+	                                    exitTraceData.stop();
+	                                    head.topOfTheStackElement = exitTraceData.getParent();
+	                                    if (head.minDuratinToCapture > 0 &&
+	                                        head.minDuratinToCapture > (exitTraceData.getEndTime() - exitTraceData.getStartTime())) {
+	                                    	head.numElements--;
+	                                        exitTraceData.seperateFromParent();
+	                                    }
                                     }
                                 } else {
                                     logger.logWarn("exitCheckpoint called without a checkpoint available.  monitorName = " +
@@ -248,7 +273,7 @@ class ThreadTraceMonitor {
     }
     
     static class UniqueThreadTraceTimerKey {
-        private static long nextID = 0;
+		private static long nextID = 0;
         
         private final long id = ++nextID;
         private final String monitorName;
@@ -262,6 +287,29 @@ class ThreadTraceMonitor {
         private String toHashString() {
             return hashString;
         }
+        
+        String getMonitorName() {
+        	return monitorName;
+        }
+        
+        @Override
+		public int hashCode() {
+			return hashString.hashCode();
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			return hashString.equals(((UniqueThreadTraceTimerKey)obj).hashString);
+		}
     }
 
     

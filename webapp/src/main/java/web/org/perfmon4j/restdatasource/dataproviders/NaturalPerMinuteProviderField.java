@@ -26,9 +26,10 @@ import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 import web.org.perfmon4j.restdatasource.util.aggregators.NaturalPerMinuteAggregatorFactory;
 
 public class NaturalPerMinuteProviderField extends ProviderField {
-	protected String startTimeColumn;
-	protected String endTimeColumn;
-	protected String counterColumn;
+	protected final String startTimeColumn;
+	protected final String systemIDColumn;
+	protected final String endTimeColumn;
+	protected final String counterColumn;
 	private final boolean tableHasPerMinuteCalculatedField;
 
 	/**
@@ -40,11 +41,13 @@ public class NaturalPerMinuteProviderField extends ProviderField {
 	 * @param floatingPoint
 	 */
 	public NaturalPerMinuteProviderField(String name,
+			String systemIDColumn,
 			String startTimeColumn,
 			String endTimeColumn,
 			String counterColumn) {
 		super(name, new AggregationMethod[]{AggregationMethod.NATURAL}, AggregationMethod.NATURAL, null,
 				true);
+		this.systemIDColumn = systemIDColumn;
 		this.startTimeColumn = startTimeColumn;
 		this.endTimeColumn = endTimeColumn;
 		this.counterColumn = counterColumn;
@@ -64,13 +67,15 @@ public class NaturalPerMinuteProviderField extends ProviderField {
 	 */
 	public NaturalPerMinuteProviderField(String name,
 			AggregationMethod[] aggregationMethods,
-			String databaseColumn, /* Tables perMinute field. Only used if you specify an Aggregation method other than NATURAL */ 
+			String databaseColumn, /* Tables perMinute field. Only used if you specify an Aggregation method other than NATURAL */
+			String systemIDColumn,
 			String startTimeColumn,
 			String endTimeColumn,
 			String counterColumn,
 			boolean floatingPoint /* Only used if you specify an Aggregation method other than NATURAL */) {
 		super(name, aggregationMethods, AggregationMethod.NATURAL, databaseColumn,
 				floatingPoint);
+		this.systemIDColumn = systemIDColumn;
 		this.startTimeColumn = startTimeColumn;
 		this.endTimeColumn = endTimeColumn;
 		this.counterColumn = counterColumn;
@@ -80,7 +85,7 @@ public class NaturalPerMinuteProviderField extends ProviderField {
 	@Override
 	public AggregatorFactory buildFactory(AggregationMethod method) {
 		if (method.equals(AggregationMethod.NATURAL)) {
-			return new NaturalPerMinuteAggregatorFactory(startTimeColumn, endTimeColumn, counterColumn);
+			return new NaturalPerMinuteAggregatorFactory(systemIDColumn, startTimeColumn, endTimeColumn, counterColumn);
 		} else {
 			if (tableHasPerMinuteCalculatedField) {
 				return super.buildFactory(method);

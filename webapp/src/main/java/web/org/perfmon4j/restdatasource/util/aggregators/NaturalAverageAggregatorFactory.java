@@ -72,7 +72,7 @@ public class NaturalAverageAggregatorFactory implements AggregatorFactory {
 		public Number getResult() {
 			if (hasValue && accumulatorDenominator > 0) {
 				BigDecimal denominator = new BigDecimal(accumulatorDenominator);
-				BigDecimal result = accumulatorNumerator.divide(denominator, 4, RoundingMode.HALF_UP);
+				BigDecimal result = accumulatorNumerator.divide(denominator, 2, RoundingMode.HALF_UP);
 				return Double.valueOf(result.doubleValue());
 			} else {
 				return hasValue ? Double.valueOf(0) : null;
