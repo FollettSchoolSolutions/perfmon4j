@@ -6,7 +6,7 @@ showInHeader: false
 ---
 This guide details how to install the Perfmon4j agent into an Wildfly 8 application server under running on Windows. The instructions require perfomn4j 1.2.0-RC_2 or later.
 
-##Copy files
+## Copy files
 
 Copy the following files from your perfmon4j distribution:
 
@@ -20,7 +20,7 @@ Copy the following following file from within your wildfly server distribution:
 
 * Copy the file **"wildfly\modules\system\layers\base\org\javassist\main\javassist-3.18.1-GA.jar"** to file **"wildfly\standalone\lib\ext\javassist.jar"** (make sure when you copy the file is renamed to javassist.jar) -- Note: do not use the javassist.jar included with the perfmon4j distribution.
 
-##Configure
+## Configure
 
 * Append the following line to **"wildfly\bin\standalone.conf.bat"** file (insert right above the line :JAVA_OPTS_SET):
 	* set "JAVA_OPTS=%JAVA_OPTS% -javaagent:..\standalone\lib\ext\perfmon4j.jar=-eorg.apache,-eSQL,-pAUTO,-eVALVE,-f../bin/perfmonconfig.xml"
@@ -31,7 +31,7 @@ Edit file **"wildfly\modules\system\layers\base\io\undertow\core\main\module.xml
  
 * &lt;resource-root path="perfmon4j-wildfly8.jar"/&gt;
 
-##Test
+## Test
 
 Start JBoss server using wildfly\bin\standalone.bat.
 You should see Perfmon4j ascii art when the agent is launched.

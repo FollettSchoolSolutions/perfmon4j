@@ -6,7 +6,7 @@ showInHeader: false
 ---
 This guide details how to install the Perfmon4j agent into an JBoss 7 application server under running on Windows. The instructions require perfomn4j 1.2.0-RC_2 or later.
 
-##Copy files
+## Copy files
 
 Copy the following files from your perfmon4j distribution:
 
@@ -20,7 +20,7 @@ Copy the following following file from within your jboss server distribution:
 
 * Copy the file **jboss\modules\org\javassist\main\javassist-3.15.0-GA.jar** to file **'jboss\standalone\lib\ext\javassist.jar'** (make sure when you copy the file is renamed to javassist.jar) -- Note: do not use the javassist.jar included with the perfmon4j distribution.
 
-##Configure
+## Configure
 
 * Append the following line to **jboss\bin\standalone.conf.bat** file (insert right above the line :JAVA_OPTS_SET):
 	* set "JAVA_OPTS=%JAVA_OPTS% -javaagent:..\standalone\lib\ext\perfmon4j.jar=-eorg.apache,-eSQL,-pAUTO,-eVALVE,-f../bin/perfmonconfig.xml"
@@ -31,7 +31,7 @@ Edit file **jboss\modules\org\jboss\as\web\main\module.xml** and add the followi
  
 * &lt;resource-root path="perfmon4j-jbossweb7.jar"/&gt;
 
-##Test
+## Test
 
 Start JBoss server using jboss\bin\standalone.sh shell script.
 You should see Perfmon4j ascii art when the agent is launched.
