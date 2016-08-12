@@ -59,7 +59,7 @@ public class MiscHelper {
     static private final Logger logger = LoggerFactory.initLogger(MiscHelper.class);
 
 	public static final int hashCodeForCWD = buildHashCodeForCWD(); 
-	private static final String defaultSystemName = generateDefaultSystemName();
+	private static final String[] defaultSystemName = generateDefaultSystemName();
     
     
     static private final String[] MEASUREMENT_UNITS_MILLISECOND = {"MS", "MILLI", "MILLIS", "MILLISECOND", "MILLISECONDS"};
@@ -614,20 +614,36 @@ public class MiscHelper {
 		}
 		return result;
 	}
-
+	
+	public static String getDefaultSystemName(boolean includeCWDHash) {
+		String result = defaultSystemName[0];
+		
+		if (includeCWDHash) {
+			result+= "_" + defaultSystemName[1]; 
+		}
+		return result;
+	}
 
 	public static String getDefaultSystemName() {
-		return defaultSystemName;
+		return getDefaultSystemName(true);
 	}
-	
-	private static String generateDefaultSystemName() {
-		String hostName;
+
+	/**
+	 * Will return a string array with 2 elements.
+	 * result[0] will contain the host name
+	 * result[1] will contain a hash code for the current working directory.
+	 * @return
+	 */
+	private static String[] generateDefaultSystemName() {
+		String[] result = new String[2];  
+		
 		try {
-			hostName = InetAddress.getLocalHost().getHostName();
+			result[0] = InetAddress.getLocalHost().getHostName();
 		} catch (UnknownHostException uhe) {
-			hostName = "localhost";
+			result[0] = "localhost";
 		}
-		return hostName + "_" + buildHashCodeForCWD();
+		result[1] = Integer.toString(buildHashCodeForCWD());
+		return result;
 	}
 	
 	private static int buildHashCodeForCWD() {

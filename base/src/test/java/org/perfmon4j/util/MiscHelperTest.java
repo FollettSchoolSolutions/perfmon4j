@@ -339,7 +339,16 @@ public class MiscHelperTest extends TestCase {
 	public void testGenerateDefaultSystemName() {
 		String systemName = MiscHelper.getDefaultSystemName();
 		assertNotNull("systemName", systemName);
+		// Make sure it does not append  the full CWD path.
 		assertTrue("length <= 200 chars", systemName.length() <= 200);
+	}
+
+	public void testGenerateDefaultSystemNameWithoutCWDHash() {
+		String systemNameWithCWDHash = MiscHelper.getDefaultSystemName(true);  
+		String systemNameWithoutCWDHash = MiscHelper.getDefaultSystemName(false);  
+		
+		assertTrue("System name without the hash should be shorter", systemNameWithoutCWDHash.length()
+				< systemNameWithCWDHash.length());
 	}
 	
 	
