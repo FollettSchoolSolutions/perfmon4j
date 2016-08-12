@@ -45,8 +45,9 @@ public abstract class SQLAppender extends Appender {
 	private String insertIntervalPS = null;
 	private String insertThresholdPS = null;
 	private String systemNamePrefix = null;
-	private String systemNameBody = MiscHelper.getDefaultSystemName();
+	private String systemNameBody = null;
 	private String systemNameSuffix = null;
+	private boolean excludeCWDHashFromSystemName = false;
 	private Long systemID = null;
 	
 	public SQLAppender(AppenderID id) {
@@ -390,7 +391,7 @@ public abstract class SQLAppender extends Appender {
 	
 	public String getSystemName() {
 		return (systemNamePrefix == null ? "" : systemNamePrefix)
-			+ systemNameBody
+			+ getSystemNameBody()
 			+ (systemNameSuffix == null ? "" : systemNameSuffix);
 	}
 	
@@ -415,7 +416,12 @@ public abstract class SQLAppender extends Appender {
 	}
 	
 	public String getSystemNameBody() {
-		return systemNameBody;
+		if (systemNameBody == null) {
+			boolean includeCWDHash = !excludeCWDHashFromSystemName;
+			return MiscHelper.getDefaultSystemName(includeCWDHash);
+		} else {
+			return systemNameBody;
+		}
 	}
 
 	public String getSystemNamePrefix() {
@@ -434,5 +440,24 @@ public abstract class SQLAppender extends Appender {
 	public void setSystemNameSuffix(String systemNameSuffix) {
 		this.systemNameSuffix = systemNameSuffix;
 		this.systemID = null;
-	}	
+	}
+	
+
+	public boolean isExcludeCWDHashFromSystemName() {
+		return excludeCWDHashFromSystemName;
+	}
+
+	/**
+	 * If this is set to true the cwdHash will NOT be appended to the system name.
+	 * This is very useful when you do not want the system name to change if the 
+	 * path of the application changes.
+	 * 
+	 * By default the CWD has is included.
+	 *   
+	 * @param excludeCWDHashFromSystemName
+	 */
+	public void setExcludeCWDHashFromSystemName(boolean excludeCWDHashFromSystemName) {
+		this.excludeCWDHashFromSystemName = excludeCWDHashFromSystemName;
+	}
+
 }
