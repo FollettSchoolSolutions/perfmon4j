@@ -230,10 +230,10 @@ public class LaunchRunnableInVM {
 				int nullBootstrapMonitors = 0;	
 				int insertedBootstrapMonitors = 0;
 				
-				// RuntimeTimerInjector.monitorsForRedefinedClasses is an array of arrays....
-				if (RuntimeTimerInjector.monitorsForRedefinedClasses != null) {
-					for (int i = 0; i < RuntimeTimerInjector.monitorsForRedefinedClasses.length; i++) {
-						PerfMon monitors[] = RuntimeTimerInjector.monitorsForRedefinedClasses[i];
+				// PerfMonTimerTransformer.monitorsForRedefinedClasses is an array of arrays....
+				if (PerfMonTimerTransformer.monitorsForRedefinedClasses != null) {
+					for (int i = 0; i < PerfMonTimerTransformer.monitorsForRedefinedClasses.length; i++) {
+						PerfMon monitors[] = PerfMonTimerTransformer.monitorsForRedefinedClasses[i];
 						for (int j = 0; j < monitors.length; j++) {
 							PerfMon mon = monitors[j];
 							if (mon == null) {

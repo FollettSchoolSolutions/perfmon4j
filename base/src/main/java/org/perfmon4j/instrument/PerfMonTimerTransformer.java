@@ -68,6 +68,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 
     public final static String USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY="Perfmon4j.UseLegacyInstrumentationWrapper"; 
 	public final static boolean USE_LEGACY_INSTRUMENTATION_WRAPPER=Boolean.getBoolean(USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY);
+
+    // Redefined classes will store their timers in this array...
+    public static PerfMon[][] monitorsForRedefinedClasses = null;
+	
 	
 	/*
 	 * This property is NOT used when legacy instrumentation wrapper is used.
@@ -86,6 +90,15 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 
 	
 	private static ValveHookInserter valveHookInserter = null;
+	
+	public static final RuntimeTimerInjector runtimeTimerInjector;
+	
+	
+	static {
+		// This will need to be replaced where we instantiate the class!!! 
+		runtimeTimerInjector = new JavassistRuntimeTimerInjector();
+	}
+	
 	
     private PerfMonTimerTransformer(String paramsString) {
         params = new TransformerParams(paramsString);
@@ -168,7 +181,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		                        clazz.defrost();
 		                    }
 		                    
-		                    int count = RuntimeTimerInjector.injectPerfMonTimers(clazz, classBeingRedefined != null, params, loader, protectionDomain);
+		                    int count = runtimeTimerInjector.injectPerfMonTimers(clazz, classBeingRedefined != null, params, loader, protectionDomain);
 		                    if (count > 0) {
 		                        if (classBeingRedefined != null) {
 		                        	InstrumentationMonitor.incBootstrapClassesInst();
@@ -420,7 +433,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		            if (clazz.isFrozen()) {
 		                clazz.defrost();
 		            }
-		            RuntimeTimerInjector.disableSystemGC(clazz);
+		            runtimeTimerInjector.disableSystemGC(clazz);
 		            result = clazz.toBytecode();
 		            logger.logInfo("Perfmon4j disabled System.gc()");
 	            } catch (Exception ex) {
@@ -605,7 +618,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                    // Reserve space for the PerfMon references for each of the
 	                    // preloaded classes...  We need to do this, since we can not add static
 	                    // data members for the preloaded classes..
-	                    RuntimeTimerInjector.monitorsForRedefinedClasses = new PerfMon[numClasses][];
+	                	PerfMonTimerTransformer.monitorsForRedefinedClasses = new PerfMon[numClasses][];
 	                    logger.logInfo("Starting to instrument " + numClasses + " preloaded classes");
 	                    inst.redefineClasses(redefineList.toArray(new ClassDefinition[]{}));
 	                    logger.logInfo("Instrumented " + numClasses + " preloaded classes");
