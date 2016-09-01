@@ -38,6 +38,8 @@ import java.util.regex.PatternSyntaxException;
 import javassist.CtClass;
 import javassist.NotFoundException;
 
+//import javassist.CtClass;
+//import javassist.NotFoundException;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -514,32 +516,6 @@ public class TransformerParams {
     	return result;
     }
 	
-	public boolean isExtremeSQLClass(CtClass clazz) {
-		boolean result = false;
-		if (extremeSQLMonitorEnabled && isPossibleJDBCDriver(clazz.getName())) {
-			try {
-				CtClass interfaces[] = getInterfaces(clazz).toArray(new CtClass[]{});
-				for (int i = 0; i < interfaces.length && !result; i++) {
-					result = isExtremeSQLInterface(interfaces[i].getName());
-				}
-			} catch (NotFoundException ex) {
-				// nothing todo...
-			}
-		}
-		return result;
-	}
-	
-	public boolean isExtremeSQLClass(Class<?> clazz) {
-		boolean result = false;
-		if (extremeSQLMonitorEnabled && isPossibleJDBCDriver(clazz.getName())) {
-			Class<?> interfaces[] = getInterfaces(clazz).toArray(new Class[]{});
-			for (int i = 0; i < interfaces.length && !result; i++) {
-				result = isExtremeSQLInterface(interfaces[i].getName());
-			}
-		}
-		return result;
-	}
-
 	public boolean isPossibleJDBCDriver(String className) {
 		boolean found = extremeSQLPackages.isEmpty();
 		if (!found) {

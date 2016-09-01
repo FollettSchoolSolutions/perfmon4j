@@ -651,11 +651,6 @@ public class TransformerParamsTest extends TestCase {
             params = new TransformerParams("-ecom.follett.fsc,-eSQL");
             assertTrue("Combined with anyting else...", params.isExtremeSQLMonitorEnabled());
             
-            // Now check the classes that are used to monitor SQL statement execution time.
-            assertFalse("Just a gut check with a non SQL class!", params.isExtremeSQLClass(String.class));
-            
-            assertTrue("java.sql.Statement", params.isExtremeSQLClass(StatementImpl.class));
-            assertTrue("java.sql.Statement", params.isExtremeSQLClass(ClassPool.getDefault().get(StatementImpl.class.getName())));
             
             // Just test the rest at the class name interface...
             assertTrue("java.sql.PreparedStatement", params.isExtremeSQLInterface(java.sql.PreparedStatement.class.getName()));

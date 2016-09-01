@@ -206,7 +206,7 @@ public class JavassistRuntimeTimerInjector implements RuntimeTimerInjector {
             if (params != null) {
                 mode = params.getTransformMode(clazz.getName());
                 transformOptions = params.getTransformOptions(clazz.getName());
-                extremeSQLClass = params.isPossibleJDBCDriver(clazz.getName()) && params.isExtremeSQLClass(clazz);
+                extremeSQLClass = params.isPossibleJDBCDriver(clazz.getName()) && isExtremeSQLClass(params, clazz);
 				if (extremeSQLClass) {
 					if (logger.isInfoEnabled()) {
 						String n = clazz.getName();
@@ -407,6 +407,22 @@ public class JavassistRuntimeTimerInjector implements RuntimeTimerInjector {
         }
         return numTimers;
     }
+	
+	public boolean isExtremeSQLClass(TransformerParams params, CtClass clazz) {
+		boolean result = false;
+		if (params.isExtremeSQLMonitorEnabled() && params.isPossibleJDBCDriver(clazz.getName())) {
+			try {
+				CtClass interfaces[] = getInterfaces(clazz).toArray(new CtClass[]{});
+				for (int i = 0; i < interfaces.length && !result; i++) {
+					result = params.isExtremeSQLInterface(interfaces[i].getName());
+				}
+			} catch (NotFoundException ex) {
+				// nothing todo...
+			}
+		}
+		return result;
+	}
+	
     
     private static class PendingTimer {
     	final String originalMethodName;
