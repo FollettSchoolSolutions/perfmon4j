@@ -25,21 +25,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import javassist.CtClass;
-import javassist.NotFoundException;
-
-//import javassist.CtClass;
-//import javassist.NotFoundException;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -492,30 +485,6 @@ public class TransformerParams {
 		return Arrays.binarySearch(SQL_CLASSES, className) >= 0;
 	}
 	
-    private static Set<CtClass> getInterfaces(CtClass clazz) throws NotFoundException {
-    	Set<CtClass> result = new HashSet<CtClass>();
-    	
-    	CtClass interfaces[] = clazz.getInterfaces();
-    	for (int i = 0; i < interfaces.length; i++) {
-    		result.add(interfaces[i]);
-    		result.addAll(getInterfaces(interfaces[i]));
-		}
-    	
-    	return result;
-    }
-	
-    private static Set<Class<?>> getInterfaces(Class<?> clazz) {
-    	Set<Class<?>> result = new HashSet<Class<?>>();
-    	
-    	Class<?> interfaces[] = clazz.getInterfaces();
-    	for (int i = 0; i < interfaces.length; i++) {
-    		result.add(interfaces[i]);
-    		result.addAll(getInterfaces(interfaces[i]));
-		}
-    	
-    	return result;
-    }
-	
 	public boolean isPossibleJDBCDriver(String className) {
 		boolean found = extremeSQLPackages.isEmpty();
 		if (!found) {
@@ -538,6 +507,4 @@ public class TransformerParams {
 	public boolean isInstallServletValve() {
 		return installServletValve;
 	}
-	
-	
 }
