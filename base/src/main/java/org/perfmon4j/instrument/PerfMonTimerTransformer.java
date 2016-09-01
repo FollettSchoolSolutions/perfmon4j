@@ -127,74 +127,76 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         byte[] result = null;
         long startMillis = -1;
         
-        if (recursionPreventor.get().threadInScope) {
-        	InstrumentationMonitor.incRecursionSkipCount();
-        } else {
-            // !!!! IMPORTANT !!!! DO NOT DO ANYTHING HERE BEFORE BEFORE
-        	// YOU set recursionPreventor.get().threadInScope = true
-        	// IF YOU DO, YOU ARE RISKING RECURSION!
-        	try {
-        		InstrumentationMonitor.incCurrentInstThreads();
-
-        		recursionPreventor.get().threadInScope = true;
-        		
-        		if (classBeingRedefined != null && !params.isBootStrapInstrumentationEnabled()) {
-        			// Only redefine classes if bootstrap implementation IS enabled....
-        			// TODO need an instrumentation count for this!
-        			return result;
-        		}
-        		
-                if (loader != null) {
-                    GlobalClassLoader.getClassLoader().addClassLoader(loader);
-                }
-        		if (allowedClass(className)) {
-	                startMillis = MiscHelper.currentTimeWithMilliResolution();
-	                logger.logDebug("Loading class: " + className);
-	                
-	                if ((params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE)  
-	                		|| params.isPossibleJDBCDriver(className.replace('/', '.')) ) {
-	                    ClassPool classPool = null;
-	                    if (loader == null) {
-	                        classPool = new ClassPool(true);
-	                    } else {
-	                        classPool = new ClassPool(false);
-	                        classPool.appendClassPath(new LoaderClassPath(loader));
-	                    }
-	                    
-	                    ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
-	                    CtClass clazz = classPool.makeClass(inStream);
-	                    if (clazz.isFrozen()) {
-	                        clazz.defrost();
-	                    }
-	                    
-	                    int count = RuntimeTimerInjector.injectPerfMonTimers(clazz, classBeingRedefined != null, params, loader, protectionDomain);
-	                    if (count > 0) {
-	                        if (classBeingRedefined != null) {
-	                        	InstrumentationMonitor.incBootstrapClassesInst();
-	                            logger.logInfo("Inserting timer into bootstrap class: " + className);
-	                        }
-	                    	InstrumentationMonitor.incClassesInst();
-	                    	InstrumentationMonitor.incMethodsInst(count);
-	                        result = clazz.toBytecode();
-	                        logger.logDebug(count + " timers inserted into class: " + className);
-	                    }
-	                } // if transformMode != TransformerParams.MODE_NONE 
-	        	} // if (allowedClass())
-            } catch (Throwable ex) {
-            	InstrumentationMonitor.incClassInstFailures();
-                final String msg = "Unable to inject PerfMonTimers into class: " + className;
-                if (logger.isDebugEnabled()) {
-                    logger.logInfo("Unable to inject PerfMonTimers into class: " + className, ex);
-                } else {
-                    logger.logInfo(msg + " Throwable: " + ex.getMessage());
-                }
-            } finally {
-        		InstrumentationMonitor.decCurrentInstThreads();
-            	recursionPreventor.get().threadInScope = false;
-            }
-            if (startMillis > 0) {
-            	InstrumentationMonitor.incInstrumentationMillis(MiscHelper.currentTimeWithMilliResolution() - startMillis);
-            }
+        if (className != null) {
+	        if (recursionPreventor.get().threadInScope) {
+	        	InstrumentationMonitor.incRecursionSkipCount();
+	        } else {
+	            // !!!! IMPORTANT !!!! DO NOT DO ANYTHING HERE BEFORE BEFORE
+	        	// YOU set recursionPreventor.get().threadInScope = true
+	        	// IF YOU DO, YOU ARE RISKING RECURSION!
+	        	try {
+	        		InstrumentationMonitor.incCurrentInstThreads();
+	
+	        		recursionPreventor.get().threadInScope = true;
+	        		
+	        		if (classBeingRedefined != null && !params.isBootStrapInstrumentationEnabled()) {
+	        			// Only redefine classes if bootstrap implementation IS enabled....
+	        			// TODO need an instrumentation count for this!
+	        			return result;
+	        		}
+	        		
+	                if (loader != null) {
+	                    GlobalClassLoader.getClassLoader().addClassLoader(loader);
+	                }
+	        		if (allowedClass(className)) {
+		                startMillis = MiscHelper.currentTimeWithMilliResolution();
+		                logger.logDebug("Loading class: " + className);
+		                
+		                if ((params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE)  
+		                		|| params.isPossibleJDBCDriver(className.replace('/', '.')) ) {
+		                    ClassPool classPool = null;
+		                    if (loader == null) {
+		                        classPool = new ClassPool(true);
+		                    } else {
+		                        classPool = new ClassPool(false);
+		                        classPool.appendClassPath(new LoaderClassPath(loader));
+		                    }
+		                    
+		                    ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+		                    CtClass clazz = classPool.makeClass(inStream);
+		                    if (clazz.isFrozen()) {
+		                        clazz.defrost();
+		                    }
+		                    
+		                    int count = RuntimeTimerInjector.injectPerfMonTimers(clazz, classBeingRedefined != null, params, loader, protectionDomain);
+		                    if (count > 0) {
+		                        if (classBeingRedefined != null) {
+		                        	InstrumentationMonitor.incBootstrapClassesInst();
+		                            logger.logInfo("Inserting timer into bootstrap class: " + className);
+		                        }
+		                    	InstrumentationMonitor.incClassesInst();
+		                    	InstrumentationMonitor.incMethodsInst(count);
+		                        result = clazz.toBytecode();
+		                        logger.logDebug(count + " timers inserted into class: " + className);
+		                    }
+		                } // if transformMode != TransformerParams.MODE_NONE 
+		        	} // if (allowedClass())
+	            } catch (Throwable ex) {
+	            	InstrumentationMonitor.incClassInstFailures();
+	                final String msg = "Unable to inject PerfMonTimers into class: " + className;
+	                if (logger.isDebugEnabled()) {
+	                    logger.logInfo("Unable to inject PerfMonTimers into class: " + className, ex);
+	                } else {
+	                    logger.logInfo(msg + " Throwable: " + ex.getMessage());
+	                }
+	            } finally {
+	        		InstrumentationMonitor.decCurrentInstThreads();
+	            	recursionPreventor.get().threadInScope = false;
+	            }
+	            if (startMillis > 0) {
+	            	InstrumentationMonitor.incInstrumentationMillis(MiscHelper.currentTimeWithMilliResolution() - startMillis);
+	            }
+	        }
         }
 
         return result;
