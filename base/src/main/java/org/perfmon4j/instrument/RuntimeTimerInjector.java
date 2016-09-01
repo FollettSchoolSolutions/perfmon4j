@@ -152,7 +152,6 @@ public class RuntimeTimerInjector {
         List<PendingTimer> pendingTimers = new ArrayList<PendingTimer>();
         boolean extremeSQLClass = false;
         
-        logger.logDebug("Injecting timer into: " + clazz.getName());
         
         if (!clazz.isInterface()) {
             if (params != null) {
@@ -277,6 +276,8 @@ public class RuntimeTimerInjector {
                 }
                 
                 if (numTimers > 0) {
+                    logger.logDebug("Injecting timer into: " + clazz.getName());
+                	
             		Class<?> externalClazzForMonitors = null;
                     Integer offsetInStaticMonitorArray = null;
                     if (!beingRedefined) {
