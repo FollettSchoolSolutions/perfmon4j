@@ -20,6 +20,7 @@
 */
 package org.perfmon4j.instrument;
 
+import java.io.ByteArrayInputStream;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,13 +34,17 @@ import javassist.CtClass;
 import javassist.CtField;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
+import javassist.LoaderClassPath;
 import javassist.Modifier;
 import javassist.NotFoundException;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.AttributeInfo;
 import javassist.bytecode.ParameterAnnotationsAttribute;
 
+import javax.management.ObjectName;
+
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
+import org.perfmon4j.instrument.tomcat.TomcatDataSourceRegistry;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -120,9 +125,25 @@ public class JavassistRuntimeTimerInjector implements RuntimeTimerInjector {
     /* (non-Javadoc)
 	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#disableSystemGC(javassist.CtClass)
 	 */
-    public void disableSystemGC(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
+    public byte[] disableSystemGC(byte[] classfileBuffer, ClassLoader loader) throws Exception {
+    	ClassPool classPool;
+        if (loader == null) {
+            classPool = new ClassPool(true);
+        } else {
+            classPool = new ClassPool(false);
+            classPool.appendClassPath(new LoaderClassPath(loader));
+        }
+        
+        ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+        CtClass clazz = classPool.makeClass(inStream);
+        if (clazz.isFrozen()) {
+            clazz.defrost();
+        }    	
+    	
     	CtMethod gcMethod = clazz.getDeclaredMethod("gc");
     	gcMethod.insertBefore("if (1==1) {return;}\r\n");
+    	
+    	return clazz.toBytecode();
     }
     
     private boolean classHaveSkipIndicator(CtClass clazz) {
@@ -138,6 +159,28 @@ public class JavassistRuntimeTimerInjector implements RuntimeTimerInjector {
 		}
     	return result;
     }
+
+    public TimerInjectionReturn injectPerfMonTimers(byte[] classfileBuffer, boolean beingRedefined, 
+    		TransformerParams params, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+    	
+	    ClassPool classPool = null;
+	    if (loader == null) {
+	        classPool = new ClassPool(true);
+	    } else {
+	        classPool = new ClassPool(false);
+	        classPool.appendClassPath(new LoaderClassPath(loader));
+	    }
+	    
+	    ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+	    CtClass clazz = classPool.makeClass(inStream);
+	    if (clazz.isFrozen()) {
+	        clazz.defrost();
+	    }
+	    
+	    int numTimers = injectPerfMonTimers(clazz, beingRedefined, params, loader, protectionDomain);
+	    return new TimerInjectionReturn(numTimers, clazz.toBytecode());
+    }
+    
     
     /* (non-Javadoc)
 	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#injectPerfMonTimers(javassist.CtClass, boolean, org.perfmon4j.instrument.TransformerParams)
@@ -761,6 +804,82 @@ public class JavassistRuntimeTimerInjector implements RuntimeTimerInjector {
         
         return offset;
     }
+    
+    public byte[] installUndertowOrTomcatSetValveHook(byte[] classfileBuffer, ClassLoader loader) throws Exception {
+        ClassPool classPool = null;
+        if (loader == null) {
+            classPool = new ClassPool(true);
+        } else {
+            classPool = new ClassPool(false);
+            classPool.appendClassPath(new LoaderClassPath(loader));
+        }
+        
+        ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+        CtClass clazz = classPool.makeClass(inStream);
+        if (clazz.isFrozen()) {
+            clazz.defrost();
+        }
+    	
+    	if (clazz.getName().contains("undertow")) {
+        	logger.logInfo("Perfmon4j found Undertow DeploymentInfo Class: " + clazz.getName());
+
+        	// Undertow, which includes JBoss Wildfly, no longer has Valves.  We implement similar behavior by
+        	// installing a HandlerWrapper into the innerHandlerChain.
+        	CtMethod m = clazz.getDeclaredMethod("getInnerHandlerChainWrappers");
+        	final String insertBlock = 
+        			"synchronized (innerHandlerChainWrappers) {\r\n" +
+        			"	io.undertow.server.HandlerWrapper wrapper = (io.undertow.server.HandlerWrapper)" + PerfMonTimerTransformer.class.getName() + ".getValveHookInserter().getUndertowHandlerWrapperSingleton(this);\r\n" +
+        			"	if (wrapper != null && !innerHandlerChainWrappers.contains(wrapper)) {\r\n" +
+    	    		"		innerHandlerChainWrappers.add(wrapper);\r\n" +
+    	    		"	}\r\n" +
+        			"}\r\n";            	
+			m.insertBefore(insertBlock);
+    	} else {
+        	logger.logInfo("Perfmon4j found Catalina Engine Class: " + clazz.getName());
+        	
+        	CtMethod m = clazz.getDeclaredMethod("setDefaultHost");
+        	String insert = PerfMonTimerTransformer.class.getName() + ".getValveHookInserter().installValve(this);";
+			m.insertAfter(insert);
+    	}
+    	
+    	return clazz.toBytecode();
+    }
+
+    
+    public byte[] wrapTomcatRegistry(byte[] classfileBuffer, ClassLoader loader) throws Exception {
+        	ClassPool classPool;
+            
+            if (loader == null) {
+                classPool = new ClassPool(true);
+            } else {
+                classPool = new ClassPool(false);
+                classPool.appendClassPath(new LoaderClassPath(loader));
+            }
+            
+            ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+            CtClass clazz = classPool.makeClass(inStream);
+            if (clazz.isFrozen()) {
+                clazz.defrost();
+            }        		
+    		
+        	CtClass objectClazz = classPool.getCtClass(Object.class.getName());
+        	CtClass objectNameClazz = classPool.getCtClass(ObjectName.class.getName());
+           	CtClass stringClazz = classPool.getCtClass(String.class.getName());
+           	CtMethod methodRegisterComponent = clazz.getDeclaredMethod("registerComponent", new CtClass[]{objectClazz, objectNameClazz, stringClazz});
+           	
+           
+           	final String codeToInsert = 
+	           	"{" +
+		        "  	if (($1 != null) && ($1 instanceof javax.sql.DataSource) && ($2 != null)) {" +
+		        "  		" + TomcatDataSourceRegistry.class.getName() + ".registerDataSource($2, (javax.sql.DataSource)$1);" +
+		        "  	}" +
+	           	"}";
+           	
+           	methodRegisterComponent.insertAfter(codeToInsert);
+           	logger.logInfo("Perfmon4j found TomcatRegistry and installed Global DataSource registry");
+           	return clazz.toBytecode();
+    }
+    
     
     
     private ThreadLocal<Boolean> singnalThreadInTimer = new ThreadLocal<Boolean>() {

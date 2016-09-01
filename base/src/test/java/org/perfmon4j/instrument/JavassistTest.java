@@ -44,7 +44,7 @@ public class JavassistTest {
             }
         }
         
-        PerfMonTimerTransformer.runtimeTimerInjector.injectPerfMonTimers(clazz, false);
+        ((JavassistRuntimeTimerInjector)PerfMonTimerTransformer.runtimeTimerInjector).injectPerfMonTimers(clazz, false);
     }
     
     private static class SimpleClass {

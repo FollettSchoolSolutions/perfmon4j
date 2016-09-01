@@ -20,7 +20,6 @@
 */
 package org.perfmon4j.instrument;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -37,21 +36,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TimerTask;
 
-import javassist.CannotCompileException;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtMethod;
-import javassist.LoaderClassPath;
-import javassist.NotFoundException;
-
-import javax.management.ObjectName;
-
 import org.perfmon4j.BootConfiguration;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
 import org.perfmon4j.XMLBootParser;
 import org.perfmon4j.XMLConfigurator;
-import org.perfmon4j.instrument.tomcat.TomcatDataSourceRegistry;
 import org.perfmon4j.remotemanagement.RemoteImpl;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
@@ -167,21 +156,22 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		                
 		                if ((params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE)  
 		                		|| params.isPossibleJDBCDriver(className.replace('/', '.')) ) {
-		                    ClassPool classPool = null;
-		                    if (loader == null) {
-		                        classPool = new ClassPool(true);
-		                    } else {
-		                        classPool = new ClassPool(false);
-		                        classPool.appendClassPath(new LoaderClassPath(loader));
-		                    }
+//		                    ClassPool classPool = null;
+//		                    if (loader == null) {
+//		                        classPool = new ClassPool(true);
+//		                    } else {
+//		                        classPool = new ClassPool(false);
+//		                        classPool.appendClassPath(new LoaderClassPath(loader));
+//		                    }
+//		                    
+//		                    ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+//		                    CtClass clazz = classPool.makeClass(inStream);
+//		                    if (clazz.isFrozen()) {
+//		                        clazz.defrost();
+//		                    }
 		                    
-		                    ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
-		                    CtClass clazz = classPool.makeClass(inStream);
-		                    if (clazz.isFrozen()) {
-		                        clazz.defrost();
-		                    }
-		                    
-		                    int count = runtimeTimerInjector.injectPerfMonTimers(clazz, classBeingRedefined != null, params, loader, protectionDomain);
+		                    RuntimeTimerInjector.TimerInjectionReturn timers = runtimeTimerInjector.injectPerfMonTimers(classfileBuffer, classBeingRedefined != null, params, loader, protectionDomain);
+		                    int count = timers.getNumTimersAdded();
 		                    if (count > 0) {
 		                        if (classBeingRedefined != null) {
 		                        	InstrumentationMonitor.incBootstrapClassesInst();
@@ -189,7 +179,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		                        }
 		                    	InstrumentationMonitor.incClassesInst();
 		                    	InstrumentationMonitor.incMethodsInst(count);
-		                        result = clazz.toBytecode();
+		                        result = timers.getClassBytes();
 		                        logger.logDebug(count + " timers inserted into class: " + className);
 		                    }
 		                } // if transformMode != TransformerParams.MODE_NONE 
@@ -245,27 +235,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             
             if (installValve || wrapTomcatRegistry) {
             	try {
-	            	ClassPool classPool;
-		            
-		            if (loader == null) {
-		                classPool = new ClassPool(true);
-		            } else {
-		                classPool = new ClassPool(false);
-		                classPool.appendClassPath(new LoaderClassPath(loader));
-		            }
-		            
-		            ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
-		            CtClass clazz = classPool.makeClass(inStream);
-		            if (clazz.isFrozen()) {
-		                clazz.defrost();
-		            }
-		            
 		            if (installValve) {
-		            	addSetValveHook(clazz);
+		            	result = runtimeTimerInjector.installUndertowOrTomcatSetValveHook(classfileBuffer, loader);
 		            } else {
-		            	wrapTomcatRegistry(clazz, classPool);
+		            	result = runtimeTimerInjector.wrapTomcatRegistry(classfileBuffer, loader);
 		            }
-		            result = clazz.toBytecode();
 	            } catch (Exception ex) {
 	            	logger.logError(installValve ? "Unable to insert addValveHook" : "Unable to wrap tomcat registry", ex);
 	            }
@@ -355,61 +329,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	}
         	return undertowHanlderWrapperSingleton;
         }
-        
-        public void wrapTomcatRegistry(CtClass clazz, ClassPool pool)  {
-//            public void registerComponent(Object bean, ObjectName oname, String type)
-//                    throws Exception      	
-        	try {
-	        	CtClass objectClazz = pool.getCtClass(Object.class.getName());
-	        	CtClass objectNameClazz = pool.getCtClass(ObjectName.class.getName());
-	           	CtClass stringClazz = pool.getCtClass(String.class.getName());
-	           	CtMethod methodRegisterComponent = clazz.getDeclaredMethod("registerComponent", new CtClass[]{objectClazz, objectNameClazz, stringClazz});
-	           	
-	           
-	           	final String codeToInsert = 
-		           	"{" +
-			        "  	if (($1 != null) && ($1 instanceof javax.sql.DataSource) && ($2 != null)) {" +
-			        "  		" + TomcatDataSourceRegistry.class.getName() + ".registerDataSource($2, (javax.sql.DataSource)$1);" +
-			        "  	}" +
-		           	"}";
-	           	
-	           	methodRegisterComponent.insertAfter(codeToInsert);
-	           	logger.logInfo("Perfmon4j found TomcatRegistry and installed Global DataSource registry");
-        	} catch (Exception ex) {
-        		if (logger.isDebugEnabled()) {
-        			logger.logError("Error instrumenting TomcatRegistry", ex);
-        		} else {
-        			logger.logError("Error instrumenting TomcatRegistry: " + ex.getMessage());
-        		}
-        	}
-        }
-        
-        public void addSetValveHook(CtClass clazz) throws ClassNotFoundException, NotFoundException, CannotCompileException {
-        	if (clazz.getName().contains("undertow")) {
-            	logger.logInfo("Perfmon4j found Undertow DeploymentInfo Class: " + clazz.getName());
-
-            	// Undertow, which includes JBoss Wildfly, no longer has Valves.  We implement similar behavior by
-            	// installing a HandlerWrapper into the innerHandlerChain.
-            	CtMethod m = clazz.getDeclaredMethod("getInnerHandlerChainWrappers");
-            	final String insertBlock = 
-            			"synchronized (innerHandlerChainWrappers) {\r\n" +
-            			"	io.undertow.server.HandlerWrapper wrapper = (io.undertow.server.HandlerWrapper)" + PerfMonTimerTransformer.class.getName() + ".getValveHookInserter().getUndertowHandlerWrapperSingleton(this);\r\n" +
-            			"	if (wrapper != null && !innerHandlerChainWrappers.contains(wrapper)) {\r\n" +
-        	    		"		innerHandlerChainWrappers.add(wrapper);\r\n" +
-        	    		"	}\r\n" +
-            			"}\r\n";            	
-    			m.insertBefore(insertBlock);
-        	} else {
-            	logger.logInfo("Perfmon4j found Catalina Engine Class: " + clazz.getName());
-            	
-            	CtMethod m = clazz.getDeclaredMethod("setDefaultHost");
-            	String insert = PerfMonTimerTransformer.class.getName() + ".getValveHookInserter().installValve(this);";
-    			m.insertAfter(insert);
-        	}
-        }
     }
 
-    
     private static class SystemGCDisabler implements ClassFileTransformer {
         public byte[] transform(ClassLoader loader, String className, 
                 Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
@@ -418,23 +339,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             
             if ("java/lang/System".equals(className)) {
 	            try {
-	            	ClassPool classPool;
-		            
-		            
-		            if (loader == null) {
-		                classPool = new ClassPool(true);
-		            } else {
-		                classPool = new ClassPool(false);
-		                classPool.appendClassPath(new LoaderClassPath(loader));
-		            }
-		            
-		            ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
-		            CtClass clazz = classPool.makeClass(inStream);
-		            if (clazz.isFrozen()) {
-		                clazz.defrost();
-		            }
-		            runtimeTimerInjector.disableSystemGC(clazz);
-		            result = clazz.toBytecode();
+		            result = runtimeTimerInjector.disableSystemGC(classfileBuffer, loader);
 		            logger.logInfo("Perfmon4j disabled System.gc()");
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to disable System.gc()", ex);

@@ -45,7 +45,7 @@ import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
 public class RuntimeTimerInjectorTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
     
-    private static RuntimeTimerInjector runtimeTimerInjector = PerfMonTimerTransformer.runtimeTimerInjector;
+    private static JavassistRuntimeTimerInjector runtimeTimerInjector = (JavassistRuntimeTimerInjector)PerfMonTimerTransformer.runtimeTimerInjector;
 
 /*----------------------------------------------------------------------------*/
     public RuntimeTimerInjectorTest(String name) {
