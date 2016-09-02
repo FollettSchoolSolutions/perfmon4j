@@ -42,7 +42,7 @@ import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory.AttributeConfig;
-import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.util.ByteFormatter;
 import org.perfmon4j.util.NumberFormatter;
 

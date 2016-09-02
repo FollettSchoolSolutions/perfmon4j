@@ -25,7 +25,7 @@ import java.util.Map;
 
 import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.instrument.snapshot.Ratio;
-import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.Logger;
@@ -58,10 +58,10 @@ public abstract class SnapShotData implements PerfMonData {
 					value = new Double(((Ratio)value).getRatio());
 				}
 			} catch (UnableToGetAttributeException e) {
-				if (field.getFieldName().endsWith(SnapShotGenerator.DELTA_FIELD_SUFFIX) &&	
+				if (field.getFieldName().endsWith(JavassistSnapShotGenerator.DELTA_FIELD_SUFFIX) &&	
 						FieldKey.DOUBLE_TYPE.equals(field.getFieldType())) {
 					
-					String attrName = field.getFieldName().replaceAll(SnapShotGenerator.DELTA_FIELD_SUFFIX + "$", "");
+					String attrName = field.getFieldName().replaceAll(JavassistSnapShotGenerator.DELTA_FIELD_SUFFIX + "$", "");
 					try {
 						Object tmp = BeanHelper.getValue(this, attrName);
 						if (tmp instanceof Delta) {

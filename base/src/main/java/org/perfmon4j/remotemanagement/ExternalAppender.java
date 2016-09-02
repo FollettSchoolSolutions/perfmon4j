@@ -36,7 +36,7 @@ import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotMonitor;
 import org.perfmon4j.SnapShotProviderWrapper;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
-import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
@@ -284,7 +284,7 @@ public class ExternalAppender {
 					String instanceName = monitorKey.getInstance();
 					try {
 						Class<?> clazz = PerfMon.getClassLoader().loadClass(className);
-						SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, instanceName);
+						JavassistSnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, instanceName);
 		            	SnapShotMonitor monitor = new SnapShotProviderWrapper("", bundle);
 		            	SnapShotData data = monitor.initSnapShot(MiscHelper.currentTimeWithMilliResolution());
 		            	

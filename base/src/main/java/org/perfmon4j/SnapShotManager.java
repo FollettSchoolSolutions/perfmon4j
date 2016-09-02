@@ -31,7 +31,7 @@ import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
 import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
-import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.Logger;
@@ -101,7 +101,7 @@ public class SnapShotManager {
 	                }                
                 } else {
                 	// Must be a generated Snap Shot class.
-                	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
+                	JavassistSnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
                 	result = new SnapShotProviderWrapper(monitorID.getName(), bundle);
                 	
                 	ExternalAppender.registerSnapShotClass(clazz.getName());
