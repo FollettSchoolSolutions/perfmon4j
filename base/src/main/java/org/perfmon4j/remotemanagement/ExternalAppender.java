@@ -35,6 +35,7 @@ import org.perfmon4j.PerfMonData;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotMonitor;
 import org.perfmon4j.SnapShotProviderWrapper;
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
@@ -42,10 +43,10 @@ import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 import org.perfmon4j.util.BeanHelper;
+import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
-import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
 
 public class ExternalAppender {
 	private static final Logger logger = LoggerFactory.initLogger(ExternalAppender.class);
@@ -283,7 +284,7 @@ public class ExternalAppender {
 					String instanceName = monitorKey.getInstance();
 					try {
 						Class<?> clazz = PerfMon.getClassLoader().loadClass(className);
-						SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(clazz, instanceName);
+						SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, instanceName);
 		            	SnapShotMonitor monitor = new SnapShotProviderWrapper("", bundle);
 		            	SnapShotData data = monitor.initSnapShot(MiscHelper.currentTimeWithMilliResolution());
 		            	
@@ -374,7 +375,7 @@ public class ExternalAppender {
 					try {
 						Class<?> clazz = PerfMon.getClassLoader().loadClass(className);
 						if (clazz != null) {
-							MonitorKeyWithFields m[] = SnapShotGenerator.generateExternalMonitorKeys(clazz);
+							MonitorKeyWithFields m[] = PerfMonTimerTransformer.snapShotGenerator.generateExternalMonitorKeys(clazz);
 							if (m != null) {
 								element.monitors = m;
 								element.monitorClass = new WeakReference<Class<?>>(clazz);

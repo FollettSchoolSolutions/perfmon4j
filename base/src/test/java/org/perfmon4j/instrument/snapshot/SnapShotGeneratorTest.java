@@ -39,6 +39,7 @@ import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.InstrumentationMonitor;
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotInstanceDefinition;
@@ -91,7 +92,7 @@ public class SnapShotGeneratorTest extends TestCase {
     }
     
     public void testSnapShotStringAllowsAnyObjectThatCanBeConvertedToAString() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(ArbitraryDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(ArbitraryDataProvider.class);
 	  	assertNotNull("clazz", clazz);
 	  	
 	  	validateMethodExists(clazz, "getObj1", ArbitraryObject.class);
@@ -117,7 +118,7 @@ public class SnapShotGeneratorTest extends TestCase {
     }
     
     public void testSnapShotStringUsesCustomFormatter() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(ArbitraryDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(ArbitraryDataProvider.class);
 	  	
 	  	SnapShotGenerator.SnapShotLifecycle lc = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
 
@@ -188,7 +189,7 @@ System.out.println(appenderString);
     }
     
     public void testExtendsSnapShotData() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	Object obj = clazz.newInstance();
 	  	
 	  	assertTrue(obj instanceof SnapShotData);
@@ -241,7 +242,7 @@ System.out.println(appenderString);
     }
     
     public void testRatio() throws Exception {
-	  	Class<?> clazz = SnapShotGenerator.generateSnapShotDataImpl(RatioDataProvider.class);
+	  	Class<?> clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(RatioDataProvider.class);
 	  	
 	  	SnapShotGenerator.SnapShotLifecycle snapShotData = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
 	  	SimpleRatio d = (SimpleRatio)snapShotData;
@@ -311,7 +312,7 @@ System.out.println(appenderString);
     }
     
     public void testAverage() throws Exception {
-	  	Class<?> clazz = SnapShotGenerator.generateSnapShotDataImpl(AverageProvider.class);
+	  	Class<?> clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(AverageProvider.class);
 	  	
 	  	SnapShotGenerator.SnapShotLifecycle snapShotData = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
 	  	
@@ -333,7 +334,7 @@ System.out.println(appenderString);
     
     
     public void testGetCounterData() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	
 	  	SnapShotGenerator.SnapShotLifecycle snapShotData = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
 	  	SimpleData d = (SimpleData)snapShotData;
@@ -362,13 +363,13 @@ System.out.println(appenderString);
     
     /*----------------------------------------------------------------------------*/    
     public void testGenerateSimpleCounter() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	assertNotNull("clazz", clazz);
 	  	validateMethodExists(clazz, "getBytesWritten", Delta.class);
     }
     
     public void testInitSetsStartTime() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	
 	  	SnapShotGenerator.SnapShotLifecycle scl = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
 	  	scl.init(new SimpleDataProvider(), 100);
@@ -377,7 +378,7 @@ System.out.println(appenderString);
     }
     
     public void testProvideDataStartEndTimeAndDuration() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	
 	  	SnapShotGenerator.SnapShotLifecycle scl = (SnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
 	  	SimpleDataProvider p = new SimpleDataProvider();
@@ -391,14 +392,14 @@ System.out.println(appenderString);
     
     /*----------------------------------------------------------------------------*/    
     public void testGenerateSimpleGauge() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	assertNotNull("clazz", clazz);
 	  	validateMethodExists(clazz, "getTotalMemory", long.class);
     }
     
     /*----------------------------------------------------------------------------*/    
     public void testImplementSpecifiedInterface() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	assertNotNull("clazz", clazz);
 	  	
 	  	assertTrue(implementsInterface(clazz, SimpleData.class));
@@ -406,7 +407,7 @@ System.out.println(appenderString);
     
     /*----------------------------------------------------------------------------*/    
     public void testImplementsSnapShotLifecycle() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	assertNotNull("clazz", clazz);
 	  	
 	  	assertTrue(implementsInterface(clazz, SnapShotGenerator.SnapShotLifecycle.class));
@@ -427,7 +428,7 @@ System.out.println(appenderString);
     
     /*----------------------------------------------------------------------------*/    
     public void testDataProviderForGauge() throws Exception {
-		Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+		Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 		
 		SimpleDataProvider provider = new SimpleDataProvider();
 		provider.setTotalMemory(10);
@@ -442,7 +443,7 @@ System.out.println(appenderString);
   
 	  /*----------------------------------------------------------------------------*/    
     public void testGetAllSupportedGaugeTypes() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleDataProvider.class);
 	  	assertNotNull("clazz", clazz);
 	  	
 	  	validateMethodExists(clazz, "getLongValue", long.class);
@@ -490,7 +491,7 @@ System.out.println(appenderString);
     }
     
     public void testSnapShotString() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(TestProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(TestProvider.class);
 	  	assertNotNull("clazz", clazz);
 	  	
 	  	validateMethodExists(clazz, "getStringValue", String.class);
@@ -499,7 +500,7 @@ System.out.println(appenderString);
     
     
     public void testGetAllSupportedCounterTypes() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(TestProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(TestProvider.class);
 	  	assertNotNull("clazz", clazz);
 	  	
 	  	validateMethodExists(clazz, "getLongValue", Delta.class);
@@ -514,7 +515,7 @@ System.out.println(appenderString);
     
     
     public void testToAppenderString() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(TestProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(TestProvider.class);
 	  	
 	  	SnapShotData d = (SnapShotData)clazz.newInstance();
 	  	d.setName("MyData");
@@ -593,7 +594,7 @@ System.out.println(appenderString);
     }
     
     public void testGenerateSnapShotDataForStaticType() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(TestStaticProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(TestStaticProvider.class);
 	  	SnapShotData d = (SnapShotData)clazz.newInstance();
 	  	
 	  	validateMethodExists(clazz, "getBytesWritten", Delta.class);
@@ -615,7 +616,7 @@ System.out.println(appenderString);
     }
 
     public void testProvideDataForStaticType() throws Exception {
-	  	Class clazz = SnapShotGenerator.generateSnapShotDataImpl(TestStaticProvider.class);
+	  	Class clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(TestStaticProvider.class);
 	  	SnapShotLifecycle lc = (SnapShotLifecycle)clazz.newInstance();
 
 	  	lc.init(null, 1000);
@@ -632,7 +633,7 @@ System.out.println(appenderString);
     }
     
     public void testGenerateBundleForStaticProvider() throws Exception {
-	  	SnapShotGenerator.Bundle  bundle = SnapShotGenerator.generateBundle(TestStaticProvider.class);
+	  	SnapShotGenerator.Bundle  bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(TestStaticProvider.class);
 	  	
 	  	TestStaticProvider p = (TestStaticProvider)bundle.getProviderInstance();
 	  	assertNull("providerInstance", p);
@@ -653,7 +654,7 @@ System.out.println(appenderString);
     }
     
     public void testGenerateBundleForInstancePerMonitorProvider() throws Exception {
-    	SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(TestInstancePerProvider.class);
+    	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(TestInstancePerProvider.class);
 	  	
     	TestInstancePerProvider p = (TestInstancePerProvider)bundle.getProviderInstance();
 	  	assertNotNull("providerInstance", p);
@@ -662,11 +663,11 @@ System.out.println(appenderString);
 	  	assertNotNull("newSnapShotData", d);
 	  	
 	  	// Each call should get a new provider...
-    	bundle = SnapShotGenerator.generateBundle(TestInstancePerProvider.class);
+    	bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(TestInstancePerProvider.class);
     	assertFalse("Each bundle should get a new provider instance", p == bundle.getProviderInstance());
     	
     	// Now pass an instance name.
-    	bundle = SnapShotGenerator.generateBundle(TestInstancePerProvider.class, "bogus");
+    	bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(TestInstancePerProvider.class, "bogus");
     	p = (TestInstancePerProvider)bundle.getProviderInstance();
     	
     	assertEquals("Should have called constructor with instance name", "bogus", p.instanceName);
@@ -687,12 +688,12 @@ System.out.println(appenderString);
     }
     
     public void testGenerateBundleFactoryProvider() throws Exception {
-    	SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(TestFactoryProvider.class);
+    	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(TestFactoryProvider.class);
 	  	
     	TestFactoryProvider p = (TestFactoryProvider)bundle.getProviderInstance();
     	assertTrue("Should return single instance", p == TestFactoryProvider.noInstanceName);
     	
-    	bundle = SnapShotGenerator.generateBundle(TestFactoryProvider.class, "bogus");
+    	bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(TestFactoryProvider.class, "bogus");
 	  	
     	p = (TestFactoryProvider)bundle.getProviderInstance();
     	assertTrue("Should return single instance", p == TestFactoryProvider.withInstanceName);
@@ -736,7 +737,7 @@ System.out.println(appenderString);
      * @throws Exception
      */
     public void testInaccessiblePrivateMethodDoesNotBlowUp() throws Exception {
-    	SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(DataProviderWithPrivateMethod.class);
+    	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(DataProviderWithPrivateMethod.class);
     	
     	SnapShotData data = bundle.newSnapShotData();
     	validateMethodExists(data.getClass(), "getAccessibleCounter", Delta.class);
@@ -792,7 +793,7 @@ System.out.println(appenderString);
     }    
 
     public void testCreateSQLWritableData() throws Exception {
-    	SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(SQLCompatibleDataProvider.class);
+    	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(SQLCompatibleDataProvider.class);
     	SnapShotData data = bundle.newSnapShotData();
     	
     	assertTrue("Should implement the SQLWritable interface", data instanceof SQLWriteable);
@@ -830,7 +831,7 @@ System.out.println(appenderString);
     
 
     public void testSimpleGetMonitorKeyWithFields() throws Exception {
-    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(JVMSnapShot.class);
+    	MonitorKeyWithFields keys[] = PerfMonTimerTransformer.snapShotGenerator.generateExternalMonitorKeys(JVMSnapShot.class);
     	
     	assertNotNull("keys[]", keys);
     	assertEquals("keys.length", 1, keys.length);
@@ -853,7 +854,7 @@ System.out.println(appenderString);
     }
 
     public void testSimpleGetMonitorKeyWithStringField() throws Exception {
-    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(InstrumentationMonitor.class);
+    	MonitorKeyWithFields keys[] = PerfMonTimerTransformer.snapShotGenerator.generateExternalMonitorKeys(InstrumentationMonitor.class);
     	
     	assertNotNull("keys[]", keys);
     	assertEquals("keys.length", 1, keys.length);
@@ -884,7 +885,7 @@ System.out.println(appenderString);
     
 
     public void testSimpleGetMonitorKeyWithStaticMonitor() throws Exception {
-    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(StaticMonitor.class);
+    	MonitorKeyWithFields keys[] = PerfMonTimerTransformer.snapShotGenerator.generateExternalMonitorKeys(StaticMonitor.class);
     	
     	assertNotNull("keys[]", keys);
     	assertEquals("keys.length", 1, keys.length);
@@ -949,7 +950,7 @@ System.out.println(appenderString);
     
     /*----------------------------------------------------------------------------*/
     public void testSimpleGetMonitorKeyWithFieldsFromMonitorWithInstances() throws Exception {
-    	MonitorKeyWithFields keys[] = SnapShotGenerator.generateExternalMonitorKeys(MonitorWithInstance.class);
+    	MonitorKeyWithFields keys[] = PerfMonTimerTransformer.snapShotGenerator.generateExternalMonitorKeys(MonitorWithInstance.class);
     	
     	assertNotNull("keys[]", keys);
     	assertEquals("keys.length", 3, keys.length);

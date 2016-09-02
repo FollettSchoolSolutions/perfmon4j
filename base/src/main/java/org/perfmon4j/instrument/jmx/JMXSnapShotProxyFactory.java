@@ -43,6 +43,7 @@ import javax.management.ObjectName;
 import org.perfmon4j.InvalidConfigException;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SnapShotProviderWrapper;
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotRatio;
@@ -75,7 +76,7 @@ public class JMXSnapShotProxyFactory {
 	public static SnapShotProviderWrapper getnerateSnapShotWrapper(String monitorName, String configXML) throws Exception {
 		ClassPool classPool = new ClassPool();
 		JMXSnapShotImpl impl = newSnapShotImpl(configXML, classPool);
-		SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(impl, classPool);
+		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(impl, classPool);
 		
 		return new SnapShotProviderWrapper(monitorName, bundle);
 	}

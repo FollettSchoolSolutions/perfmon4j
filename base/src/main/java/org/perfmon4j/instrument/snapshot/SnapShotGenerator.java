@@ -75,7 +75,7 @@ public class SnapShotGenerator {
     	public void takeSnapShot(Object dataProvider, long timesStamp);
     }
     
-	static private String generateFieldName(String methodName) {
+	private String generateFieldName(String methodName) {
 		if (!methodName.startsWith("get")) {
 			throw new IllegalArgumentException("Invalid method expected expected to start with get"); 
 		}
@@ -85,14 +85,14 @@ public class SnapShotGenerator {
 		return m.toString();
 	}
 	
-	static private String generateGetterName(String fieldName) {
+	private String generateGetterName(String fieldName) {
 		StringBuffer f = new StringBuffer(fieldName);
 		f.setCharAt(0, Character.toUpperCase(f.charAt(0)));
 		
 		return "get" + f.toString();
 	}
 	
-	static private void generateRatio(SnapShotRatio ratio, CtClass cls, StringBuffer toAppenderStringBody) throws CannotCompileException {
+	private void generateRatio(SnapShotRatio ratio, CtClass cls, StringBuffer toAppenderStringBody) throws CannotCompileException {
 		String methodName = generateGetterName(ratio.name());
 		String denominatorMethod = generateGetterName(ratio.denominator());
 		String numeratorMethod = generateGetterName(ratio.numerator());
@@ -117,7 +117,7 @@ public class SnapShotGenerator {
 	}
 	
 	
-	static private void generateCounter(Method method, CtClass cls, StringBuffer initBody, StringBuffer providerBody,
+	private void generateCounter(Method method, CtClass cls, StringBuffer initBody, StringBuffer providerBody,
 			StringBuffer toAppenderStringBody, SnapShotCounter counterAnnotation) throws CannotCompileException {
 		String fieldName = generateFieldName(method.getName());
 		
@@ -162,7 +162,7 @@ public class SnapShotGenerator {
 		toAppenderStringBody.append(appendToAppenderString);
 	}
 	
-	static private void generateGauge(Method method, CtClass cls, StringBuffer providerBody, StringBuffer toAppenderStringBody, SnapShotGauge gaugeAnnotation) throws CannotCompileException {
+	private void generateGauge(Method method, CtClass cls, StringBuffer providerBody, StringBuffer toAppenderStringBody, SnapShotGauge gaugeAnnotation) throws CannotCompileException {
 		String fieldName = generateFieldName(method.getName());
 		CtField f;
 		String fieldTypeName;
@@ -222,7 +222,7 @@ public class SnapShotGenerator {
 		toAppenderStringBody.append(appendToAppenderString);
 	}
 
-	static private void generateStringAnnotation(Method method, CtClass cls, StringBuffer providerBody, StringBuffer toAppenderStringBody, SnapShotString stringAnnotation) throws CannotCompileException {
+	private void generateStringAnnotation(Method method, CtClass cls, StringBuffer providerBody, StringBuffer toAppenderStringBody, SnapShotString stringAnnotation) throws CannotCompileException {
 		Class<?> retType = method.getReturnType();
 		if (retType.isPrimitive()) {
 			throw new IllegalArgumentException("Invalid field type: " + retType.getName());
@@ -249,7 +249,7 @@ public class SnapShotGenerator {
 	}
 	
 	
-	private static void addMethod(CtClass ctClass, String methodBody) {
+	private void addMethod(CtClass ctClass, String methodBody) {
 		try {
 			ctClass.addMethod(CtMethod.make(methodBody, ctClass));
 		} catch (CannotCompileException e) {
@@ -257,12 +257,12 @@ public class SnapShotGenerator {
 		}
 	}
 	
-	public static Class<?> generateSnapShotDataImpl(Class<?> dataProvider) throws GenerateSnapShotException {
+	public Class<?> generateSnapShotDataImpl(Class<?> dataProvider) throws GenerateSnapShotException {
 		return generateSnapShotDataImpl(dataProvider, null, null);
 	}
 
 	
-	public static Class<?> generateSnapShotDataImpl(Class<?> dataProvider, JMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
+	public Class<?> generateSnapShotDataImpl(Class<?> dataProvider, JMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean useJMXConfig = jmxConfig != null;
 		boolean isStatic = false;
 		Class<?> dataInterface = null;
@@ -491,15 +491,15 @@ public class SnapShotGenerator {
 	}
 	
 	
-	static public Bundle generateBundle(Class<?> provider) throws GenerateSnapShotException {
+	public Bundle generateBundle(Class<?> provider) throws GenerateSnapShotException {
 		return generateBundle(provider, null);
 	}
 	
-	static public Bundle generateBundle(Class<?> provider, String instanceName) throws GenerateSnapShotException {
+	public Bundle generateBundle(Class<?> provider, String instanceName) throws GenerateSnapShotException {
 		return generateBundle(provider, instanceName, null, null);
 	}
 	
-	static public Bundle generateBundle(Class<?> provider, String instanceName, JMXSnapShotProxyFactory.JMXSnapShotImpl jmxWrapper, ClassPool classPool) throws GenerateSnapShotException {
+	public Bundle generateBundle(Class<?> provider, String instanceName, JMXSnapShotProxyFactory.JMXSnapShotImpl jmxWrapper, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean isJMXWrapperClass = jmxWrapper != null;
 		JMXSnapShotProxyFactory.Config jmxSnapShotConfig = null;
 		
@@ -593,11 +593,11 @@ public class SnapShotGenerator {
 	/**
 	 * NOTE: The unit test for this method are found in JMXSnapShotFactoryTest.java
 	 */
-	public static Bundle generateBundle(JMXSnapShotImpl impl, ClassPool classPool) throws GenerateSnapShotException {
+	public Bundle generateBundle(JMXSnapShotImpl impl, ClassPool classPool) throws GenerateSnapShotException {
 		return generateBundle(impl.getClass(), null, impl, classPool);
 	}
 	
-	private static List<FieldKey> createFields(MonitorKey keys[], String name, String fieldType) {
+	private List<FieldKey> createFields(MonitorKey keys[], String name, String fieldType) {
 		List<FieldKey> fields = new ArrayList<FieldKey>();
 		
 		for (int i = 0; i < keys.length; i++) {
@@ -607,7 +607,7 @@ public class SnapShotGenerator {
 		return fields;
 	}
 
-	private static MonitorKey[] getMonitorKeysForClass(Class<?> clazz) {
+	private MonitorKey[] getMonitorKeysForClass(Class<?> clazz) {
 		List<MonitorKey> result = new ArrayList<MonitorKey>();
 
 		Method methods[] = clazz.getMethods();
@@ -637,7 +637,7 @@ public class SnapShotGenerator {
 	
 	
 	
-	public static MonitorKeyWithFields[] generateExternalMonitorKeys (Class<?> clazz) {
+	public MonitorKeyWithFields[] generateExternalMonitorKeys (Class<?> clazz) {
 		MonitorKey monitorKey[] = getMonitorKeysForClass(clazz);
 		
 		List<FieldKey> fields = new ArrayList<FieldKey>();
