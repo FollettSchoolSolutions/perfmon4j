@@ -69,11 +69,11 @@ public class JMXSnapShotProxyFactory {
 	/**
 	 * Package level for testing.
 	 */
-	static Config parseConfig(String xml) throws Exception {
+	Config parseConfig(String xml) throws Exception {
 		return XMLParser.parseXML(xml);
 	}
 	
-	public static SnapShotProviderWrapper getnerateSnapShotWrapper(String monitorName, String configXML) throws Exception {
+	public SnapShotProviderWrapper getnerateSnapShotWrapper(String monitorName, String configXML) throws Exception {
 		ClassPool classPool = new ClassPool();
 		JMXSnapShotImpl impl = newSnapShotImpl(configXML, classPool);
 		JavassistSnapShotGenerator.Bundle bundle = ((JavassistSnapShotGenerator)PerfMonTimerTransformer.snapShotGenerator).generateBundle(impl, classPool);
@@ -81,11 +81,11 @@ public class JMXSnapShotProxyFactory {
 		return new SnapShotProviderWrapper(monitorName, bundle);
 	}
 	
-	public static JMXSnapShotImpl newSnapShotImpl(String xml) throws Exception {
+	public JMXSnapShotImpl newSnapShotImpl(String xml) throws Exception {
 		return newSnapShotImpl(xml, new ClassPool());
 	}
 	
-	private static JMXSnapShotImpl newSnapShotImpl(String xml, ClassPool classPool) throws Exception {
+	private JMXSnapShotImpl newSnapShotImpl(String xml, ClassPool classPool) throws Exception {
 		Config config = parseConfig(xml);
 		Class clazz = generateDerivedJMXClass(config, classPool);
 		JMXSnapShotImpl result = (JMXSnapShotImpl)clazz.getConstructor(new Class[]{JMXSnapShotProxyFactory.Config.class}).newInstance(new Object[]{config});
@@ -298,7 +298,7 @@ public class JMXSnapShotProxyFactory {
 	    	}
 	    }
 
-	    private static void validateArg(String section, String name, String value) throws SAXException {
+	    private void validateArg(String section, String name, String value) throws SAXException {
 	        if (value == null || "".equals(value)) {
 	            throw new SAXException("Attribute: " + name + " required for section: " + section);
 	        }
@@ -307,7 +307,7 @@ public class JMXSnapShotProxyFactory {
 	
 	public static long SERIAL_NUMBER = 0; 
 
-	private static MBeanAttributeInfo findMBeanInfo(MBeanAttributeInfo info[], String attrName) {
+	private MBeanAttributeInfo findMBeanInfo(MBeanAttributeInfo info[], String attrName) {
 		MBeanAttributeInfo result = null;
 		
 		for (int i = 0; i < info.length && result == null; i++) {
@@ -319,7 +319,7 @@ public class JMXSnapShotProxyFactory {
 		return result;
 	}
 	
-	private static Class generateDerivedJMXClass(Config config, ClassPool classPool) throws Exception {
+	private Class generateDerivedJMXClass(Config config, ClassPool classPool) throws Exception {
 		classPool.appendSystemPath();
 
 		String className = "JMXSnapShot_" + (++SERIAL_NUMBER);

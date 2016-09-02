@@ -79,7 +79,7 @@ public class SnapShotManager {
                 Properties attr = monitorID.getAttributes();
                 if (clazz.getName().equals(JMXSnapShotProxyFactory.class.getName())) {
                 	String XML = attr.getProperty(JMX_XML_PROPERTY);
-                	result = JMXSnapShotProxyFactory.getnerateSnapShotWrapper(monitorID.getName(), XML);
+                	result = PerfMonTimerTransformer.jmxSnapShotProxyFactory.getnerateSnapShotWrapper(monitorID.getName(), XML);
                 } else if (SnapShotMonitor.class.isAssignableFrom(clazz)) {
 	                Constructor constructor = clazz.getConstructor(new Class[]{String.class});
 	                result = (SnapShotMonitor)constructor.newInstance(new Object[]{monitorID.getName()});
