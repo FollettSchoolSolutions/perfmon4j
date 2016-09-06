@@ -29,12 +29,19 @@ import java.io.InputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.rmi.RemoteException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.perfmon4j.BootConfiguration;
 import org.perfmon4j.PerfMon;
@@ -42,8 +49,6 @@ import org.perfmon4j.SQLTime;
 import org.perfmon4j.XMLBootParser;
 import org.perfmon4j.XMLConfigurator;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
-import org.perfmon4j.instrument.jmx.JavassistJMXSnapShotProxyFactory;
-import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.RemoteImpl;
 import org.perfmon4j.util.GlobalClassLoader;
@@ -87,12 +92,79 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	public static final RuntimeTimerInjector runtimeTimerInjector;
 	public static final SnapShotGenerator snapShotGenerator;
 	public static final JMXSnapShotProxyFactory jmxSnapShotProxyFactory;
+	private static ClassLoader javassistClassLoader = null;
+	private static String javassistVersion = null;
+	
+	static private class IssolateJavassistClassLoader extends URLClassLoader {
+		public IssolateJavassistClassLoader(File perfmon4j, File javassist) throws MalformedURLException {
+			super(new URL[]{toURL(perfmon4j), toURL(javassist)}, new ClassLoader() {
+			});
+		}
+		
+		@Override
+		public Class<?> loadClass(String name) throws ClassNotFoundException {
+			Class<?> result = null;
+			
+			boolean isJavassistClass = name.toLowerCase().contains("javassist");
+			if (!isJavassistClass) {
+				result = super.loadClass(name);
+			} else {
+				result = findLoadedClass(name);
+				if (result == null) {
+					try {
+						result = findClass(name);
+					} catch (ClassNotFoundException cnf) {
+						result = super.loadClass(name);
+					}
+				}
+			}
+			return result;
+		}
+		
+		private static URL toURL(File file) throws MalformedURLException {
+			URI uri = file.toURI();
+			return uri.toURL();
+		}
+	}
+	
 	
 	static {
-		// This will need to be replaced where we instantiate the class!!! 
-		runtimeTimerInjector = new JavassistRuntimeTimerInjector();
-		snapShotGenerator = new JavassistSnapShotGenerator();
-		jmxSnapShotProxyFactory = new JavassistJMXSnapShotProxyFactory();
+		File agentInstallFolder = findPerfmon4jAgentInstallFolder();
+		if (agentInstallFolder != null) {
+			File javassist = new File(agentInstallFolder, "javassist.jar");
+			File perfmon4j = new File(agentInstallFolder, "perfmon4j.jar");
+			
+			if (!javassist.exists()) {
+				System.err.println("Perfmon4j could not find javassist.jar based on agent location - " + javassist.getPath());
+			} else if (!perfmon4j.exists()) {
+				System.err.println("Perfmon4j could not find perfmon4j.jar based on agent location - " + perfmon4j.getPath());
+			} else {
+				try {
+					javassistClassLoader = new IssolateJavassistClassLoader(perfmon4j, javassist);
+				} catch (MalformedURLException e) {
+					System.err.println("Perfmon4j is unable to create the javaasist classloader.");
+					e.printStackTrace();
+				}
+			}
+		} else {
+			System.err.println("Perfmon4j could not find perfmon4j agent on java command line.");
+		}
+
+		if (javassistClassLoader == null) {
+			javassistClassLoader = PerfMonTimerTransformer.class.getClassLoader();
+			System.err.println("Perfmon4j will attempt to use the default classloader to load javassist classes.");
+		}
+		
+		try {
+			Class<?> ctClass =  javassistClassLoader.loadClass("javassist.CtClass");
+	        javassistVersion = ctClass.getPackage().getSpecificationVersion();
+			
+			snapShotGenerator = (SnapShotGenerator)javassistClassLoader.loadClass("org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator").newInstance();
+			runtimeTimerInjector = (RuntimeTimerInjector)javassistClassLoader.loadClass("org.perfmon4j.instrument.JavassistRuntimeTimerInjector").newInstance();
+			jmxSnapShotProxyFactory = (JMXSnapShotProxyFactory)javassistClassLoader.loadClass("org.perfmon4j.instrument.jmx.JavassistJMXSnapShotProxyFactory").newInstance();
+		} catch (Exception e) {
+			throw new RuntimeException("Fatal exception", e);
+		} 		
 	}
 	
 	
@@ -163,19 +235,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		                
 		                if ((params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE)  
 		                		|| params.isPossibleJDBCDriver(className.replace('/', '.')) ) {
-//		                    ClassPool classPool = null;
-//		                    if (loader == null) {
-//		                        classPool = new ClassPool(true);
-//		                    } else {
-//		                        classPool = new ClassPool(false);
-//		                        classPool.appendClassPath(new LoaderClassPath(loader));
-//		                    }
-//		                    
-//		                    ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
-//		                    CtClass clazz = classPool.makeClass(inStream);
-//		                    if (clazz.isFrozen()) {
-//		                        clazz.defrost();
-//		                    }
 		                    
 		                    RuntimeTimerInjector.TimerInjectionReturn timers = runtimeTimerInjector.injectPerfMonTimers(classfileBuffer, classBeingRedefined != null, params, loader, protectionDomain);
 		                    int count = timers.getNumTimersAdded();
@@ -195,7 +254,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            	InstrumentationMonitor.incClassInstFailures();
 	                final String msg = "Unable to inject PerfMonTimers into class: " + className;
 	                if (logger.isDebugEnabled()) {
-	                    logger.logInfo("Unable to inject PerfMonTimers into class: " + className, ex);
+	                    logger.logInfo(msg, ex);
 	                } else {
 	                    logger.logInfo(msg + " Throwable: " + ex.getMessage());
 	                }
@@ -390,7 +449,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	}
     	logger.logInfo("Perfmon4j Instrumentation Agent v." + PerfMonTimerTransformer.class.getPackage().getImplementationVersion() + " installed. (http://perfmon4j.org)");
     	
-        String javassistVersion = javassist.CtClass.class.getPackage().getSpecificationVersion();
         if (javassistVersion != null) {
         	logger.logInfo("Perfmon4j found Javassist bytcode instrumentation library version: " + javassistVersion);
         }
@@ -616,8 +674,33 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			}
 		}
     }
-    
 
+    
+    /**
+     * Look for the perfmon4j.jar javaagent and return the path of the file.
+     * @return
+     */
+    private static File findPerfmon4jAgentInstallFolder() {
+        final Pattern pattern = Pattern.compile("^\\-javaagent\\:(.*)perfmon4j.jar", Pattern.CASE_INSENSITIVE);
+    	File result = null;
+    	
+    	List<String> inputArgs = ManagementFactory.getRuntimeMXBean().getInputArguments();
+    	for(int i = 0; i < inputArgs.size() && result == null; i++) {
+    		String arg = inputArgs.get(i);
+        	Matcher matcher = pattern.matcher(arg);
+        	if (matcher.find()) {
+        		String path = matcher.group(1);
+        		if (path.trim().equals("")) {
+        			path = ".";
+        		}
+        		result = new File(path);
+        	}
+    	}
+    	
+    	return result;
+    }
+    
+    
     private static String getDisplayablePath(File file) {
     	String result = file.getAbsolutePath();
     	

@@ -26,7 +26,7 @@ public abstract class SnapShotGenerator {
 	    private final Object providerInstance;
 	    private final boolean usePriorityTimer;
 	    
-	    Bundle(Class<?> dataClass, Object providerInstance, boolean usePriorityTimer) {
+	    public Bundle(Class<?> dataClass, Object providerInstance, boolean usePriorityTimer) {
 	    	this.dataClass = dataClass;
 	    	this.providerInstance = providerInstance;
 	    	this.usePriorityTimer = usePriorityTimer;

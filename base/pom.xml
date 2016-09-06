@@ -44,7 +44,10 @@
 						<manifestEntries>
 							<premain-class>org.perfmon4j.instrument.PerfMonTimerTransformer</premain-class>
 							<Can-Redefine-Classes>true</Can-Redefine-Classes>
-							<Boot-Class-Path>javassist.jar</Boot-Class-Path>
+<!-- Putting javassist on the boot class caused problems for some applications that were already
+using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate classloader
+<Boot-Class-Path>javassist.jar</Boot-Class-Path>   
+-->
 						</manifestEntries>
 					</archive>
 				</configuration>

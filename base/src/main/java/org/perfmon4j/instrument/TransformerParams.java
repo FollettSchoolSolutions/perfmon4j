@@ -275,7 +275,7 @@ public class TransformerParams {
     }   
 
     
-    int getTransformMode(String className) {
+    public int getTransformMode(String className) {
         int mode = MODE_NONE;
         int includeMatchLength = 0;
         
