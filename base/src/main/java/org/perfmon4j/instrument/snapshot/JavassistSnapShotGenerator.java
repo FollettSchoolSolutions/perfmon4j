@@ -50,8 +50,8 @@ import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.SnapShotString;
-import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory.JMXSnapShotImpl;
+import org.perfmon4j.instrument.jmx.JavassistJMXSnapShotProxyFactory;
 import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
@@ -251,7 +251,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 	}
 
 	
-	private Class<?> generateSnapShotDataImpl(Class<?> dataProvider, JMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
+	private Class<?> generateSnapShotDataImpl(Class<?> dataProvider, JavassistJMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean useJMXConfig = jmxConfig != null;
 		boolean isStatic = false;
 		Class<?> dataInterface = null;
@@ -377,9 +377,9 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 			
 			// Find each method in the interface and provide and implementation and a field
 			if (useJMXConfig) {
-				Iterator<JMXSnapShotProxyFactory.AttributeConfig> itr =  jmxConfig.getAttributeConfigs().iterator();
+				Iterator<JavassistJMXSnapShotProxyFactory.AttributeConfig> itr =  jmxConfig.getAttributeConfigs().iterator();
 				while (itr.hasNext()) {
-					JMXSnapShotProxyFactory.AttributeConfig attr = itr.next();
+					JavassistJMXSnapShotProxyFactory.AttributeConfig attr = itr.next();
 					Method m = dataProvider.getDeclaredMethod("get" + attr.getName(), new Class[]{});
 					
 					SnapShotGauge gaugeAnnotation = attr.getSnapShotGauge();
@@ -488,9 +488,9 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		return generateBundle(provider, instanceName, null, null);
 	}
 	
-	private Bundle generateBundle(Class<?> provider, String instanceName, JMXSnapShotProxyFactory.JMXSnapShotImpl jmxWrapper, ClassPool classPool) throws GenerateSnapShotException {
+	private Bundle generateBundle(Class<?> provider, String instanceName, JavassistJMXSnapShotProxyFactory.JMXSnapShotImpl jmxWrapper, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean isJMXWrapperClass = jmxWrapper != null;
-		JMXSnapShotProxyFactory.Config jmxSnapShotConfig = null;
+		JavassistJMXSnapShotProxyFactory.Config jmxSnapShotConfig = null;
 		
 		if (isJMXWrapperClass) {
 			jmxSnapShotConfig = jmxWrapper.getConfig();

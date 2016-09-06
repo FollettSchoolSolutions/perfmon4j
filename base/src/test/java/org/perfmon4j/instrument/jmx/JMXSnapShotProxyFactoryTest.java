@@ -248,7 +248,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"    	</attribute>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
     	SnapShotRatios ratios = config.getSnapShotRatios();
     	
     	assertEquals("Should have one snapShotRatio", 1, ratios.value().length);
@@ -286,7 +286,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"    <attribute objectName='dave:type=x' name='bytesWritten'/>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
     	
     	assertEquals("attributes", 1, config.getAttributeConfigs().size());
     	
@@ -302,7 +302,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"    <attribute name='cpuLoad'/>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
     	AttributeConfig attr = config.getAttributeConfigs().get(0);
     	
     	assertEquals("Should have used the default object name", "dave:type=x", attr.getObjectName());
@@ -316,7 +316,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"    </attribute>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
     	AttributeConfig attr = config.getAttributeConfigs().get(0);
     	
     	assertNotNull(attr);
@@ -338,7 +338,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"    </attribute>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
     	AttributeConfig attr = config.getAttributeConfigs().get(0);
     	
     	assertNotNull(attr);
@@ -375,7 +375,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"    </attribute>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
     	AttributeConfig attr = config.getAttributeConfigs().get(0);
     	
     	assertNotNull(attr);
@@ -393,7 +393,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"    </attribute>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
     	AttributeConfig attr = config.getAttributeConfigs().get(0);
     	
     	assertNotNull(attr);
@@ -415,7 +415,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"    <attribute objectName='dave:type=x' name='cpuLoad' jmxName='TotalCPU'/>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = PerfMonTimerTransformer.jmxSnapShotProxyFactory.parseConfig(XML);
     	AttributeConfig attr = config.getAttributeConfigs().get(0);
     	
     	assertNotNull(attr);
@@ -427,7 +427,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"<JMXWrapper serverDomain='JMXFactoryTest'>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.JMXSnapShotImpl impl = PerfMonTimerTransformer.jmxSnapShotProxyFactory.newSnapShotImpl(XML);
+    	JavassistJMXSnapShotProxyFactory.JMXSnapShotImpl impl = PerfMonTimerTransformer.jmxSnapShotProxyFactory.newSnapShotImpl(XML);
     	assertEquals("MBEAN_SERVER_DOMAIN", MBEAN_SERVER_DOMAIN, impl.getServerDomain());
     	assertEquals("mBeanServer", mBeanServer, impl.getMBeanServer());
     	assertNotNull("Should have the config imbedded", impl.getConfig());
@@ -466,11 +466,11 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"	<attribute name='LongValue'/>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.JMXSnapShotImpl impl = PerfMonTimerTransformer.jmxSnapShotProxyFactory.newSnapShotImpl(XML);
-    	JMXSnapShotProxyFactory.Config config = impl.getConfig();
+    	JavassistJMXSnapShotProxyFactory.JMXSnapShotImpl impl = PerfMonTimerTransformer.jmxSnapShotProxyFactory.newSnapShotImpl(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = impl.getConfig();
     	
     	assertEquals(1, config.getAttributeConfigs().size());
-    	JMXSnapShotProxyFactory.AttributeConfig attr = config.getAttributeConfigs().get(0);
+    	JavassistJMXSnapShotProxyFactory.AttributeConfig attr = config.getAttributeConfigs().get(0);
     	
     	assertNotNull("Numeric attribute should default to a gaugeAnnotation", attr.getSnapShotGauge());
     	
@@ -501,7 +501,7 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"	<attribute name='BooleanValue'/>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.JMXSnapShotImpl impl = PerfMonTimerTransformer.jmxSnapShotProxyFactory.newSnapShotImpl(XML);
+    	JavassistJMXSnapShotProxyFactory.JMXSnapShotImpl impl = PerfMonTimerTransformer.jmxSnapShotProxyFactory.newSnapShotImpl(XML);
     	
     	exampleMBean.setLongValue(1);
     	exampleMBean.setDoubleValue(2.2);
@@ -529,13 +529,13 @@ public class JMXSnapShotProxyFactoryTest extends TestCase {
     		"	<attribute name='ObjectValue'/>\r\n" +
     		"</JMXWrapper>";
     	
-    	JMXSnapShotProxyFactory.JMXSnapShotImpl impl = PerfMonTimerTransformer.jmxSnapShotProxyFactory.newSnapShotImpl(XML);
-    	JMXSnapShotProxyFactory.Config config = impl.getConfig();
-    	Iterator<JMXSnapShotProxyFactory.AttributeConfig> itr = config.getAttributeConfigs().iterator();
+    	JavassistJMXSnapShotProxyFactory.JMXSnapShotImpl impl = PerfMonTimerTransformer.jmxSnapShotProxyFactory.newSnapShotImpl(XML);
+    	JavassistJMXSnapShotProxyFactory.Config config = impl.getConfig();
+    	Iterator<JavassistJMXSnapShotProxyFactory.AttributeConfig> itr = config.getAttributeConfigs().iterator();
     	
     	// Each one should have a SnapShotString Annotation
     	while (itr.hasNext()) {
-    		JMXSnapShotProxyFactory.AttributeConfig attr = itr.next();
+    		JavassistJMXSnapShotProxyFactory.AttributeConfig attr = itr.next();
     		assertNotNull("Should have a SnapShotString annotation", attr.getSnapShotString());
     	}
     	

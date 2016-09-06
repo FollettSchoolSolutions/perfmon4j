@@ -42,6 +42,7 @@ import org.perfmon4j.SQLTime;
 import org.perfmon4j.XMLBootParser;
 import org.perfmon4j.XMLConfigurator;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
+import org.perfmon4j.instrument.jmx.JavassistJMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.RemoteImpl;
@@ -91,7 +92,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		// This will need to be replaced where we instantiate the class!!! 
 		runtimeTimerInjector = new JavassistRuntimeTimerInjector();
 		snapShotGenerator = new JavassistSnapShotGenerator();
-		jmxSnapShotProxyFactory = new JMXSnapShotProxyFactory();
+		jmxSnapShotProxyFactory = new JavassistJMXSnapShotProxyFactory();
 	}
 	
 	
