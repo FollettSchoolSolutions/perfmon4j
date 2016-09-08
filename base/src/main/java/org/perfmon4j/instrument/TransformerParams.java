@@ -153,6 +153,12 @@ public class TransformerParams {
                     	installServletValve = true;
                     } else if ("SQL".equals(nextParam.parameter)) {
                     	extremeSQLMonitorEnabled = true;
+                		extremeSQLPackages.add("org.postgresql");
+                		extremeSQLPackages.add("net.sourceforge.jtds");
+                		extremeSQLPackages.add("com.mysql.jdbc");
+                		extremeSQLPackages.add("org.apache.derby");
+                		extremeSQLPackages.add("oracle.jdbc");
+                		extremeSQLPackages.add("com.microsoft.sqlserver.jdbc");
                     } else if (m.matches()) {
                     	extremeSQLMonitorEnabled = true;
                     	String p = m.group(1);
@@ -166,9 +172,13 @@ public class TransformerParams {
                     		extremeSQLPackages.add("org.apache.derby");
                     	} else if ("ORACLE".equals(p)) {
                     		extremeSQLPackages.add("oracle.jdbc");
+                    	} else if ("MICROSOFT".equals(p)) {
+                    		extremeSQLPackages.add("com.microsoft.sqlserver.jdbc");
                     	} else {
                     		extremeSQLPackages.add(m.group(1));
                     	}
+                    	
+                    	                    	
                     } else {
 	                     TransformOptions o = parseOptions(nextParam);
 	                     if (o == null) {
@@ -481,16 +491,17 @@ public class TransformerParams {
     };
     
     // Package level for testing...
-	boolean isExtremeSQLInterface(String className) {
+	public boolean isExtremeSQLInterface(String className) {
 		return Arrays.binarySearch(SQL_CLASSES, className) >= 0;
 	}
 	
 	public boolean isPossibleJDBCDriver(String className) {
-		boolean found = extremeSQLPackages.isEmpty();
-		if (!found) {
+		boolean found = false;
+		if (isExtremeSQLMonitorEnabled()) {
 			Iterator<String> itr = extremeSQLPackages.iterator();
-			if (!found && itr.hasNext()) {
-				found = className.startsWith(itr.next());
+			while (!found && itr.hasNext()) {
+				String value = itr.next();
+				found = className.startsWith(value);
 			}
 		}
 		return found;
