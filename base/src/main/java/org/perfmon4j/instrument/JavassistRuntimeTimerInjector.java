@@ -48,7 +48,7 @@ import org.perfmon4j.instrument.tomcat.TomcatDataSourceRegistry;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
-public class JavassistRuntimeTimerInjector implements RuntimeTimerInjector {
+public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     final private static String IMPL_METHOD_SUFFIX = "$Impl";
     private static int serialNumber = 0;
     final private static Logger logger = LoggerFactory.initLogger(JavassistRuntimeTimerInjector.class);
@@ -894,34 +894,5 @@ public class JavassistRuntimeTimerInjector implements RuntimeTimerInjector {
            	methodRegisterComponent.insertAfter(codeToInsert);
            	logger.logInfo("Perfmon4j found TomcatRegistry and installed Global DataSource registry");
            	return clazz.toBytecode();
-    }
-    
-    
-    
-    private ThreadLocal<Boolean> singnalThreadInTimer = new ThreadLocal<Boolean>() {
-        public Boolean initialValue() {
-            return Boolean.FALSE;
-        }
-    }; 
-
-    /* (non-Javadoc)
-	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#signalThreadInTimer()
-	 */
-    public void signalThreadInTimer() {
-        singnalThreadInTimer.set(Boolean.TRUE);
-    }
-
-    /* (non-Javadoc)
-	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#releaseThreadInTimer()
-	 */
-    public void releaseThreadInTimer() {
-        singnalThreadInTimer.set(Boolean.FALSE);
-    }
-    
-    /* (non-Javadoc)
-	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#isThreadInTimer()
-	 */
-    public boolean isThreadInTimer() {
-        return singnalThreadInTimer.get().booleanValue();
     }
 }    

@@ -2,18 +2,42 @@ package org.perfmon4j.instrument;
 
 import java.security.ProtectionDomain;
 
-public interface RuntimeTimerInjector {
+public abstract class RuntimeTimerInjector {
 
-	public TimerInjectionReturn injectPerfMonTimers(byte[] classfileBuffer, boolean beingRedefined, 
+	public abstract TimerInjectionReturn injectPerfMonTimers(byte[] classfileBuffer, boolean beingRedefined, 
 	    		TransformerParams params, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
-	public byte[] installUndertowOrTomcatSetValveHook(byte[] classfileBuffer, ClassLoader loader) throws Exception;	
-    public byte[] wrapTomcatRegistry(byte[] classfileBuffer, ClassLoader loader) throws Exception;
-    public byte[] disableSystemGC(byte[] classfileBuffer, ClassLoader loader) throws Exception;
+	public abstract byte[] installUndertowOrTomcatSetValveHook(byte[] classfileBuffer, ClassLoader loader) throws Exception;	
+    public abstract byte[] wrapTomcatRegistry(byte[] classfileBuffer, ClassLoader loader) throws Exception;
+    public abstract byte[] disableSystemGC(byte[] classfileBuffer, ClassLoader loader) throws Exception;
 	
+    
+    private ThreadLocal<Boolean> singnalThreadInTimer = new ThreadLocal<Boolean>() {
+        public Boolean initialValue() {
+            return Boolean.FALSE;
+        }
+    }; 
 
-	public abstract void signalThreadInTimer();
-	public abstract void releaseThreadInTimer();
-	public abstract boolean isThreadInTimer();
+    /* (non-Javadoc)
+	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#signalThreadInTimer()
+	 */
+    public void signalThreadInTimer() {
+        singnalThreadInTimer.set(Boolean.TRUE);
+    }
+
+    /* (non-Javadoc)
+	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#releaseThreadInTimer()
+	 */
+    public void releaseThreadInTimer() {
+        singnalThreadInTimer.set(Boolean.FALSE);
+    }
+    
+    /* (non-Javadoc)
+	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#isThreadInTimer()
+	 */
+    public boolean isThreadInTimer() {
+        return singnalThreadInTimer.get().booleanValue();
+    }
+
 	
 	
 	public static class TimerInjectionReturn {
