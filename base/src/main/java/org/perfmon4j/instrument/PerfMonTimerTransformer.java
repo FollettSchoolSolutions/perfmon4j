@@ -59,7 +59,7 @@ import org.perfmon4j.util.MiscHelper;
 
 public class PerfMonTimerTransformer implements ClassFileTransformer {
     private final TransformerParams params; 
-    private final static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
+    private static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
 	
     private final static String REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY="Perfmon4j.RemoteInterfaceDelaySeconds"; 
 	private final static int REMOTE_INTERFACE_DEFAULT_DELAY_SECONDS=30;
@@ -94,6 +94,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	public static final JMXSnapShotProxyFactory jmxSnapShotProxyFactory;
 	private static ClassLoader javassistClassLoader = null;
 	private static String javassistVersion = null;
+	private static boolean inPremain = false;
 	
 	static private class IssolateJavassistClassLoader extends URLClassLoader {
 		public IssolateJavassistClassLoader(File perfmon4j, File javassist) throws MalformedURLException {
@@ -125,6 +126,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			URI uri = file.toURI();
 			return uri.toURL();
 		}
+		
+		public String toString() {
+			return "Perfmon4j JavassistClassLoader(" + super.toString() + ")";
+		}
 	}
 	
 	
@@ -151,8 +156,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		}
 
 		if (javassistClassLoader == null) {
-			javassistClassLoader = PerfMonTimerTransformer.class.getClassLoader();
+			javassistClassLoader = Thread.currentThread().getContextClassLoader();
 			System.err.println("Perfmon4j will attempt to use the default classloader to load javassist classes.");
+		} else {
+			System.err.println("Perfmon4j using issolated javassist classloader.");
 		}
 		
 		try {
@@ -196,8 +203,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             	|| className.endsWith("Test");
         }
         
-        logger.logDebug(className + " allowed: " + result);        
-        
         return result;
     }
     
@@ -207,7 +212,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         byte[] classfileBuffer) {
         byte[] result = null;
         long startMillis = -1;
-        
         if (className != null) {
 	        if (recursionPreventor.get().threadInScope) {
 	        	InstrumentationMonitor.incRecursionSkipCount();
@@ -229,27 +233,28 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                if (loader != null) {
 	                    GlobalClassLoader.getClassLoader().addClassLoader(loader);
 	                }
-	        		if (allowedClass(className)) {
-		                startMillis = MiscHelper.currentTimeWithMilliResolution();
+	                
+	                boolean shouldConsiderTransforming = allowedClass(className) &&
+	                		((params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE) 
+	                			|| params.isPossibleJDBCDriver(className.replace('/', '.')));
+	                
+	        		if (shouldConsiderTransforming) {
+	        			startMillis = MiscHelper.currentTimeWithMilliResolution();
 		                logger.logDebug("Loading class: " + className);
-		                
-		                if ((params.getTransformMode(className.replace('/', '.')) != TransformerParams.MODE_NONE)  
-		                		|| params.isPossibleJDBCDriver(className.replace('/', '.')) ) {
-		                    
-		                    RuntimeTimerInjector.TimerInjectionReturn timers = runtimeTimerInjector.injectPerfMonTimers(classfileBuffer, classBeingRedefined != null, params, loader, protectionDomain);
-		                    int count = timers.getNumTimersAdded();
-		                    if (count > 0) {
-		                        if (classBeingRedefined != null) {
-		                        	InstrumentationMonitor.incBootstrapClassesInst();
-		                            logger.logInfo("Inserting timer into bootstrap class: " + className);
-		                        }
-		                    	InstrumentationMonitor.incClassesInst();
-		                    	InstrumentationMonitor.incMethodsInst(count);
-		                        result = timers.getClassBytes();
-		                        logger.logDebug(count + " timers inserted into class: " + className);
+	                	RuntimeTimerInjector.TimerInjectionReturn timers = runtimeTimerInjector.injectPerfMonTimers(classfileBuffer, classBeingRedefined != null, params, loader, protectionDomain);
+
+	                    int count = timers.getNumTimersAdded();
+	                    if (count > 0) {
+	                        if (classBeingRedefined != null) {
+	                        	InstrumentationMonitor.incBootstrapClassesInst();
+	                            logger.logInfo("Inserting timer into bootstrap class: " + className);
+	                        }
+	                    	InstrumentationMonitor.incClassesInst();
+	                    	InstrumentationMonitor.incMethodsInst(count);
+	                        result = timers.getClassBytes();
+	                        logger.logDebug(count + " timers inserted into class: " + className);
 		                    }
-		                } // if transformMode != TransformerParams.MODE_NONE 
-		        	} // if (allowedClass())
+		        	} // if (shouldConsiderTransforming)
 	            } catch (Throwable ex) {
 	            	InstrumentationMonitor.incClassInstFailures();
 	                final String msg = "Unable to inject PerfMonTimers into class: " + className;
@@ -267,7 +272,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            }
 	        }
         }
-
         return result;
     }
 
@@ -430,9 +434,24 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     		System.setProperty(PROP_KEY, existing + "," + PERFMON_4J_PACKAGES);
     	}
     }
-    
-    public static void premain(String packageName,  Instrumentation inst)  {
+
+    public static void premain(String packageName,  Instrumentation inst)  {    	
+    	try {
+    		inPremain = true;
+    		doPremain(packageName, inst);
+    	} finally {
+    		inPremain = false;
+    	}
+    }
+    	
+    private static void doPremain(String packageName,  Instrumentation inst)  {    	
     	addPerfmon4jToJBoss7SystemPackageList();
+        PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
+
+        LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled());
+        LoggerFactory.setVerboseInstrumentationEnabled(t.params.isVerboseInstrumentationEnabled());
+        // Reset logger so debug and verbose flags are respected...
+        logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
     	
     	final String hideBannerProperty="Perfmon4j.HideBanner";
     	
@@ -453,12 +472,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	logger.logInfo("Perfmon4j found Javassist bytcode instrumentation library version: " + javassistVersion);
         }
     	logger.logInfo(MiscHelper.getHighResolutionTimerEnabledDisabledMessage());
-    	
-        PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
-
-        LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled());
-        LoggerFactory.setVerboseInstrumentationEnabled(t.params.isVerboseInstrumentationEnabled());
-        
+    	 
         logger.logInfo("Perfmon4j transformer paramsString: " + (packageName == null ? "" : packageName));
         if (t.params.isExtremeInstrumentationEnabled() && !t.params.isVerboseInstrumentationEnabled()) {
         	logger.logInfo("Perfmon4j verbose instrumentation logging disabled.  Add -vtrue to javaAgent parameters to enable.");
@@ -541,13 +555,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	        List<ClassDefinition> redefineList = new ArrayList<ClassDefinition>(loadedClasses.length);
 	        for (int i = 0; i < loadedClasses.length; i++) {
 	            Class<?> clazz = loadedClasses[i];
-	            logger.logDebug("Found preloaded class: " + clazz.getName());
-	            
 	            String resourceName = clazz.getName().replace('.', '/') + ".class";
 	            if (allowedClass(resourceName) 
 	            		&& ((t.params.getTransformMode(clazz) != TransformerParams.MODE_NONE)
 	            				|| (t.params.isDisableSystemGC() && resourceName.equals("java/lang/System.class")))) {
-	                logger.logInfo("Perfmon4j trying to instrument preloaded class: " + clazz.getName());
+	                logger.logInfo("Perfmon4j found preloaded class to instrument: " + clazz.getName());
 	                try {
 	                    ClassLoader loader = clazz.getClassLoader();
 	                    if (loader == null) {
@@ -574,6 +586,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                        logger.logError(msg + " Exception: " + ex.getMessage());
 	                    }
 	                }
+	            } else {
+		            logger.logDebug("Perfmon4j Found preloaded class (not a candidate for instrumentation based on javaagent params): " + clazz.getName());
 	            }
 	        }
 	        
@@ -603,7 +617,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                    } else {
 	                        logger.logError(msg + " Throwable: " + th.getMessage());
 	                    }
-	                }
+	                } 
 	            }
 	        }
         }
@@ -711,6 +725,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		}
     	
     	return result;
+    }
+    
+    public static boolean isInPremain() {
+    	return inPremain;
     }
     
 }
