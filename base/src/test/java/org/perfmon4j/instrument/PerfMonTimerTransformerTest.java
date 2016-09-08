@@ -27,6 +27,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.Statement;
@@ -58,6 +59,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
+	private File javassistJar = null;
 	
 /*----------------------------------------------------------------------------*/
     public PerfMonTimerTransformerTest(String name) {
@@ -94,6 +96,20 @@ public class PerfMonTimerTransformerTest extends TestCase {
         System.out.println("perfmon4j jar file: " + perfmon4jJar.getCanonicalPath());
         
         initJavaAssistJar();
+        
+    	// The location of the JavaAssist Jar should be set as a maven-surefire-plugin
+    	// property in perfom4j/base/pom.xml
+    	String javaAssistProp = LaunchRunnableInVM.fixupLinuxHomeFolder(System.getProperty("JAVASSIST_JAR"));
+    	if (javaAssistProp == null) {
+    		throw new RuntimeException("JAVASSIST_JAR system property must be set");
+    	}
+    	if (!(new File(javaAssistProp).exists())) {
+    		throw new RuntimeException("JAVASSIST_JAR system property is set, but file does NOT exist: " + javaAssistProp);
+    	}
+    	
+//    	 Copy javassist jar alongside the perfmon4j.jar
+    	javassistJar = new File(perfmon4jJar.getParent(), "javassist.jar");
+    	Files.copy(new File(javaAssistProp).toPath(), javassistJar.toPath());
     }
     
     
@@ -102,7 +118,14 @@ public class PerfMonTimerTransformerTest extends TestCase {
     public void tearDown() throws Exception {
     	File folder = perfmon4jJar.getParentFile();
         perfmon4jJar.delete();
+        if (javassistJar != null) {
+        	javassistJar.delete();
+        }
         folder.delete();
+        
+        perfmon4jJar = null;
+        javassistJar = null;
+        
     	super.tearDown();
     }
     
@@ -150,7 +173,8 @@ public class PerfMonTimerTransformerTest extends TestCase {
     	
     	// Now check to ensure that the inserting bootstrap timers is not on by default.
        	output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "e=java.lang.String", perfmon4jJar);
-    	
+       	
+       	
     	assertFalse("b=true must be passed to java agent for bootstrap class insturmentation: " + output,
     			output.contains(validationString));
     	
@@ -374,7 +398,7 @@ System.out.println(output);
 	}
 	
     public void testInstrumentSQLStatement() throws Exception {
-    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL(DERBY)", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-dtrue,-eSQL(DERBY)", "", perfmon4jJar);
     	System.out.println(output);   	
     	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
     }
@@ -598,7 +622,7 @@ System.out.println(output);
     	System.out.println(output);
     	
     	assertTrue("Before LOG4J initialize, logging should be through java logging",
-    			output.contains("[STDERR] INFO: info - pre initialize"));
+    			output.contains("info - pre initialize"));
     	
     	assertTrue("After LOG4J initialize, logging should be through LOG4J",
     			output.contains("[main] INFO org.perfmon4j.instrument.PerfMonTimerTransformerTest$Log4jRuntimeLoggerTest  - info - post initialize"));
