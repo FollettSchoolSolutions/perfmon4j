@@ -92,7 +92,7 @@ public class LaunchRunnableInVM {
 		return run(clazz, javaAgentParams, args, null, perfmonJar);
 	}
 
-	private static String fixupLinuxHomeFolder(String path) {
+	public static String fixupLinuxHomeFolder(String path) {
 		if (path != null) {
 			// Java does not always deal with the ~ substitution for home folder.
 			if (path.startsWith("~")) {
@@ -255,7 +255,6 @@ public class LaunchRunnableInVM {
 				ex.printStackTrace();
 			}
 		}
-		
 	}
 
 }
