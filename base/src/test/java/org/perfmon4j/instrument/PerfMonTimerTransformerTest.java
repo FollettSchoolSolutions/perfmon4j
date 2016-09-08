@@ -144,7 +144,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
     	String javaAssistProp = System.getProperty("JAVASSIST_JAR");
     	if (javaAssistProp == null) {
     		String filePath = System.getenv("M2_REPO") + 
-    			"/javassist/javassist/3.10.0.GA/javassist-3.10.0.GA.jar";
+    			"/org/javassist/javassist/3.20.0-GA/javassist-3.20.0-GA.jar";
         	logger.logWarn("JAVASSSIST_JAR system property NOT set...  Trying default location: " + filePath);
         	System.setProperty("JAVASSIST_JAR", filePath);
     	}
@@ -966,7 +966,7 @@ System.out.println(output);
     public static void main(String[] args) {
         BasicConfigurator.configure();
         System.setProperty("Perfmon4j.debugEnabled", "true");
-		System.setProperty("JAVASSIST_JAR",  "G:\\projects\\perfmon4j\\.repository\\javassist\\javassist\\3.10.0.GA\\javassist-3.10.0.GA.jar");
+		System.setProperty("JAVASSIST_JAR",  "G:\\projects\\perfmon4j\\.repository\\javassist\\javassist\\3.20.0-GA\\javassist-3.20.0-GA.jar");
 		
         org.apache.log4j.Logger.getLogger(PerfMonTimerTransformerTest.class.getPackage().getName()).setLevel(Level.INFO);
         String[] testCaseName = {PerfMonTimerTransformerTest.class.getName()};
