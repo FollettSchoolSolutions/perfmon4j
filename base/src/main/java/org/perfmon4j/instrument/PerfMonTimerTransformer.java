@@ -151,16 +151,30 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			File perfmon4j = new File(agentInstallFolder, "perfmon4j.jar");
 			File externalJavassistJar = null;
 			URL embeddedJavassist = null;
+
+			boolean useExternalJavassist = Boolean.getBoolean(PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR);
 			
-			final boolean useExternalJavassist = Boolean.getBoolean(PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR);
-			if (useExternalJavassist) {
-				System.out.println("Perfmon4j found system property: \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\". " 
-					+ "The embedded javassist.jar will not be used.");
-				externalJavassistJar = new File(agentInstallFolder, "javassist.jar");
-			} else {
+			if (!useExternalJavassist) {
+				// Check to see if we can access and load javassist classes from the embedded javassist.jar.
+				// This works on jboss, wildfly and through direct java invocation.  However it does
+				// not work under tomcat (most likely due to a security policy).
 				embeddedJavassist = Thread.currentThread().getContextClassLoader().getResource("lib/javassist.jar");
-				System.out.println("Perfmon4j will use embedded javassist.jar.  To use an external "
-						+ "javassist.jar set system property \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\"."); 
+				if (!canJavassistClassesBeLoadedFromEmbeddedJar(embeddedJavassist)) {
+					System.err.println("Perfmon4j is unabled to load classes from the embedded javassist.jar "
+						+ "and will be forced to use the external javassist.jar." ); 
+					embeddedJavassist = null;
+					useExternalJavassist = true;
+				} else {
+					System.out.println("Perfmon4j will use embedded javassist.jar.  To use an external "
+							+ "javassist.jar set system property \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\"."); 
+				}
+			} else {
+				System.out.println("Perfmon4j found system property: \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\". " 
+						+ "The embedded javassist.jar will not be used.");
+			}
+			
+			if (useExternalJavassist) {
+				externalJavassistJar = new File(agentInstallFolder, "javassist.jar");
 			}
 			
 			if (!useExternalJavassist && embeddedJavassist == null) {
@@ -751,6 +765,33 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		} catch (IOException e) {
 			// Nothing todo...  Just return the absolute path
 		}
+    	
+    	return result;
+    }
+    
+    private static boolean canJavassistClassesBeLoadedFromEmbeddedJar(URL url) {
+    	/**
+    	 * This method is called from the static class initializer... Do not 
+    	 * use logger here!
+    	 */
+    	boolean result = false;
+    	
+    	if (url != null) {
+	    	try {
+		    	URLClassLoader tmpLoader = null;
+		    	try {
+		    		tmpLoader = new URLClassLoader(new URL[]{url});
+		    		tmpLoader.loadClass("javassist.CtClass");
+		    		result = true;
+		    	} finally {
+		    		if (tmpLoader != null) {
+		    			tmpLoader.close();
+		    		}
+		    	}
+	    	} catch (Exception ex) {
+	    		// Nothing todo.
+	    	}
+    	}
     	
     	return result;
     }
