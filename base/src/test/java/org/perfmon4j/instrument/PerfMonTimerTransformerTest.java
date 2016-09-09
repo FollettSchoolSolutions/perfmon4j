@@ -27,7 +27,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
-import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.Statement;
@@ -94,22 +93,6 @@ public class PerfMonTimerTransformerTest extends TestCase {
         MiscHelper.createJarFile(perfmon4jJar.getAbsolutePath(), props, new File[]{classesFolder, testClassesFolder});
         
         System.out.println("perfmon4j jar file: " + perfmon4jJar.getCanonicalPath());
-        
-        initJavaAssistJar();
-        
-    	// The location of the JavaAssist Jar should be set as a maven-surefire-plugin
-    	// property in perfom4j/base/pom.xml
-    	String javaAssistProp = LaunchRunnableInVM.fixupLinuxHomeFolder(System.getProperty("JAVASSIST_JAR"));
-    	if (javaAssistProp == null) {
-    		throw new RuntimeException("JAVASSIST_JAR system property must be set");
-    	}
-    	if (!(new File(javaAssistProp).exists())) {
-    		throw new RuntimeException("JAVASSIST_JAR system property is set, but file does NOT exist: " + javaAssistProp);
-    	}
-    	
-//    	 Copy javassist jar alongside the perfmon4j.jar
-    	javassistJar = new File(perfmon4jJar.getParent(), "javassist.jar");
-    	Files.copy(new File(javaAssistProp).toPath(), javassistJar.toPath());
     }
     
     
@@ -140,15 +123,15 @@ public class PerfMonTimerTransformerTest extends TestCase {
     	}
     }
 
-    private void initJavaAssistJar() {
-    	String javaAssistProp = System.getProperty("JAVASSIST_JAR");
-    	if (javaAssistProp == null) {
-    		String filePath = System.getenv("M2_REPO") + 
-    			"/org/javassist/javassist/3.20.0-GA/javassist-3.20.0-GA.jar";
-        	logger.logWarn("JAVASSSIST_JAR system property NOT set...  Trying default location: " + filePath);
-        	System.setProperty("JAVASSIST_JAR", filePath);
-    	}
-    }
+//    private void initJavaAssistJar() {
+//    	String javaAssistProp = System.getProperty("JAVASSIST_JAR");
+//    	if (javaAssistProp == null) {
+//    		String filePath = System.getenv("M2_REPO") + 
+//    			"/org/javassist/javassist/3.20.0-GA/javassist-3.20.0-GA.jar";
+//        	logger.logWarn("JAVASSSIST_JAR system property NOT set...  Trying default location: " + filePath);
+//        	System.setProperty("JAVASSIST_JAR", filePath);
+//    	}
+//    }
     
     /*----------------------------------------------------------------------------*/    
     public void testTemplatedClassIsAnnotated() throws Exception {
@@ -164,10 +147,10 @@ public class PerfMonTimerTransformerTest extends TestCase {
     
     /*----------------------------------------------------------------------------*/    
     public void testAnnotateBootStrapClass() throws Exception {
-    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "-dtrue,-ejava.lang.String,-btrue", perfmon4jJar);
-
+    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "-ejava.lang.String,-btrue", perfmon4jJar);
     	final String validationString = "BootStrapMonitor: java.lang.String.equals";
-    	
+System.out.println(output);
+
     	assertTrue("Should have added a bootstrap monitor: " + output,
     			output.contains(validationString));
     	

@@ -96,9 +96,17 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	private static String javassistVersion = null;
 	private static boolean inPremain = false;
 	
-	static private class IssolateJavassistClassLoader extends URLClassLoader {
-		public IssolateJavassistClassLoader(File perfmon4j, File javassist) throws MalformedURLException {
-			super(new URL[]{toURL(perfmon4j), toURL(javassist)}, new ClassLoader() {
+	/**
+	 * If perfmon4j is loaded with this property set to false it will ignore the javassist jar
+	 * embedded within the perfmon4j JAR.  Instead it will look for a javassist.jar in 
+	 * the same folder as the perfmon4j agent OR if that is not found it will attempt to
+	 * load javassist from the classpath.
+	 */
+	private static final String PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR = "PERFMON4J_FORCE_EXTERNAL_JAVASSIST_JAR";
+	
+	static private class IsolateJavassistClassLoader extends URLClassLoader {
+		public IsolateJavassistClassLoader(File perfmon4j, URL javassist) throws MalformedURLException {
+			super(new URL[]{toURL(perfmon4j), javassist}, new ClassLoader() {
 			});
 		}
 		
@@ -134,18 +142,38 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	
 	
 	static {
+		/**
+		 * Do NOT use logger here.  Logger depends on PerfMonTimerTransformer class which is being initialized now.
+		 */
+		
 		File agentInstallFolder = findPerfmon4jAgentInstallFolder();
 		if (agentInstallFolder != null) {
-			File javassist = new File(agentInstallFolder, "javassist.jar");
 			File perfmon4j = new File(agentInstallFolder, "perfmon4j.jar");
+			File externalJavassistJar = null;
+			URL embeddedJavassist = null;
 			
-			if (!javassist.exists()) {
-				System.err.println("Perfmon4j could not find javassist.jar based on agent location - " + javassist.getPath());
+			final boolean useExternalJavassist = Boolean.getBoolean(PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR);
+			if (useExternalJavassist) {
+				System.out.println("Perfmon4j found system property: \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\". " 
+					+ "The embedded javassist.jar will not be used.");
+				externalJavassistJar = new File(agentInstallFolder, "javassist.jar");
+			} else {
+				embeddedJavassist = Thread.currentThread().getContextClassLoader().getResource("lib/javassist.jar");
+				System.out.println("Perfmon4j will use embedded javassist.jar.  To use an external "
+						+ "javassist.jar set system property \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\"."); 
+			}
+			
+			if (!useExternalJavassist && embeddedJavassist == null) {
+				// This should not happen unless someone modifies the shipped perfmon4j agent.
+				System.err.println("Perfmon4j could not find embedded javassist.jar");
+			} else if (useExternalJavassist && !externalJavassistJar.exists()) {
+				System.err.println("Perfmon4j could not find javassist.jar based on agent location - " + externalJavassistJar.getPath());
 			} else if (!perfmon4j.exists()) {
 				System.err.println("Perfmon4j could not find perfmon4j.jar based on agent location - " + perfmon4j.getPath());
 			} else {
 				try {
-					javassistClassLoader = new IssolateJavassistClassLoader(perfmon4j, javassist);
+					URL javassistURLToUse = useExternalJavassist ? externalJavassistJar.toURI().toURL() : embeddedJavassist;
+					javassistClassLoader = new IsolateJavassistClassLoader(perfmon4j, javassistURLToUse);
 				} catch (MalformedURLException e) {
 					System.err.println("Perfmon4j is unable to create the javaasist classloader.");
 					e.printStackTrace();
@@ -159,7 +187,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			javassistClassLoader = Thread.currentThread().getContextClassLoader();
 			System.err.println("Perfmon4j will attempt to use the default classloader to load javassist classes.");
 		} else {
-			System.err.println("Perfmon4j using issolated javassist classloader.");
+			System.err.println("Perfmon4j using isolated javassist classloader.");
 		}
 		
 		try {

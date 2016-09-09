@@ -144,17 +144,7 @@ public class LaunchRunnableInVM {
     		cmdString += "=" + javaAgentParams;
     	}
 
-    	// The location of the JavaAssist Jar should be set as a maven-surefire-plugin
-    	// property in perfom4j/base/pom.xml
-    	String javaAssistProp = fixupLinuxHomeFolder(System.getProperty("JAVASSIST_JAR"));
-    	if (javaAssistProp == null) {
-    		throw new RuntimeException("JAVASSIST_JAR system property must be set");
-    	}
-    	
-    	File javassistJar = new File(javaAssistProp);
-    	final String pathSeparator = System.getProperty("path.separator");
-
-		cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath() + pathSeparator + javassistJar.getParentFile().getCanonicalPath());
+		cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
 
 		if (systemProperties != null) {
 			Iterator<Map.Entry<Object,Object>> itr = systemProperties.entrySet().iterator();
