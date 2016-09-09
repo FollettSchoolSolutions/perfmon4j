@@ -4,7 +4,7 @@
   
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>1.3.0-SNAPSHOT</version>
+	<version>1.3.0</version>
 	<packaging>pom</packaging>
 
 	<name>org.perfmon4j:perfmon4j-project</name>
