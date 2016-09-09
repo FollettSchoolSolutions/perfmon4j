@@ -29,8 +29,9 @@ import java.util.Properties;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
 import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
-import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.Logger;
@@ -78,7 +79,7 @@ public class SnapShotManager {
                 Properties attr = monitorID.getAttributes();
                 if (clazz.getName().equals(JMXSnapShotProxyFactory.class.getName())) {
                 	String XML = attr.getProperty(JMX_XML_PROPERTY);
-                	result = JMXSnapShotProxyFactory.getnerateSnapShotWrapper(monitorID.getName(), XML);
+                	result = PerfMonTimerTransformer.jmxSnapShotProxyFactory.getnerateSnapShotWrapper(monitorID.getName(), XML);
                 } else if (SnapShotMonitor.class.isAssignableFrom(clazz)) {
 	                Constructor constructor = clazz.getConstructor(new Class[]{String.class});
 	                result = (SnapShotMonitor)constructor.newInstance(new Object[]{monitorID.getName()});
@@ -100,7 +101,7 @@ public class SnapShotManager {
 	                }                
                 } else {
                 	// Must be a generated Snap Shot class.
-                	SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
+                	JavassistSnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
                 	result = new SnapShotProviderWrapper(monitorID.getName(), bundle);
                 	
                 	ExternalAppender.registerSnapShotClass(clazz.getName());

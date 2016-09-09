@@ -182,6 +182,16 @@ public class TransformerParamsTest extends TestCase {
                 params.getTransformMode("com.acme.utils.MyClass"));
     }
     
+    public void testClassInSamePackage() {
+    	// Extreme monitor all classe in "com.acme" package, but ignore any
+    	// classes in the com.acme.utils sub package
+        TransformerParams params = new TransformerParams("-ejava.lang.String");
+        
+        assertEquals("This class should be included", TransformerParams.MODE_EXTREME, 
+            params.getTransformMode("java.lang.String"));
+        assertEquals("This class should be NOT be included since it is in the utils package", TransformerParams.MODE_NONE, 
+                params.getTransformMode("java.lang.Void"));
+    }
     
     /*----------------------------------------------------------------------------*/    
     public void testGetterSetterDisabledByDefault() {
@@ -651,11 +661,6 @@ public class TransformerParamsTest extends TestCase {
             params = new TransformerParams("-ecom.follett.fsc,-eSQL");
             assertTrue("Combined with anyting else...", params.isExtremeSQLMonitorEnabled());
             
-            // Now check the classes that are used to monitor SQL statement execution time.
-            assertFalse("Just a gut check with a non SQL class!", params.isExtremeSQLClass(String.class));
-            
-            assertTrue("java.sql.Statement", params.isExtremeSQLClass(StatementImpl.class));
-            assertTrue("java.sql.Statement", params.isExtremeSQLClass(ClassPool.getDefault().get(StatementImpl.class.getName())));
             
             // Just test the rest at the class name interface...
             assertTrue("java.sql.PreparedStatement", params.isExtremeSQLInterface(java.sql.PreparedStatement.class.getName()));
@@ -689,8 +694,8 @@ public class TransformerParamsTest extends TestCase {
         
         
         public void testIsPossibleJDBCDriverClass() {
-        	assertPossibleJDBCDriver(true, true, true, true, true, true, new TransformerParams());
-        	assertPossibleJDBCDriver(true, true, true, true, true, true, new TransformerParams("-eSQL"));
+//        	assertPossibleJDBCDriver(false, false, false, false, false, false, new TransformerParams());
+        	assertPossibleJDBCDriver(true, true, true, true, true, false, new TransformerParams("-eSQL"));
         	assertPossibleJDBCDriver(true, false, false, false, false, false, new TransformerParams("-eSQL(JTDS)"));
         	assertPossibleJDBCDriver(false, true, false, false, false, false, new TransformerParams("-eSQL(POSTGRESQL)"));
         	assertPossibleJDBCDriver(false, false, true, false, false, false, new TransformerParams("-eSQL(MYSQL)"));
@@ -700,6 +705,15 @@ public class TransformerParamsTest extends TestCase {
         	assertPossibleJDBCDriver(false, false, false, false, false, true, new TransformerParams("-eSQL(org.perfmon4j.jdbc)"));
         }
 
+        
+        public void testMicrosoftAsPossibleJDBCDriver() {
+        	TransformerParams params = new TransformerParams("-eSQL(MICROSOFT)");
+        	assertTrue(params.isPossibleJDBCDriver("com.microsoft.sqlserver.jdbc.Driver"));
+        	
+        	params = new TransformerParams("-eSQL");
+        	assertTrue(params.isPossibleJDBCDriver("com.microsoft.sqlserver.jdbc.Driver"));
+        }
+        
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

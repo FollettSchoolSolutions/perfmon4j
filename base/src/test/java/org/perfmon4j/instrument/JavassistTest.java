@@ -20,11 +20,11 @@
 */
 package org.perfmon4j.instrument;
 
-import org.perfmon4j.PerfMonTimer;
-
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
+
+import org.perfmon4j.PerfMonTimer;
 
 public class JavassistTest {
     
@@ -44,7 +44,7 @@ public class JavassistTest {
             }
         }
         
-        RuntimeTimerInjector.injectPerfMonTimers(clazz, false);
+        ((JavassistRuntimeTimerInjector)PerfMonTimerTransformer.runtimeTimerInjector).injectPerfMonTimers(clazz, false);
     }
     
     private static class SimpleClass {

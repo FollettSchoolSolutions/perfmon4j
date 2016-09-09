@@ -25,18 +25,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
-import javassist.CtClass;
-import javassist.NotFoundException;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -158,6 +153,12 @@ public class TransformerParams {
                     	installServletValve = true;
                     } else if ("SQL".equals(nextParam.parameter)) {
                     	extremeSQLMonitorEnabled = true;
+                		extremeSQLPackages.add("org.postgresql");
+                		extremeSQLPackages.add("net.sourceforge.jtds");
+                		extremeSQLPackages.add("com.mysql.jdbc");
+                		extremeSQLPackages.add("org.apache.derby");
+                		extremeSQLPackages.add("oracle.jdbc");
+                		extremeSQLPackages.add("com.microsoft.sqlserver.jdbc");
                     } else if (m.matches()) {
                     	extremeSQLMonitorEnabled = true;
                     	String p = m.group(1);
@@ -171,9 +172,13 @@ public class TransformerParams {
                     		extremeSQLPackages.add("org.apache.derby");
                     	} else if ("ORACLE".equals(p)) {
                     		extremeSQLPackages.add("oracle.jdbc");
+                    	} else if ("MICROSOFT".equals(p)) {
+                    		extremeSQLPackages.add("com.microsoft.sqlserver.jdbc");
                     	} else {
                     		extremeSQLPackages.add(m.group(1));
                     	}
+                    	
+                    	                    	
                     } else {
 	                     TransformOptions o = parseOptions(nextParam);
 	                     if (o == null) {
@@ -280,7 +285,7 @@ public class TransformerParams {
     }   
 
     
-    int getTransformMode(String className) {
+    public int getTransformMode(String className) {
         int mode = MODE_NONE;
         int includeMatchLength = 0;
         
@@ -486,66 +491,17 @@ public class TransformerParams {
     };
     
     // Package level for testing...
-	boolean isExtremeSQLInterface(String className) {
+	public boolean isExtremeSQLInterface(String className) {
 		return Arrays.binarySearch(SQL_CLASSES, className) >= 0;
 	}
 	
-    private static Set<CtClass> getInterfaces(CtClass clazz) throws NotFoundException {
-    	Set<CtClass> result = new HashSet<CtClass>();
-    	
-    	CtClass interfaces[] = clazz.getInterfaces();
-    	for (int i = 0; i < interfaces.length; i++) {
-    		result.add(interfaces[i]);
-    		result.addAll(getInterfaces(interfaces[i]));
-		}
-    	
-    	return result;
-    }
-	
-    private static Set<Class<?>> getInterfaces(Class<?> clazz) {
-    	Set<Class<?>> result = new HashSet<Class<?>>();
-    	
-    	Class<?> interfaces[] = clazz.getInterfaces();
-    	for (int i = 0; i < interfaces.length; i++) {
-    		result.add(interfaces[i]);
-    		result.addAll(getInterfaces(interfaces[i]));
-		}
-    	
-    	return result;
-    }
-	
-	public boolean isExtremeSQLClass(CtClass clazz) {
-		boolean result = false;
-		if (extremeSQLMonitorEnabled && isPossibleJDBCDriver(clazz.getName())) {
-			try {
-				CtClass interfaces[] = getInterfaces(clazz).toArray(new CtClass[]{});
-				for (int i = 0; i < interfaces.length && !result; i++) {
-					result = isExtremeSQLInterface(interfaces[i].getName());
-				}
-			} catch (NotFoundException ex) {
-				// nothing todo...
-			}
-		}
-		return result;
-	}
-	
-	public boolean isExtremeSQLClass(Class<?> clazz) {
-		boolean result = false;
-		if (extremeSQLMonitorEnabled && isPossibleJDBCDriver(clazz.getName())) {
-			Class<?> interfaces[] = getInterfaces(clazz).toArray(new Class[]{});
-			for (int i = 0; i < interfaces.length && !result; i++) {
-				result = isExtremeSQLInterface(interfaces[i].getName());
-			}
-		}
-		return result;
-	}
-
 	public boolean isPossibleJDBCDriver(String className) {
-		boolean found = extremeSQLPackages.isEmpty();
-		if (!found) {
+		boolean found = false;
+		if (isExtremeSQLMonitorEnabled()) {
 			Iterator<String> itr = extremeSQLPackages.iterator();
-			if (!found && itr.hasNext()) {
-				found = className.startsWith(itr.next());
+			while (!found && itr.hasNext()) {
+				String value = itr.next();
+				found = className.startsWith(value);
 			}
 		}
 		return found;
@@ -562,6 +518,4 @@ public class TransformerParams {
 	public boolean isInstallServletValve() {
 		return installServletValve;
 	}
-	
-	
 }
