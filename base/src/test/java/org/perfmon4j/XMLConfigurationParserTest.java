@@ -114,7 +114,7 @@ public class XMLConfigurationParserTest extends TestCase {
     
 
 /*----------------------------------------------------------------------------*/
-    public void testParseWithAttributeFromSystemProperty() throws Exception {
+    public void testParseTagValueFromSystemProperty() throws Exception {
         System.setProperty("testParse", "x");
         try {
             final String XML =
@@ -140,6 +140,28 @@ public class XMLConfigurationParserTest extends TestCase {
         }
     }
 
+    /*----------------------------------------------------------------------------*/
+    public void testParseWithAttributeFromSystemProperty() throws Exception {
+        System.setProperty("monitorName", "setByProperty");
+        try {
+            final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender name='5 minute' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='5 min'>" +
+                "   </appender>" +
+                "   <monitor name='${monitorName}'>" +
+                "       <appender name='5 minute'/>" +
+                "   </monitor>" +
+                "</Perfmon4JConfig>";
+            
+            PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+            assertEquals("Monitor name should be value of system property", "setByProperty", config.getMonitorArray()[0]);
+            
+        } finally {
+            System.getProperties().remove("monitorName");
+        }
+    }
 
 /*----------------------------------------------------------------------------*/
     public void testParseWithMedianCalculatorAttribute() throws Exception {
