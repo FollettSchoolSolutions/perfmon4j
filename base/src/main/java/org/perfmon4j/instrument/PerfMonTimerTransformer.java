@@ -69,6 +69,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     public final static String USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY="Perfmon4j.UseLegacyInstrumentationWrapper"; 
 	public final static boolean USE_LEGACY_INSTRUMENTATION_WRAPPER=Boolean.getBoolean(USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY);
 
+    public final static String DISABLE_CLASS_INSTRUMENTATION_PROPERTY="Perfmon4j.DisableClassInstrumentation"; 
+	public final static boolean DISABLE_CLASS_INSTRUMENTATION=Boolean.getBoolean(DISABLE_CLASS_INSTRUMENTATION_PROPERTY);
+	
+	
+	
     // Redefined classes will store their timers in this array...
     public static PerfMon[][] monitorsForRedefinedClasses = null;
 	
@@ -556,6 +561,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         if (javassistVersion != null) {
         	logger.logInfo("Perfmon4j found Javassist bytcode instrumentation library version: " + javassistVersion);
         }
+        
     	logger.logInfo(MiscHelper.getHighResolutionTimerEnabledDisabledMessage());
     	 
         logger.logInfo("Perfmon4j transformer paramsString: " + (packageName == null ? "" : packageName));
@@ -564,14 +570,19 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         }
         SystemGCDisabler disabler = null;
         
-        if (t.params.isExtremeSQLMonitorEnabled()) {
-        	SQLTime.setEnabled(true);
-        	logger.logInfo("Perfmon4j SQL instrumentation enabled.");
+        if (DISABLE_CLASS_INSTRUMENTATION) {
+        	logger.logWarn("!!** Found system property " + DISABLE_CLASS_INSTRUMENTATION_PROPERTY + "=true. Perfmon4j class instrumentation is disabled "
+        			+ " -- Extreme, Annotation and SQL monitoring will not be implemented. **!");
         } else {
-        	logger.logInfo("Perfmon4j SQL instrumentation disabled.  Add -eSQL to javaAgent parameters to enable.");
+	        if (t.params.isExtremeSQLMonitorEnabled() ) {
+	        	SQLTime.setEnabled(true);
+	        	logger.logInfo("Perfmon4j SQL instrumentation enabled.");
+	        } else {
+	        	logger.logInfo("Perfmon4j SQL instrumentation disabled.  Add -eSQL to javaAgent parameters to enable.");
+	        }
+	        inst.addTransformer(t);
         }
         
-        inst.addTransformer(t);
         if (t.params.isDisableSystemGC()) {
     		if (inst.isRedefineClassesSupported()) {
     			logger.logInfo("Perfmon4j is installing SystemGCDisabler agent");
@@ -608,8 +619,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         
         // Check for all the preloaded classes and try to instrument any that might
         // match our perfmon4j javaagent configuration
-        if (!t.params.isBootStrapInstrumentationEnabled()) {
-        	logger.logInfo("Perfmon4j bootstrap implementation disabled.  Add -btrue to javaAgent parameters to enable.");
+        if (!t.params.isBootStrapInstrumentationEnabled() || DISABLE_CLASS_INSTRUMENTATION) {
+        	if (!DISABLE_CLASS_INSTRUMENTATION) {
+        		logger.logInfo("Perfmon4j bootstrap implementation disabled.  Add -btrue to javaAgent parameters to enable.");
+        	}
         	if (disabler != null) {
         		try {
 	        		Class<?> clazz = System.class;       		
