@@ -35,17 +35,15 @@ import web.org.perfmon4j.restdatasource.BaseDatabaseSetup;
 import web.org.perfmon4j.restdatasource.DataSourceRestImpl;
 import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.Category;
-import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
-import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.dataproviders.TestHelper;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 
-public class FSSFetchPolicyDataProviderTest extends TestCase {
+public class FSSFetchThreadPoolDataProviderTest extends TestCase {
 
 	private static String DATABASE_NAME = "Production";
 	private final BaseDatabaseSetup databaseSetup = new BaseDatabaseSetup();
-	private final FSSFetchPolicyDataProvider provider = new FSSFetchPolicyDataProvider();
+	private final FSSFetchThreadPoolDataProvider provider = new FSSFetchThreadPoolDataProvider();
 	private Connection conn = null;
 	private RegisteredDatabaseConnections.Database database = null;
 	private final DateTimeHelper helper = new DateTimeHelper();
@@ -71,7 +69,7 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 	}
 	
 	
-	public FSSFetchPolicyDataProviderTest(String name) {
+	public FSSFetchThreadPoolDataProviderTest(String name) {
 		super(name);
 	}
 
@@ -87,21 +85,11 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 		super.tearDown();
 	}
 
-	private void deleteChangeLogEntryForFSSFetchPolicy() throws SQLException {
+	private void deleteChangeLogEntryForFSSFetchThreadPool() throws SQLException {
 		Statement stmt = null;
 		try {
 			stmt = conn.createStatement();
-			stmt.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID='" + FSSFetchPolicyDataProvider.REQUIRED_DATABASE_CHANGESET + "'");
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
-	}
-
-	private void deleteChangeLogEntryForProviderAsyncCount() throws SQLException {
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID='" + FSSFetchPolicyDataProvider.ADD_ASYNC_COLUMN_CHANGESET + "'");
+			stmt.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID='" + FSSFetchThreadPoolDataProvider.REQUIRED_DATABASE_CHANGESET + "'");
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 		}
@@ -115,7 +103,7 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 			assertEquals("Should have no systems with Results", 0, result.size());
 			
 			// Add a JVM Observation...
-			databaseSetup.addFSSFetchPolicyObservation(1, System.currentTimeMillis(), "availability");
+			databaseSetup.addFSSFetchThreadPoolObservation(1, System.currentTimeMillis());
 			result = provider.lookupMonitoredSystems(conn, database, getStartTime(), getEndTime());
 			assertNotNull(result);
 			assertEquals("Should have one system with Results", 1, result.size());
@@ -127,7 +115,7 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 			
 			// Delete the required change log entry to verify that we are checking 
 			// for the addition of the FSS third party schema elements.
-			deleteChangeLogEntryForFSSFetchPolicy();
+			deleteChangeLogEntryForFSSFetchThreadPool();
 
 			// Provider does not think FSSFetchPolicySnapshot table exists.. should return no request.
 			result = provider.lookupMonitoredSystems(conn, database, getStartTime(), getEndTime());
@@ -154,28 +142,23 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 			assertEquals("Should have no categories with Results", 0, result.size());
 			
 			// Add an Observation...
-			databaseSetup.addFSSFetchPolicyObservation(1, System.currentTimeMillis(), "availability");
+			databaseSetup.addFSSFetchThreadPoolObservation(1, System.currentTimeMillis());
 			result = provider.lookupMonitoredCategories(conn, database, systems, getStartTime(), getEndTime());
 			assertNotNull(result);
 			assertEquals("Should have 1 category", 1, result.size());
 			Category cat = result.iterator().next();
-			assertEquals("FSSFetchPolicy.availability", cat.getName());
-			assertEquals("FSSFetchPolicy", cat.getTemplateName());
+			assertEquals("FSSFetchThreadPool", cat.getName());
+			assertEquals("FSSFetchThreadPool", cat.getTemplateName());
 		
 			// Now check outside when the observation was recorded...
 			result = provider.lookupMonitoredCategories(conn, database, systems, getStartTime("now-10H"), getEndTime("now-8H"));
 			assertNotNull(result);
 			assertEquals("Should have no category within the time period GC Results", 0, result.size());
 
-			// Now add a different instance type.  Should get two categories back.
-			databaseSetup.addFSSFetchPolicyObservation(1, System.currentTimeMillis(), "marcData");
-			result = provider.lookupMonitoredCategories(conn, database, systems, getStartTime(), getEndTime());
-			assertNotNull(result);
-			assertEquals("Should have 2 categories", 2, result.size());
 			
 			// Delete the required change log entry to verify that we are checking 
 			// for the addition of the FSS third party schema elements.
-			deleteChangeLogEntryForFSSFetchPolicy();
+			deleteChangeLogEntryForFSSFetchThreadPool();
 
 			result = provider.lookupMonitoredCategories(conn, database, systems, getStartTime(), getEndTime());
 			assertEquals("Provider should have checked for the database changelog entry", 0, result.size());
@@ -189,10 +172,10 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 		try {
 			DataSourceRestImpl impl = new DataSourceRestImpl();
 			String seriesDef = 
-				TestHelper.buildSeriesDefinitionWithAllFields(getDefaultSystemID(), "FSSFetchPolicy.availability", 
+				TestHelper.buildSeriesDefinitionWithAllFields(getDefaultSystemID(), "FSSFetchThreadPool", 
 					provider.getCategoryTemplate());
 					
-			databaseSetup.addFSSFetchPolicyObservation(1, System.currentTimeMillis(), "availability");
+			databaseSetup.addFSSFetchThreadPoolObservation(1, System.currentTimeMillis());
 			
 			web.org.perfmon4j.restdatasource.data.query.advanced.AdvancedQueryResult result = 
 					impl.getQueryObservations(database.getID(), seriesDef, "now-1H", "now", "");
@@ -218,32 +201,4 @@ public class FSSFetchPolicyDataProviderTest extends TestCase {
 		return helper.parseDateTime(value).getTimeForEnd();
 	}
 
-	
-	public void testLimitFieldsBasedOnChangeSet() throws Exception{
-		setUpDatabase();
-		try {
-			DataSourceRestImpl impl = new DataSourceRestImpl();
-
-			CategoryTemplate template = impl.getCategoryTemplate(database.getID(), "FSSFetchPolicy")[0];
-			assertNotNull("Should have the providerAsyncCount field", findField(template, "providerAsyncCount"));
-			
-			deleteChangeLogEntryForProviderAsyncCount();
-			template = impl.getCategoryTemplate(database.getID(), "FSSFetchPolicy")[0];
-			assertNull("ChangeLog not present for providerAsyncCount", findField(template, "providerAsyncCount"));
-		} finally {
-			tearDownDatabase();
-		}
-	}
-	
-	
-	private Field findField(CategoryTemplate template, String fieldName) {
-		for (Field f : template.getFields()) {
-			if (fieldName.equals(f.getName())) {
-				return f;
-			}
-		}
-		return null;
-	}
-	
-	
 }

@@ -44,6 +44,8 @@ import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
 
 public class RuntimeTimerInjectorTest extends TestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
+    
+    private static JavassistRuntimeTimerInjector runtimeTimerInjector = (JavassistRuntimeTimerInjector)PerfMonTimerTransformer.runtimeTimerInjector;
 
 /*----------------------------------------------------------------------------*/
     public RuntimeTimerInjectorTest(String name) {
@@ -82,7 +84,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
     public void testAnnotation() throws Exception {
         CtClass clazz = cloneLoadedClass(TestAnnotation.class);
         
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false);
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false);
         assertEquals("Number of inserted timers", 1, numTimersInserted);
         
         try {
@@ -111,7 +113,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
 /*----------------------------------------------------------------------------*/    
     public void testNoAnnotation() throws Exception {
         CtClass clazz = cloneLoadedClass(TestNoAnnotation.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, false));
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, false));
         
         assertEquals("Number of inserted timers", 0, numTimersInserted);
         try {
@@ -157,7 +159,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
         
         
         clazz.defrost();
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
         assertEquals("Number of inserted timers", 1, numTimersInserted);
         
         loader = new JavaAssistClassLoader();
@@ -186,7 +188,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
         long originalSerialVersionID = ObjectStreamClass.lookup(loader.loadClass(clazz.getName())).getSerialVersionUID();
         clazz.defrost();
         
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
         assertEquals("Number of inserted timers", 1, numTimersInserted);
         
         loader = new JavaAssistClassLoader();
@@ -239,7 +241,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
         try {
             CtClass clazz = cloneLoadedClass(TestDoNOTSkipSerializableWithExplicitID.class);
             
-            int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+            int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
             assertEquals("Class should have been instrumented", 1, numTimersInserted);
         	
         } finally {
@@ -256,7 +258,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
     
     public void testExtremeOnlyInjection() throws Exception {
         CtClass clazz = cloneLoadedClass(TestExtremeOnlyInjection.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, false, true));
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, false, true));
         
         assertEquals("Should not add a timer for the annotation", 1, numTimersInserted);
     }
@@ -273,7 +275,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
     
     public void testExtremeAndAnnotatedInjection() throws Exception {
         CtClass clazz = cloneLoadedClass(TestExtremeAndAnnotatedInjection.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
         
         // Should have 3 timers... 1 for the annotation and a seperate one for each method....
         assertEquals("Number of inserted timers", 3, numTimersInserted);
@@ -304,7 +306,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
     
     public void testSerializedClassWithoutExplicitVersionIsNotModified() throws Exception {
         CtClass clazz = cloneLoadedClass(TestSerializedWithNoExplicitID.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
         
         // Should have 3 timers... 1 for the annotation and a separate one for each method....
         assertEquals("Number of inserted timers", 3, numTimersInserted);
@@ -352,7 +354,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
     
     public void testAnnotationDoesNotDuplicateExtreme() throws Exception {
         CtClass clazz = cloneLoadedClass(TestAnnotationDoesNotDuplicateExtreme.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
         
         // Should have 2 timers...  Since the annotation is a subset of the
         // extreme don't bother including it...
@@ -385,7 +387,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
     
     public void testExtremeDoesNotInstrumentGettersAndSettersByDefault() throws Exception {
         CtClass clazz = cloneLoadedClass(TestSimpleBean.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, paramsForClass(clazz, true, true));
         
         // Should have 2 timers...  Since the annotation is a subset of the
         // extreme don't bother including it...
@@ -395,7 +397,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
     
     public void testExtremeOverrideGetter() throws Exception {
         CtClass clazz = cloneLoadedClass(TestSimpleBean.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, 
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, 
         		paramsForClass(clazz, true, true, "(+getter)"));
         
         // Should have 2 timers...  Since the annotation is a subset of the
@@ -405,7 +407,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
     
     public void testExtremeOverrideSetter() throws Exception {
         CtClass clazz = cloneLoadedClass(TestSimpleBean.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, 
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, 
         		paramsForClass(clazz, true, true, "(+setter)"));
         
         // Should have 2 timers...  Since the annotation is a subset of the
@@ -415,7 +417,7 @@ public class RuntimeTimerInjectorTest extends TestCase {
 
     public void testExtremeOverrideGetterAndSetter() throws Exception {
         CtClass clazz = cloneLoadedClass(TestSimpleBean.class);
-        int numTimersInserted = RuntimeTimerInjector.injectPerfMonTimers(clazz, false, 
+        int numTimersInserted = runtimeTimerInjector.injectPerfMonTimers(clazz, false, 
         		paramsForClass(clazz, true, true, "(+setter,+getter)"));
         
         // Should have 2 timers...  Since the annotation is a subset of the

@@ -55,6 +55,7 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 	private static final String TEMPLATE_NAME = "FSSFetchPolicy";
 	private final FSSFetchPolicy categoryTemplate;
 	static final String REQUIRED_DATABASE_CHANGESET = "FSS-P4JFetchPolicySnapshot-tableCreate";
+	static final String ADD_ASYNC_COLUMN_CHANGESET = "FSS-addProviderAsyncCountColumn";
 	private static final Logger logger = LoggerFactory.initLogger(FSSFetchPolicyDataProvider.class);
 	
 	public FSSFetchPolicyDataProvider() {
@@ -182,7 +183,6 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 	}
 
 	private static class FSSFetchPolicy extends CategoryTemplate {
-
 		private FSSFetchPolicy(String templateName) {
 			super(templateName, buildFields());
 		}
@@ -196,7 +196,7 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 			fields.add(new ProviderField("L2CacheMissCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "L2CACHEMISSCOUNT", false));
 			fields.add(new ProviderField("L2CachePutCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "L2CACHEPUTCOUNT", false));
 			fields.add(new ProviderField("L2CacheDeleteCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "L2CACHEDELETECOUNT", false));
-			fields.add(new PercentProviderField("L2CacheHitPercent", "L2CACHEHITCOUNT", "L2CACHEQUERYCOUNT").makePrimary());
+			fields.add(new PercentProviderField("L2CacheHitPercent", "SystemID", "L2CACHEHITCOUNT", "L2CACHEQUERYCOUNT").makePrimary());
 			fields.add(new ProviderField("L2CacheTimePerQuery", AggregationMethod.DEFAULT, AggregationMethod.AVERAGE, "L2TIMEPERQUERY", true));
 			
 			fields.add(new ProviderField("L3CacheCumulativeTime", AggregationMethod.DEFAULT, AggregationMethod.SUM, "L3CACHECUMULATIVETIME", false));
@@ -205,7 +205,7 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 			fields.add(new ProviderField("L3CacheMissCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "L3CACHEMISSCOUNT", false));
 			fields.add(new ProviderField("L3CachePutCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "L3CACHEPUTCOUNT", false));
 			fields.add(new ProviderField("L3CacheDeleteCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "L3CACHEDELETECOUNT", false));
-			fields.add(new PercentProviderField("L3CacheHitPercent", "L3CACHEHITCOUNT", "L3CACHEQUERYCOUNT").makePrimary());
+			fields.add(new PercentProviderField("L3CacheHitPercent", "SystemID", "L3CACHEHITCOUNT", "L3CACHEQUERYCOUNT").makePrimary());
 			fields.add(new ProviderField("L3CacheTimePerQuery", AggregationMethod.DEFAULT, AggregationMethod.AVERAGE, "L3TIMEPERQUERY", true));
 
 			fields.add(new ProviderField("providerCumulativeTime", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROVIDERCUMULATIVETIME", false));
@@ -214,8 +214,8 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 			fields.add(new ProviderField("providerMissCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROVIDERMISSCOUNT", false));
 			fields.add(new ProviderField("providerWaiveCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROVIEDRWAIVECOUNT", false));
 			fields.add(new ProviderField("providerErrorCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROVIDERERRORCOUNT", false));
-			fields.add(new PercentProviderField("providerHitPercent", "PROVIDERHITCOUNT", "PROVIDERQUERYCOUNT").makePrimary());
-			fields.add(new PercentProviderField("providerWaivePercent", "PROVIEDRWAIVECOUNT", "PROVIDERQUERYCOUNT").makePrimary());
+			fields.add(new PercentProviderField("providerHitPercent", "SystemID", "PROVIDERHITCOUNT", "PROVIDERQUERYCOUNT").makePrimary());
+			fields.add(new PercentProviderField("providerWaivePercent", "SystemID", "PROVIEDRWAIVECOUNT", "PROVIDERQUERYCOUNT").makePrimary());
 			fields.add(new ProviderField("providerTimePerQuery", AggregationMethod.DEFAULT, AggregationMethod.AVERAGE, "PROVIDERTIMEPERQUERY", true));
 			
 			fields.add(new ProviderField("promiseBlockCumulativeTime", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROMISEBLOCKCULULATIVETIME", false));
@@ -223,6 +223,10 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 			fields.add(new ProviderField("promiseBlockedThreads", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROMISEBLOCKEDTHREADS", false).makePrimary());
 			fields.add(new ProviderField("promiseExpirations", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROMISEEXPIRATIONS", false));
 			fields.add(new ProviderField("promiseCancellations", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROMISECANCELLATIONS", false));
+		
+			fields.add(new ProviderField("providerAsyncCount", AggregationMethod.DEFAULT, AggregationMethod.SUM, "PROVIDERASYNCCOUNT", false)
+				.requiresChangeSet(ADD_ASYNC_COLUMN_CHANGESET)
+				.makePrimary());
 			
 			return fields.toArray(new Field[]{});
 		}

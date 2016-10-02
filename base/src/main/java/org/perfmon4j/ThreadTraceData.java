@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MiscHelper;
@@ -40,21 +41,38 @@ import org.perfmon4j.util.MiscHelper;
 
 public class ThreadTraceData implements PerfMonData, SQLWriteable {
     private ThreadTraceData parent;
+    private final UniqueThreadTraceTimerKey key;
     private final String name;
     private final List<ThreadTraceData> children = new Vector<ThreadTraceData>();
-    private final int depth;
+    private int depth;
     private final long startTime;
     private long endTime = -1;
     private final long sqlStartTime;
     private long sqlEndTime = -1;
     private boolean overflow;
     
-    ThreadTraceData(String name, long startTime) {
-        this(name, null, startTime);
+    ThreadTraceData(UniqueThreadTraceTimerKey key, long startTime) {
+        this(key, null, startTime);
     }
 
-    ThreadTraceData(String name, ThreadTraceData parent, long startTime) {
-        this.name = name;
+    ThreadTraceData(UniqueThreadTraceTimerKey key, ThreadTraceData parent, long startTime) {
+        this.key = key;
+        String nameToUse = key.getMonitorName();
+        
+        // If this is the outermost monitor.  We want to use the fully qualified monitor for
+        // the display name.  For instance - We could of configured thread traces to
+        // capture "WebRequest" but we were actually started by "WebRequest.rest.circulation".  
+        // In that case we want to display the fully qualified name.
+        if (parent == null) {
+        	// PerfMonTimer stores the last PerfMonTimer.start(String key) key name
+        	// on the thread.
+        	String lastNameOnThread = PerfMonTimer.getLastFullyQualifiedStartNameForThread();
+        	if (lastNameOnThread != null) {
+        		nameToUse = lastNameOnThread;
+        	}
+        }
+        this.name = nameToUse;
+        
         this.parent = parent;
         this.startTime = startTime;
         this.sqlStartTime = SQLTime.getSQLTime();
@@ -131,6 +149,10 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     public String getName() {
         return name;
     }
+    
+    public UniqueThreadTraceTimerKey getKey() {
+    	return key;
+    }
 
     void setEndTime(long endTime) {
         this.endTime = endTime;
@@ -141,12 +163,31 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     }
 
     void seperateFromParent() {
+    	seperateFromParent(false);
+    }
+
+    void seperateFromParent(boolean relocateChildren) {
         if (parent != null) {
             parent.children.remove(this);
+            if (relocateChildren) {
+            	for (ThreadTraceData child : children) {
+            		child.parent = parent;
+            		reduceDepth(child);
+            		parent.children.add(child);
+            	}
+            }
             parent = null;
         }
     }
-
+    
+    private void reduceDepth(ThreadTraceData data) {
+    	data.depth--;
+    	for (ThreadTraceData child : data.children) {
+    		reduceDepth(child);
+    	}
+    }
+    
+    
 	private void writeToSQL(Long parentRowID, ThreadTraceData data, 
 			Connection conn, String schema,
 			Map categoryNameCache, long systemID) throws SQLException {

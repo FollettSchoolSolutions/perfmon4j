@@ -26,22 +26,12 @@ import java.io.StringReader;
 import java.lang.annotation.Annotation;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.CtNewConstructor;
-
-import javax.management.MBeanAttributeInfo;
-import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import org.perfmon4j.InvalidConfigException;
-import org.perfmon4j.PerfMon;
 import org.perfmon4j.SnapShotProviderWrapper;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
@@ -49,8 +39,6 @@ import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.SnapShotStringFormatter;
-import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
-import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -62,34 +50,18 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-public class JMXSnapShotProxyFactory {
+public abstract class JMXSnapShotProxyFactory {
 	private static final Logger logger = LoggerFactory.initLogger(JMXSnapShotProxyFactory.class);
 	
+	public abstract SnapShotProviderWrapper getnerateSnapShotWrapper(String monitorName, String configXML) throws Exception;
+	public abstract JMXSnapShotImpl newSnapShotImpl(String xml) throws Exception;
+
 	/**
 	 * Package level for testing.
 	 */
-	static Config parseConfig(String xml) throws Exception {
+	Config parseConfig(String xml) throws Exception {
 		return XMLParser.parseXML(xml);
-	}
-	
-	public static SnapShotProviderWrapper getnerateSnapShotWrapper(String monitorName, String configXML) throws Exception {
-		ClassPool classPool = new ClassPool();
-		JMXSnapShotImpl impl = newSnapShotImpl(configXML, classPool);
-		SnapShotGenerator.Bundle bundle = SnapShotGenerator.generateBundle(impl, classPool);
-		
-		return new SnapShotProviderWrapper(monitorName, bundle);
-	}
-	
-	public static JMXSnapShotImpl newSnapShotImpl(String xml) throws Exception {
-		return newSnapShotImpl(xml, new ClassPool());
-	}
-	
-	private static JMXSnapShotImpl newSnapShotImpl(String xml, ClassPool classPool) throws Exception {
-		Config config = parseConfig(xml);
-		Class clazz = generateDerivedJMXClass(config, classPool);
-		JMXSnapShotImpl result = (JMXSnapShotImpl)clazz.getConstructor(new Class[]{JMXSnapShotProxyFactory.Config.class}).newInstance(new Object[]{config});
-		return result;
-	}
+	}		 
 	
 	public static class Config {
 		private String serverDomain = null;
@@ -126,61 +98,25 @@ public class JMXSnapShotProxyFactory {
 			this.defaultObjectName = defaultObjectName;
 		}
 	}
-	
-	public static class AttributeConfig {
-		private final String objectName;
-		private final String name;  //  
-		private final String jmxName; // jmxName defaults to name if not set.
-		
-		private SnapShotGauge snapShotGauge = null;
-		private SnapShotCounter snapShotCounter = null;
-		private SnapShotString snapShotString = null;
-		
-		
-		AttributeConfig(String objectName, String name, String jmxName) {
-			this.objectName = objectName;
-			this.name = name;
-			this.jmxName = jmxName;
-		}
 
-		public String getObjectName() {
-			return objectName;
-		}
-
-		public String getName() {
-			return name;
-		}
-
-		public String getJMXName() {
-			return (jmxName == null) ? name : jmxName;
+	// Container implementation of all annotations
+	 protected static class SnapShotRatiosVO implements SnapShotRatios {
+		private final List<SnapShotRatio> snapShotRatios = new ArrayList<SnapShotRatio>();
+		
+		void addSnapShotRatio(SnapShotRatio ratio) {
+			snapShotRatios.add(ratio);
 		}
 		
-		public SnapShotGauge getSnapShotGauge() {
-			return snapShotGauge;
+		public SnapShotRatio[] value() {
+			return snapShotRatios.toArray(new SnapShotRatio[]{});
 		}
 
-		public void setSnapShotGauge(SnapShotGauge snapShotGauge) {
-			this.snapShotGauge = snapShotGauge;
-		}
-
-		public SnapShotCounter getSnapShotCounter() {
-			return snapShotCounter;
-		}
-
-		public void setSnapShotCounter(SnapShotCounter snapShotCounter) {
-			this.snapShotCounter = snapShotCounter;
-		}
-
-		public SnapShotString getSnapShotString() {
-			return snapShotString;
-		}
-
-		public void setSnapShotString(SnapShotString snapShotString) {
-			this.snapShotString = snapShotString;
+		public Class<? extends Annotation> annotationType() {
+			return SnapShotRatio.class;
 		}
 	}
-	
-	static private class XMLParser extends DefaultHandler {
+
+	private static class XMLParser extends DefaultHandler {
 	    private final Config config = new Config();
 	    private AttributeConfig lastJMXAttribute = null;
 	    
@@ -207,7 +143,8 @@ public class JMXSnapShotProxyFactory {
 	    private static String SECTION_SNAP_SHOT_COUNTER = "snapShotCounter";
 	    private static String SECTION_SNAP_SHOT_GAUGE = "snapShotGauge";
 
-	    private Class<? extends NumberFormatter> extractNumberFormatter(Attributes atts) {
+	    @SuppressWarnings("unchecked")
+		private Class<? extends NumberFormatter> extractNumberFormatter(Attributes atts) {
 	    	Class<? extends NumberFormatter> result = NumberFormatter.class;
     		String formatterValue = atts.getValue("formatter");
     		if (formatterValue != null) {
@@ -220,12 +157,11 @@ public class JMXSnapShotProxyFactory {
 	    	return result;
 	    }
 	    
-	    public void startElement(@SuppressWarnings("unused") String uri, 
-	    	String name, @SuppressWarnings("unused") String qName,
+	    public void startElement(String uri, String name, String qName,
 	        Attributes atts) throws SAXException {
 	    	if (SECTION_WRAPPER.equals(name)) {
 	    		String value = atts.getValue("serverDomain");
-//	    		validateArg(SECTION_WRAPPER, "serverDomain", value);
+//		    		validateArg(SECTION_WRAPPER, "serverDomain", value);
 	    		config.setServerDomain(value);
 	    		config.setDefaultObjectName(atts.getValue("defaultObjectName"));
 	    		
@@ -297,117 +233,18 @@ public class JMXSnapShotProxyFactory {
 	    	}
 	    }
 
-	    private static void validateArg(String section, String name, String value) throws SAXException {
+	    private void validateArg(String section, String name, String value) throws SAXException {
 	        if (value == null || "".equals(value)) {
 	            throw new SAXException("Attribute: " + name + " required for section: " + section);
 	        }
 	    }
 	}
-	
-	public static long SERIAL_NUMBER = 0; 
 
-	private static MBeanAttributeInfo findMBeanInfo(MBeanAttributeInfo info[], String attrName) {
-		MBeanAttributeInfo result = null;
-		
-		for (int i = 0; i < info.length && result == null; i++) {
-			MBeanAttributeInfo attr = info[i];
-			if (attrName.equals(attr.getName())) {
-				result = attr;
-			}
-		}
-		return result;
-	}
-	
-	private static Class generateDerivedJMXClass(Config config, ClassPool classPool) throws Exception {
-		classPool.appendSystemPath();
-
-		String className = "JMXSnapShot_" + (++SERIAL_NUMBER);
-		CtClass superClass = classPool.get(JMXSnapShotProxyFactory.JMXSnapShotImpl.class.getName());
-		CtClass configClass = classPool.get(JMXSnapShotProxyFactory.Config.class.getName());
-		CtClass ctClass = classPool.makeClass(className, superClass);
-
-		// Add the constructor...
-		CtConstructor constructor = CtNewConstructor.make(new CtClass[]{configClass}, new CtClass[]{}, ctClass); 
-		ctClass.addConstructor(constructor);
-
-		MBeanServer server = MiscHelper.findMBeanServer(config.getServerDomain());
-		if (server == null) {
-			throw new GenerateSnapShotException("Unable to find attribute mBeanServer for domain: " 
-					+ config.getServerDomain());
-		}
-		Iterator<AttributeConfig> itr = config.getAttributeConfigs().iterator();
-		while (itr.hasNext()) {
-			AttributeConfig attr = itr.next();
-			
-			ObjectName objName = new ObjectName(attr.getObjectName());
-			MBeanInfo info = server.getMBeanInfo(objName);
-			MBeanAttributeInfo mBeanInfo = findMBeanInfo(info.getAttributes(), attr.getJMXName());
-			if (mBeanInfo == null) {
-				throw new GenerateSnapShotException("Unable to find attribute for attribute: " + attr.getJMXName() + 
-						" on MBean: " + objName.getCanonicalName());
-			}
-			String src = "";
-			String getterName = "get" + attr.getName() + "()";
-			
-			boolean stringType = false;
-			if ("long".equals(mBeanInfo.getType())) {
-				src = "public long " + getterName + "{\r\n" +
-					"    return ((java.lang.Long)getAttribute(\"" + 
-						attr.getObjectName() + "\", \"" + attr.getJMXName() + "\", new java.lang.Long(-1l))).longValue();\r\n" +
-					"}";
-			} else if ("double".equals(mBeanInfo.getType())) {
-				src = "public double " + getterName + "{\r\n" +
-					"    return ((java.lang.Double)getAttribute(\"" + 
-						attr.getObjectName() + "\", \"" + attr.getJMXName() + "\", new java.lang.Double(-1.0))).doubleValue();\r\n" +
-					"}";
-			} else if ("float".equals(mBeanInfo.getType())) {
-				src = "public float " + getterName + "{\r\n" +
-					"    return ((java.lang.Float)getAttribute(\"" + 
-						attr.getObjectName() + "\", \"" + attr.getJMXName() + "\", new java.lang.Float(-1.0f))).floatValue();\r\n" +
-					"}";
-			} else if ("int".equals(mBeanInfo.getType())) {
-				src = "public int " + getterName + "{\r\n" +
-					"    return ((java.lang.Integer)getAttribute(\"" + 
-						attr.getObjectName() + "\", \"" + attr.getJMXName() + "\", new java.lang.Integer(-1))).intValue();\r\n" +
-					"}";
-			} else if ("short".equals(mBeanInfo.getType())) {
-				src = "public short " + getterName + "{\r\n" +
-					"    return ((java.lang.Short)getAttribute(\"" + 
-						attr.getObjectName() + "\", \"" + attr.getJMXName() + "\", new java.lang.Short((short)-1))).shortValue();\r\n" +
-					"}";
-			} else if ("boolean".equals(mBeanInfo.getType())) {
-				src = "public boolean " + getterName + "{\r\n" +
-					"    return ((java.lang.Boolean)getAttribute(\"" + 
-						attr.getObjectName() + "\", \"" + attr.getJMXName() + "\", Boolean.FALSE)).booleanValue();\r\n" +
-					"}";
-			} else {
-				src = "public String " + getterName + "{\r\n" +
-				"    return ((java.lang.String)getAttribute(\"" + 
-					attr.getObjectName() + "\", \"" + attr.getJMXName() + "\", \"\").toString());\r\n" +
-				"}";
-				stringType = true;
-			}
-
-			boolean hasAnnotation = (attr.getSnapShotCounter() != null) || (attr.getSnapShotGauge() != null)
-				|| (attr.getSnapShotString() != null);
-			if (!hasAnnotation) {
-				if (stringType) {
-					attr.setSnapShotString(new SnapShotStringVO(SnapShotStringFormatter.class));
-				} else {
-					attr.setSnapShotGauge(new SnapShotGaugeVO(NumberFormatter.class));
-				}
-			}
-			CtMethod method = CtMethod.make(src, ctClass);
-			ctClass.addMethod(method);
-		}
-		return ctClass.toClass(PerfMon.getClassLoader());
-	}
-	
 	public static class JMXSnapShotImpl {
-		private final JMXSnapShotProxyFactory.Config config;
+		private final JavassistJMXSnapShotProxyFactory.Config config;
 		private WeakReference<MBeanServer> mBeanServer = null;
 		
-		public JMXSnapShotImpl(JMXSnapShotProxyFactory.Config config) {
+		public JMXSnapShotImpl(JavassistJMXSnapShotProxyFactory.Config config) {
 			this.config = config;
 		}
 		
@@ -415,7 +252,7 @@ public class JMXSnapShotProxyFactory {
 			return config.getServerDomain();
 		}
 		
-		public JMXSnapShotProxyFactory.Config getConfig() {
+		public JavassistJMXSnapShotProxyFactory.Config getConfig() {
 			return config;
 		}
 		
@@ -468,26 +305,8 @@ public class JMXSnapShotProxyFactory {
 			return result;
 		}
 	}
-	
-	// Container implementation of all annotations
-	 @SuppressWarnings("intfAnnotation") 
-	 private static class SnapShotRatiosVO implements SnapShotRatios {
-		private final List<SnapShotRatio> snapShotRatios = new ArrayList<SnapShotRatio>();
 		
-		private void addSnapShotRatio(SnapShotRatio ratio) {
-			snapShotRatios.add(ratio);
-		}
 		
-		public SnapShotRatio[] value() {
-			return snapShotRatios.toArray(new SnapShotRatio[]{});
-		}
-
-		public Class<? extends Annotation> annotationType() {
-			return SnapShotRatio.class;
-		}
-	}
-	
-	@SuppressWarnings("intfAnnotation") 
 	private static class SnapShotRatioVO implements SnapShotRatio {
 		private final String name;
 		private final String numerator;
@@ -529,8 +348,7 @@ public class JMXSnapShotProxyFactory {
 		}
 	}
 
-	 @SuppressWarnings("intfAnnotation") 
-	 private static class SnapShotGaugeVO implements SnapShotGauge {
+	 protected static class SnapShotGaugeVO implements SnapShotGauge {
 		 private final Class<? extends NumberFormatter> formatter;
 
 		 public SnapShotGaugeVO(Class<? extends NumberFormatter> formatter) {
@@ -545,9 +363,8 @@ public class JMXSnapShotProxyFactory {
 			return SnapShotGauge.class;
 		}
 	 }
-	
-	 @SuppressWarnings("intfAnnotation") 
-	 private static class SnapShotStringVO implements SnapShotString {
+		
+	 protected static class SnapShotStringVO implements SnapShotString {
 		 private final Class<? extends SnapShotStringFormatter> formatter;
 
 		 public SnapShotStringVO(Class<? extends SnapShotStringFormatter> formatter) {
@@ -566,8 +383,7 @@ public class JMXSnapShotProxyFactory {
 			 return false;
 		 }
 	 }
-	 
-	 @SuppressWarnings("intfAnnotation") 
+		 
 	 private static class SnapShotCounterVO implements SnapShotCounter {
 		 private final SnapShotCounter.Display preferredDisplay;
 		 private final Class<? extends NumberFormatter> formatter;
@@ -597,4 +413,58 @@ public class JMXSnapShotProxyFactory {
 			return SnapShotCounter.class;
 		}
 	 }
+		 
+		
+	public static class AttributeConfig {
+		private final String objectName;
+		private final String name;  //  
+		private final String jmxName; // jmxName defaults to name if not set.
+		
+		private SnapShotGauge snapShotGauge = null;
+		private SnapShotCounter snapShotCounter = null;
+		private SnapShotString snapShotString = null;
+		
+		
+		AttributeConfig(String objectName, String name, String jmxName) {
+			this.objectName = objectName;
+			this.name = name;
+			this.jmxName = jmxName;
+		}
+
+		public String getObjectName() {
+			return objectName;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public String getJMXName() {
+			return (jmxName == null) ? name : jmxName;
+		}
+		
+		public SnapShotGauge getSnapShotGauge() {
+			return snapShotGauge;
+		}
+
+		public void setSnapShotGauge(SnapShotGauge snapShotGauge) {
+			this.snapShotGauge = snapShotGauge;
+		}
+
+		public SnapShotCounter getSnapShotCounter() {
+			return snapShotCounter;
+		}
+
+		public void setSnapShotCounter(SnapShotCounter snapShotCounter) {
+			this.snapShotCounter = snapShotCounter;
+		}
+
+		public SnapShotString getSnapShotString() {
+			return snapShotString;
+		}
+
+		public void setSnapShotString(SnapShotString snapShotString) {
+			this.snapShotString = snapShotString;
+		}
+	}
 }

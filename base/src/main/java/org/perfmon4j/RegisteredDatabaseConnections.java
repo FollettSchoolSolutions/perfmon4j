@@ -348,7 +348,9 @@ public final class RegisteredDatabaseConnections {
 
 		@Override
 		public Connection openConnection() throws SQLException {
-			return JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, jarFileName, jdbcURL, getUserName(), getPassword());
+			Connection conn = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, jarFileName, jdbcURL, getUserName(), getPassword());
+			conn.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);	
+			return conn;
 		}
 
 		private void setDriverClassName(String driverClassName) {
@@ -381,7 +383,9 @@ public final class RegisteredDatabaseConnections {
 		
 		@Override
 		public Connection openConnection() throws SQLException {
-			return dataSource.getConnection();
+			Connection conn = dataSource.getConnection();
+			conn.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);	
+			return conn;
 		}
 		
 		public void setPoolName(String poolName) {

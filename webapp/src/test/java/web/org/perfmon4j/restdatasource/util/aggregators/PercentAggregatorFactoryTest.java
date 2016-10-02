@@ -27,6 +27,8 @@ import junit.framework.TestCase;
 
 import org.mockito.Mockito;
 
+import web.org.perfmon4j.restdatasource.data.AggregationMethod;
+
 public class PercentAggregatorFactoryTest extends TestCase {
 
 
@@ -47,7 +49,7 @@ public class PercentAggregatorFactoryTest extends TestCase {
 		
 		Mockito.when(rs.getString("systemID")).thenReturn("1");
 		
-		Aggregator ag = new PercentAggregatorFactory("numerator", "denominator").newAggregator();
+		Aggregator ag = new PercentAggregatorFactory("systemID", "numerator", "denominator").newAggregator();
 		assertNull("We dont have any data should return null", ag.getResult());
 		
 		Mockito.when(rs.getLong("numerator")).thenReturn(Long.valueOf(4));
@@ -68,7 +70,7 @@ public class PercentAggregatorFactoryTest extends TestCase {
 		
 		Mockito.when(rs.getString("systemID")).thenReturn("1");
 		
-		Aggregator ag = new PercentAggregatorFactory("numerator", "denominator").newAggregator();
+		Aggregator ag = new PercentAggregatorFactory("systemID", "numerator", "denominator").newAggregator();
 		assertNull("We dont have any data should return null", ag.getResult());
 		
 		Mockito.when(rs.getLong("numerator")).thenReturn(Long.valueOf(0));
@@ -78,4 +80,103 @@ public class PercentAggregatorFactoryTest extends TestCase {
 		Number result = ag.getResult();
 		assertEquals("Denominator is 0, we should return 0.0", 0, result.longValue());
 	}
+
+
+	public void testSimpleMax() throws Exception {
+		ResultSet rs = Mockito.mock(ResultSet.class);
+		
+		Aggregator ag = new PercentAggregatorFactory("systemID", "numerator", "denominator", AggregationMethod.MAX).newAggregator();
+		assertNull("We dont have any data should return null", ag.getResult());
+
+		// For System 1 we have a 40% hit ratio.
+		Mockito.when(rs.getLong("systemID")).thenReturn(1L);
+		Mockito.when(rs.getLong("numerator")).thenReturn(Long.valueOf(4));
+		Mockito.when(rs.getLong("denominator")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+
+		// For System 2 we have a 60% hit ratio.
+		Mockito.when(rs.getLong("systemID")).thenReturn(2L);
+		Mockito.when(rs.getLong("numerator")).thenReturn(Long.valueOf(6));
+		Mockito.when(rs.getLong("denominator")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+		
+		Number result = ag.getResult();
+		assertTrue("Should be a double value", result instanceof Double);
+		assertEquals("Should display system 2 since it had the Max hit ratio", 60, result.longValue());
+	}
+
+	public void testSimpleMin() throws Exception {
+		ResultSet rs = Mockito.mock(ResultSet.class);
+		
+		Aggregator ag = new PercentAggregatorFactory("systemID", "numerator", "denominator", AggregationMethod.MIN).newAggregator();
+		assertNull("We dont have any data should return null", ag.getResult());
+
+		// For System 1 we have a 40% hit ratio.
+		Mockito.when(rs.getLong("systemID")).thenReturn(1L);
+		Mockito.when(rs.getLong("numerator")).thenReturn(Long.valueOf(4));
+		Mockito.when(rs.getLong("denominator")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+
+		// For System 2 we have a 60% hit ratio.
+		Mockito.when(rs.getLong("systemID")).thenReturn(2L);
+		Mockito.when(rs.getLong("numerator")).thenReturn(Long.valueOf(6));
+		Mockito.when(rs.getLong("denominator")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+		
+		Number result = ag.getResult();
+		assertTrue("Should be a double value", result instanceof Double);
+		assertEquals("Should display system 1 since it had the Min hit ratio", 40, result.longValue());
+	}
+
+
+	public void testMinIgnoresSystemWithZeroDenominator() throws Exception {
+		ResultSet rs = Mockito.mock(ResultSet.class);
+		
+		Aggregator ag = new PercentAggregatorFactory("systemID", "numerator", "denominator", AggregationMethod.MIN).newAggregator();
+		assertNull("We dont have any data should return null", ag.getResult());
+
+		// For System 1 has a denominator of zero which indicates it had no activity
+		Mockito.when(rs.getLong("systemID")).thenReturn(1L);
+		Mockito.when(rs.getLong("numerator")).thenReturn(Long.valueOf(0));
+		Mockito.when(rs.getLong("denominator")).thenReturn(Long.valueOf(0));
+		ag.aggreagate(rs);
+
+		// For System 2 we have a 40% hit ratio.
+		Mockito.when(rs.getLong("systemID")).thenReturn(2L);
+		Mockito.when(rs.getLong("numerator")).thenReturn(Long.valueOf(2));
+		Mockito.when(rs.getLong("denominator")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+		
+		Number result = ag.getResult();
+		assertTrue("Should be a double value", result instanceof Double);
+		assertEquals("Should display system 2 since system 1 had no activity", 20, result.longValue());
+	}
+	
+	/**
+	 * In this example, in the database we have a queueCapacity and queueFree counters.
+	 * However we want to display a queueInUse percentage.  To do this we set invertRatio=true
+	 * on the PercentAggregatorFactory constructor.  
+	 * @throws Exception
+	 */
+	public void testSimpleInvertRatio() throws Exception {
+		ResultSet rs = Mockito.mock(ResultSet.class);
+		
+		Mockito.when(rs.getString("systemID")).thenReturn("1");
+		
+		Aggregator ag = new PercentAggregatorFactory("systemID", "queueFree", "queueCapacity", AggregationMethod.NATURAL, false, true).newAggregator();
+		assertNull("We dont have any data should return null", ag.getResult());
+		
+		Mockito.when(rs.getLong("queueFree")).thenReturn(Long.valueOf(2));
+		Mockito.when(rs.getLong("queueCapacity")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+
+		Mockito.when(rs.getLong("queueFree")).thenReturn(Long.valueOf(3));
+		Mockito.when(rs.getLong("queueCapacity")).thenReturn(Long.valueOf(10));
+		ag.aggreagate(rs);
+		
+		Number result = ag.getResult();
+		assertTrue("Should be a double value", result instanceof Double);
+		assertEquals("Should invert the percentage", 75, result.longValue());
+	}
+	
 }

@@ -92,7 +92,7 @@ public class LaunchRunnableInVM {
 		return run(clazz, javaAgentParams, args, null, perfmonJar);
 	}
 
-	private static String fixupLinuxHomeFolder(String path) {
+	public static String fixupLinuxHomeFolder(String path) {
 		if (path != null) {
 			// Java does not always deal with the ~ substitution for home folder.
 			if (path.startsWith("~")) {
@@ -144,17 +144,7 @@ public class LaunchRunnableInVM {
     		cmdString += "=" + javaAgentParams;
     	}
 
-    	// The location of the JavaAssist Jar should be set as a maven-surefire-plugin
-    	// property in perfom4j/base/pom.xml
-    	String javaAssistProp = fixupLinuxHomeFolder(System.getProperty("JAVASSIST_JAR"));
-    	if (javaAssistProp == null) {
-    		throw new RuntimeException("JAVASSIST_JAR system property must be set");
-    	}
-    	
-    	File javassistJar = new File(javaAssistProp);
-    	final String pathSeparator = System.getProperty("path.separator");
-
-		cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath() + pathSeparator + javassistJar.getParentFile().getCanonicalPath());
+		cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
 
 		if (systemProperties != null) {
 			Iterator<Map.Entry<Object,Object>> itr = systemProperties.entrySet().iterator();
@@ -230,10 +220,10 @@ public class LaunchRunnableInVM {
 				int nullBootstrapMonitors = 0;	
 				int insertedBootstrapMonitors = 0;
 				
-				// RuntimeTimerInjector.monitorsForRedefinedClasses is an array of arrays....
-				if (RuntimeTimerInjector.monitorsForRedefinedClasses != null) {
-					for (int i = 0; i < RuntimeTimerInjector.monitorsForRedefinedClasses.length; i++) {
-						PerfMon monitors[] = RuntimeTimerInjector.monitorsForRedefinedClasses[i];
+				// PerfMonTimerTransformer.monitorsForRedefinedClasses is an array of arrays....
+				if (PerfMonTimerTransformer.monitorsForRedefinedClasses != null) {
+					for (int i = 0; i < PerfMonTimerTransformer.monitorsForRedefinedClasses.length; i++) {
+						PerfMon monitors[] = PerfMonTimerTransformer.monitorsForRedefinedClasses[i];
 						for (int j = 0; j < monitors.length; j++) {
 							PerfMon mon = monitors[j];
 							if (mon == null) {
@@ -255,7 +245,6 @@ public class LaunchRunnableInVM {
 				ex.printStackTrace();
 			}
 		}
-		
 	}
 
 }
