@@ -37,7 +37,7 @@ import org.apache.log4j.Logger;
 import org.mockito.Mockito;
 import org.perfmon4j.SQLTest;
 import org.perfmon4j.SnapShotData;
-import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator.Bundle;
 import org.perfmon4j.java.management.MemoryPoolSnapShot.MemoryPoolData;
 import org.perfmon4j.util.JDBCHelper;
@@ -110,9 +110,9 @@ public class MemoryPoolSnapShotTest extends SQLTest {
     
     /*----------------------------------------------------------------------------*/    
     public void testValidateDataInterface() throws Exception {
-    	Bundle bundle = SnapShotGenerator.generateBundle(MemoryPoolSnapShot.class);
+    	Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(MemoryPoolSnapShot.class);
     	SnapShotData data = bundle.newSnapShotData();
-    	
+
     	assertTrue("Should implement interface", data instanceof MemoryPoolSnapShot.MemoryPoolData);
     	
     	MemoryPoolSnapShot.MemoryPoolData d = (MemoryPoolSnapShot.MemoryPoolData)data;

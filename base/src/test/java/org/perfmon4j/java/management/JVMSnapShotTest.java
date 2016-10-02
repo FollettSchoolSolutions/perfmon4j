@@ -37,8 +37,8 @@ import org.apache.log4j.Logger;
 import org.mockito.Mockito;
 import org.perfmon4j.SQLTest;
 import org.perfmon4j.SnapShotData;
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.snapshot.Delta;
-import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator.Bundle;
 import org.perfmon4j.java.management.JVMSnapShot.JVMData;
 import org.perfmon4j.util.JDBCHelper;
@@ -109,7 +109,7 @@ public class JVMSnapShotTest extends SQLTest {
     
     /*----------------------------------------------------------------------------*/    
     public void testValidateDataInterface() throws Exception {
-    	Bundle bundle = SnapShotGenerator.generateBundle(JVMSnapShot.class);
+    	Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(JVMSnapShot.class);
     	SnapShotData data = bundle.newSnapShotData();
     	
     	assertTrue("Should implement interface", data instanceof 

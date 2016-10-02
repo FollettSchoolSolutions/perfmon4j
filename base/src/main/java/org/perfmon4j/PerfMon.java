@@ -471,7 +471,7 @@ public class PerfMon {
                     for (int i = 0; i < appenders.length; i++) {
                         Appender appender = Appender.getAppender(appenders[i]);
                         if (appender != null) {
-                            appender.outputData(data);
+                        	appender.appendData(data);
                         }
                     }
                 }

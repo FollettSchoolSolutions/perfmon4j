@@ -26,15 +26,19 @@ import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 
 public class NaturalPerMinuteAggregatorFactory implements AggregatorFactory {
 	private final String databaseColumnStartTime;
 	private final String databaseColumnEndTime;
 	private final String databaseColumnCounter;
+	private final String databaseColumnSystemID;
 	
 	
-	public NaturalPerMinuteAggregatorFactory(String databaseColumnStartTime, String databaseColumnEndTime, 
+	public NaturalPerMinuteAggregatorFactory(String databaseColumnSystemID, String databaseColumnStartTime, String databaseColumnEndTime, 
 			String databaseColumnCounter) {
+		this.databaseColumnSystemID = databaseColumnSystemID;
 		this.databaseColumnStartTime = databaseColumnStartTime;
 		this.databaseColumnEndTime = databaseColumnEndTime;
 		this.databaseColumnCounter = databaseColumnCounter;
@@ -48,17 +52,14 @@ public class NaturalPerMinuteAggregatorFactory implements AggregatorFactory {
 
 	@Override
 	public String[] getDatabaseColumns() {
-		return new String[]{databaseColumnStartTime, databaseColumnEndTime, databaseColumnCounter};
+		return new String[]{databaseColumnSystemID, databaseColumnStartTime, databaseColumnEndTime, databaseColumnCounter};
 	}
 	
 	// For an average we will always return a floating point value.
 	private final class FloatingPoint implements Aggregator {
 		private boolean hasValue = false;
 
-		private long startTime = Long.MAX_VALUE;
-		private long endTime = 0;
-		
-//		private BigDecimal accumulatorMillis = new BigDecimal(0);
+		Map<Long, StartStopTime> durationTracker = new HashMap<Long, NaturalPerMinuteAggregatorFactory.StartStopTime>();
 		private BigDecimal accumulatorCounter = new BigDecimal(0);
 		
 		@Override
@@ -68,17 +69,17 @@ public class NaturalPerMinuteAggregatorFactory implements AggregatorFactory {
 			if (tsStart != null && tsEnd != null) {
 				long counter = rs.getLong(databaseColumnCounter);
 				if (!rs.wasNull()) {
+					Long systemID = Long.valueOf(rs.getLong(databaseColumnSystemID));
+					StartStopTime tracker = durationTracker.get(systemID);
+					if (tracker == null) {
+						tracker = new StartStopTime();
+						durationTracker.put(systemID, tracker);
+					}
 					hasValue =  true;
 					long start = tsStart.getTime();
 					long end = tsEnd.getTime();
+					tracker.update(start, end);
 
-					if (start < startTime) {
-						startTime = start;
-					}
-				
-					if (end > endTime) {
-						endTime = end;
-					}
 					accumulatorCounter = accumulatorCounter.add(new BigDecimal(counter));
 				}
 			}
@@ -89,14 +90,40 @@ public class NaturalPerMinuteAggregatorFactory implements AggregatorFactory {
 			Double result = null;
 			
 			if (hasValue) {
-				double minutes = ((endTime - startTime)/60000.0);
+				long duration = 0;
+				for (StartStopTime tracker : durationTracker.values()) {
+					long newDuration = tracker.getDuration();
+					if (newDuration > duration) {
+						duration = newDuration;
+					}
+				}
+				double minutes = duration/60000.0;
 				if (minutes != 0.0) {
-					result = Double.valueOf(accumulatorCounter.divide(new BigDecimal(minutes), 4, RoundingMode.HALF_UP).doubleValue());
+					result = Double.valueOf(accumulatorCounter.divide(new BigDecimal(minutes), 2, RoundingMode.HALF_UP).doubleValue());
 				} else {
 					result = Double.valueOf(0);
 				}
 			}
 			return result;
+		}
+	}
+	
+	private static class StartStopTime {
+		long startTime = Long.MAX_VALUE;
+		long endTime = 0;
+		
+		void update(long newStartTime, long newEndTime) {
+			if (newStartTime < startTime) {
+				startTime = newStartTime;
+			}
+			
+			if (newEndTime > endTime) {
+				endTime = newEndTime;
+			}
+		}
+		
+		long getDuration() {
+			return endTime - startTime;
 		}
 	}
 }

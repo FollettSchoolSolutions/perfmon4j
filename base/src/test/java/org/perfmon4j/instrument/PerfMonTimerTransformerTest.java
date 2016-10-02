@@ -59,6 +59,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
+	private File javassistJar = null;
 	
 /*----------------------------------------------------------------------------*/
     public PerfMonTimerTransformerTest(String name) {
@@ -94,8 +95,6 @@ public class PerfMonTimerTransformerTest extends TestCase {
         MiscHelper.createJarFile(perfmon4jJar.getAbsolutePath(), props, new File[]{classesFolder, testClassesFolder});
         
         System.out.println("perfmon4j jar file: " + perfmon4jJar.getCanonicalPath());
-        
-        initJavaAssistJar();
     }
     
     
@@ -104,9 +103,33 @@ public class PerfMonTimerTransformerTest extends TestCase {
     public void tearDown() throws Exception {
     	File folder = perfmon4jJar.getParentFile();
         perfmon4jJar.delete();
+        if (javassistJar != null) {
+        	javassistJar.delete();
+        }
         folder.delete();
+        
+        perfmon4jJar = null;
+        javassistJar = null;
+        
     	super.tearDown();
     }
+    
+	
+	public void testSystemPropertyDisablesInstrumentation() throws Exception {
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "true");
+    	
+    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(TemplatedClassTest.class, "-dtrue,-btrue,-eorg.perfmon4j", props, perfmon4jJar);
+    	assertTrue("Should have an $impl method indicating class was annotated" + output,
+    			output.contains("thisMethodShouldBeAnnotated$1$Impl()"));
+    	
+    	props.setProperty(PerfMonTimerTransformer.DISABLE_CLASS_INSTRUMENTATION_PROPERTY, "true");
+    	output = LaunchRunnableInVM.loadClassAndPrintMethods(TemplatedClassTest.class, "-dtrue,-btrue,-eorg.perfmon4j", props, perfmon4jJar);
+//System.out.println(output);
+    	assertFalse("SystemPropert Perfmon4j.DisableClassInstrumentation should disable class instrumentation: " + output,
+    			output.contains("thisMethodShouldBeAnnotated$1$Impl()"));
+    }
+    
     
     public static class TemplatedClassTest<T> {
     	final T value;
@@ -119,15 +142,15 @@ public class PerfMonTimerTransformerTest extends TestCase {
     	}
     }
 
-    private void initJavaAssistJar() {
-    	String javaAssistProp = System.getProperty("JAVASSIST_JAR");
-    	if (javaAssistProp == null) {
-    		String filePath = System.getenv("M2_REPO") + 
-    			"/javassist/javassist/3.10.0.GA/javassist-3.10.0.GA.jar";
-        	logger.logWarn("JAVASSSIST_JAR system property NOT set...  Trying default location: " + filePath);
-        	System.setProperty("JAVASSIST_JAR", filePath);
-    	}
-    }
+//    private void initJavaAssistJar() {
+//    	String javaAssistProp = System.getProperty("JAVASSIST_JAR");
+//    	if (javaAssistProp == null) {
+//    		String filePath = System.getenv("M2_REPO") + 
+//    			"/org/javassist/javassist/3.20.0-GA/javassist-3.20.0-GA.jar";
+//        	logger.logWarn("JAVASSSIST_JAR system property NOT set...  Trying default location: " + filePath);
+//        	System.setProperty("JAVASSIST_JAR", filePath);
+//    	}
+//    }
     
     /*----------------------------------------------------------------------------*/    
     public void testTemplatedClassIsAnnotated() throws Exception {
@@ -143,16 +166,17 @@ public class PerfMonTimerTransformerTest extends TestCase {
     
     /*----------------------------------------------------------------------------*/    
     public void testAnnotateBootStrapClass() throws Exception {
-    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "-dtrue,-ejava.lang.String,-btrue", perfmon4jJar);
-
+    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "-ejava.lang.String,-btrue", perfmon4jJar);
     	final String validationString = "BootStrapMonitor: java.lang.String.equals";
-    	
+System.out.println(output);
+
     	assertTrue("Should have added a bootstrap monitor: " + output,
     			output.contains(validationString));
     	
     	// Now check to ensure that the inserting bootstrap timers is not on by default.
        	output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "e=java.lang.String", perfmon4jJar);
-    	
+       	
+       	
     	assertFalse("b=true must be passed to java agent for bootstrap class insturmentation: " + output,
     			output.contains(validationString));
     	
@@ -374,7 +398,7 @@ System.out.println(output);
 	}
 	
     public void testInstrumentSQLStatement() throws Exception {
-    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL(DERBY)", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-dtrue,-eSQL(DERBY)", "", perfmon4jJar);
     	System.out.println(output);   	
     	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
     }
@@ -598,7 +622,7 @@ System.out.println(output);
     	System.out.println(output);
     	
     	assertTrue("Before LOG4J initialize, logging should be through java logging",
-    			output.contains("[STDERR] INFO: info - pre initialize"));
+    			output.contains("info - pre initialize"));
     	
     	assertTrue("After LOG4J initialize, logging should be through LOG4J",
     			output.contains("[main] INFO org.perfmon4j.instrument.PerfMonTimerTransformerTest$Log4jRuntimeLoggerTest  - info - post initialize"));
@@ -923,13 +947,85 @@ System.out.println(output);
 				} finally {
 					PerfMonTimer.stop(timer);
 				}
+
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}
 		}
     }
-    
-    
+			
+	public static class UnbalancedThreadTraceTest implements Runnable {
+		private static String THREAD_TRACE_CATEGORY = "ThreadTrace";
+		public static final class BogusAppender extends Appender {
+			public BogusAppender(AppenderID id) {
+				super(id);
+			}
+			
+			@Override
+			public void outputData(PerfMonData data) {
+				System.out.println(data.toAppenderString());
+			}
+		}
+		
+		// This creates an unbalanced thread trace.
+		public PerfMonTimer startMonitor() {
+			return PerfMonTimer.start(THREAD_TRACE_CATEGORY);
+		}
+		
+		public void methodA() {
+			methodB();
+		}
+			
+		public void methodB() {
+		}
+		
+		
+		public void test() {
+			PerfMonTimer timer = startMonitor();
+			try {
+				methodA();
+				methodB();
+			} finally {
+				PerfMonTimer.stop(timer);
+			}
+		}
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String appenderName = "bogus";
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				
+				ThreadTraceConfig tcConfig = new ThreadTraceConfig();
+				tcConfig.addAppender(config.getAppenderForName(appenderName));
+				
+				// Put the thread trace on the test method.
+				config.addThreadTraceConfig(this.getClass().getName() + ".test", tcConfig);
+				
+				PerfMon.configure(config);
+				
+				test();
+				Appender.flushAllAppenders();
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * The manual timer contained in the startMonitor method 
+	 * creates an unbalanced call stack for the thread trace.
+	 * To clean this up the call to startMonitor should NOT be part of
+	 * the thread trace output. 
+	 * @throws Exception
+	 */
+    public void testUnbalancedThreadTrace() throws Exception {
+    	String output = LaunchRunnableInVM.run(UnbalancedThreadTraceTest.class, "-eorg.perfmon4j", "", perfmon4jJar);
+    	System.out.println(output);
+    	
+    	assertTrue("Should not display the startMonitor method", !output.contains(".startMonitor"));
+    }
     
     
     public void testEnhancedStackDump() throws Exception {
@@ -948,7 +1044,7 @@ System.out.println(output);
     public static void main(String[] args) {
         BasicConfigurator.configure();
         System.setProperty("Perfmon4j.debugEnabled", "true");
-		System.setProperty("JAVASSIST_JAR",  "G:\\projects\\perfmon4j\\.repository\\javassist\\javassist\\3.10.0.GA\\javassist-3.10.0.GA.jar");
+		System.setProperty("JAVASSIST_JAR",  "G:\\projects\\perfmon4j\\.repository\\javassist\\javassist\\3.20.0-GA\\javassist-3.20.0-GA.jar");
 		
         org.apache.log4j.Logger.getLogger(PerfMonTimerTransformerTest.class.getPackage().getName()).setLevel(Level.INFO);
         String[] testCaseName = {PerfMonTimerTransformerTest.class.getName()};

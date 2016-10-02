@@ -258,6 +258,25 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalDat
     	assertEquals("Should have added system row", 1, count);
     }    
     
+    public void testGetOrCreateSystemWithoutCWDHash() throws Exception {
+    	Connection conn = appender.getConnection();
+    	
+    	appender.setExcludeCWDHashFromSystemName(true);
+    	String systemNameWithoutCWDHash = MiscHelper.getDefaultSystemName(false);
+    	
+    	final String SQL_COUNT = "SELECT COUNT(*) FROM mydb.P4JSystem WHERE SystemName = '" + systemNameWithoutCWDHash + "'";
+    	
+    	long count = JDBCHelper.getQueryCount(conn, SQL_COUNT);
+    	assertEquals("Should not have system row", 0, count);
+    	
+    	long id = appender.getSystemID();
+    	assertEquals("Should be the second systemID", 2, id);
+    	
+    	count = JDBCHelper.getQueryCount(conn, SQL_COUNT);
+    	assertEquals("Should have added system row", 1, count);
+    }      
+    
+    
     public void testOverrideSystemName() throws Exception {
     	Connection conn = appender.getConnection();
     	String systemName = "My System -- testOverrideSystemName";

@@ -127,7 +127,7 @@ class LoggerWrapper implements Logger {
 		// Very important!!!  If the logging operation is occurring
 		// while we are actively instrumenting objects, we don't 
 		// want any other classloading going on.
-		if (!PerfMonTimerTransformer.isThreadInInstrumentationPhase()) {
+		if (!PerfMonTimerTransformer.isThreadInInstrumentationPhase() && !PerfMonTimerTransformer.isInPremain()) {
 			if (mode == LOG4J_LOGGING) {
 				result = log4jDelegate;
 				if (result == null) {

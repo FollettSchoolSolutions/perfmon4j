@@ -91,7 +91,7 @@ public class NaturalStdDevAggregatorFactory implements AggregatorFactory {
         	total = total.multiply(total);
         	total = total.divide(new BigDecimal(sampleCount), 4, RoundingMode.HALF_UP);
         	BigDecimal numerator = sumOfSquares.subtract(total);
-        	result = numerator.divide(new BigDecimal(sampleCount - 1), 4, RoundingMode.HALF_UP).doubleValue();
+        	result = numerator.divide(new BigDecimal(sampleCount - 1), 2, RoundingMode.HALF_UP).doubleValue();
         }
         
         return result;
