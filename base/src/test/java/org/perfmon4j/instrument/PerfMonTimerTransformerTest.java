@@ -112,6 +112,23 @@ public class PerfMonTimerTransformerTest extends TestCase {
     	super.tearDown();
     }
     
+	
+	public void testSystemPropertyDisablesInstrumentation() throws Exception {
+    	Properties props = new Properties();
+    	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "true");
+    	
+    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(TemplatedClassTest.class, "-dtrue,-btrue,-eorg.perfmon4j", props, perfmon4jJar);
+    	assertTrue("Should have an $impl method indicating class was annotated" + output,
+    			output.contains("thisMethodShouldBeAnnotated$1$Impl()"));
+    	
+    	props.setProperty(PerfMonTimerTransformer.DISABLE_CLASS_INSTRUMENTATION_PROPERTY, "true");
+    	output = LaunchRunnableInVM.loadClassAndPrintMethods(TemplatedClassTest.class, "-dtrue,-btrue,-eorg.perfmon4j", props, perfmon4jJar);
+//System.out.println(output);
+    	assertFalse("SystemPropert Perfmon4j.DisableClassInstrumentation should disable class instrumentation: " + output,
+    			output.contains("thisMethodShouldBeAnnotated$1$Impl()"));
+    }
+    
+    
     public static class TemplatedClassTest<T> {
     	final T value;
     	
