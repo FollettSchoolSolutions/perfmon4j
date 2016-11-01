@@ -19,7 +19,7 @@
  * 
 */
 
-package org.perfmon4j.servlet;
+package web.org.perfmon4j.servlet;
 
 import java.io.IOException;
 import java.util.Arrays;

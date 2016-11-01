@@ -43,10 +43,11 @@ import org.apache.catalina.Valve;
 import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
 import org.apache.catalina.valves.ValveBase;
-import org.perfmon4j.servlet.PerfMonFilter;
-import org.perfmon4j.servlet.PerfMonNDCFilter;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+
+import web.org.perfmon4j.servlet.PerfMonFilter;
+import web.org.perfmon4j.servlet.PerfMonNDCFilter;
 
 public class PerfMonValve extends ValveBase implements Lifecycle {
 	private static final Logger logger = LoggerFactory.initLogger(PerfMonValve.class);
