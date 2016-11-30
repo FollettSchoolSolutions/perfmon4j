@@ -23,9 +23,11 @@ package org.perfmon4j.instrument;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
@@ -67,6 +69,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     public final static String USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY="Perfmon4j.UseLegacyInstrumentationWrapper"; 
 	public final static boolean USE_LEGACY_INSTRUMENTATION_WRAPPER=Boolean.getBoolean(USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY);
 
+    public final static String DISABLE_CLASS_INSTRUMENTATION_PROPERTY="Perfmon4j.DisableClassInstrumentation"; 
+	public final static boolean DISABLE_CLASS_INSTRUMENTATION=Boolean.getBoolean(DISABLE_CLASS_INSTRUMENTATION_PROPERTY);
+	
+	
+	
     // Redefined classes will store their timers in this array...
     public static PerfMon[][] monitorsForRedefinedClasses = null;
 	
@@ -156,17 +163,58 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			
 			if (!useExternalJavassist) {
 				// Check to see if we can access and load javassist classes from the embedded javassist.jar.
-				// This works on jboss, wildfly and through direct java invocation.  However it does
-				// not work under tomcat (most likely due to a security policy).
 				embeddedJavassist = Thread.currentThread().getContextClassLoader().getResource("lib/javassist.jar");
-				if (!canJavassistClassesBeLoadedFromEmbeddedJar(embeddedJavassist)) {
+				File tempJavassistJarFile = null;
+				InputStream in = null;
+				OutputStream out = null;
+				
+				try {
+					tempJavassistJarFile = File.createTempFile("javassist.", ".jar");
+					tempJavassistJarFile.deleteOnExit();
+					out = new FileOutputStream(tempJavassistJarFile);
+					in = embeddedJavassist.openStream();
+					byte[] buffer = new byte[5120];
+					int byteCount;
+					while ((byteCount = in.read(buffer)) != -1) {
+					   out.write(buffer, 0, byteCount);
+					}
+					embeddedJavassist = tempJavassistJarFile.toURI().toURL();
+				} catch (IOException ioex) {
+					try { tempJavassistJarFile.delete(); } catch (Exception ex) {}
+					tempJavassistJarFile = null;
+				} finally {
+					if (in != null) {
+						try { in.close(); } catch (Exception ex) {}
+					}
+					if (out != null) {
+						try { out.close(); } catch (Exception ex) {}
+					}
+				}
+				
+				if (tempJavassistJarFile != null) {
+					if (!canJavassistClassesBeLoadedFromEmbeddedJar(perfmon4j, embeddedJavassist)) {
+						try {
+							if (tempJavassistJarFile.exists()) {
+								tempJavassistJarFile.delete(); 
+							}
+						} catch (Exception ex) {
+							// Nothing todo..
+						}
+						tempJavassistJarFile = null;
+						useExternalJavassist = true;
+					}
+				}
+				
+				if (tempJavassistJarFile != null) {
+						System.out.println("Perfmon4j will use embedded javassist.jar copied to temporary file "
+								+ "(" + tempJavassistJarFile.getAbsolutePath() + ")"
+								+ ".  To use an external "
+								+ "javassist.jar set system property \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\"."); 
+				} else {
 					System.err.println("Perfmon4j is unabled to load classes from the embedded javassist.jar "
 						+ "and will be forced to use the external javassist.jar." ); 
 					embeddedJavassist = null;
 					useExternalJavassist = true;
-				} else {
-					System.out.println("Perfmon4j will use embedded javassist.jar.  To use an external "
-							+ "javassist.jar set system property \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\"."); 
 				}
 			} else {
 				System.out.println("Perfmon4j found system property: \"" + PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR + "=true\". " 
@@ -513,6 +561,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         if (javassistVersion != null) {
         	logger.logInfo("Perfmon4j found Javassist bytcode instrumentation library version: " + javassistVersion);
         }
+        
     	logger.logInfo(MiscHelper.getHighResolutionTimerEnabledDisabledMessage());
     	 
         logger.logInfo("Perfmon4j transformer paramsString: " + (packageName == null ? "" : packageName));
@@ -521,14 +570,19 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         }
         SystemGCDisabler disabler = null;
         
-        if (t.params.isExtremeSQLMonitorEnabled()) {
-        	SQLTime.setEnabled(true);
-        	logger.logInfo("Perfmon4j SQL instrumentation enabled.");
+        if (DISABLE_CLASS_INSTRUMENTATION) {
+        	logger.logWarn("!!** Found system property " + DISABLE_CLASS_INSTRUMENTATION_PROPERTY + "=true. Perfmon4j class instrumentation is disabled "
+        			+ " -- Extreme, Annotation and SQL monitoring will not be implemented. **!");
         } else {
-        	logger.logInfo("Perfmon4j SQL instrumentation disabled.  Add -eSQL to javaAgent parameters to enable.");
+	        if (t.params.isExtremeSQLMonitorEnabled() ) {
+	        	SQLTime.setEnabled(true);
+	        	logger.logInfo("Perfmon4j SQL instrumentation enabled.");
+	        } else {
+	        	logger.logInfo("Perfmon4j SQL instrumentation disabled.  Add -eSQL to javaAgent parameters to enable.");
+	        }
+	        inst.addTransformer(t);
         }
         
-        inst.addTransformer(t);
         if (t.params.isDisableSystemGC()) {
     		if (inst.isRedefineClassesSupported()) {
     			logger.logInfo("Perfmon4j is installing SystemGCDisabler agent");
@@ -565,8 +619,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         
         // Check for all the preloaded classes and try to instrument any that might
         // match our perfmon4j javaagent configuration
-        if (!t.params.isBootStrapInstrumentationEnabled()) {
-        	logger.logInfo("Perfmon4j bootstrap implementation disabled.  Add -btrue to javaAgent parameters to enable.");
+        if (!t.params.isBootStrapInstrumentationEnabled() || DISABLE_CLASS_INSTRUMENTATION) {
+        	if (!DISABLE_CLASS_INSTRUMENTATION) {
+        		logger.logInfo("Perfmon4j bootstrap implementation disabled.  Add -btrue to javaAgent parameters to enable.");
+        	}
         	if (disabler != null) {
         		try {
 	        		Class<?> clazz = System.class;       		
@@ -769,7 +825,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	return result;
     }
     
-    private static boolean canJavassistClassesBeLoadedFromEmbeddedJar(URL url) {
+    private static boolean canJavassistClassesBeLoadedFromEmbeddedJar(File perfmon4j, URL url) {
     	/**
     	 * This method is called from the static class initializer... Do not 
     	 * use logger here!
@@ -780,7 +836,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	    	try {
 		    	URLClassLoader tmpLoader = null;
 		    	try {
-		    		tmpLoader = new URLClassLoader(new URL[]{url});
+		    		tmpLoader = new IsolateJavassistClassLoader(perfmon4j, url);
 		    		tmpLoader.loadClass("javassist.CtClass");
 		    		result = true;
 		    	} finally {

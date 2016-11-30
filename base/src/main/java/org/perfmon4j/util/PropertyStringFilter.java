@@ -58,22 +58,24 @@ public class PropertyStringFilter {
 
     private static String filter(Properties props, String sourceString, List recursionPreventionList) {
         String result = sourceString;
-        Matcher matcher = REQUEST_PATTERN.matcher(sourceString);
-       
-        while (matcher.find()) {
-            final String key = matcher.group(1);
-            String value = props.getProperty(key);
-            if (value != null) {
-                if (!recursionPreventionList.contains(key)) {
-                    try {
-                        recursionPreventionList.add(key);
-                        value = filter(props, value, recursionPreventionList);
-                        result = replaceAll(result, "${" + key + "}", value);
-                    } finally {
-                        recursionPreventionList.remove(key);
-                    }
-                }
-            }
+        if (sourceString != null) {
+	        Matcher matcher = REQUEST_PATTERN.matcher(sourceString);
+	       
+	        while (matcher.find()) {
+	            final String key = matcher.group(1);
+	            String value = props.getProperty(key);
+	            if (value != null) {
+	                if (!recursionPreventionList.contains(key)) {
+	                    try {
+	                        recursionPreventionList.add(key);
+	                        value = filter(props, value, recursionPreventionList);
+	                        result = replaceAll(result, "${" + key + "}", value);
+	                    } finally {
+	                        recursionPreventionList.remove(key);
+	                    }
+	                }
+	            }
+	        }
         }
         
         return result;

@@ -141,10 +141,12 @@ class XMLConfigurationParser extends DefaultHandler {
     private String currentThreadTraceMonitorName = null;
     private ThreadTraceConfig currentThreadTraceConfig = null;
     private List<ThreadTraceConfig.Trigger> currentTriggers = null;
+
+    @Override() public void startElement(String uri, String name, String qName, Attributes atts) throws SAXException {
+    	startElementWorker(uri, name, qName, new SystemPropertyAwareAttributes(atts));
+    }
     
-    
-    @Override() public void startElement(@SuppressWarnings("unused") String uri, String name, @SuppressWarnings("unused") String qName,
-        Attributes atts) throws SAXException {
+    public void startElementWorker(String uri, String name, String qName, Attributes atts) throws SAXException {
         switch (currentState) {
             case STATE_UNDEFINED: 
                 if (!ROOT_ELEMENT_NAME.equalsIgnoreCase(name)) {
@@ -435,4 +437,61 @@ class XMLConfigurationParser extends DefaultHandler {
             this.className = className;
         }
     }
+    
+    private static class SystemPropertyAwareAttributes implements Attributes {
+    	private final Attributes wrapped;
+    	
+    	SystemPropertyAwareAttributes(Attributes wrapped) {
+    		this.wrapped = wrapped;
+    	}
+
+		public int getLength() {
+			return wrapped.getLength();
+		}
+
+		public String getURI(int index) {
+			return wrapped.getURI(index);
+		}
+
+		public String getLocalName(int index) {
+			return wrapped.getLocalName(index);
+		}
+
+		public String getQName(int index) {
+			return wrapped.getQName(index);
+		}
+
+		public String getType(int index) {
+			return wrapped.getType(index);
+		}
+
+		public String getValue(int index) {
+			return PropertyStringFilter.filter(wrapped.getValue(index));
+		}
+
+		public int getIndex(String uri, String localName) {
+			return wrapped.getIndex(uri, localName);
+		}
+
+		public int getIndex(String qName) {
+			return wrapped.getIndex(qName);
+		}
+
+		public String getType(String uri, String localName) {
+			return wrapped.getType(uri, localName);
+		}
+
+		public String getType(String qName) {
+			return wrapped.getType(qName);
+		}
+
+		public String getValue(String uri, String localName) {
+			return PropertyStringFilter.filter(wrapped.getValue(uri, localName));
+		}
+
+		public String getValue(String qName) {
+			return PropertyStringFilter.filter(wrapped.getValue(qName));
+		}
+    }
+    
 }

@@ -465,11 +465,11 @@ public class TransformerParams {
 	}
 	
 	public boolean isExtremeInstrumentationEnabled() {
-		return !extremeList.isEmpty();
+		return !extremeList.isEmpty() && !PerfMonTimerTransformer.DISABLE_CLASS_INSTRUMENTATION;
 	}
 
 	public boolean isAnnotationInstrumentationEnabled() {
-		return !annotateList.isEmpty();
+		return !annotateList.isEmpty() && !PerfMonTimerTransformer.DISABLE_CLASS_INSTRUMENTATION;
 	}
 	
 	public boolean isDisableSystemGC() {
@@ -477,7 +477,7 @@ public class TransformerParams {
 	}
 	
 	public boolean isExtremeSQLMonitorEnabled() {
-		return extremeSQLMonitorEnabled;
+		return extremeSQLMonitorEnabled && !PerfMonTimerTransformer.DISABLE_CLASS_INSTRUMENTATION;
 	} 
 	
     // Doing a binary search on this...  These must be in alpha-sorted order.
