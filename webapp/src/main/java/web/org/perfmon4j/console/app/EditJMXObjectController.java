@@ -38,6 +38,7 @@ import org.zkoss.zk.ui.Execution;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Wire;
+import org.zkoss.zul.Button;
 import org.zkoss.zul.Grid;
 import org.zkoss.zul.Label;
 import org.zkoss.zul.ListModelArray;
@@ -114,7 +115,8 @@ public class EditJMXObjectController extends SelectorComposer<Component> {
 		public void render(Row row, MBeanOperationInfo operation, int whatIsThis)
 				throws Exception {
 			
-			row.appendChild(new Label(operation.getName()));
+			row.appendChild(new Button(operation.getName()));
+//			row.appendChild(new Label(operation.getName()));
 			row.appendChild(new Label(operation.getReturnType()));
 			row.appendChild(new Label(operation.getDescription()));
 		}

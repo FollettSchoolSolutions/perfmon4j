@@ -7,7 +7,7 @@
 	xmlns:html="native">
 	<vlayout>
 		<hlayout><image src="/app/images/perfmon4j-logo.png"/><html:h2>${oName}</html:h2></hlayout>
-		<label>Attributes</label>
+		<html:h3>Attributes</html:h3>
 		<grid id="attributesGrid" width="100%" height="100%" mold="paging" pageSize="10">
 			<columns>
 				<column label="Name"/>
@@ -17,7 +17,7 @@
 			</columns>
 			<rows/>
 		</grid>
-		<label>Operations</label>
+		<html:h3>Operations</html:h3>
 		<grid id="operationsGrid" width="100%" height="100%" mold="paging" pageSize="10">
 			<columns>
 				<column label="Name"/>
