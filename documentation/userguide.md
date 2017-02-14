@@ -399,13 +399,15 @@ Installing the perfmon4j java agent on the command line is configured as follows
 |-p| This option specifies a port should be opened to monitor perfmon4j instrumentation through the perfmon4j VisualVM plugin. You must specify AUTO, where perfmon4j will attempt to find an avialable port, or the specific port to use.|-pAUTO,-p5400|
 |-d|Enables debug level logging in perfmon4j. Defaults to false.|-dtrue|
 |-v|Enables verbose instrumentation output. This will output each method that is instrumented and the name of the monitor created.|-vtrue|
-|-b|When this option is true perfmon4j will instrument ALL classes loaded by the bootstrap loader. When this option is false (default) classes that are loaded before the javaagent is loaded are NOT instrumented.|-btrue|
+|-b|When this option is true perfmon4j will instrument ALL classes loaded by the bootstrap loader. When this option is false (default) classes that are loaded before the javaagent is loaded are NOT instrumented. [See here for more information on instrumenting boot level classes](../notes/bootstrap/)|-btrue|
 |-r|Used with the -f option. Will override the duration in seconds that the perfmonconfig.xml file will be checked for modification. The default reload duration is every 60 seconds|-fc:/perfmonconfig.xml,-r360|
 
 <a name="perfmonconfig-xml-config"/>
 
 ## Perfmonconfig.xml configuration
 Runtime configuration is done through the perfmonconfig xml file.  This file will be checked for updates as the application is running. 
+
+[See here for information on using token substitution within the perfmonconfig file](./tokensubstitution/)
 
 ### Boot specific configuration
 
