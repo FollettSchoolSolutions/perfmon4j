@@ -141,9 +141,10 @@ class XMLConfigurationParser extends DefaultHandler {
     private String currentThreadTraceMonitorName = null;
     private ThreadTraceConfig currentThreadTraceConfig = null;
     private List<ThreadTraceConfig.Trigger> currentTriggers = null;
+    private final PropertyStringFilter filter = new PropertyStringFilter(true);
 
     @Override() public void startElement(String uri, String name, String qName, Attributes atts) throws SAXException {
-    	startElementWorker(uri, name, qName, new SystemPropertyAwareAttributes(atts));
+    	startElementWorker(uri, name, qName, new SystemPropertyAwareAttributes(atts, filter));
     }
     
     public void startElementWorker(String uri, String name, String qName, Attributes atts) throws SAXException {
@@ -422,7 +423,7 @@ class XMLConfigurationParser extends DefaultHandler {
             if (currentAttributeData == null) {
                 currentAttributeData = "";
             }
-            currentAttributeData +=  PropertyStringFilter.filter(new String(ch, start, length));
+            currentAttributeData +=  filter.doFilter(new String(ch, start, length));
         }
     }
     
@@ -439,10 +440,12 @@ class XMLConfigurationParser extends DefaultHandler {
     }
     
     private static class SystemPropertyAwareAttributes implements Attributes {
+    	private final PropertyStringFilter filter;
     	private final Attributes wrapped;
     	
-    	SystemPropertyAwareAttributes(Attributes wrapped) {
+    	SystemPropertyAwareAttributes(Attributes wrapped, PropertyStringFilter filter) {
     		this.wrapped = wrapped;
+    		this.filter = filter;
     	}
 
 		public int getLength() {
@@ -466,7 +469,7 @@ class XMLConfigurationParser extends DefaultHandler {
 		}
 
 		public String getValue(int index) {
-			return PropertyStringFilter.filter(wrapped.getValue(index));
+			return filter.doFilter(wrapped.getValue(index));
 		}
 
 		public int getIndex(String uri, String localName) {
@@ -486,11 +489,11 @@ class XMLConfigurationParser extends DefaultHandler {
 		}
 
 		public String getValue(String uri, String localName) {
-			return PropertyStringFilter.filter(wrapped.getValue(uri, localName));
+			return filter.doFilter(wrapped.getValue(uri, localName));
 		}
 
 		public String getValue(String qName) {
-			return PropertyStringFilter.filter(wrapped.getValue(qName));
+			return filter.doFilter(wrapped.getValue(qName));
 		}
     }
     

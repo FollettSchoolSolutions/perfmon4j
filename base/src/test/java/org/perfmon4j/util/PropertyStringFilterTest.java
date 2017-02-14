@@ -20,10 +20,15 @@
 */
 package org.perfmon4j.util;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
+
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -52,25 +57,27 @@ public class PropertyStringFilterTest extends TestCase {
 /*----------------------------------------------------------------------------*/    
     public void testSimple() throws Exception {
         Properties props = new Properties();
+        PropertyStringFilter filter = new PropertyStringFilter(props);
         
         final String sourceString = "abc,${last.name},${first.name}.xyz";
         
         assertEquals("If matching properties are not set... do nothing",
-            sourceString, PropertyStringFilter.filter(props, sourceString));
+            sourceString, filter.doFilter(sourceString));
         
         props.setProperty("last.name", "Doe");
         assertEquals("Mathing property should be substituted",
-            "abc,Doe,${first.name}.xyz", PropertyStringFilter.filter(props, sourceString));
+            "abc,Doe,${first.name}.xyz", filter.doFilter(sourceString));
        
         
         props.setProperty("first.name", "John");
         assertEquals("Mathing property should be substituted",
-            "abc,Doe,John.xyz", PropertyStringFilter.filter(props, sourceString));
+            "abc,Doe,John.xyz", filter.doFilter(sourceString));
     }
     
  /*----------------------------------------------------------------------------*/    
     public void testPropertyEmbeddedInProperty() throws Exception {
         Properties props = new Properties();
+        PropertyStringFilter filter = new PropertyStringFilter(props);
         
         final String sourceString = "${full.name}";
         
@@ -79,12 +86,13 @@ public class PropertyStringFilterTest extends TestCase {
         props.setProperty("first.name", "John");
 
         assertEquals("Mathing property should be substituted",
-            "John Doe", PropertyStringFilter.filter(props, sourceString));
+            "John Doe", filter.doFilter(sourceString));
     }
    
  /*----------------------------------------------------------------------------*/    
     public void testPreventRecursion() throws Exception {
         Properties props = new Properties();
+        PropertyStringFilter filter = new PropertyStringFilter(props);
         
         final String sourceString = "${full.name}";
         
@@ -93,14 +101,121 @@ public class PropertyStringFilterTest extends TestCase {
 
         try {
             assertEquals("Can't expand when we have recursion", "${full.name} cant't expand", 
-                PropertyStringFilter.filter(props, sourceString));
+                filter.doFilter(sourceString));
             
         } catch (StackOverflowError se) {
             fail("Should not allow stack overflow");
         }
     }
     
-/*----------------------------------------------------------------------------*/    
+    
+    public void testGetVariableFromEnvironment() throws Exception {
+    	Random r = new Random();
+    	
+    	final String envKey = Long.toBinaryString(r.nextLong());
+    	final String envValue = Long.toBinaryString(r.nextLong());
+    	final String sourceString = "${" + envKey + "}";
+    	
+    	Map<String, String> mockEnvVariables = new HashMap<String, String>();
+    	mockEnvVariables.put(envKey, envValue);
+    	
+    	PropertyStringFilter filter = new PropertyStringFilter(true);
+    	filter.setMockEnvVariables_TEST_ONLY(mockEnvVariables);
+    	
+    	assertEquals("Should find mock environment variable", envValue, filter.doFilter(sourceString));
+    }
+    
+    public void testSystemPropertyIsPreferred() throws Exception {
+    	Random r = new Random();
+    	
+    	final String envKey = Long.toBinaryString(r.nextLong());
+    	final String envValue = Long.toBinaryString(r.nextLong());
+    	final String systemPropertyValue = "System Property Override";
+    	final String sourceString = "${" + envKey + "}";
+    	
+    	Map<String, String> mockEnvVariables = new HashMap<String, String>();
+    	mockEnvVariables.put(envKey, envValue);
+    	
+    	try {
+        	PropertyStringFilter filter = new PropertyStringFilter(true);
+        	filter.setMockEnvVariables_TEST_ONLY(mockEnvVariables);
+
+        	// Since envKey is only set as an environment variable that should be returned
+        	assertEquals("Should find mock environment variable", envValue, filter.doFilter(sourceString));
+        	
+        	// Now use envKey to set a system property.  This should now be preferred and returned.
+        	System.setProperty(envKey, systemPropertyValue);
+        	
+        	
+        	assertEquals("System property should override environment property", systemPropertyValue, filter.doFilter(sourceString));
+        	
+    	} finally {
+    		System.getProperties().remove(envKey);
+    	}
+    }
+
+    
+    /**
+     * By the pattern ${env.KEY_NAME} the variable will attempt to be read from the environment first.
+     * If not found it will try looking in system properties.
+     * @throws Exception
+     */
+    public void testForcePreveredToEnvironment() throws Exception {
+    	Random r = new Random();
+    	
+    	final String envKey = Long.toBinaryString(r.nextLong());
+    	final String envValue = Long.toBinaryString(r.nextLong());
+    	final String systemPropertyValue = "System Property Override";
+    	final String sourceString = "${env." + envKey + "}";
+    	
+    	Map<String, String> mockEnvVariables = new HashMap<String, String>();
+    	mockEnvVariables.put(envKey, envValue);
+    	
+    	try {
+        	PropertyStringFilter filter = new PropertyStringFilter(true);
+        	filter.setMockEnvVariables_TEST_ONLY(mockEnvVariables);
+        	// Now use envKey to set a system property.  This should now be preferred and returned.
+        	System.setProperty(envKey, systemPropertyValue);
+        	
+        	assertEquals("Should prefer the the environment variable", envValue, filter.doFilter(sourceString));
+
+        	//Now remove the mock environment variable...should now retrieve the system property 
+        	filter = new PropertyStringFilter(true);
+
+        	assertEquals("Should return system property since environment variable not set", 
+        			systemPropertyValue, filter.doFilter(sourceString));
+    	} finally {
+    		System.getProperties().remove(envKey);
+    	}
+    }
+    
+    /**
+     * For backwards compatibility if someone was using a system property that fit 
+     * the pattern ${env.KEY_NAME} we should still retrieve this value (if KEY_NAME is
+     * not found in the Environment or System properties)
+     * @throws Exception
+     */
+    public void testForceBackwardCompatibilityWithEnvPrefix() throws Exception {
+    	Random r = new Random();
+    	
+    	final String envKey = "env." + Long.toBinaryString(r.nextLong());
+    	final String envValue = Long.toBinaryString(r.nextLong());
+    	final String sourceString = "${" + envKey + "}";
+    	
+    	try {
+        	PropertyStringFilter filter = new PropertyStringFilter(true);
+        	// Set the system property with the "env.XXX" pattern
+        	System.setProperty(envKey, envValue);
+        	
+        	assertEquals("Should return system property based on raw key", envValue, filter.doFilter(sourceString));
+    	} finally {
+    		System.getProperties().remove(envKey);
+    	}
+    }
+
+    
+    
+    /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
         Logger.getRootLogger().setLevel(Level.INFO);
