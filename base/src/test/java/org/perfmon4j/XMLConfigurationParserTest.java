@@ -22,6 +22,7 @@
 package org.perfmon4j;
 
 import java.io.StringReader;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -140,6 +141,40 @@ public class XMLConfigurationParserTest extends TestCase {
         }
     }
 
+    /*----------------------------------------------------------------------------*/
+    public void testParseBodyValueFromEnvironmentVariable() throws Exception {
+    	Map.Entry<String, String> entry = getEnvironmentVariableForUser();
+    	
+    	assertNull("Can not have a system property set with the same value", System.getProperty(entry.getValue()));
+    	
+    	String token = "${" + entry.getKey() + "}";
+    	
+    	assertEquals(entry.getValue(), substituteTokenInXMLBody(token));
+    }
+
+    
+    /*----------------------------------------------------------------------------*/
+    public void testParseBodyValueFromEnvironmentVariableSystemPropIsPreferred() throws Exception {
+    	Map.Entry<String, String> entry = getEnvironmentVariableForUser();
+    	String tokenPrefersSystemProperty = "${" + entry.getKey() + "}";
+    	String tokenPrefersEnvVariable = "${env." + entry.getKey() + "}";
+
+    	final String resetSystemProperty = System.getProperty(entry.getKey());
+    	final String systemPropertyValue = entry.getValue() + "ABC";
+    	System.setProperty(entry.getKey(), systemPropertyValue);
+    	try {
+        	assertEquals(entry.getValue(), substituteTokenInXMLBody(tokenPrefersEnvVariable));
+        	assertEquals(systemPropertyValue, substituteTokenInXMLBody(tokenPrefersSystemProperty));
+        	
+    	} finally {
+    		if (resetSystemProperty != null) {
+    			System.setProperty(entry.getKey(), resetSystemProperty);
+    		} else {
+    			System.getProperties().remove(entry.getKey());
+    		}
+    	}
+    }
+    
     /*----------------------------------------------------------------------------*/
     public void testParseWithAttributeFromSystemProperty() throws Exception {
         System.setProperty("monitorName", "setByProperty");
@@ -595,6 +630,61 @@ public class XMLConfigurationParserTest extends TestCase {
     	assertNotNull("Should not have recieved default configuration",config.getAppenderForName("5 minute"));
     }
 
+    private Map.Entry<String, String> getEnvironmentVariableForUser() {
+    	Map<String, String> envProperties = System.getenv();
+    	for (Map.Entry<String, String> envProp : envProperties.entrySet()) {
+    		final String key = (String)envProp.getKey();
+    		final String value = (String)envProp.getValue();
+    		if (key.equalsIgnoreCase("USER") || key.equalsIgnoreCase("USERNAME") ) {
+		        return new Map.Entry<String, String>() {
+		
+		    			public String getKey() {
+		    				return key;
+		    			}
+		
+		    			public String getValue() {
+		    				return value;
+		    			}
+		
+		    			public String setValue(String value) {
+		    				return null;
+		    			}
+		    		};
+    		}
+    	}
+    	
+    	fail("Could not find environment variable for User or UserName");
+    	return null;
+ 	}
+
+    /**
+     * This helper method will build an XML configuration containing the
+     * specified tokenName within a body tag.
+     * The configuration will be processed and the substituted value
+     * of the token will be returned.
+     * 
+     *  
+     * @param token - Examples ${USER}, ${env.USER}
+     * @return
+     * @throws Exception
+     */
+    private String substituteTokenInXMLBody(String token) throws Exception {
+        final String XML =
+            "<Perfmon4JConfig>" +
+            "   <appender name='5 minute' " +
+            "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+            "       interval='5 min'>" +
+            "       <attribute name='extraString'>" + token + "</attribute>" +
+            "   </appender>" +
+            "   <monitor name='mon'>" +
+            "       <appender name='5 minute'/>" +
+            "   </monitor>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+        Appender appender = config.getAppendersForMonitor("mon")[0].getAppender();
+        return ((MyAppender)appender).extraString;
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
