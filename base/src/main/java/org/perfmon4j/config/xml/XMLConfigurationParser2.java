@@ -110,6 +110,7 @@ class XMLConfigurationParser2 extends DefaultHandler {
     private MonitorConfigElement currentMonitorElement = null;
     private SnapShotConfigElement currentSnapShotElement = null;
     private ThreadTraceConfigElement currentThreadTraceElement = null;
+    private final PropertyStringFilter filter = new PropertyStringFilter(true);
     
 //    private boolean isActiveBasedOnProperty(Attributes atts) {
 //        boolean result = true;
@@ -398,7 +399,7 @@ class XMLConfigurationParser2 extends DefaultHandler {
             if (currentAttributeData == null) {
                 currentAttributeData = "";
             }
-            currentAttributeData +=  PropertyStringFilter.filter(new String(ch, start, length));
+            currentAttributeData +=  filter.doFilter(new String(ch, start, length));
         }
     }
 }
