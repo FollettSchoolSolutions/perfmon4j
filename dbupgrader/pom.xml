@@ -7,7 +7,7 @@
 		<artifactId>perfmon4j-project</artifactId>
 		<!-- THIS VERSION NUMBER MUST BE SYNCED WITH THE PARENT POM.. AT LEAST 
 			UNTIL MAVEN ADDS SOMETHING THAT MAKES MORE SENSE! -->
-		<version>1.3.2</version>
+		<version>1.3.3-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>perfmon4j-dbupgrader</artifactId>
