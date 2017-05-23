@@ -108,14 +108,7 @@ public class PerfMon {
         ROOT_MONITOR_NAME = "<ROOT>";
         rootMonitor = new PerfMon(null, ROOT_MONITOR_NAME);
         
-        /* TODO:  Fix potential Null pointer exception here! */
-        String version = PerfMon.class.getPackage().getImplementationVersion();
-        if (version == null) {
-            // In production the package implementation version will always exists
-			// However in test it will not, since tests are not running off a bundled JAR.
-        	version = "NA(Running in test)";
-        }
-        System.setProperty(PERFMON4J_VERSION,  version);
+        System.setProperty(PERFMON4J_VERSION, getImplementationVersion());
         System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
         System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015 Follett School Solutions, Inc");
     }
@@ -1465,5 +1458,32 @@ public class PerfMon {
 
 	public long getSumOfSQLSquares() {
 		return sumOfSQLSquares;
+	}
+	
+	
+	/**
+	 * When running within the armstrong client getting the implementation version with:
+	 * "PerfMon.class.getPackage().getImplementationVersion()" would throw a null 
+	 * pointer exception.  This method was added to ensure every reference
+	 * was checked for null
+	 *  
+	 * @return
+	 */
+	private static String getImplementationVersion() {
+		String version = null;
+		
+		Class<?> clazz = PerfMon.class;
+		if (clazz != null) {
+			Package p = clazz.getPackage();
+			if (p != null) {
+				version = p.getImplementationVersion();
+			}
+		}
+
+		if (version == null) {
+			version = "NA(Running in test)";
+		}
+		
+		return version;
 	}
 }
