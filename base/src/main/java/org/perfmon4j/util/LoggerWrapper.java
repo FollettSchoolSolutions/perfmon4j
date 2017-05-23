@@ -20,7 +20,7 @@
  */
 package org.perfmon4j.util;
 
-import org.perfmon4j.instrument.PerfMonTimerTransformer;
+import org.perfmon4j.instrument.InstrumentationRecursionPreventor;
 
 /**
  * Based on classloader issues the Log4j Logger class may not be loadable from
@@ -127,12 +127,7 @@ class LoggerWrapper implements Logger {
 		// Very important!!!  If the logging operation is occurring
 		// while we are actively instrumenting objects, we don't 
 		// want any other classloading going on.
-		
-		/**
-		 * TODO: Fix -- In Armstrong Client referencing the PerfMonTimerTransformer class here
-		 * caused a no class def found exception loading PerfMonTimerTransformer class!
-		 */
-		if (!PerfMonTimerTransformer.isThreadInInstrumentationPhase() && !PerfMonTimerTransformer.isInPremain()) {
+		if (InstrumentationRecursionPreventor.allowThreadInLogging()) {
 			if (mode == LOG4J_LOGGING) {
 				result = log4jDelegate;
 				if (result == null) {
