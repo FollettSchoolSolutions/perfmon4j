@@ -127,6 +127,11 @@ class LoggerWrapper implements Logger {
 		// Very important!!!  If the logging operation is occurring
 		// while we are actively instrumenting objects, we don't 
 		// want any other classloading going on.
+		
+		/**
+		 * TODO: Fix -- In Armstrong Client referencing the PerfMonTimerTransformer class here
+		 * caused a no class def found exception loading PerfMonTimerTransformer class!
+		 */
 		if (!PerfMonTimerTransformer.isThreadInInstrumentationPhase() && !PerfMonTimerTransformer.isInPremain()) {
 			if (mode == LOG4J_LOGGING) {
 				result = log4jDelegate;

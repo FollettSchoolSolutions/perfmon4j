@@ -108,6 +108,7 @@ public class PerfMon {
         ROOT_MONITOR_NAME = "<ROOT>";
         rootMonitor = new PerfMon(null, ROOT_MONITOR_NAME);
         
+        /* TODO:  Fix potential Null pointer exception here! */
         String version = PerfMon.class.getPackage().getImplementationVersion();
         if (version == null) {
             // In production the package implementation version will always exists
