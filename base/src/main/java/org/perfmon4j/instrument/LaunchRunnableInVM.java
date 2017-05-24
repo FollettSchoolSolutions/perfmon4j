@@ -102,50 +102,69 @@ public class LaunchRunnableInVM {
 		return path;
 	}
 
+	public static String runWithoutPerfmon4jJavaAgent(Class<?> clazz, File perfmonJar) throws Exception {
+		return runWithoutPerfmon4jJavaAgent(clazz, "", null, perfmonJar);
+	}
+	
+	public static String runWithoutPerfmon4jJavaAgent(Class<?> clazz, String args, Properties systemProperties, File perfmonJar) throws Exception {
+		return run(clazz, null, args, systemProperties, perfmonJar, false);
+	}
 	
 	public static String run(Class<?> clazz, String javaAgentParams, String args, Properties systemProperties, File perfmonJar) throws Exception {
+		return run(clazz, javaAgentParams, args, systemProperties, perfmonJar, true);
+	}
+	
+	
+	
+	
+	
+	private static String run(Class<?> clazz, String javaAgentParams, String args, Properties systemProperties, File perfmonJar, boolean loadJavaAgent) throws Exception {
 		StringBuffer output = new StringBuffer();
     	
     	final String javaCmd = System.getProperty("java.home") + "/bin/java";
     	final String runnableName = clazz.getName();
 
-    	final String javaAgentPath = perfmonJar.getCanonicalPath();
-    	
+    	final String PATH_SEPERATOR = System.getProperty("path.separator");
     	String cmdString = quoteIfNeeded(javaCmd);
+    
+    	String myClassPath = "";
+    	String originalClasspath = System.getProperty("java.class.path").replaceAll(";/", ";");
+    	originalClasspath.split(PATH_SEPERATOR);
     	
-    	String myClassPath = System.getProperty("java.class.path").replaceAll(";/", ";");
-    	myClassPath = myClassPath.replaceAll("\\\\", "/");
-    	// The location of the Derby Embedded Driver Jar should be set as a maven-surefire-plugin
-    	// property in perfom4j/base/pom.xml
-    	String derbyDriver = fixupLinuxHomeFolder(System.getProperty("DERBY_EMBEDDED_DRIVER"));
-    	if (derbyDriver != null) {
-    		File driver = new File(derbyDriver);
-    		if (!driver.exists()) {
-    			throw new RuntimeException("DERBY_EMBEDDED_DRIVER \"" + derbyDriver + "\" - NOT FOUND!");
-    		}
-    		myClassPath += System.getProperty("path.separator") + derbyDriver;
+    	for (String part : originalClasspath.split(PATH_SEPERATOR)) {
+    		if (part.endsWith("test-classes")) {
+    			// Add the perfmon4j test classes...
+    			myClassPath += part + PATH_SEPERATOR; 
+    		} else if (part.contains("junit")) {
+    			// Add junit classes...
+    			myClassPath += part + PATH_SEPERATOR; 
+    		} else if (part.contains("derby")) {
+    			// Add derby classes for SQLAppender tests...
+    			myClassPath += part + PATH_SEPERATOR; 
+    		} else if (part.contains("log4j")) {
+    			// Add log4j classes for log4j tests....
+    			myClassPath += part + PATH_SEPERATOR; 
+			} 
     	}
+//    	myClassPath = myClassPath.replaceAll("\\\\", "/");
+    	
+		if (loadJavaAgent) {
+	    	cmdString +=  " -javaagent:" + quoteIfNeeded(perfmonJar.getCanonicalPath());
+	    	if (javaAgentParams != null) {
+	    		cmdString += "=" + javaAgentParams;
+	    	}
+			cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
+		} else {
+			// Just load the perfmon4j.jar onto the classpath.
+			myClassPath += PATH_SEPERATOR + perfmonJar.getCanonicalPath();
+		}
 
-    	// The location of the LOG4J Jar should be set as a maven-surefire-plugin
-    	// property in perfom4j/base/pom.xml
-    	String log4jJar = fixupLinuxHomeFolder(System.getProperty("LOG4J_JAR"));
-    	if (log4jJar != null) {
-    		myClassPath += System.getProperty("path.separator") + log4jJar;
-    	}
-    	
     	myClassPath = quoteIfNeeded(myClassPath);
     	
     	System.out.println("CLASSPATH=" + myClassPath); 
 		cmdString += " -classpath " + myClassPath;
-    	
-    	
-    	cmdString +=  " -javaagent:" + quoteIfNeeded(javaAgentPath);
-    	if (javaAgentParams != null) {
-    		cmdString += "=" + javaAgentParams;
-    	}
 
-		cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
-
+		
 		if (systemProperties != null) {
 			Iterator<Map.Entry<Object,Object>> itr = systemProperties.entrySet().iterator();
 			while (itr.hasNext()) {

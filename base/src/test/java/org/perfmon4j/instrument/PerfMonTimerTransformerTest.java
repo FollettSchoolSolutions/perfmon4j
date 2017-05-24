@@ -55,7 +55,6 @@ import org.perfmon4j.util.MiscHelper;
 
 
 public class PerfMonTimerTransformerTest extends TestCase {
-	private static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
@@ -527,6 +526,7 @@ System.out.println(output);
     }
 
 	public static class DontInstrumentMeTest implements Runnable{
+		@SuppressWarnings("unused")
 		private static final String NO_PERFMON4J_INSTRUMENTATION = "";
 		
 		public void run() {
