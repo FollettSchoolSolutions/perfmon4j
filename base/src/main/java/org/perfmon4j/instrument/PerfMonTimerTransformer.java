@@ -101,7 +101,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	public static final JMXSnapShotProxyFactory jmxSnapShotProxyFactory;
 	private static ClassLoader javassistClassLoader = null;
 	private static String javassistVersion = null;
-	private static boolean inPremain = false;
 	
 	/**
 	 * If perfmon4j is loaded with this property set to false it will ignore the javassist jar
@@ -269,19 +268,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         params = new TransformerParams(paramsString);
     }
     
-    private static ThreadLocal<RecursionPreventor> recursionPreventor = new ThreadLocal<RecursionPreventor>() {
-        protected synchronized RecursionPreventor initialValue() {
-            return new RecursionPreventor();
-        }
-    };    
-    
-    public static boolean isThreadInInstrumentationPhase() {
-    	return recursionPreventor.get().threadInScope;
-    }
-    
-    private static class RecursionPreventor {
-    	boolean threadInScope = false;
-    }
     
     private static boolean allowedClass(String className) {
         boolean result = !className.startsWith("["); // Skip all array classes...
@@ -303,7 +289,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         byte[] result = null;
         long startMillis = -1;
         if (className != null) {
-	        if (recursionPreventor.get().threadInScope) {
+	        if (InstrumentationRecursionPreventor.isThreadInInstrumentation()) {
 	        	InstrumentationMonitor.incRecursionSkipCount();
 	        } else {
 	            // !!!! IMPORTANT !!!! DO NOT DO ANYTHING HERE BEFORE BEFORE
@@ -312,7 +298,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	        	try {
 	        		InstrumentationMonitor.incCurrentInstThreads();
 	
-	        		recursionPreventor.get().threadInScope = true;
+	        		InstrumentationRecursionPreventor.setThreadInInstrumentation(true);
 	        		
 	        		if (classBeingRedefined != null && !params.isBootStrapInstrumentationEnabled()) {
 	        			// Only redefine classes if bootstrap implementation IS enabled....
@@ -355,7 +341,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                }
 	            } finally {
 	        		InstrumentationMonitor.decCurrentInstThreads();
-	            	recursionPreventor.get().threadInScope = false;
+	        		InstrumentationRecursionPreventor.setThreadInInstrumentation(false);
 	            }
 	            if (startMillis > 0) {
 	            	InstrumentationMonitor.incInstrumentationMillis(MiscHelper.currentTimeWithMilliResolution() - startMillis);
@@ -527,10 +513,10 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 
     public static void premain(String packageName,  Instrumentation inst)  {    	
     	try {
-    		inPremain = true;
+    		InstrumentationRecursionPreventor.setThreadInPremain(true);
     		doPremain(packageName, inst);
     	} finally {
-    		inPremain = false;
+    		InstrumentationRecursionPreventor.setThreadInPremain(false);
     	}
     }
     	
@@ -851,10 +837,5 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	
     	return result;
     }
-    
-    public static boolean isInPremain() {
-    	return inPremain;
-    }
-    
 }
 
