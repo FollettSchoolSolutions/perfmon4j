@@ -9,12 +9,10 @@ showInHeader: false
 
 Perfmon4j has been successfully deployed in hundreds of production java systems over the last 5 years. It has proven to be a highly successful tool to measure performance while production servers are under load.
 
->> Perfmon4j has been used to monitor thousands of Java based application servers in production over the last 10 years.
-
 We have found Perfmon4j typically enables us to diagnose performance related issues in hours instead of weeks. This is accomplished by the ability to deploy Perfmon4j in a very low overhead dormant state. If/when performance issues occur it is possible to activate monitoring on targeted portions of the application code to isolate any bottlenecks. The overhead of this targeted monitoring is minimal allowing measurements to be obtained as the problems are occurring. Since monitoring can be configured at runtime there is no need for inconvenience users with an application restart.
 
 
-##How it works?
+## How it works?
 
 At a base level Perfmon4j groups performance measurements into configurable intervals. Based on our experience monitoring production application servers it is not typically useful to know that the response time for method MyClass.doSomething() has averaged 57 milliseconds since the application server was started. The things we are more likely interested in include:
 
@@ -26,7 +24,7 @@ At a base level Perfmon4j groups performance measurements into configurable inte
 
 Perfmon4j attempts to answer these questions by providing a set of tools that enable you to instrument code (and more such as dynamic application behavior (i.e. Web Request Duration)) and apply configurable output based on any meaningful duration you desire. Perfmon4j does this through its Monitor + Appender architecture. The monitors collect data, while the appenders harvest at regularly defined intervals. On top of this Perfmon4j also provides SnapShot monitors, which allow you to monitor internal system variables (i.e. JMX Attributes, static counters, etc) and Thread Trace Sampling which provides a detailed stack trace, including performance measurements of the internal workings of application code.
 
->> Perfmon4j peak load monitoring provides essential measuresment to use to estimates usage patterns for Performance/Load testing and capacity planning. 
+> Perfmon4j peak load monitoring provides essential measuresment to use to estimates usage patterns for Performance/Load testing and capacity planning.
 s
 
 # Features
@@ -35,7 +33,7 @@ s
 
 Interval Monitors are a primary data collection feature of Perfmon4j. These monitors provided detailed performance measurements of executing application code. Below is an example of the performance measures that can be gathered (example output based on the Text Appender):
 
->> For simplicity the output displayed in this document is from the TextAppender.  Perfmon4j also includes a SQL appender to output performance measurements directly to a SQL database.
+> For simplicity the output displayed in this document is from the TextAppender.  Perfmon4j also includes a SQL appender to output performance measurements directly to a SQL database.
 
 ~~~~
 ********************************************************************************
@@ -118,13 +116,13 @@ Interval monitors are created through the following methods:
 * Annotation Monitors are based on annotations declared in the java source code. Monitors ,based on the annotations, are created at runtime by Perfmon4j instrumentation agent.
 * Code Monitors can be manually inserted into code by the java developer.
 
-##Extreme (Java Method Level) Monitors
+## Extreme (Java Method Level) Monitors
 
 Extreme monitors are a type of Interval Monitor that are automatically attached to methods based on parameters passed to the Perfmon4j instrumentation agent.
 
 Extreme monitors are created at run time based on parameters passed to the Perfmon4j java agent (See: -e agent parameter). An extreme monitor is created for each method, of each class that belongs to a package, or child package, based on the specified package. The extreme monitor, associated with each method, takes on a package structure based on its class/package name. See: Interval Monitor Package Structure for details on method package structure.
 
-##Web Request Monitors
+## Web Request Monitors
 
 Web request monitoring is available when running an application under the JBoss Application Server or Apache-Tomcat Servlet Engine. To enable WebRequest monitoring include the -eVALVE as a parameter on the Perfmon4j java agent (See: -eVALVE agent parameter)
 
@@ -136,14 +134,14 @@ Unlike Extreme monitors, Annotation monitors require modification to the java so
 * First add the DeclarePerfMonTimer annotation to a method.
 * Then specify the class containing the method with the -a parameter on the Perfmon4j java agent (See: -a agent parameter).
 
-###In Code Monitors
+### In Code Monitors
 
 Perfmon4j provides an API that allows you to directly insert timer blocks into your java code. Although this method does require access to the source code, it can add great deal of flexibility to your monitoring options.
 
 See: Code Monitor Package Structure for details on adding code monitors.
 
 
-##Snap Shot Monitors
+## Snap Shot Monitors
 
 Snap Shot Monitors are used to capture system metrics at regular intervals. Snap Shot Monitors can be used for the following:
 
@@ -151,7 +149,7 @@ Snap Shot Monitors are used to capture system metrics at regular intervals. Snap
 * JMX Monitoring - You can configure Perfmon4j to collect attributes from any JMX Object.
 * Custom Monitoring - You can create your own custom monitoring class.
 
-###JVM SnapShot Monitor (Built-in monitor)
+### JVM SnapShot Monitor (Built-in monitor)
 
 * Monitor Class: org.perfmon4j.java.management.JVMSnapShot
 * Supports SQL Appender Output: true
@@ -237,7 +235,7 @@ Composite Memory Pool
  usedMaxRatio............. 34.808%
 ~~~~
 
-###Thread Pool Monitor (Built-in monitor)
+### Thread Pool Monitor (Built-in monitor)
 
 * Monitor Class: org.perfmon4j.extras.tomcat7.ThreadPoolMonitorImpl,org.perfmon4j.extras.tomcat55.ThreadPoolMonitorImpl
 * Supports SQL Appender Output: true
@@ -255,7 +253,7 @@ ThreadPool
  currentThreadsBusy....... 0
 ~~~~
 
-###Global Request Monitor (Built-in monitor)
+### Global Request Monitor (Built-in monitor)
 
 * Monitor Class: org.perfmon4j.extras.tomcat7.GlobalRequestMonitorImpl,org.perfmon4j.extras.tomcat55.GlobalRequestMonitorImpl
 * Supports SQL Appender Output: true
@@ -276,7 +274,7 @@ TomcatRequestProcessor
  processingTimeMillis..... 124803.080/per minute
 ~~~~
 
-###JMX Monitoring
+### JMX Monitoring
 
 * Monitor Class: org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory
 * Supports SQL Appender Output: false
@@ -315,7 +313,7 @@ httpThreadPool.Executor
  poolSize................. 30
 ~~~~
 
-###Custom Snapshot Monitors
+### Custom Snapshot Monitors
 
 * Monitor Class: N/A
 * Supports SQL Appender Output: true
@@ -370,9 +368,9 @@ SQL appender
 
 <a name="configuration"/>
 
-#Configuration 
+# Configuration
 
-##VM Boot time configuration
+## VM Boot time configuration
 
 The boot time configuration is done through the following two methods:
 
@@ -381,12 +379,12 @@ The boot time configuration is done through the following two methods:
 
 <a name="javaagent-config"/>
 
-##Javaagent configuration
+## Javaagent configuration
 
 Installing the perfmon4j java agent on the command line is configured as follows: `-javaagent:<<path to perfmon4j.jar>>perfmon4j.jar=<<parameter 1>>,<<parameter n>>`
 
 
-###Java agent parameters:
+### Java agent parameters:
 
 | Parameter | Description | Example(s) |
  ------------ | :----------- | :----------- |
@@ -405,15 +403,28 @@ Installing the perfmon4j java agent on the command line is configured as follows
 <a name="perfmonconfig-xml-config"/>
 
 ## Perfmonconfig.xml configuration
-Runtime configuration is done through the perfmonconfig xml file.  This file will be checked for updates as the application is running. 
+
+Runtime configuration is done through the `perfmonconfig.xml` file.  This file will be checked for updates as the application is running.
 
 [See here for information on using token substitution within the perfmonconfig file](./tokensubstitution/)
 
+### Disabling Perfmon4J
+
+Disabling Perfmon4J does not prevent the instrumentation of the Java classes, but disables data collection and reporting. This allows a simple configuration change to quickly activate logging without the delay and performance implications of adding instrumentation on a running system.
+
+Change the `enabled` attribute in `perfmonconfig.xml` to `false` to disable data capture and logging.
+
+~~~~ xml
+<Perfmon4JConfig enabled='false'>
+/// don't care
+</Perfmon4JConfig>
+~~~~
+
 ### Boot specific configuration
 
-Although perfmonconfig.xml is largely used for dynamic configuration (changes to the file are dynamically reloaded and do not require a JVM restart) the boot section is used to specify boot time configuration which do require a JVM restart. Currently the boot section is used to configure the servlet valve properties (for JBoss and Apache-Tomcat Application servers).
+Although `perfmonconfig.xml` is largely used for dynamic configuration (changes to the file are dynamically reloaded and do not require a JVM restart) the boot section is used to specify boot time configuration which do require a JVM restart. Currently the boot section is used to configure the servlet valve properties (for JBoss and Apache-Tomcat Application servers).
 
-The following an example of the perfmonconfig.xml file with boot configuration:
+The following an example of the `perfmonconfig.xml` file with boot configuration:
 
 ~~~~ xml
 <Perfmon4JConfig enabled='true'>
@@ -436,7 +447,7 @@ The parameters, which can be set as attributes on the servletValve tag are:
  | pushCookiesOnNDC | If you are using log4j for your logging implementation you can specify one or more cookie values to be pushed onto the NDC (Nested Diagnostic Context). You can use a wild card character "*" to specify all cookies or a comma seperated list of cookies (e.g. "siteID, userName") | "" | 
  | pushSessionAttributesOnNDC | If you are using log4j for your logging implementation you can specify one or more session attributes to be pushed onto the NDC (Nested Diagnostic Context). You can use a wild card character "*" to specify all session attributes or a comma seperated list of session attributes (e.g. "siteID, userName") | "" | 
 
-###Dynamic configuration
+### Dynamic configuration
 
 The dynamic configuration of perfmon4j is done through the perfmonconfig.xml file. This file is monitored for changes every 60 seconds (by default - go here for information on how to configure this duration).
 
@@ -448,7 +459,7 @@ The perfmonconfig.xml file is used primarily to configure the following 3 elemen
 
 The following sections go into the configuration of these elements in more detail:
 
-###Appender Configuration
+### Appender Configuration
 
 Appenders are the primary worker of any Perfmon4j instance. Monitors passively collect data, with extremely minimal overhead placed on the application thread. Appenders are responsible for collecting this data and writing it to various output devices.
 
@@ -460,7 +471,7 @@ Perfmon4j is shipped with the following appender types. You are also free to ext
 * SQL Appender (2 types a JDBCSQLAppender and PooledSQLAppender) - The SQL appender will output data to a SQL database. Perfmon4j includes scripts to create a database to accept logging information for the following databases: Microsoft SQL server, MySQL, Postgress and Oracle. Additionally the schema is relatively simple so it should be easily addapted to other SQL compatible databases.
 * Anything else - Perfmon4j's appender architecture is very flexible. It would be relativly simple to provide your own appender to output data in any format you require.
 
-####Text Appender Configuration:
+#### Text Appender Configuration:
 
 The following shows an example of a text appender, a JDBC SQL appender, and a Pooled SQL appender.
 
@@ -540,6 +551,6 @@ Following parameters available for: org.perfmon4j.PooledSQLAppender
 | contextFactory| The value for the system property java.naming.factory.initial used when obtaining the javax.naming.InitialContext| In most cases the default value does not need to be overridden.|  Uses the default value configured in the JVM| 
 | urlPkgs| The value for the system property java.naming.factory.url.pkgs used when obtaining the javax.naming.InitialContext | In most cases the default value does not need to be overridden.| Uses the default value configured in the JVM.| 
 
-#License
+# License
 
 Perfmon4j is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License, version 3, as published by the Free Software Foundation. This program is distributed WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,OR FITNESS FOR A PARTICULAR PURPOSE. You should have received a copy of the GNU Lesser General Public License, Version 3, along with this program. If not, you can obtain the LGPL v.s at http://www.gnu.org/licenses/ 
