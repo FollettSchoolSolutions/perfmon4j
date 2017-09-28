@@ -39,6 +39,8 @@ public class DateTimeHelper {
 	private static final Pattern DATE_TIME = Pattern.compile("(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})");
 	
 	public DateTimeValue parseDateTime(String dateTime) {
+		// Trim of any time adjustment leftover on the incoming value
+		dateTime = TimeAdjustmentValue.stripTimeAdjustment(dateTime);
 		DateTimeValue result = null;
 		
 		// Ignore case on time matching...

@@ -24,8 +24,9 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
-import junit.framework.TestCase;
 import javax.ws.rs.BadRequestException;
+
+import junit.framework.TestCase;
 
 public class DateTimeHelperTest extends TestCase {
 	private final DateTimeHelper helper = new TestDateTimeHelper();
@@ -281,6 +282,14 @@ public class DateTimeHelperTest extends TestCase {
 		assertEquals(0, cal.get(Calendar.MILLISECOND));
 	}
 	
+
+	public void testParseDateTimeIgnoresTimeAdjustment() throws Exception {
+		try {
+			helper.parseDateTime("now {-1D}");
+		} catch (Exception e) {
+			fail("Should have ignored the time adjustment...This is handled in Rest Implementation layer");
+		}
+	}
 	
 	
 	

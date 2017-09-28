@@ -74,13 +74,16 @@ import web.org.perfmon4j.restdatasource.dataproviders.thirdparty.FSSFetchPolicyD
 import web.org.perfmon4j.restdatasource.dataproviders.thirdparty.FSSFetchThreadPoolDataProvider;
 import web.org.perfmon4j.restdatasource.util.DataProviderRegistry;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
+import web.org.perfmon4j.restdatasource.util.DateTimeValue;
 import web.org.perfmon4j.restdatasource.util.ParsedSeriesDefinition;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
+import web.org.perfmon4j.restdatasource.util.TimeAdjustmentValue;
+import web.org.perfmon4j.restdatasource.util.TimeAdjustmentValue.Period;
 
 @Path("/datasource")
 public class DataSourceRestImpl {
 	private static final Logger logger = LoggerFactory.initLogger(DataSourceRestImpl.class);
-	private final DateTimeHelper helper = new DateTimeHelper();
+	static private final DateTimeHelper helper = new DateTimeHelper();
 	private static final DataProviderRegistry registry = new DataProviderRegistry();
 	
 	
@@ -128,8 +131,9 @@ public class DataSourceRestImpl {
 		Connection conn = null;
 		try {
 			conn = db.openConnection();
-			long start = helper.parseDateTime(timeStart).getTimeForStart();
-			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+			long[] startStop = getStartStopTime(timeStart, timeEnd);
+			long start = startStop[0];
+			long end = startStop[1];
 			for (DataProvider provider : registry.getDataProviders()) {
 				Set<MonitoredSystem> r = provider.lookupMonitoredSystems(conn, db, start, end);
 				result.addAll(r);
@@ -162,8 +166,9 @@ public class DataSourceRestImpl {
 		Connection conn = null;
 		try {
 			conn = db.openConnection();
-			long start = helper.parseDateTime(timeStart).getTimeForStart();
-			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+			long[] startStop = getStartStopTime(timeStart, timeEnd);
+			long start = startStop[0];
+			long end = startStop[1];
 			for (DataProvider provider : registry.getDataProviders()) {
 				Set<Category> r = provider.lookupMonitoredCategories(conn, db, ids, start, end);
 				result.addAll(r);
@@ -263,8 +268,9 @@ public class DataSourceRestImpl {
 
 		Connection conn = null;;
 		try {
-			long start = helper.parseDateTime(timeStart).getTimeForStart();
-			long end = helper.parseDateTime(timeEnd).getTimeForEnd();
+			long[] startStop = getStartStopTime(timeStart, timeEnd);
+			long start = startStop[0];
+			long end = startStop[1];
 			
 			conn = db.openConnection();
 			
@@ -387,6 +393,31 @@ public class DataSourceRestImpl {
 	private Double roundOff(double value) {
 		return Double.valueOf(Math.round(value * 100)/100.00);
 	}
+	
+	
+	static long[] getStartStopTime(String startTime, String endTime) {
+		long[] result = {0,0};
+
+		TimeAdjustmentValue noAdjustment = new TimeAdjustmentValue(Period.NOADJUSTMENT, 0);
+		TimeAdjustmentValue startAdjustment = TimeAdjustmentValue.parse(startTime);
+		TimeAdjustmentValue endAdjustment = TimeAdjustmentValue.parse(endTime);
+		
+		if (startAdjustment == null) {
+			startAdjustment = endAdjustment != null ? endAdjustment : noAdjustment;
+		} 
+		if (endAdjustment == null) {
+			endAdjustment = startAdjustment != null ? startAdjustment : noAdjustment;
+		}
+		
+		DateTimeValue startDTV = helper.parseDateTime(startTime);
+		DateTimeValue endDTV = helper.parseDateTime(endTime);
+		
+		result[0] = startAdjustment.adjustDateTime(startDTV.getTimeForStart());
+		result[1] = endAdjustment.adjustDateTime(endDTV.getTimeForEnd());
+		
+		return result;
+	}
+	
 	
 	private CategoryTemplate filterFieldsBasedOnDatabaseChangeSet(RegisteredDatabaseConnections.Database db, CategoryTemplate unFiltered) {
 			CategoryTemplate result = unFiltered;

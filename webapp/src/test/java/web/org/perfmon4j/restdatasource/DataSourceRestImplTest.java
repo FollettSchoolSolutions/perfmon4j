@@ -24,6 +24,8 @@ package web.org.perfmon4j.restdatasource;
 
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -598,6 +600,53 @@ public class DataSourceRestImplTest extends TestCase {
 			tearDownDatabase();
 		}
 	}
+
+	public void testGetStartStop_AdjustStartOnly() {
+		String startTime = "2017-09-28T05:00";
+		String endTime   = "2017-09-28T06:00";   
+
+		Calendar expectedCalStart = new GregorianCalendar(2017, 8, 28, 4, 0); //2017-09-28T04:00
+		Calendar expectedCalEnd = new GregorianCalendar(2017, 8, 28, 5, 0, 59); //2017-09-28T05:00
+		expectedCalEnd.set(Calendar.MILLISECOND, 999);
+		
+		// Add the timeAdjustment only to the startTime.  It should apply to both start and end parameters.
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime + "{-1H}", endTime);
+		
+		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
+		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);
+	}
+	
+	public void testGetStartStop_AdjustEndOnly() {
+		String startTime = "2017-09-28T05:00";
+		String endTime   = "2017-09-28T06:00";   
+
+		Calendar expectedCalStart = new GregorianCalendar(2017, 8, 28, 4, 0); //2017-09-28T04:00
+		Calendar expectedCalEnd = new GregorianCalendar(2017, 8, 28, 5, 0, 59); //2017-09-28T05:00
+		expectedCalEnd.set(Calendar.MILLISECOND, 999);
+		
+		// Add the timeAdjustment only to the endTime.  It should apply to both start and end parameters.
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime, endTime + "{-1H}");
+		
+		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
+		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);
+	}
+
+	public void testGetStartStop_AdjustBothStartAndEnd() {
+		String startTime = "2017-09-28T05:00";
+		String endTime   = "2017-09-28T06:00";   
+
+		Calendar expectedCalStart = new GregorianCalendar(2017, 8, 28, 4, 0); //2017-09-28T04:00
+		Calendar expectedCalEnd = new GregorianCalendar(2017, 8, 28, 6, 0, 59); //2017-09-28T06:00
+		expectedCalEnd.set(Calendar.MILLISECOND, 999);
+		
+		// Move the start time back 1 hour, but leave the endtime the same by appending "{}" to the 
+		// end time.
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime + "{-1H}", endTime + "{}");
+		
+		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
+		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);
+	}
+	
 	
 	private MockHttpResponse queryThroughRest(String databaseID, String seriesDefinition) throws URISyntaxException {
 		return queryThroughRest(databaseID, seriesDefinition, "");
