@@ -20,6 +20,8 @@
 */
 package web.org.perfmon4j.restdatasource.util;
 
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -85,6 +87,36 @@ public class TimeAdjustmentValue {
 		}
 		return result;
 	}
+	
+
+	/**
+	 * 
+	 * @param value
+	 * @return - The input value modified to match the period and increment  
+	 */
+	public long adjustDateTime(long value) {
+		long result = value;
+		
+		if (!Period.NOADJUSTMENT.equals(period)) {
+			Calendar cal = new GregorianCalendar();
+			cal.setTimeInMillis(value);
+			
+			if (Period.HOUR.equals(period)) {
+				cal.add(Calendar.HOUR, increment);
+			} else if (Period.DAY.equals(period)) {
+				cal.add(Calendar.DATE, increment);
+			} else if (Period.WEEK.equals(period)) {
+				cal.add(Calendar.DATE, increment * 7);
+			} else if (Period.MONTH.equals(period)) {
+				cal.add(Calendar.MONTH, increment);
+			}
+			
+			result = cal.getTimeInMillis();
+		}
+		
+		return result;
+	}
+	
 	
 	@Override
 	public String toString() {

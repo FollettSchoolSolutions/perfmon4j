@@ -20,6 +20,9 @@
 */
 package web.org.perfmon4j.restdatasource.util;
 
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+
 import junit.framework.TestCase;
 import web.org.perfmon4j.restdatasource.util.TimeAdjustmentValue.Period;
 
@@ -167,4 +170,77 @@ public class TimeAdjustmentValueTest extends TestCase {
 		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {}"));
 	}
 	
+	public void testAdjustNoAdjustment() throws Exception { 
+		TimeAdjustmentValue adjustment = new TimeAdjustmentValue(Period.NOADJUSTMENT, 10);
+		
+		long now = System.currentTimeMillis();
+		
+		assertEquals("Should be no adjustment", now, adjustment.adjustDateTime(now));
+	}
+
+	public void testAdjustHours() throws Exception { 
+		TimeAdjustmentValue adjustment = new TimeAdjustmentValue(Period.HOUR, -2);
+		
+		Calendar calStart = new GregorianCalendar(2017, 9, 10, 0, 0);
+		Calendar calAdjust = new GregorianCalendar(2017, 9, 9, 22, 0);
+		
+		assertEquals("Should be moved back 2 hours", calAdjust.getTimeInMillis(), adjustment.adjustDateTime(calStart.getTimeInMillis()));
+	}
+
+	public void testAdjustDays() throws Exception { 
+		TimeAdjustmentValue adjustment = new TimeAdjustmentValue(Period.DAY, -2);
+		
+		Calendar calStart = new GregorianCalendar(2017, 8, 1);
+		Calendar calAdjust = new GregorianCalendar(2017, 7, 30);
+		
+		assertEquals("Should be moved back 2 days", calAdjust.getTimeInMillis(), adjustment.adjustDateTime(calStart.getTimeInMillis()));
+	}
+
+	public void testAdjustDaysRollsOverYear() throws Exception { 
+		TimeAdjustmentValue adjustment = new TimeAdjustmentValue(Period.DAY, -2);
+		
+		Calendar calStart = new GregorianCalendar(2017, 0, 1);
+		Calendar calAdjust = new GregorianCalendar(2016, 11, 30);
+		
+		assertEquals("Should be moved back 2 days", calAdjust.getTimeInMillis(), adjustment.adjustDateTime(calStart.getTimeInMillis()));
+	}
+
+
+	public void testAdjustWeeks() throws Exception { 
+		TimeAdjustmentValue adjustment = new TimeAdjustmentValue(Period.WEEK, -2);
+		
+		Calendar calStart = new GregorianCalendar(2017, 8, 1);
+		Calendar calAdjust = new GregorianCalendar(2017, 7, 18);
+		
+		assertEquals("Should be moved back 2 weeks", calAdjust.getTimeInMillis(), adjustment.adjustDateTime(calStart.getTimeInMillis()));
+	}
+	
+	
+	public void testAdjustMonth() throws Exception { 
+		TimeAdjustmentValue adjustment = new TimeAdjustmentValue(Period.MONTH, -2);
+		
+		Calendar calStart = new GregorianCalendar(2017, 8, 1);
+		Calendar calAdjust = new GregorianCalendar(2017, 6, 1);
+		
+		assertEquals("Should be moved back 2 months", calAdjust.getTimeInMillis(), adjustment.adjustDateTime(calStart.getTimeInMillis()));
+	}
+
+	public void testAdjustMonthAcrossYear() throws Exception { 
+		TimeAdjustmentValue adjustment = new TimeAdjustmentValue(Period.MONTH, -2);
+		
+		Calendar calStart = new GregorianCalendar(2017, 1, 5);
+		Calendar calAdjust = new GregorianCalendar(2016, 11, 5);
+		
+		assertEquals("Should be moved back 2 months", calAdjust.getTimeInMillis(), adjustment.adjustDateTime(calStart.getTimeInMillis()));
+	}
+
+	public void testAdjustMonthIntoShorterMonth() throws Exception { 
+		TimeAdjustmentValue adjustment = new TimeAdjustmentValue(Period.MONTH, -1);
+		
+		Calendar calStart = new GregorianCalendar(2017, 2, 31);  // March 31
+		Calendar calAdjust = new GregorianCalendar(2017, 1, 28); // February 28th
+		
+		assertEquals("Should be moved back 1 month", calAdjust.getTimeInMillis(), adjustment.adjustDateTime(calStart.getTimeInMillis()));
+	}
+
 }
