@@ -148,4 +148,23 @@ public class TimeAdjustmentValueTest extends TestCase {
 		assertEquals("negative value", negative2, TimeAdjustmentValue.parse("{-2M}"));
 	}
 
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	public void testStripTimeAdjustments() throws Exception { 
+		String timeValue = "2017-09-27T15:30";
+		
+		assertEquals("Invalid adjustment \"{2X}\" should NOT be stripped", timeValue + " {2X}", TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {2X}"));
+		
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + "{+2M}"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {+2M}"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {-2D}"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {-2}"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {+2}"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {2}"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {}"));
+	}
+	
 }

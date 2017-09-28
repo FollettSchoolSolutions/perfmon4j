@@ -24,7 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TimeAdjustmentValue {
-	private static final Pattern PATTERN = Pattern.compile("\\{([\\-\\+]?\\d*)([HDWM]?)\\}");
+	private static final Pattern PATTERN = Pattern.compile("\\s*\\{([\\-\\+]?\\d*)([HDWM]?)\\}");
 	
 	public enum Period {
 		NOADJUSTMENT,
@@ -50,6 +50,17 @@ public class TimeAdjustmentValue {
 		return period;
 	}
 
+	static public String stripTimeAdjustment(String input) {
+		String result = input;
+		
+		if (input != null) {
+			Matcher m = PATTERN.matcher(input);
+			result = m.replaceFirst("");
+		}
+		
+		return result;
+	}
+	
 	static public TimeAdjustmentValue parse(String input) {
 		TimeAdjustmentValue result = null;
 		if (input != null) {
