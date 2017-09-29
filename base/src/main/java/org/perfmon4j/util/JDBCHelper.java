@@ -425,7 +425,7 @@ public class JDBCHelper {
      * NOTE -  This is tested in JDBCSQLAppenderTest class.
      * @param conn
      * @param schema
-     * @param monitorID
+     * @param categoryID
      * @return
      * @throws SQLException 
      */
