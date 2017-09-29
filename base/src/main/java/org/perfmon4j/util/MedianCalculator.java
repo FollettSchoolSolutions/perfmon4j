@@ -35,9 +35,10 @@ import java.util.TreeMap;
  * the rounding factor used (factor) and the bell shaped 
  * distribution an accurate median should be returned.
  * 
- * If the elements allowed is insufficent to determine an
- * exact median you will recieve an estimated median indicating the
- * actual result is >= to the value returned or <= the value returned.
+ * If the elements allowed is insufficient to determine an
+ * exact median you will receive an estimated median indicating the
+ * actual result is greater than or equal to the value returned or less than or equal to
+ * the value returned.
  */
 public class MedianCalculator {
     private final Object lockToken = new Object();
@@ -98,7 +99,7 @@ public class MedianCalculator {
     }
     
 /*----------------------------------------------------------------------------*/    
-    /** @todo For performance reasons we may need to create a queue
+    /** todo For performance reasons we may need to create a queue
      * for storing values when we need to insert beyound this  **/
     public void putValue(long value) {
         if (factor > 1) {
@@ -114,7 +115,7 @@ public class MedianCalculator {
                 count.incCount();
             } else {
                 if (valueMap.size() >= maxElements) {
-                    /** @todo For performance reasons we may need to create a queue
+                    /** todo For performance reasons we may need to create a queue
                      * storing values outside the normal range...  
                      **/
                     long lowValue = valueMap.firstKey().longValue();

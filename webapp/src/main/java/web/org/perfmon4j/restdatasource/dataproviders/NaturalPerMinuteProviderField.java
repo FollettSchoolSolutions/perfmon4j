@@ -35,10 +35,10 @@ public class NaturalPerMinuteProviderField extends ProviderField {
 	/**
 	 * Use this constructor only when the table DOES NOT contains its' own perMinute field.
 	 * @param name
+	 * @param systemIDColumn
 	 * @param startTimeColumn
 	 * @param endTimeColumn
 	 * @param counterColumn
-	 * @param floatingPoint
 	 */
 	public NaturalPerMinuteProviderField(String name,
 			String systemIDColumn,

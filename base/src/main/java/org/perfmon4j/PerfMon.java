@@ -78,7 +78,7 @@ public class PerfMon {
     
     private final Lock startStopLock = new ReentrantLock();
 
-    /** @todo Make these timers lazy initialized.... If PerfMon is never instantiated
+    /** todo Make these timers lazy initialized.... If PerfMon is never instantiated
      * we dont want to start these thread... **/
     
     /**
