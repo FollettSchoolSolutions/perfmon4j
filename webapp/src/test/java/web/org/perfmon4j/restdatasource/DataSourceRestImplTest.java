@@ -610,7 +610,7 @@ public class DataSourceRestImplTest extends TestCase {
 		expectedCalEnd.set(Calendar.MILLISECOND, 999);
 		
 		// Add the timeAdjustment only to the startTime.  It should apply to both start and end parameters.
-		long[] result = DataSourceRestImpl.getStartStopTime(startTime + "{-1H}", endTime);
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime + "~ADJ-1H", endTime);
 		
 		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
 		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);
@@ -625,7 +625,7 @@ public class DataSourceRestImplTest extends TestCase {
 		expectedCalEnd.set(Calendar.MILLISECOND, 999);
 		
 		// Add the timeAdjustment only to the endTime.  It should apply to both start and end parameters.
-		long[] result = DataSourceRestImpl.getStartStopTime(startTime, endTime + "{-1H}");
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime, endTime + "~ADJ-1H");
 		
 		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
 		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);
@@ -641,7 +641,7 @@ public class DataSourceRestImplTest extends TestCase {
 		
 		// Move the start time back 1 hour, but leave the endtime the same by appending "{}" to the 
 		// end time.
-		long[] result = DataSourceRestImpl.getStartStopTime(startTime + "{-1H}", endTime + "{}");
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime + "~ADJ-1H", endTime + "~ADJ");
 		
 		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
 		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);

@@ -57,11 +57,11 @@ public class TimeAdjustmentValueTest extends TestCase {
 	public void testParseNoOpAdjustment() throws Exception { 
 		TimeAdjustmentValue noAdjustment = new TimeAdjustmentValue(Period.NOADJUSTMENT, 0);
 		
-		assertEquals("No adjustment", noAdjustment, TimeAdjustmentValue.parse("{}"));
-		assertEquals("Date/Time value before is OK", noAdjustment, TimeAdjustmentValue.parse("now{}"));
-		assertEquals("Date/Time value before is OK with whitespace", noAdjustment, TimeAdjustmentValue.parse("now{}"));
-		assertEquals("Date/Time value after is OK", noAdjustment, TimeAdjustmentValue.parse("{}now"));
-		assertEquals("Date/Time value after is OK with whitespace", noAdjustment, TimeAdjustmentValue.parse("{} now"));
+		assertEquals("No adjustment", noAdjustment, TimeAdjustmentValue.parse("~ADJ"));
+		assertEquals("Date/Time value before is OK", noAdjustment, TimeAdjustmentValue.parse("now~ADJ"));
+		assertEquals("Date/Time value before is OK with whitespace", noAdjustment, TimeAdjustmentValue.parse("now~ADJ"));
+		assertEquals("Date/Time value after is OK", noAdjustment, TimeAdjustmentValue.parse("~ADJnow"));
+		assertEquals("Date/Time value after is OK with whitespace", noAdjustment, TimeAdjustmentValue.parse(" ~ADJ"));
 	}
 	
 	/**
@@ -82,11 +82,11 @@ public class TimeAdjustmentValueTest extends TestCase {
 		TimeAdjustmentValue positive2Days = new TimeAdjustmentValue(Period.DAY, 2);
 		TimeAdjustmentValue negative2Days = new TimeAdjustmentValue(Period.DAY, -2);
 		
-		assertEquals("+sign allowed, period defaults to days", positive2Days, TimeAdjustmentValue.parse("{+2}"));
-		assertEquals("period defaults to days", positive2Days, TimeAdjustmentValue.parse("{2}"));
-		assertEquals("explicit period", positive2Days, TimeAdjustmentValue.parse("{2D}"));
-		assertEquals("period defaults to days", negative2Days, TimeAdjustmentValue.parse("{-2}"));
-		assertEquals("explicit period", negative2Days, TimeAdjustmentValue.parse("{-2D}"));
+		assertEquals("+sign allowed, period defaults to days", positive2Days, TimeAdjustmentValue.parse("~ADJ+2"));
+		assertEquals("period defaults to days", positive2Days, TimeAdjustmentValue.parse("~ADJ2"));
+		assertEquals("explicit period", positive2Days, TimeAdjustmentValue.parse("~ADJ2D"));
+		assertEquals("period defaults to days", negative2Days, TimeAdjustmentValue.parse("~ADJ-2"));
+		assertEquals("explicit period", negative2Days, TimeAdjustmentValue.parse("~ADJ-2D"));
 	}
 	
 
@@ -105,9 +105,9 @@ public class TimeAdjustmentValueTest extends TestCase {
 		TimeAdjustmentValue positive2 = new TimeAdjustmentValue(Period.HOUR, 2);
 		TimeAdjustmentValue negative2 = new TimeAdjustmentValue(Period.HOUR, -2);
 		
-		assertEquals("+sign allowed", positive2, TimeAdjustmentValue.parse("{+2H}"));
-		assertEquals("+sign not required", positive2, TimeAdjustmentValue.parse("{2H}"));
-		assertEquals("negative value", negative2, TimeAdjustmentValue.parse("{-2H}"));
+		assertEquals("+sign allowed", positive2, TimeAdjustmentValue.parse("~ADJ+2H"));
+		assertEquals("+sign not required", positive2, TimeAdjustmentValue.parse("~ADJ2H"));
+		assertEquals("negative value", negative2, TimeAdjustmentValue.parse("~ADJ-2H"));
 	}
 
 	/**
@@ -125,9 +125,9 @@ public class TimeAdjustmentValueTest extends TestCase {
 		TimeAdjustmentValue positive2 = new TimeAdjustmentValue(Period.WEEK, 2);
 		TimeAdjustmentValue negative2 = new TimeAdjustmentValue(Period.WEEK, -2);
 		
-		assertEquals("+sign allowed", positive2, TimeAdjustmentValue.parse("{+2W}"));
-		assertEquals("+sign not required", positive2, TimeAdjustmentValue.parse("{2W}"));
-		assertEquals("negative value", negative2, TimeAdjustmentValue.parse("{-2W}"));
+		assertEquals("+sign allowed", positive2, TimeAdjustmentValue.parse("~ADJ+2W"));
+		assertEquals("+sign not required", positive2, TimeAdjustmentValue.parse("~ADJ2W"));
+		assertEquals("negative value", negative2, TimeAdjustmentValue.parse("~ADJ-2W"));
 	}
 
 
@@ -146,9 +146,9 @@ public class TimeAdjustmentValueTest extends TestCase {
 		TimeAdjustmentValue positive2 = new TimeAdjustmentValue(Period.MONTH, 2);
 		TimeAdjustmentValue negative2 = new TimeAdjustmentValue(Period.MONTH, -2);
 		
-		assertEquals("+sign allowed", positive2, TimeAdjustmentValue.parse("{+2M}"));
-		assertEquals("+sign not required", positive2, TimeAdjustmentValue.parse("{2M}"));
-		assertEquals("negative value", negative2, TimeAdjustmentValue.parse("{-2M}"));
+		assertEquals("+sign allowed", positive2, TimeAdjustmentValue.parse("~ADJ+2M"));
+		assertEquals("+sign not required", positive2, TimeAdjustmentValue.parse("~ADJ2M"));
+		assertEquals("negative value", negative2, TimeAdjustmentValue.parse("~ADJ-2M"));
 	}
 
 	
@@ -161,13 +161,13 @@ public class TimeAdjustmentValueTest extends TestCase {
 		
 		assertEquals("Invalid adjustment \"{2X}\" should NOT be stripped", timeValue + " {2X}", TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {2X}"));
 		
-		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + "{+2M}"));
-		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {+2M}"));
-		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {-2D}"));
-		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {-2}"));
-		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {+2}"));
-		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {2}"));
-		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " {}"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + "~ADJ+2M"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " ~ADJ+2M"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " ~ADJ-2D"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " ~ADJ-2"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " ~ADJ+2"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " ~ADJ2"));
+		assertEquals("Valid adjustment should be stripped", timeValue, TimeAdjustmentValue.stripTimeAdjustment(timeValue + " ~ADJ"));
 	}
 	
 	public void testAdjustNoAdjustment() throws Exception { 
