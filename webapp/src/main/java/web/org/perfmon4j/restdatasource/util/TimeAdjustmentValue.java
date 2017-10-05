@@ -26,7 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TimeAdjustmentValue {
-	private static final Pattern PATTERN = Pattern.compile("\\s*\\{([\\-\\+]?\\d*)([HDWM]?)\\}");
+	private static final Pattern PATTERN = Pattern.compile("\\s*\\~ADJ([\\-\\+]?\\d*)([HDWM]?)");
 	
 	public enum Period {
 		NOADJUSTMENT,

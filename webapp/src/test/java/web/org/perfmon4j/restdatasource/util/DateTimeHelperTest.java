@@ -285,7 +285,7 @@ public class DateTimeHelperTest extends TestCase {
 
 	public void testParseDateTimeIgnoresTimeAdjustment() throws Exception {
 		try {
-			helper.parseDateTime("now {-1D}");
+			helper.parseDateTime("now ~ADJ-1D");
 		} catch (Exception e) {
 			fail("Should have ignored the time adjustment...This is handled in Rest Implementation layer");
 		}
