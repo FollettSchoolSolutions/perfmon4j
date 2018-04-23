@@ -117,7 +117,7 @@ END;</sql>
 
 	<changeSet author="ddeucher" id="P4JIntervalData-tableCreate">
 		<createTable tableName="P4JIntervalData">
-			<column autoIncrement="true" name="IntervalID" type="INT">
+			<column autoIncrement="true" name="IntervalID" type="BIGINT">
 				<constraints primaryKey="true" primaryKeyName="P4JIntervalData_pk" />
 			</column>
 			<column name="CategoryID" type="INT">
@@ -187,7 +187,7 @@ END;</sql>
 
 	<changeSet author="ddeucher" id="P4JIntervalThreshold-tableCreate">
 		<createTable tableName="P4JIntervalThreshold">
-			<column name="IntervalID" type="INT">
+			<column name="IntervalID" type="BIGINT">
 				<constraints nullable="false" />
 			</column>
 			<column name="ThresholdMillis" type="INT">

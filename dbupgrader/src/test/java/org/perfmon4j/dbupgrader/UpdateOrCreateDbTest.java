@@ -159,7 +159,32 @@ public class UpdateOrCreateDbTest extends TestCase {
 				
 	}
 	
-	
+	/**
+	 * 4/23/2018
+	 * 
+	 * After 2.5 years of monitoring many systems we overflowed the INTEGER column
+	 * primary key of the P4JIntervalData table and the referenced column in the 
+	 * P4JIntervalThreshold table.  
+	 * 
+	 * Based on the SQL hoops (dropping indexes and constraints) that would be required for an 
+	 * automated upgrade we decided not to upgrade existing tables to a BIGINT. 
+	 * However, new databases will be created with a BIGINT column instead of a INTEGER Column.  
+	 * For those with existing tables they will require a manual update of the columns.
+	 * @throws Exception
+	 */
+	public void testIntervalIDIsCreatedAsABigInt() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA});
+		
+		String dataType = UpdaterUtil.getColumnDataType(conn, SCHEMA, "P4JIntervalData", "IntervalID");
+		assertEquals("P4JIntervalData.IntervalID column should be a BIGINT", "BIGINT", dataType.toUpperCase());
+
+		dataType = UpdaterUtil.getColumnDataType(conn, SCHEMA, "P4JIntervalThreshold", "IntervalID");
+		assertEquals("P4JIntervalThreshold.IntervalID column should be a BIGINT", "BIGINT", dataType.toUpperCase());
+	}
 	
 	public void testParseParameters() throws Exception {
 		String args[] = {
