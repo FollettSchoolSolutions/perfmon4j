@@ -143,6 +143,30 @@ class UpdaterUtil {
 		return result;
 	}
 
+	static String getColumnDataType(Connection conn, String schema, String tableName, String columnName) throws Exception {
+		String result = null;
+		
+		if (doesColumnExist(conn, schema, tableName, columnName)) {
+			Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
+			tableName = db.escapeTableName(null, schema, tableName);
+			columnName = db.escapeColumnName(null, schema, tableName, columnName);
+			Statement stmt = null;
+			ResultSet rs = null;
+			try {
+				stmt = conn.createStatement();
+				rs = stmt.executeQuery("SELECT " + columnName + " FROM " + tableName + " WHERE 1=0");
+				ResultSetMetaData md = rs.getMetaData();
+				result = md.getColumnTypeName(1);
+			} finally {
+				closeNoThrow(rs);
+				closeNoThrow(stmt);
+			}
+		}
+		
+		return result;
+	}
+	
+	
 	static boolean doesColumnExist(Connection conn, String schema, String tableName, String column) throws Exception {
 		boolean result = doesTableExist(conn, schema, tableName);
 		
