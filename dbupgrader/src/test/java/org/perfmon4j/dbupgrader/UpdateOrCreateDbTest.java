@@ -185,6 +185,24 @@ public class UpdateOrCreateDbTest extends TestCase {
 		dataType = UpdaterUtil.getColumnDataType(conn, SCHEMA, "P4JIntervalThreshold", "IntervalID");
 		assertEquals("P4JIntervalThreshold.IntervalID column should be a BIGINT", "BIGINT", dataType.toUpperCase());
 	}
+
+	public void testVersion6Update() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA});
+		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
+				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0006.0'");
+		assertEquals("should have installed 6.0 label", 1, count);
+		
+		boolean groupExists = UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JGroup");
+		boolean joinExists = UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JGroupSystemJoin");
+		
+		assertTrue("New P4JGroup table should exist", groupExists);
+		assertTrue("New P4JGroupSystemJoin table should exist", joinExists);
+	}
+	
 	
 	public void testParseParameters() throws Exception {
 		String args[] = {
