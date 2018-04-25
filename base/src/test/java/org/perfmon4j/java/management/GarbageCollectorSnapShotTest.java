@@ -25,7 +25,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.sql.Timestamp;
 
 import junit.framework.TestSuite;
@@ -47,45 +46,14 @@ import org.perfmon4j.util.JDBCHelper;
 public class GarbageCollectorSnapShotTest extends SQLTest {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
-    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JGarbageCollection(\r\n" +
-	"	SystemID INT NOT NULL,\r\n" +
-	"	InstanceName VARCHAR(200) NOT NULL,\r\n" +
-	"	StartTime TIMESTAMP NOT NULL,\r\n" +
-	"	EndTime TIMESTAMP NOT NULL,\r\n" +
-	"	Duration INT NOT NULL,\r\n" +
-	"	NumCollections INT NOT NULL,\r\n" +
-	"	CollectionMillis INT NOT NULL,\r\n" +
-	"	NumCollectionsPerMinute DECIMAL(9,2) NOT NULL,\r\n" +
-	"	CollectionMillisPerMinute DECIMAL(9,2) NOT NULL\r\n" +
-	")\r\n";
-
-    final String DERBY_DROP_1 = "DROP TABLE mydb.P4JGarbageCollection";
     private Connection conn;
 
 	protected void setUp() throws Exception {
 		super.setUp();
 		
 		conn = appender.getConnection();
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.execute(DERBY_CREATE_1);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
 	}
 
-	protected void tearDown() throws Exception {
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.execute(DERBY_DROP_1);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
-		super.tearDown();
-	}
-    
     
 /*----------------------------------------------------------------------------*/
     public GarbageCollectorSnapShotTest(String name) {

@@ -39,7 +39,7 @@ public class SQLAppenderTest extends SQLTest {
 	public void testGetDatabaseVersion_SingleChangeLogLabel() throws Exception {
 		Connection conn = appender.getConnection();
 		
-		addVersionLabel(conn, "0004.0", false);
+		addVersionLabel(conn, "0004.0", true);
 		
 		double version = appender.getDatabaseVersion_TestOnly(disableCache);
 		assertEquals("With single version label we should use value", 4.0, version);
@@ -48,7 +48,7 @@ public class SQLAppenderTest extends SQLTest {
 	public void testGetDatabaseVersion_MultipleChangeLogLabels() throws Exception {
 		Connection conn = appender.getConnection();
 		
-		addVersionLabel(conn, "0001.0", false);
+		addVersionLabel(conn, "0001.0", true);
 		addVersionLabel(conn, "0004.0", false);
 		addVersionLabel(conn, "0002.0", false);
 		addVersionLabel(conn, "0003.0", false);
@@ -64,7 +64,7 @@ public class SQLAppenderTest extends SQLTest {
 		// fill the cache
 		appender.getDatabaseVersion_TestOnly(disableCache);
 
-		addVersionLabel(conn, "0004.0", false);
+		addVersionLabel(conn, "0004.0", true);
 		
 		double version = appender.getDatabaseVersion_TestOnly(100);
 		assertEquals("Should still be reading", 0.0, version);

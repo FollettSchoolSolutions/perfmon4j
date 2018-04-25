@@ -25,7 +25,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.sql.Timestamp;
 
 import junit.framework.TestSuite;
@@ -44,35 +43,6 @@ import org.perfmon4j.java.management.JVMSnapShot.JVMData;
 import org.perfmon4j.util.JDBCHelper;
 
 public class JVMSnapShotTest extends SQLTest {
-    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JVMSnapShot(\r\n" +
-	"	SystemID INT NOT NULL,\r\n" +
-	"	StartTime TIMESTAMP NOT NULL,\r\n" +
-	"	EndTime TIMESTAMP NOT NULL,\r\n" +
-	"	Duration INT NOT NULL,\r\n" +
-	"	CurrentClassLoadCount INT NOT NULL,\r\n" +
-	" 	ClassLoadCountInPeriod INT NOT NULL,\r\n" +
-	" 	ClassLoadCountPerMinute DECIMAL(18,2) NOT NULL,\r\n" +
-	"	ClassUnloadCountInPeriod INT NOT NULL,\r\n" +
-	"	ClassUnloadCountPerMinute DECIMAL(18,2) NOT NULL,\r\n" +
-	" 	PendingClassFinalizationCount INT NOT NULL,\r\n" +  
-	" 	CurrentThreadCount INT NOT NULL,\r\n" +
-	" 	CurrentDaemonThreadCount INT NOT NULL,\r\n" +
-	" 	ThreadStartCountInPeriod INT NOT NULL,\r\n" +
-	"  	ThreadStartCountPerMinute DECIMAL(18,2) NOT NULL,\r\n" +
-	"  	HeapMemUsedMB  DECIMAL(18,2)  NOT NULL,\r\n" +
-	"  	HeapMemCommitedMB DECIMAL(18,2) NOT NULL,\r\n" +
-	"  	HeapMemMaxMB DECIMAL(18,2) NOT NULL,\r\n" +
-	"  	NonHeapMemUsedMB  DECIMAL(18,2)  NOT NULL,\r\n" +
-	" 	NonHeapMemCommittedUsedMB  DECIMAL(18,2) NOT NULL,\r\n" +  
-	" 	NonHeapMemMaxUsedMB  DECIMAL(18,2) NOT NULL,\r\n" +  
-	"  	SystemLoadAverage DECIMAL(5, 2),\r\n" +
-	" 	CompilationMillisInPeriod  INT,\r\n" + // (Can be null based on getCompilationTimeActive())
-	" 	CompilationMillisPerMinute DECIMAL(18,2),\r\n" + // (Can be null based on getCompilationTimeActive())
-	" 	systemCpuLoad Decimal(5,3) NOT NULL WITH DEFAULT -1.0,\r\n" + // (Can be null based on getCompilationTimeActive())
-	" 	processCpuLoad Decimal(5,3) NOT NULL WITH DEFAULT -1.0\r\n" + // (Can be null based on getCompilationTimeActive())
-	")\r\n";
-
-    final String DERBY_DROP_1 = "DROP TABLE mydb.P4JVMSnapShot";
     private Connection conn;
 
 	
@@ -86,27 +56,8 @@ public class JVMSnapShotTest extends SQLTest {
 		super.setUp();
 		
 		conn = appender.getConnection();
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.execute(DERBY_CREATE_1);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
 	}
 
-	protected void tearDown() throws Exception {
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.execute(DERBY_DROP_1);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
-		super.tearDown();
-	}
-    
-    
     /*----------------------------------------------------------------------------*/    
     public void testValidateDataInterface() throws Exception {
     	Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(JVMSnapShot.class);

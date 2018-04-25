@@ -150,5 +150,13 @@ using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate cl
 			<version>10.10.2.0</version>
 			<scope>test</scope>
 		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<version>${project.version}</version>
+			<artifactId>perfmon4j-dbupgrader</artifactId>
+			<scope>test</scope>
+		</dependency>		
+		
 	</dependencies>
 </project>
