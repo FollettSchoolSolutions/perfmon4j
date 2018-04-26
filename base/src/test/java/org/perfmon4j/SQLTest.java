@@ -14,6 +14,7 @@ import liquibase.resource.ClassLoaderResourceAccessor;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
+import org.slf4j.LoggerFactory;
 
 public abstract class SQLTest extends TestCase {
 
@@ -35,7 +36,7 @@ public abstract class SQLTest extends TestCase {
     
 	protected void setUp() throws Exception {
 		super.setUp();
-
+	
 		appender = new JDBCSQLAppender(AppenderID.getAppenderID(JDBCSQLAppender.class.getName()));
 		appender.setDbSchema("mydb");
 		appender.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver");
@@ -46,13 +47,21 @@ public abstract class SQLTest extends TestCase {
 
     private void createTables() throws Exception {
 		Connection conn = appender.getConnection();
+
+		/** Quiet down Liquibase **/
+    	ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
+    	logger.setLevel(ch.qos.logback.classic.Level.WARN);
 		
 		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
 		db.setDefaultSchemaName(SCHEMA_NAME);
-		
+
 		Liquibase updater = new Liquibase("org/perfmon4j/update-change-master-log.xml", new ClassLoaderResourceAccessor(), db);
 		updater.setChangeLogParameter("DatabaseIdentifier", "ABCDEFG");
 		updater.update((String)null);
+
+		// The liquibase updater turns off autocommit...  Our appenders require it
+		// so turn it back on.
+		conn.setAutoCommit(true);
     }
     
 	protected void tearDown() throws Exception {

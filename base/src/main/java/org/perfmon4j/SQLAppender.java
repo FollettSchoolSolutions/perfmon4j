@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
@@ -42,13 +43,19 @@ public abstract class SQLAppender extends Appender {
 	private String dbSchema = null;
 	private String insertCategoryPS = null;
 	private String selectCategoryPS = null;
+	private String insertGroupPS = null;
+	private String selectGroupPS = null;
+	private String joinGroupToSystemPS = null;
+	private String groupToSystemJoinExistsPS = null;
 	private String insertIntervalPS = null;
 	private String insertThresholdPS = null;
 	private String systemNamePrefix = null;
 	private String systemNameBody = null;
 	private String systemNameSuffix = null;
 	private boolean excludeCWDHashFromSystemName = false;
+	private String[] groups = new String[]{};
 	private Long systemID = null;
+	private final AtomicBoolean groupsHaveChanged = new AtomicBoolean(true);
 	
 	public SQLAppender(AppenderID id) {
 		super(id);
@@ -63,7 +70,10 @@ public abstract class SQLAppender extends Appender {
 	public void outputData(PerfMonData data) {
 		Connection conn = null;
 		double databaseVersion = 0.0;
-		boolean needDatabaseVersion = (data instanceof SQLWriteableWithDatabaseVersion);
+		boolean needDatabaseVersion = 
+			(data instanceof SQLWriteableWithDatabaseVersion) 
+			|| (data instanceof IntervalData)
+			|| groupsHaveChanged.get();
 				
 		if (needDatabaseVersion) {
 			databaseVersion = getDatabaseVersion();
@@ -71,6 +81,14 @@ public abstract class SQLAppender extends Appender {
 		
 		try {
 			conn = getConnection();
+			if (groupsHaveChanged.get() && databaseVersion >= 6.0) {
+				long systemID = getSystemID();
+				for (String groupName : getGroupsAsArray()) {
+					long groupID = getOrCreateGroup(conn, groupName);
+					joinGroupToSystemIfNotExists(conn, groupID, systemID);
+				}
+				groupsHaveChanged.set(false);
+			}
 			if (conn != null) {
 				if (data instanceof IntervalData) {
 					outputIntervalData(conn, (IntervalData)data);
@@ -92,6 +110,21 @@ public abstract class SQLAppender extends Appender {
 		}
 	}
 
+	public String getInsertGroupPS() {
+		if (insertGroupPS == null) {
+			insertGroupPS = String.format(INSERT_GROUP_PS, dbSchema == null ? "" : (dbSchema + "."));
+		}
+		return insertGroupPS;
+	}
+
+	
+	public String getSelectGroupPS() {
+		if (selectGroupPS == null) {
+			selectGroupPS = String.format(SELECT_GROUP_PS, dbSchema == null ? "" : (dbSchema + "."));
+		}
+		return selectGroupPS;
+	}
+
 	public String getInsertCategoryPS() {
 		if (insertCategoryPS == null) {
 			insertCategoryPS = String.format(INSERT_CATEGORY_PS, dbSchema == null ? "" : (dbSchema + "."));
@@ -106,7 +139,7 @@ public abstract class SQLAppender extends Appender {
 		}
 		return selectCategoryPS;
 	}
-
+	
 	public String getInsertIntervalPS() {
 		if (insertIntervalPS == null) {
 			insertIntervalPS = String.format(INSERT_INTERVAL_PS, dbSchema == null ? "" : (dbSchema + "."));
@@ -120,8 +153,28 @@ public abstract class SQLAppender extends Appender {
 		}
 		return insertThresholdPS;
 	}
+
+	public String getJoinGroupToSystemPS() {
+		if (joinGroupToSystemPS == null) {
+			joinGroupToSystemPS = String.format(JOIN_GROUP_TO_SYSTEM_PS, dbSchema == null ? "" : (dbSchema + "."));
+		}
+		return joinGroupToSystemPS;
+	}	
+	
+	public String getGroupToSystemJoinExistsPS() {
+		if (groupToSystemJoinExistsPS == null) {
+			groupToSystemJoinExistsPS = String.format(GROUP_TO_SYSTEM_JOIN_EXISTS_PS, dbSchema == null ? "" : (dbSchema + "."));
+		}
+		return groupToSystemJoinExistsPS;
+	}	
+
+	
 	private final static String INSERT_CATEGORY_PS = "INSERT INTO %sP4JCategory (CategoryName) VALUES(?)";
 	private final static String SELECT_CATEGORY_PS = "SELECT CategoryID FROM %sP4JCategory WHERE CategoryName=?";
+
+	private final static String INSERT_GROUP_PS = "INSERT INTO %sP4JGroup (GroupName) VALUES(?)";
+	private final static String SELECT_GROUP_PS = "SELECT GroupID FROM %sP4JGroup WHERE GroupName=?";
+	
 	
 	private final static String INSERT_INTERVAL_PS = "INSERT INTO %sP4JIntervalData (SystemID, CategoryID, StartTime, EndTime, " +
 		"TotalHits, TotalCompletions, MaxActiveThreads, MaxActiveThreadsSet, MaxDuration, " +
@@ -134,6 +187,35 @@ public abstract class SQLAppender extends Appender {
 	
 	private final static String INSERT_THRESHOLD_PS = "INSERT INTO %sP4JIntervalThreshold (intervalID, ThresholdMillis, " +
 		"CompletionsOver, PercentOver) VALUES(?, ?, ?, ?)";
+
+	private final static String JOIN_GROUP_TO_SYSTEM_PS = "INSERT INTO %sP4JGroupSystemJoin (groupID, systemID) VALUES(?, ?)";
+	private final static String GROUP_TO_SYSTEM_JOIN_EXISTS_PS = "SELECT COUNT(*) FROM %sP4JGroupSystemJoin WHERE GroupID=? AND SystemID=?";
+
+	private void joinGroupToSystemIfNotExists(Connection conn, long groupID, long systemID) throws SQLException {
+		PreparedStatement stmtQuery = null;
+		PreparedStatement stmtInsert = null;
+
+		try {
+			stmtQuery = conn.prepareStatement(getGroupToSystemJoinExistsPS());
+			stmtQuery.setLong(1, groupID);
+			stmtQuery.setLong(2, systemID);
+			boolean rowExists = JDBCHelper.getQueryCount(stmtQuery) != 0;
+			if (!rowExists) {
+				// We use generic SQL so we can't reliably have a single statement 
+				// that only inserts if the row does not already exist. Still since all 
+				// appenders operate in a single thread, the possibility of
+				// a race condition where the insert fails is minor.
+				stmtInsert = conn.prepareStatement(getJoinGroupToSystemPS());
+				stmtInsert.setLong(1, groupID);
+				stmtInsert.setLong(2, systemID);
+				
+				stmtInsert.execute();
+			}
+		} finally {
+			JDBCHelper.closeNoThrow(stmtQuery);
+			JDBCHelper.closeNoThrow(stmtInsert);
+		}
+	}
 
 	private long getOrCreateCategory(Connection conn, String categoryName) throws SQLException {
 		long result = 0;
@@ -169,6 +251,42 @@ public abstract class SQLAppender extends Appender {
 		}
 		return result;
 	}
+
+	private long getOrCreateGroup(Connection conn, String groupName) throws SQLException {
+		long result = 0;
+		final boolean oracleConnection = JDBCHelper.isOracleConnection(conn);
+		PreparedStatement stmtQuery = null;
+		PreparedStatement stmtInsert = null;
+		ResultSet rs = null;
+		
+		try {
+			stmtQuery = conn.prepareStatement(getSelectGroupPS());
+			stmtQuery.setString(1, groupName);
+			rs = stmtQuery.executeQuery();
+			if (!rs.next()) {
+				JDBCHelper.closeNoThrow(rs);
+				rs = null;
+		
+				if (oracleConnection) {
+					stmtInsert = conn.prepareStatement(getInsertGroupPS(), new int[]{1});
+				} else {
+					stmtInsert = conn.prepareStatement(getInsertGroupPS(), Statement.RETURN_GENERATED_KEYS);
+				}
+				stmtInsert.setString(1, groupName);
+				stmtInsert.execute();
+				
+				rs = stmtInsert.getGeneratedKeys();
+				rs.next();
+			}
+			result = rs.getLong(1);
+		} finally {
+			JDBCHelper.closeNoThrow(rs);
+			JDBCHelper.closeNoThrow(stmtQuery);
+			JDBCHelper.closeNoThrow(stmtInsert);
+		}
+		return result;
+	}
+	
 	
 	private Timestamp buildTimestampOrNull(long time) {
 		return time > 0 ? new Timestamp(time) : null;
@@ -460,4 +578,12 @@ public abstract class SQLAppender extends Appender {
 		this.excludeCWDHashFromSystemName = excludeCWDHashFromSystemName;
 	}
 
+	public String[] getGroupsAsArray() {
+		return groups;
+	}
+
+	public void setGroups(String csvGroups) {
+		groupsHaveChanged.set(true);
+		this.groups = MiscHelper.tokenizeCSVString(csvGroups);
+	}
 }

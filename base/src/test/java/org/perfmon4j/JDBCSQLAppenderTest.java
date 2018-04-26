@@ -31,6 +31,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.util.JDBCHelper;
+import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
@@ -109,6 +110,62 @@ public class JDBCSQLAppenderTest extends SQLTest {
 		assertEquals("Should have 2 interval rows", 2, JDBCHelper.getQueryCount(conn, countInterval));
     }
 
+    /*----------------------------------------------------------------------------*/
+    public void testCreateGroups() throws Exception {
+    	long now = System.currentTimeMillis();
+    	
+    	Connection conn = appender.getConnection();
+    	appender.setGroups("AllProduction, CircService");
+    	
+		appender.outputData(createIntervalData("a.b.c", now, 1000));
+    	
+		final String countSelectGroups = "SELECT COUNT(*) FROM mydb.P4JGroup "
+				+ "WHERE ((GroupName = 'AllProduction') OR (GroupName = 'CircService'))";
+		final String countAllGroups = "SELECT COUNT(*) FROM mydb.P4JGroup";
+		final String countGroupJoins = "SELECT COUNT(*) FROM mydb.P4JGroupSystemJoin";
+		final String countIntervalRows = "SELECT COUNT(*) FROM mydb.P4JIntervalData";
+		
+
+		assertEquals("Should have added the interval row", 1, JDBCHelper.getQueryCount(conn, countIntervalRows));
+		assertEquals("Should have created Groups", 2, JDBCHelper.getQueryCount(conn, countSelectGroups));
+		assertEquals("Should have created 2 system group join rows", 2, JDBCHelper.getQueryCount(conn, countGroupJoins));
+
+		// Change one of the groups, Appender should add the new group association, 
+		// but it NEVER removes existing associations 
+    	appender.setGroups("AllProduction, CircService, Special");
+    	appender.outputData(createIntervalData("a.b.c", now + 1000, 1000));
+		
+		assertEquals("Should have created another group", 3, JDBCHelper.getQueryCount(conn, countAllGroups));
+		assertEquals("Should now have 3 system group join rows", 3, JDBCHelper.getQueryCount(conn, countGroupJoins));
+		assertEquals("Should have added another interval row", 2, JDBCHelper.getQueryCount(conn, countIntervalRows));
+		
+		// Now delete the Group rows underneath the appender. To reduce overhead 
+		// on the database the appender only adds the groups once (or if they are changed)
+		JDBCHelper.executeUpdateOrDelete(conn, "DELETE FROM mydb.P4JGroup");
+		
+    	appender.outputData(createIntervalData("a.b.c", now + 1000, 1000));
+		
+		assertEquals("Should NOT have recreated the groups", 0, JDBCHelper.getQueryCount(conn, countAllGroups));
+		assertEquals("Should NOT have recreated the joins", 0, JDBCHelper.getQueryCount(conn, countGroupJoins));
+		assertEquals("Should have added another interval row", 3, JDBCHelper.getQueryCount(conn, countIntervalRows));
+    }
+
+    /*----------------------------------------------------------------------------*/
+    public void testCreateGroupsRequiresDb6orGreater() throws Exception {
+    	long now = System.currentTimeMillis();
+    	Connection conn = appender.getConnection();
+
+    	// Set the schema label back to 5.0
+    	this.addVersionLabel(conn, "0005.0", true);
+    	
+    	appender.setGroups("AllProduction, CircService");
+		appender.outputData(createIntervalData("a.b.c", now, 1000));
+    	
+		final String countAllGroups = "SELECT COUNT(*) FROM mydb.P4JGroup";
+		assertEquals("Should NOT have created groups", 0, JDBCHelper.getQueryCount(conn, countAllGroups));
+    }
+
+    
     public void testAddThreshold() throws Exception {
     	long now = System.currentTimeMillis();
     	
@@ -185,7 +242,6 @@ public class JDBCSQLAppenderTest extends SQLTest {
     	d.setTimeStop(now + 1000);
     	appender.outputData(d);
     	
-System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalData t"));
 		assertEquals("record count", 1, JDBCHelper.getQueryCount(conn, count));
     }    
     
@@ -218,7 +274,6 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalDat
     	d.setTimeStop(now + 1000);
     	appender.outputData(d);
     	
-System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM mydb.P4JIntervalData t"));
 		assertEquals("record count", 1, JDBCHelper.getQueryCount(conn, count));
     }    
 
