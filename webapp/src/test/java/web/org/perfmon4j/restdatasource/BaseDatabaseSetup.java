@@ -36,6 +36,7 @@ import java.util.Set;
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
+import org.slf4j.LoggerFactory;
 
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 
@@ -49,6 +50,9 @@ public class BaseDatabaseSetup  {
 	
 	
 	public BaseDatabaseSetup() {
+		/** Quiet down Liquibase **/
+    	ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
+    	logger.setLevel(ch.qos.logback.classic.Level.WARN);
 	}
 
 	public void setUpDatabase() throws Exception {

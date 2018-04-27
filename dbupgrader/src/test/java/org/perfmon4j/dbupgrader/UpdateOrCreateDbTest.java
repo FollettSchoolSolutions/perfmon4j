@@ -38,6 +38,7 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb.Parameters;
+import org.slf4j.LoggerFactory;
 
 public class UpdateOrCreateDbTest extends TestCase {
 	private static String SCHEMA = "TEST";
@@ -47,6 +48,9 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public UpdateOrCreateDbTest(String name) {
 		super(name);
+		
+    	ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
+    	logger.setLevel(ch.qos.logback.classic.Level.WARN);		
 	}
 	
 	protected void setUp() throws Exception {
