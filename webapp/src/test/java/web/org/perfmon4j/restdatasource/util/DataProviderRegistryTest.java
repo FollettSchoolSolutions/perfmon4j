@@ -30,16 +30,17 @@ import javax.ws.rs.BadRequestException;
 
 import junit.framework.TestCase;
 
+import org.mockito.Mockito;
 import org.perfmon4j.RegisteredDatabaseConnections;
 import org.perfmon4j.RegisteredDatabaseConnections.Database;
 
 import web.org.perfmon4j.restdatasource.DataProvider;
-import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;
 import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
 import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
+import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 
 public class DataProviderRegistryTest extends TestCase {
@@ -61,8 +62,17 @@ public class DataProviderRegistryTest extends TestCase {
 		super.tearDown();
 	}
 	
+	private RegisteredDatabaseConnections.Database mockDatabase(String expectedDatabaseID) {
+		RegisteredDatabaseConnections.Database result = Mockito.mock(RegisteredDatabaseConnections.Database.class);
+		
+		Mockito.when(result.getID()).thenReturn(expectedDatabaseID);
+		Mockito.when(result.isMock()).thenReturn(Boolean.TRUE);
+	
+		return result;
+	}
+	
 	public void testBasicResolve() {
-		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~shoeSize", mockDatabase("ABCD-EFGH"))[0];
 		
 		SeriesField field = registry.resolveField(def, "series 1");
 		assertNotNull(field);
@@ -72,7 +82,7 @@ public class DataProviderRegistryTest extends TestCase {
 		assertEquals("Category Template", "Person", field.getCategory().getTemplateName());
 		assertEquals("Field name", "shoeSize", field.getField().getName());
 		
-		def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~hatSize", "ABCD-EFGH")[0];
+		def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~hatSize", mockDatabase("ABCD-EFGH"))[0];
 		
 		field = registry.resolveField(def, "series 1");
 		assertNotNull(field);
@@ -85,14 +95,14 @@ public class DataProviderRegistryTest extends TestCase {
 	
 
 	public void testOverrideDefaultAggregationMethod() {
-		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("MAX~ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("MAX~ABCD-EFGH.1~Person.student~shoeSize", mockDatabase("ABCD-EFGH"))[0];
 		
 		SeriesField field = registry.resolveField(def, "series 1");
 		assertEquals("Should be the specified aggregation method", AggregationMethod.MAX,  field.getAggregationMethod());
 	}
 
 	public void testUnsupportedAggregationMethod() {
-		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("MIN~ABCD-EFGH.1~Person.student~shoeSize", "ABCD-EFGH")[0];
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("MIN~ABCD-EFGH.1~Person.student~shoeSize", mockDatabase("ABCD-EFGH"))[0];
 		
 		try {
 			registry.resolveField(def, "series 1");
@@ -103,7 +113,7 @@ public class DataProviderRegistryTest extends TestCase {
 	}
 
 	public void testUnregisteredTemplate() {
-		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Pet.student~shoeSize", "ABCD-EFGH")[0];
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Pet.student~shoeSize", mockDatabase("ABCD-EFGH"))[0];
 		
 		try {
 			registry.resolveField(def, "series 1");
@@ -114,7 +124,7 @@ public class DataProviderRegistryTest extends TestCase {
 	}
 	
 	public void testInvalidField() {
-		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~height", "ABCD-EFGH")[0];	
+		ParsedSeriesDefinition def = ParsedSeriesDefinition.parse("ABCD-EFGH.1~Person.student~height", mockDatabase("ABCD-EFGH"))[0];	
 		try {
 			registry.resolveField(def, "series 1");
 			fail("Template does not contain a height field");

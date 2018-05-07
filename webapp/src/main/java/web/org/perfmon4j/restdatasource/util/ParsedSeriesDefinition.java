@@ -22,24 +22,42 @@
 package web.org.perfmon4j.restdatasource.util;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.ws.rs.BadRequestException;
 
-import web.org.perfmon4j.restdatasource.DataSourceRestImpl;
+import org.perfmon4j.RegisteredDatabaseConnections;
+
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;
+import web.org.perfmon4j.restdatasource.data.ID;
+import web.org.perfmon4j.restdatasource.data.SystemID;
+import web.org.perfmon4j.restdatasource.util.aggregators.SystemToGroupMapper;
 
 public class ParsedSeriesDefinition {
 	private final AggregationMethod aggregationMethod;
-	private final DataSourceRestImpl.SystemID[] systems;
+	private final SystemID[] systems;
 	private final String categoryName;
 	private final String fieldName;
 	
 	private ParsedSeriesDefinition(AggregationMethod aggregationMethod, String[] systems,
-			String categoryName, String fieldName, String expectedDatabaseID) {
+			String categoryName, String fieldName, RegisteredDatabaseConnections.Database db) {
 		super();
 		this.aggregationMethod = aggregationMethod;
-		this.systems = DataSourceRestImpl.SystemID.parse(systems, expectedDatabaseID);
+		String expectedDatabaseID = db.getID();
+		
+		Set<ID> ids = new HashSet<ID>();
+		for (String s : systems) {
+			ID id = ID.parse(s);
+			if (!expectedDatabaseID.equals(id.getDatabaseID())) {
+				throw new BadRequestException("SystemID must match the specified database(" + expectedDatabaseID + "): " 
+						+ id.getDisplayable());
+			}
+			ids.add(id);
+		}
+		SystemToGroupMapper mapper = new SystemToGroupMapper(db);
+		this.systems = mapper.resolveGroupsToSystems(ids.toArray(new ID[]{}));
 		this.categoryName = categoryName;
 		this.fieldName = fieldName;
 	}
@@ -48,7 +66,7 @@ public class ParsedSeriesDefinition {
 		return aggregationMethod;
 	}
 
-	public DataSourceRestImpl.SystemID[] getSystems() {
+	public SystemID[] getSystems() {
 		return systems;
 	}
 
@@ -60,7 +78,7 @@ public class ParsedSeriesDefinition {
 		return fieldName;
 	}
 	
-	private static ParsedSeriesDefinition parseSingleSeries(String definition, String expectedDatabaseID) {
+	private static ParsedSeriesDefinition parseSingleSeries(String definition, RegisteredDatabaseConnections.Database db) {
 		if (definition == null || "".equals(definition.trim())) {
 			throw new BadRequestException("You must provide a series definition");
 		}	
@@ -92,11 +110,11 @@ public class ParsedSeriesDefinition {
 		String categoryName = split[offset++];
 		String fieldName = split[offset];
 		
-		return new ParsedSeriesDefinition(aggregationMethod, systems.toArray(new String[]{}), categoryName, fieldName, expectedDatabaseID);
+		return new ParsedSeriesDefinition(aggregationMethod, systems.toArray(new String[]{}), categoryName, fieldName, db);
 	}
 
 
-	public static ParsedSeriesDefinition[] parse(String definition, String expectedDatabaseID) {
+	public static ParsedSeriesDefinition[] parse(String definition, RegisteredDatabaseConnections.Database db) {
 		if (definition == null || "".equals(definition.trim())) {
 			throw new BadRequestException("You must provide a series definition");
 		}
@@ -108,7 +126,7 @@ public class ParsedSeriesDefinition {
 			throw new BadRequestException("You must provide a series definition");
 		}		
 		for (String s : split) {
-			result.add(parseSingleSeries(s, expectedDatabaseID));	
+			result.add(parseSingleSeries(s, db));	
 		}
 		
 		return result.toArray(new ParsedSeriesDefinition[]{});

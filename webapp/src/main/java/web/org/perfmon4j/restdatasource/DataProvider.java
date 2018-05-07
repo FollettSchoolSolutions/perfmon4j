@@ -29,10 +29,10 @@ import java.util.Set;
 
 import org.perfmon4j.RegisteredDatabaseConnections;
 
-import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
+import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import web.org.perfmon4j.restdatasource.dataproviders.ProviderField;
 import web.org.perfmon4j.restdatasource.util.SeriesField;

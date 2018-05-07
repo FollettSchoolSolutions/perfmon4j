@@ -115,6 +115,28 @@ public class BaseDatabaseSetup  {
 			JDBCHelper.closeNoThrow(stmt);
 		}
 	}
+
+	public long addGroup(String groupName) throws SQLException {
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate("INSERT INTO P4JGroup (GroupName) VALUES('" + groupName + "')", Statement.RETURN_GENERATED_KEYS);
+			return getID(stmt);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
+	
+	public void addGroupToSystem(long groupID, long systemID) throws SQLException {
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate("INSERT INTO P4JGroupSystemJoin"
+				+ " (GroupID, SystemID) VALUES(" + groupID + "," + systemID + ")");
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
 	
 	public long addInterval(long systemID, long categoryID, String endTime) throws SQLException {
 		return addInterval(systemID, categoryID, endTime, 1);

@@ -24,15 +24,21 @@ package web.org.perfmon4j.restdatasource.data;
 public class MonitoredSystem implements Comparable<MonitoredSystem> {
 	private String name;
 	private String id;
+	private boolean group;
 	
 	public MonitoredSystem() {
 		super();
 	}
 	
 	public MonitoredSystem(String name, String id) {
+		this(name, id, false);
+	}
+
+	public MonitoredSystem(String name, String id, boolean group) {
 		super();
 		this.name = name;
 		this.id = id;
+		this.group = group;
 	}
 	
 	public String getName() {
@@ -41,12 +47,42 @@ public class MonitoredSystem implements Comparable<MonitoredSystem> {
 	public void setName(String name) {
 		this.name = name;
 	}
+	
+	/**
+	 * A monitor can be associated with a system or a group of
+	 * systems (group==true)
+	 * 
+	 * For a system (group==false) the ID will be
+	 * in the following format:
+	 * 	<databaseID>.<systemID>
+	 * 
+	 * DatabaseID is always a 4 character code and systemID will be an integer.
+	 * examples:  PROD.1,  DALY.453, XVSS.21
+	 *   
+	 * For a group (group==true) the ID will be in the following format
+	 * 		<databaseID>.GROUP.<groupID>
+	 * examples:
+	 *    		
+	 *  
+	 *   
+	 * @return
+	 */
+	
 	public String getID() {
 		return id;
 	}
 	public void setID(String id) {
 		this.id = id;
 	}
+	
+	public boolean isGroup() {
+		return group;
+	}
+
+	public void setGroup(boolean group) {
+		this.group = group;
+	}
+
 	@Override
 	public String toString() {
 		return "MonitoredSystem [name=" + name + ", id=" + id + "]";

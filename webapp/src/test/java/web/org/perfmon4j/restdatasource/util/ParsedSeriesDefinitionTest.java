@@ -25,6 +25,10 @@ package web.org.perfmon4j.restdatasource.util;
 import javax.ws.rs.BadRequestException;
 
 import junit.framework.TestCase;
+
+import org.mockito.Mockito;
+import org.perfmon4j.RegisteredDatabaseConnections;
+
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;
 
 public class ParsedSeriesDefinitionTest extends TestCase {
@@ -41,10 +45,18 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 		super.tearDown();
 	}
 	
+	private RegisteredDatabaseConnections.Database mockDatabase(String expectedDatabaseID) {
+		RegisteredDatabaseConnections.Database result = Mockito.mock(RegisteredDatabaseConnections.Database.class);
+		
+		Mockito.when(result.getID()).thenReturn(expectedDatabaseID);
+		Mockito.when(result.isMock()).thenReturn(Boolean.TRUE);
+	
+		return result;
+	}
 	
 	public void testParserSimpleSeries() {
 		String series = "GRSK-VRTS.1~Interval.WebRequest.search~avgDuration";
-		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
+		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, mockDatabase("GRSK-VRTS"));
 		
 		assertNotNull(def);
 		assertEquals("def.length", 1, def.length);
@@ -57,7 +69,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testParserCompositeSeries() {
 		String series = "GRSK-VRTS.1~GRSK-VRTS.2~Interval.WebRequest.search~avgDuration";
-		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
+		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, mockDatabase("GRSK-VRTS"));
 		
 		assertNotNull(def);
 		assertEquals("def.length", 1, def.length);
@@ -73,7 +85,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testParserCompositeSeriesWithAggregationMethod() {
 		String series = "MAX~GRSK-VRTS.1~GRSK-VRTS.2~Interval.WebRequest.search~avgDuration";
-		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
+		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, mockDatabase("GRSK-VRTS"));
 		
 		assertNotNull(def);
 		assertEquals("def.length", 1, def.length);
@@ -89,7 +101,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testParserMultipleSeries() {
 		String series = "GRSK-VRTS.1~Interval.WebRequest.search~avgDuration_MAX~GRSK-VRTS.4~GRSK-VRTS.5~Interval.WebRequest.search~maxActiveThreads_MAX~GRSK-VRTS.4~GRSK-VRTS.5~Interval.WebRequest.search~medianDuration";
-		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
+		ParsedSeriesDefinition def[] = ParsedSeriesDefinition.parse(series, mockDatabase("GRSK-VRTS"));
 		
 		assertNotNull(def);
 		assertEquals("numberOfSeries", 3, def.length);
@@ -98,7 +110,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 	public void testParserWithSeriesContainingASystemNotInCurrentDatabase() {
 		String series = "GRSK-VRTS.1~Interval.WebRequest.search~avgDuration_MAX~GRSK-VRTS.4~GRSK-VRTS.5~Interval.WebRequest.search~maxActiveThreads_MAX~GRSK-VRTS.4~AAAA-BBBB.5~Interval.WebRequest.search~medianDuration";
 		try {
-			ParsedSeriesDefinition.parse(series, "GRSK-VRTS");
+			ParsedSeriesDefinition.parse(series, mockDatabase("GRSK-VRTS"));
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("SystemID must match the specified database(GRSK-VRTS): AAAA-BBBB.5", ex.getMessage());
@@ -107,7 +119,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testNullRequest() {
 		try {
-			ParsedSeriesDefinition.parse(null, "GRSK-VRTS");
+			ParsedSeriesDefinition.parse(null, mockDatabase("GRSK-VRTS"));
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("You must provide a series definition", ex.getMessage());
@@ -116,7 +128,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testEmptyRequest() {
 		try {
-			ParsedSeriesDefinition.parse("", "GRSK-VRTS");
+			ParsedSeriesDefinition.parse("", mockDatabase("GRSK-VRTS"));
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("You must provide a series definition", ex.getMessage());
@@ -125,7 +137,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testMultipleEmptyRequests() {
 		try {
-			ParsedSeriesDefinition.parse("__", "GRSK-VRTS");
+			ParsedSeriesDefinition.parse("__", mockDatabase("GRSK-VRTS"));
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("You must provide a series definition", ex.getMessage());
@@ -134,7 +146,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testMultipleEmptyRequestsWithWhiteSpace() {
 		try {
-			ParsedSeriesDefinition.parse("  _  _  ", "GRSK-VRTS");
+			ParsedSeriesDefinition.parse("  _  _  ", mockDatabase("GRSK-VRTS"));
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("You must provide a series definition", ex.getMessage());
@@ -143,7 +155,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 	
 	public void testInsufficientFieldsInSeriesDefinition() {
 		try {
-			ParsedSeriesDefinition.parse("Interval.WebRequest.search~avgDuration", "GRSK-VRTS");
+			ParsedSeriesDefinition.parse("Interval.WebRequest.search~avgDuration", mockDatabase("GRSK-VRTS"));
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("Insufficent fields in series definition", ex.getMessage());
@@ -152,7 +164,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 		
 	public void testInsufficientFieldsInSeriesDefinitionWithAggregationMethod() {
 		try {
-			ParsedSeriesDefinition.parse("MAX~Interval.WebRequest.search~avgDuration", "GRSK-VRTS");
+			ParsedSeriesDefinition.parse("MAX~Interval.WebRequest.search~avgDuration", mockDatabase("GRSK-VRTS"));
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("Insufficent fields in series definition", ex.getMessage());
@@ -161,7 +173,7 @@ public class ParsedSeriesDefinitionTest extends TestCase {
 
 	public void testInvalidAggregationMethod() {
 		try {
-			ParsedSeriesDefinition.parse("WHATISTHIS~Interval.WebRequest.search~avgDuration", "GRSK-VRTS");
+			ParsedSeriesDefinition.parse("WHATISTHIS~Interval.WebRequest.search~avgDuration", mockDatabase("GRSK-VRTS"));
 			fail("Expected a BadRequestException");
 		} catch (BadRequestException ex) {
 			assertEquals("Invalid aggregation method: WHATISTHIS", ex.getMessage());
