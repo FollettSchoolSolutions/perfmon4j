@@ -129,15 +129,15 @@ public final class RegisteredDatabaseConnections {
 	}
 	
 	
-	static public void addDatabase(String name, boolean isDefault, String driverClassName, String jarFileName,
+	static public Database addDatabase(String name, boolean isDefault, String driverClassName, String jarFileName,
 	    String jdbcURL, String schema, String userName, String password, String poolName, String contextFactory, String urlPkgs) throws InvalidConfigException {
 		Connection conn = null;
+		Database database = null; 
 		
 		try {
 			String databaseIdentity;
 			double databaseVersion;
 
-			Database database = null;
 			if (mockIdentityAndVersionForTest) {
 				databaseIdentity = Long.toString(System.nanoTime());
 				databaseVersion = 1.0;
@@ -204,6 +204,8 @@ public final class RegisteredDatabaseConnections {
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
 		}
+		
+		return database;
 	}
 	
 	static public void removeDatabase(String name) {
