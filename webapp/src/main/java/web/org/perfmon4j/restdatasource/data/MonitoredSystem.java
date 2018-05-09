@@ -33,6 +33,10 @@ public class MonitoredSystem implements Comparable<MonitoredSystem> {
 	public MonitoredSystem(String name, String id) {
 		this(name, id, false);
 	}
+	
+	public MonitoredSystem(String name, ID id) {
+		this(name, id.getDatabaseID(), id.isGroup());
+	}
 
 	public MonitoredSystem(String name, String id, boolean group) {
 		super();

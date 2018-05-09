@@ -45,15 +45,11 @@ public class ParsedSeriesDefinition {
 			String categoryName, String fieldName, RegisteredDatabaseConnections.Database db) {
 		super();
 		this.aggregationMethod = aggregationMethod;
-		String expectedDatabaseID = db.getID();
 		
 		Set<ID> ids = new HashSet<ID>();
 		for (String s : systems) {
 			ID id = ID.parse(s);
-			if (!expectedDatabaseID.equals(id.getDatabaseID())) {
-				throw new BadRequestException("SystemID must match the specified database(" + expectedDatabaseID + "): " 
-						+ id.getDisplayable());
-			}
+			id.validateMatchesDatabase(db);
 			ids.add(id);
 		}
 		SystemToGroupMapper mapper = new SystemToGroupMapper(db);

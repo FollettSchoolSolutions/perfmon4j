@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.ws.rs.BadRequestException;
+
+import org.perfmon4j.RegisteredDatabaseConnections;
+
 public abstract class ID implements Comparable<ID> {
 	private final String databaseID;
 	private final String displayable;
@@ -124,6 +128,14 @@ public abstract class ID implements Comparable<ID> {
 
 	public String getSortable() {
 		return sortable;
+	}
+	
+	public void validateMatchesDatabase(RegisteredDatabaseConnections.Database db) {
+		String expectedDatabaseID = db.getID();
+		if (!databaseID.equals(expectedDatabaseID)) {
+			throw new BadRequestException("SystemID must match the specified database(" + expectedDatabaseID + "): " 
+	              + getDisplayable());
+		}
 	}
 	
 	public static String buildArrayString(ID ids[]) {

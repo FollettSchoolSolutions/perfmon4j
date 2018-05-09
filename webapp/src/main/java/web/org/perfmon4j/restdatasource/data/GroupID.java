@@ -13,7 +13,7 @@ public class GroupID extends ID {
 		return true;
 	}
 
-	public long getSystemID() {
+	public long getGroupID() {
 		return groupID;
 	}
 
