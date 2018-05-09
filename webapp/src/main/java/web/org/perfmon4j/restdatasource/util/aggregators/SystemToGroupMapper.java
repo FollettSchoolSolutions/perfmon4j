@@ -23,6 +23,7 @@ import web.org.perfmon4j.restdatasource.data.SystemID;
 public class SystemToGroupMapper {
 	private static final Logger logger = LoggerFactory.initLogger(SystemToGroupMapper.class);
 	private final RegisteredDatabaseConnections.Database db;
+	public static final double MIN_DATABASE_VERSION = 6.0;
 	
 	public SystemToGroupMapper(RegisteredDatabaseConnections.Database db) {
 		this.db = db;
@@ -48,7 +49,7 @@ public class SystemToGroupMapper {
 			}
 		}
 		
-		if (!groups.isEmpty()) {
+		if (!groups.isEmpty() && (db.getDatabaseVersion() >= MIN_DATABASE_VERSION)) {
 			String sql = "SELECT SystemID FROM "+ fixupSchema(db.getSchema())+ "P4JGroupSystemJoin WHERE GroupID IN (";
 			boolean firstTime = true;
 			for (GroupID group : groups) {
@@ -85,7 +86,7 @@ public class SystemToGroupMapper {
 	
 
 	public Set<MonitoredSystem> resolveGroups(Set<MonitoredSystem> systems, boolean returnOnlyGroups) {
-		if (!systems.isEmpty()) {
+		if (!systems.isEmpty()&& (db.getDatabaseVersion() >= MIN_DATABASE_VERSION)) {
 			MonitoredSystem[] inSystems = systems.toArray(new MonitoredSystem[systems.size()]);
 			if (returnOnlyGroups) {
 				systems.clear();
