@@ -17,6 +17,7 @@ import org.perfmon4j.util.LoggerFactory;
 
 import web.org.perfmon4j.restdatasource.data.GroupID;
 import web.org.perfmon4j.restdatasource.data.ID;
+import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.SystemID;
 
 public class SystemToGroupMapper {
@@ -83,6 +84,56 @@ public class SystemToGroupMapper {
 	}
 	
 
+	public Set<MonitoredSystem> resolveGroups(Set<MonitoredSystem> systems, boolean returnOnlyGroups) {
+		if (!systems.isEmpty()) {
+			MonitoredSystem[] inSystems = systems.toArray(new MonitoredSystem[systems.size()]);
+			if (returnOnlyGroups) {
+				systems.clear();
+			}
+			String sql = "SELECT g.GroupName, g.GroupID "
+					+ "FROM P4JGroup g "
+					+ "JOIN P4JGroupSystemJoin j ON j.GroupID = g.GroupID "
+					+ "WHERE j.SystemID IN (";
+			boolean firstTime = true;
+			for (MonitoredSystem s : inSystems) {
+				ID id = ID.parse(s.getID());
+				if (!id.isSystem()) {
+					throw new InternalServerErrorException("Did not expect group in MonitoredSystem set");
+				}
+				SystemID systemID = (SystemID)id;
+				
+				if (!firstTime) {
+					sql += ", ";
+				} else {
+					firstTime = false;
+				}
+				sql += Long.toString(systemID.getSystemID());
+			}
+			sql += ") GROUP BY g.GroupName, g.GroupID";
+			try {
+				Connection conn = db.openConnection();
+				Statement stmt = null;
+				ResultSet rs = null;
+				try {
+					stmt = conn.createStatement();
+					rs = stmt.executeQuery(sql);
+					while (rs.next()) {
+						GroupID groupID = new GroupID(db.getID(), rs.getLong(2));
+						systems.add(new MonitoredSystem(rs.getString(1), groupID));
+					}
+				} finally {
+					JDBCHelper.closeNoThrow(rs);
+					JDBCHelper.closeNoThrow(stmt);
+					JDBCHelper.closeNoThrow(conn);
+				}
+			} catch (SQLException s) {
+				throw new InternalServerErrorException(s);
+			}
+		}
+		return systems;
+	}
+	
+	
 	protected String fixupSchema(String schema) {
 		return schema == null ? "" : schema + ".";
 	}	

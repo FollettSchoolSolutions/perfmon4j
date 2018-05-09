@@ -35,7 +35,7 @@ public class MonitoredSystem implements Comparable<MonitoredSystem> {
 	}
 	
 	public MonitoredSystem(String name, ID id) {
-		this(name, id.getDatabaseID(), id.isGroup());
+		this(name, id.getDisplayable(), id.isGroup());
 	}
 
 	public MonitoredSystem(String name, String id, boolean group) {
@@ -66,12 +66,9 @@ public class MonitoredSystem implements Comparable<MonitoredSystem> {
 	 * For a group (group==true) the ID will be in the following format
 	 * 		<databaseID>.GROUP.<groupID>
 	 * examples:
-	 *    		
-	 *  
 	 *   
 	 * @return
 	 */
-	
 	public String getID() {
 		return id;
 	}
@@ -96,6 +93,7 @@ public class MonitoredSystem implements Comparable<MonitoredSystem> {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + (group ? 1231 : 1237);
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		return result;
@@ -110,6 +108,8 @@ public class MonitoredSystem implements Comparable<MonitoredSystem> {
 		if (getClass() != obj.getClass())
 			return false;
 		MonitoredSystem other = (MonitoredSystem) obj;
+		if (group != other.group)
+			return false;
 		if (id == null) {
 			if (other.id != null)
 				return false;
@@ -123,8 +123,17 @@ public class MonitoredSystem implements Comparable<MonitoredSystem> {
 		return true;
 	}
 
+	private String buildComparable() {
+		// Want groups to sort before systems.
+		if (isGroup()) {
+			return "a" + name;
+		} else {
+			return "z" + name;
+		}
+	}
+	
 	@Override
 	public int compareTo(MonitoredSystem o) {
-		return name.compareTo(o.getName());
+		return buildComparable().compareTo(o.buildComparable());
 	}
 }

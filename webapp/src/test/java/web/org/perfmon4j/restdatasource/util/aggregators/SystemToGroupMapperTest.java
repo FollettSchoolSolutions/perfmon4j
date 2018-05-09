@@ -1,5 +1,9 @@
 package web.org.perfmon4j.restdatasource.util.aggregators;
 
+import java.util.Iterator;
+import java.util.Set;
+import java.util.TreeSet;
+
 import javax.ws.rs.BadRequestException;
 
 import junit.framework.TestCase;
@@ -9,6 +13,7 @@ import org.perfmon4j.RegisteredDatabaseConnections;
 import web.org.perfmon4j.restdatasource.BaseDatabaseSetup;
 import web.org.perfmon4j.restdatasource.data.GroupID;
 import web.org.perfmon4j.restdatasource.data.ID;
+import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.SystemID;
 
 public class SystemToGroupMapperTest extends TestCase {
@@ -74,7 +79,6 @@ public class SystemToGroupMapperTest extends TestCase {
 		assertEquals("Should be the default system ID", defaultSystemID, mappedIds[0]);
 	}
 
-
 	public void testExpandGroupsDoesNoDuplicateSystem() throws Exception {
 		GroupID myGroupA = new GroupID(database.getID(), databaseSetup.addGroup("MyGroupA"));
 		databaseSetup.addGroupToSystem(myGroupA.getGroupID(), defaultSystemID.getSystemID());
@@ -84,6 +88,47 @@ public class SystemToGroupMapperTest extends TestCase {
 		SystemID mappedIds[] = mapper.resolveGroupsToSystems(ids);
 		assertEquals("Default system was in group, should not be returned multiple times", 1, mappedIds.length);
 		assertEquals("Should be the default system ID", defaultSystemID, mappedIds[0]);
+	}
+
+	public void testResolveGroupsReturnGroupsNoGroups() throws Exception {
+		Set<MonitoredSystem> systems = new TreeSet<MonitoredSystem>();
+		MonitoredSystem def = new MonitoredSystem("default", defaultSystemID);
+		systems.add(def);
+		
+		Set<MonitoredSystem> result = mapper.resolveGroups(systems, true);
+		assertEquals("No groups to return", 0, result.size());
+	}
+	
+	public void testResolveGroupsReturnGroupsOnly() throws Exception {
+		GroupID myGroupA = new GroupID(database.getID(), databaseSetup.addGroup("MyGroupA"));
+		databaseSetup.addGroupToSystem(myGroupA.getGroupID(), defaultSystemID.getSystemID());
+		
+		Set<MonitoredSystem> systems = new TreeSet<MonitoredSystem>();
+		MonitoredSystem def = new MonitoredSystem("default", defaultSystemID);
+		systems.add(def);
+		
+		Set<MonitoredSystem> result = mapper.resolveGroups(systems, true);
+		assertEquals("Should only have returned the group", 1, result.size());
+		assertEquals("Should be the group", "MyGroupA", result.iterator().next().getName());
+	}
+
+	public void testResolveGroupsReturnGroupsAndSystems() throws Exception {
+		GroupID myGroupA = new GroupID(database.getID(), databaseSetup.addGroup("MyGroupA"));
+		databaseSetup.addGroupToSystem(myGroupA.getGroupID(), defaultSystemID.getSystemID());
+		
+		Set<MonitoredSystem> systems = new TreeSet<MonitoredSystem>();
+		MonitoredSystem def = new MonitoredSystem("default", defaultSystemID);
+		systems.add(def);
+		
+		Set<MonitoredSystem> result = mapper.resolveGroups(systems, false);
+		assertEquals("Should only have returned the group and the system", 2, result.size());
+		
+		Iterator<MonitoredSystem> itr = result.iterator();
+		MonitoredSystem group = itr.next();
+		MonitoredSystem system = itr.next();
+		
+		assertEquals("Group should be first", "MyGroupA", group.getName());
+		assertEquals("Systems should sort after groups", "default", system.getName());
 	}
 
 }

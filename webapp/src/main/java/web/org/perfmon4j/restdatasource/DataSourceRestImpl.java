@@ -165,6 +165,11 @@ public class DataSourceRestImpl {
 			JDBCHelper.closeNoThrow(conn);
 		}
 		
+		if (!result.isEmpty()  && !groupOption.equals(GroupOption.SYSTEMS)) {
+			SystemToGroupMapper mapper = new SystemToGroupMapper(db);
+			result = mapper.resolveGroups(result, groupOption.equals(GroupOption.GROUPS));
+		}
+		
 		return result.toArray(new MonitoredSystem[]{});
 	}
 
