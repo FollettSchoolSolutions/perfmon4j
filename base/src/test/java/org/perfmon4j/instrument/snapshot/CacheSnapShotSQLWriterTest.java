@@ -22,59 +22,21 @@ package org.perfmon4j.instrument.snapshot;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import org.perfmon4j.SQLTest;
 import org.perfmon4j.util.JDBCHelper;
 
 public class CacheSnapShotSQLWriterTest extends SQLTest {
-	   final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JCache(\r\n" +
-		"	SystemID INT NOT NULL,\r\n" +
-		"	CacheType VARCHAR(100) NOT NULL,\r\n" +
-		"	InstanceName VARCHAR(100) NOT NULL,\r\n" +
-		"	StartTime TIMESTAMP NOT NULL,\r\n" +
-		"	EndTime TIMESTAMP NOT NULL,\r\n" +
-		"	Duration INT NOT NULL,\r\n" +
-		"	HitRatio DOUBLE NOT NULL,\r\n" +
-		"	HitCount INT NOT NULL,\r\n" +
-		"	MissCount INT NOT NULL,\r\n" +
-		"	PutCount INT NOT NULL)\r\n";
-
-		final String DERBY_DROP_1 = "DROP TABLE mydb.P4JCache";
-
 		private Connection conn;
 
 		private void createTables() throws SQLException {
 			conn = appender.getConnection();
-			Statement stmt = null;
-			try {
-				stmt = conn.createStatement();
-				stmt.execute(DERBY_CREATE_1);
-			} finally {
-				JDBCHelper.closeNoThrow(stmt);
-			}
-		}
-
-		private void dropTables() throws SQLException {
-			Statement stmt = null;
-			try {
-				stmt = conn.createStatement();
-				stmt.execute(DERBY_DROP_1);
-			} finally {
-				JDBCHelper.closeNoThrow(stmt);
-			}
 		}
 		
 		protected void setUp() throws Exception {
 			super.setUp();
 			createTables();
 		}
-
-		protected void tearDown() throws Exception {
-			dropTables();
-			super.tearDown();
-		}
-		
 		
 	    public void testWriteToSQL() throws Exception {
 	    	MyData data = new MyData();

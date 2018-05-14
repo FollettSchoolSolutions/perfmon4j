@@ -36,6 +36,7 @@ import java.util.Set;
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
+import org.slf4j.LoggerFactory;
 
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 
@@ -49,6 +50,9 @@ public class BaseDatabaseSetup  {
 	
 	
 	public BaseDatabaseSetup() {
+		/** Quiet down Liquibase **/
+    	ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
+    	logger.setLevel(ch.qos.logback.classic.Level.WARN);
 	}
 
 	public void setUpDatabase() throws Exception {
@@ -107,6 +111,28 @@ public class BaseDatabaseSetup  {
 			stmt = connection.createStatement();
 			stmt.executeUpdate("INSERT INTO P4JSystem (SystemName) VALUES('" + systemName + "')", Statement.RETURN_GENERATED_KEYS);
 			return getID(stmt);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
+
+	public long addGroup(String groupName) throws SQLException {
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate("INSERT INTO P4JGroup (GroupName) VALUES('" + groupName + "')", Statement.RETURN_GENERATED_KEYS);
+			return getID(stmt);
+		} finally {
+			JDBCHelper.closeNoThrow(stmt);
+		}
+	}
+	
+	public void addGroupToSystem(long groupID, long systemID) throws SQLException {
+		Statement stmt = null;
+		try {
+			stmt = connection.createStatement();
+			stmt.executeUpdate("INSERT INTO P4JGroupSystemJoin"
+				+ " (GroupID, SystemID) VALUES(" + groupID + "," + systemID + ")");
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 		}

@@ -30,8 +30,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;
+import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
 import web.org.perfmon4j.restdatasource.util.aggregators.Aggregator;
@@ -54,7 +54,7 @@ public class ResultAccumulator {
 			aggregationMethodDisplayName = method.toString();
 		}
 		
-		this.addSeries(series.getProvider().getTemplateName(), series.getFactory(), series.getAlias(), SystemID.toString(series.getSystems()), series.getCategory().getName(), 
+		this.addSeries(series.getProvider().getTemplateName(), series.getFactory(), series.getAlias(), SystemID.buildArrayString(series.getSystems()), series.getCategory().getName(), 
 				series.getField().getName(), aggregationMethodDisplayName);
 	}
 	

@@ -22,10 +22,10 @@
 package web.org.perfmon4j.restdatasource.util;
 
 import web.org.perfmon4j.restdatasource.DataProvider;
-import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.AggregationMethod;
 import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.Field;
+import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 
 public class SeriesField {

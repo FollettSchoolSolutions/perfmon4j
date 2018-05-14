@@ -129,15 +129,15 @@ public final class RegisteredDatabaseConnections {
 	}
 	
 	
-	static public void addDatabase(String name, boolean isDefault, String driverClassName, String jarFileName,
+	static public Database addDatabase(String name, boolean isDefault, String driverClassName, String jarFileName,
 	    String jdbcURL, String schema, String userName, String password, String poolName, String contextFactory, String urlPkgs) throws InvalidConfigException {
 		Connection conn = null;
+		Database database = null; 
 		
 		try {
 			String databaseIdentity;
 			double databaseVersion;
 
-			Database database = null;
 			if (mockIdentityAndVersionForTest) {
 				databaseIdentity = Long.toString(System.nanoTime());
 				databaseVersion = 1.0;
@@ -204,6 +204,8 @@ public final class RegisteredDatabaseConnections {
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
 		}
+		
+		return database;
 	}
 	
 	static public void removeDatabase(String name) {
@@ -273,7 +275,7 @@ public final class RegisteredDatabaseConnections {
 	    private String password;		
 		private double databaseVersion = 0.0;
 		
-		public abstract Connection openConnection() throws SQLException ; 
+		public abstract Connection openConnection() throws SQLException; 
 
 		
 		public boolean isDefault() {
@@ -315,6 +317,17 @@ public final class RegisteredDatabaseConnections {
 		public void setPassword(String password) {
 			this.password = password;
 		}
+		
+		
+		/**
+		 * This will be overridden with Mockito to return
+		 * true in areas where we don't want the overhead
+		 * of creating a real database for unit testing.
+		 * @return
+		 */
+		public boolean isMock() {
+			return false;
+		}
 
 
 		private void setDefault(boolean defaultDatabase) {
@@ -336,6 +349,8 @@ public final class RegisteredDatabaseConnections {
 		private void setDatabaseVersion(double databaseVerson) {
 			this.databaseVersion = databaseVerson;
 		}
+		
+	
 		
 		abstract String getSignature();
 	

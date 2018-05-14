@@ -203,7 +203,7 @@ public class ExternalAppenderTest extends TestCase {
         String result = (String)map.get(threadTraceKey);
         assertTrue("Thread trace should have been truncated...", result.contains("Thread Trace Limit Exceeded -- Data truncated"));
         
-        System.out.println(result);
+//        System.out.println(result);
     }
 
     /*----------------------------------------------------------------------------*/    
@@ -236,7 +236,7 @@ public class ExternalAppenderTest extends TestCase {
         
         assertTrue("Thread trace should have filtered element with short duration...", 
         		!result.contains("shouldbefiltered"));
-        System.out.println(result);
+//        System.out.println(result);
     }
     
     /*----------------------------------------------------------------------------*/    
@@ -267,7 +267,7 @@ public class ExternalAppenderTest extends TestCase {
         
         assertEquals("map.size()", 1, map.size());
         String result = (String)map.get(threadTraceKey);
-        System.out.println(result);
+//        System.out.println(result);
         
         assertTrue("Thread should filter max depth", 
         		!result.contains("shouldbefiltered"));
@@ -318,7 +318,7 @@ public class ExternalAppenderTest extends TestCase {
     	
     	assertNotNull("Should have millisPerSecond field", data.get(millisPerSecond));
     	
-    	System.out.println(data.get(millisPerSecond));
+//    	System.out.println(data.get(millisPerSecond));
     }
     
     

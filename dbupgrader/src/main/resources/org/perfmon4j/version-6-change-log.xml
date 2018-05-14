@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+	
+	<changeSet author="ddeucher" id="P4JGroup-tableCreate">
+		<createTable tableName="P4JGroup">
+			<column autoIncrement="true" name="GroupID" type="INT">
+				<constraints primaryKey="true" primaryKeyName="P4JGroup_pk" />
+			</column>
+			<column name="GroupName" type="VARCHAR(200)">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+		<createIndex indexName="[P4JGrp_GrpNm_idx]"
+			tableName="P4JGroup" unique="true">
+			<column name="GroupName" />
+		</createIndex>
+	</changeSet>	
+
+	<changeSet author="ddeucher" id="P4JGroupSystemJoin-tableCreate">
+		<createTable tableName="P4JGroupSystemJoin">
+			<column name="GroupID" type="INT">
+				<constraints nullable="false" />
+			</column>
+			<column name="SystemID" type="INT">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+		
+		<addPrimaryKey columnNames="GroupID, SystemID"
+			constraintName="P4JGrpSysJn_pk" tableName="P4JGroupSystemJoin" />
+	</changeSet>	
+
+	<changeSet author="ddeucher" id="P4JGroupSystemJoin-InitialForeignKeys">
+		<addForeignKeyConstraint baseColumnNames="GroupID"
+			baseTableName="P4JGroupSystemJoin" constraintName="P4JGrpSysJn_GrpID_fk"
+			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
+			onUpdate="NO ACTION" referencedColumnNames="GroupID"
+			referencedTableName="P4JGroup" />
+
+		<addForeignKeyConstraint baseColumnNames="SystemID"
+			baseTableName="P4JGroupSystemJoin" constraintName="P4JGrpSysJn_SysID_fk"
+			deferrable="false" initiallyDeferred="false" onDelete="CASCADE"
+			onUpdate="NO ACTION" referencedColumnNames="SystemID"
+			referencedTableName="P4JSystem" />
+	</changeSet>
+
+	<changeSet author="databaseLabel" id="0006.0"/>
+</databaseChangeLog>
