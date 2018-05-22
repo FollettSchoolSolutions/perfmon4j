@@ -42,6 +42,7 @@
 		<module>utils</module>
 		<module>webapp</module>
 		<module>wildfly8</module>
+		<module>hystrix</module>
  	</modules>
 
 	<profiles>
