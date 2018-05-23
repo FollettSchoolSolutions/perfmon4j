@@ -207,6 +207,25 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertTrue("New P4JGroupSystemJoin table should exist", joinExists);
 	}
 	
+	public void testVersion7Update() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA});
+		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
+				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0007.0'");
+		assertEquals("should have installed 7.0 label", 1, count);
+		
+		boolean hystrixKeyExists = UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JGroup");
+		boolean hystrixCommandExists = UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JGroupSystemJoin");
+		boolean hystrixThreadPoolExists = UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JGroupSystemJoin");
+		
+		assertTrue("New P4JHystrixKey table should exist", hystrixKeyExists);
+		assertTrue("New P4JHystrixCommand table should exist", hystrixCommandExists);
+		assertTrue("New P4JHystrixThreadPool table should exist", hystrixThreadPoolExists);
+	}
+
 	
 	public void testParseParameters() throws Exception {
 		String args[] = {
