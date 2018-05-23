@@ -39,8 +39,21 @@ public class SQLWriterTest extends SQLTest {
 		assertEquals("Should have inserted key row", 1 ,keyRows);
 		assertEquals("Should have inserted data row", 1 ,dataRows);
 //System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM " + schema + ".P4JHystrixCommand"));
-		
 	}
 	
+	public void testWriteThreadPoolData() throws Exception {
+		SQLWriter writer = new SQLWriter();
+		
+		HystrixThreadPoolData data = Mockito.mock(HystrixThreadPoolData.class);
+		Mockito.when(data.getInstanceName()).thenReturn("TestKey");
 
+		writer.writeToSQL(conn, schema, data, 1L);
+		
+		long keyRows = JDBCHelper.getQueryCount(conn, "SELECT * FROM " + schema + ".P4JHystrixKey WHERE KeyID = 1 AND KeyName = 'TestKey'");
+		long dataRows = JDBCHelper.getQueryCount(conn, "SELECT * FROM " + schema + ".P4JHystrixThreadPool WHERE KeyID = 1");
+		
+		assertEquals("Should have inserted key row", 1 ,keyRows);
+		assertEquals("Should have inserted data row", 1 ,dataRows);
+//System.out.println(JDBCHelper.dumpQuery(conn, "SELECT * FROM " + schema + ".P4JHystrixThreadPool"));
+	}
 }

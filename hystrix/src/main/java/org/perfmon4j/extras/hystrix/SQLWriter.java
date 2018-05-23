@@ -5,18 +5,28 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.perfmon4j.SnapShotData;
-import org.perfmon4j.SnapShotSQLWriter;
+import org.perfmon4j.SnapShotSQLWriterWithDatabaseVersion;
 import org.perfmon4j.util.JDBCHelper;
 
-public class SQLWriter implements SnapShotSQLWriter {
+public class SQLWriter implements SnapShotSQLWriterWithDatabaseVersion {
 	private final double REQUIRED_DATABASE_VERSION = 7.0;
 
-	public void writeToSQL(Connection conn, String schema, SnapShotData data, long systemID)
-		throws SQLException {
+	public void writeToSQL(Connection conn, String schema, SnapShotData data,
+			long systemID) throws SQLException {
+		throw new NotImplementedException("Must pass the databaseVersion");
+	}
+
+
+	public void writeToSQL(Connection conn, String schema, SnapShotData data,
+			long systemID, double databaseVersion) throws SQLException {
+		if (databaseVersion < REQUIRED_DATABASE_VERSION) {
+			throw new SQLException("Hystrix SnapShot requires P4J Database version >= " + REQUIRED_DATABASE_VERSION);
+		}
+
 		writeToSQL(conn, schema, (HystrixBaseData)data, systemID);
 	}
-	
 	
 	/** Package level for Testing **/
 	void writeToSQL(Connection conn, String schema, HystrixBaseData data, long systemID)
@@ -29,11 +39,6 @@ public class SQLWriter implements SnapShotSQLWriter {
 			throw new SQLException("Unsupported SnapShotData type for: " + this.getClass().getName());
 		}
 		
-		double version = JDBCHelper.getDatabaseVersion(conn, schema);
-		if (version < REQUIRED_DATABASE_VERSION) {
-			throw new SQLException("Hystrix SnapShot requires P4J Database version >= " + REQUIRED_DATABASE_VERSION);
-		}
-
 		// Fixup schema if needed
 		schema = (schema == null) ? "" : (schema + ".");
 		String keyName = ((HystrixBaseData)data).getInstanceName();
@@ -47,11 +52,11 @@ public class SQLWriter implements SnapShotSQLWriter {
 		}
 	}
 	
-	public long getOrCreateHystrixKeyID(Connection conn, String schema, String keyName) throws SQLException {
+	private long getOrCreateHystrixKeyID(Connection conn, String schema, String keyName) throws SQLException {
 		return JDBCHelper.simpleGetOrCreate(conn, schema + "P4JHystrixKey", "KeyID", "KeyName", keyName);
 	}
 	
-	public void writeToSQL(Connection conn, String schema, HystrixCommandData data, long systemID, 
+	private void writeToSQL(Connection conn, String schema, HystrixCommandData data, long systemID, 
 			long hystrixKeyID)
 		throws SQLException {
 
@@ -86,10 +91,9 @@ public class SQLWriter implements SnapShotSQLWriter {
 		}
 	}
 	
-	public void writeToSQL(Connection conn, String schema, HystrixThreadPoolData data, long systemID, 
+	private void writeToSQL(Connection conn, String schema, HystrixThreadPoolData data, long systemID, 
 			long hystrixKeyID)
 		throws SQLException {
-		schema = (schema == null) ? "" : (schema + ".");
 
 		final String SQL = "INSERT INTO " + schema + "P4JHystrixThreadPool " +
 			"(SystemID, KeyID, StartTime, EndTime, Duration,  " +
