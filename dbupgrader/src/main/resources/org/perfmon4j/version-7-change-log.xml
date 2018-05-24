@@ -121,7 +121,7 @@
 				<constraints nullable="false" />
 			</column>
 			
-			<column name="CompletedThreadCount" type="int">
+			<column name="CompletedTaskCount" type="int">
 				<constraints nullable="false" />
 			</column>
 			

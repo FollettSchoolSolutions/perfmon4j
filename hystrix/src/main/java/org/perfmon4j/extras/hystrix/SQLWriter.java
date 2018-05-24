@@ -97,7 +97,7 @@ public class SQLWriter implements SnapShotSQLWriterWithDatabaseVersion {
 
 		final String SQL = "INSERT INTO " + schema + "P4JHystrixThreadPool " +
 			"(SystemID, KeyID, StartTime, EndTime, Duration,  " +
-			"ExecutedThreadCount, RejectedThreadCount, CompletedThreadCount, ScheduledTaskCount,"
+			"ExecutedThreadCount, RejectedThreadCount, CompletedTaskCount, ScheduledTaskCount,"
 			+ "MaxActiveThreads, CurrentQueueSize, CurrentPoolSize) " +
 			"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		PreparedStatement stmt = null;
