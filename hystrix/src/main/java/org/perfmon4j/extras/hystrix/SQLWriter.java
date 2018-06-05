@@ -5,7 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriterWithDatabaseVersion;
 import org.perfmon4j.util.JDBCHelper;
@@ -15,7 +14,7 @@ public class SQLWriter implements SnapShotSQLWriterWithDatabaseVersion {
 
 	public void writeToSQL(Connection conn, String schema, SnapShotData data,
 			long systemID) throws SQLException {
-		throw new NotImplementedException("Must pass the databaseVersion");
+		throw new RuntimeException("Must pass the databaseVersion");
 	}
 
 

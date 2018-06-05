@@ -80,6 +80,9 @@ public class RemoteImpl implements RemoteInterface {
 		
 		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.GlobalRequestProcessorMonitorImpl");
 		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.ThreadPoolMonitorImpl");
+
+		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.hystrix.HystrixCommandMonitorImpl");
+		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.hystrix.HystrixThreadPoolMonitorImpl");
 	}
 
 	public static RemoteInterfaceExt1 getSingleton() {

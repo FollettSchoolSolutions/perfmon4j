@@ -5,9 +5,6 @@ import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.perfmon4j.InvalidConfigException;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
@@ -143,9 +140,9 @@ public class HystrixCommandMonitorImpl {
         HystrixCommandGroupKey myGroupKey = HystrixCommandGroupKey.Factory.asKey("MyGroup");
         
     	
-    	BasicConfigurator.configure();
-        Logger.getRootLogger().setLevel(Level.INFO);
-        Logger.getLogger("org.perfmon4j").setLevel(Level.DEBUG);
+//    	BasicConfigurator.configure();
+//        Logger.getRootLogger().setLevel(Level.INFO);
+//        Logger.getLogger("org.perfmon4j").setLevel(Level.DEBUG);
     	
         PerfMonConfiguration config = new PerfMonConfiguration();
         config.defineAppender("SimpleAppender", TextAppender.class.getName(), "1 second");
