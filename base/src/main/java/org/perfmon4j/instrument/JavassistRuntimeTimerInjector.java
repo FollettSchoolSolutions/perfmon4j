@@ -31,8 +31,10 @@ import java.util.Set;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.CtConstructor;
 import javassist.CtField;
 import javassist.CtMethod;
+import javassist.CtNewConstructor;
 import javassist.CtNewMethod;
 import javassist.LoaderClassPath;
 import javassist.Modifier;
@@ -43,6 +45,7 @@ import javassist.bytecode.ParameterAnnotationsAttribute;
 
 import javax.management.ObjectName;
 
+import org.perfmon4j.hystrix.CommandStatsProvider;
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
 import org.perfmon4j.instrument.tomcat.TomcatDataSourceRegistry;
 import org.perfmon4j.util.Logger;
@@ -860,7 +863,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	
     	return clazz.toBytecode();
     }
-
     
     public byte[] wrapTomcatRegistry(byte[] classfileBuffer, ClassLoader loader) throws Exception {
         	ClassPool classPool;
@@ -895,4 +897,90 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
            	logger.logInfo("Perfmon4j found TomcatRegistry and installed Global DataSource registry");
            	return clazz.toBytecode();
     }
+
+	@Override
+	public byte[] installHystrixCommandMetricsHook(byte[] classfileBuffer, ClassLoader loader) throws Exception {
+    	ClassPool classPool;
+        if (loader == null) {
+            classPool = new ClassPool(true);
+        } else {
+            classPool = new ClassPool(false);
+            classPool.appendSystemPath();
+            classPool.appendClassPath(new LoaderClassPath(loader));
+        }
+        
+        ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+        CtClass clazz = classPool.makeClass(inStream);
+        if (clazz.isFrozen()) {
+            clazz.defrost();
+        }    	
+
+        /* Add the static field to the main class.  This is required because
+         * we will only hold a WeakReference to this provider. This ensures that we will not prevent
+         * this class from being unloaded
+         * */
+        CtField field = CtField.make("private static final org.perfmon4j.hystrix.CommandStatsProvider p4jStatsProvider;", clazz);
+        clazz.addField(field);
+
+        
+        /**
+         * Create our inner class. This class will implement the org.perfmon4j.hystrix.CommandStatsProvider
+         */
+    	CtClass nestedClass = clazz.makeNestedClass("Perfmon4jCommandStatsProvider", true);
+    	nestedClass.addInterface(classPool.getCtClass(CommandStatsProvider.class.getName()));
+
+    	/**
+    	 * Create a final field to hold the Hystrix command metrics map.
+    	 */
+    	CtField metricsField = CtField.make("private final java.util.Map metrics;", nestedClass);
+    	nestedClass.addField(metricsField);
+    	
+    	/**
+    	 * Create a new constructor that takes the metrics as a parameter.
+    	 */
+    	CtConstructor constructor = CtNewConstructor.make(
+			"public Perfmon4jCommandStatsProvider(java.util.Map metrics) {\r\n"
+			+ "  this.metrics = metrics;\r\n"
+			+ "}",
+			nestedClass);
+    	nestedClass.addConstructor(constructor);
+    	
+    	/**
+    	 * Create the collectStats method.
+    	 */
+    	String src = "public void collectStats(org.perfmon4j.hystrix.CommandStatsAccumulator accumulator) {\r\n"
+        		+ "\tjava.util.Collection set = java.util.Collections.unmodifiableCollection(metrics.values());\r\n"
+        		+ "\tjava.util.Iterator itr = set.iterator();\r\n"
+        		+ "\twhile(itr.hasNext()) {\r\n"
+        		+ "\t\tcom.netflix.hystrix.HystrixCommandMetrics metrics = (com.netflix.hystrix.HystrixCommandMetrics)itr.next();\r\n"
+        		+ "\t\tjava.lang.String context = metrics.getCommandKey().name();\r\n"
+        		+ "\t\torg.perfmon4j.hystrix.CommandStats.Builder builder = org.perfmon4j.hystrix.CommandStats.builder();\r\n"
+        		+ "\t\tbuilder.setSuccessCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.SUCCESS));\r\n"
+        		+ "\t\tbuilder.setFailureCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.FAILURE));\r\n"
+        		+ "\t\tbuilder.setTimeoutCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.TIMEOUT));\r\n"
+        		+ "\t\tbuilder.setShortCircuitedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.SHORT_CIRCUITED));\r\n"
+        		+ "\tbuilder.setThreadPoolRejectedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.THREAD_POOL_REJECTED));\r\n"
+        		+ "\t\tbuilder.setSemaphoreRejectedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.SEMAPHORE_REJECTED));\r\n"
+        		+ "\t\taccumulator.increment(context, builder.build());\r\n"
+        		+ "\t}\r\n"
+        		+ "}";
+    	
+    	System.out.println(src);    	
+    	CtMethod collectStats = CtMethod.make(src, nestedClass);
+    	nestedClass.addMethod(collectStats);
+    	
+    	nestedClass.toClass(loader);
+    	
+
+        /**
+         *  Make class Initializer (Or append to it if it already exists)
+         */
+        CtConstructor staticInitializer = clazz.makeClassInitializer();
+        staticInitializer.insertAfter("com.netflix.hystrix.HystrixCommandMetrics.p4jStatsProvider = "
+        		+ "new com.netflix.hystrix.HystrixCommandMetrics.Perfmon4jCommandStatsProvider(com.netflix.hystrix.HystrixCommandMetrics.metrics);\r\n"
+        		+ "org.perfmon4j.hystrix.CommandStatsRegistry.getRegistry().registerProvider(p4jStatsProvider);");
+    	
+    	
+    	return clazz.toBytecode();
+	}
 }    
