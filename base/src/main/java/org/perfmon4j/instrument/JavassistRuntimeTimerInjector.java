@@ -932,7 +932,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	/**
     	 * Create a final field to hold the Hystrix command metrics map.
     	 */
-    	CtField metricsField = CtField.make("private final java.util.Map metrics;", nestedClass);
+    	CtField metricsField = CtField.make("private final java.lang.ref.WeakReference metricsRef;", nestedClass);
     	nestedClass.addField(metricsField);
     	
     	/**
@@ -940,7 +940,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	 */
     	CtConstructor constructor = CtNewConstructor.make(
 			"public Perfmon4jCommandStatsProvider(java.util.Map metrics) {\r\n"
-			+ "  this.metrics = metrics;\r\n"
+			+ "  metricsRef = new java.lang.ref.WeakReference(metrics);\r\n"
 			+ "}",
 			nestedClass);
     	nestedClass.addConstructor(constructor);
@@ -949,6 +949,10 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	 * Create the collectStats method.
     	 */
     	String src = "public void collectStats(org.perfmon4j.hystrix.CommandStatsAccumulator accumulator) {\r\n"
+        		+ "\tjava.util.Map metrics = (java.util.Map)metricsRef.get();\r\n"
+        		+ "\tif (metrics == null) {\r\n"
+        		+ "\t\treturn;\r\n"
+        		+ "\t}\r\n"
         		+ "\tjava.util.Collection set = java.util.Collections.unmodifiableCollection(metrics.values());\r\n"
         		+ "\tjava.util.Iterator itr = set.iterator();\r\n"
         		+ "\twhile(itr.hasNext()) {\r\n"
@@ -959,13 +963,13 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "\t\tbuilder.setFailureCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.FAILURE));\r\n"
         		+ "\t\tbuilder.setTimeoutCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.TIMEOUT));\r\n"
         		+ "\t\tbuilder.setShortCircuitedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.SHORT_CIRCUITED));\r\n"
-        		+ "\tbuilder.setThreadPoolRejectedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.THREAD_POOL_REJECTED));\r\n"
+        		+ "\t\tbuilder.setThreadPoolRejectedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.THREAD_POOL_REJECTED));\r\n"
         		+ "\t\tbuilder.setSemaphoreRejectedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.SEMAPHORE_REJECTED));\r\n"
         		+ "\t\taccumulator.increment(context, builder.build());\r\n"
         		+ "\t}\r\n"
         		+ "}";
     	
-    	System.out.println(src);    	
+//System.out.println("******************\r\n" + src + "\r\n******************");    	
     	CtMethod collectStats = CtMethod.make(src, nestedClass);
     	nestedClass.addMethod(collectStats);
     	
