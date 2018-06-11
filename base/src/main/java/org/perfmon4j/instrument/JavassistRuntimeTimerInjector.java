@@ -899,13 +899,12 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     }
 
 	@Override
-	public byte[] installHystrixCommandMetricsHook(byte[] classfileBuffer, ClassLoader loader) throws Exception {
+	public byte[] installHystrixCommandMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
     	ClassPool classPool;
         if (loader == null) {
             classPool = new ClassPool(true);
         } else {
             classPool = new ClassPool(false);
-            classPool.appendSystemPath();
             classPool.appendClassPath(new LoaderClassPath(loader));
         }
         
@@ -924,16 +923,16 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 
         
         /**
-         * Create our inner class. This class will implement the org.perfmon4j.hystrix.CommandStatsProvider
+         * Dynamically create the class that will implement the org.perfmon4j.hystrix.CommandStatsProvider
          */
-    	CtClass nestedClass = clazz.makeNestedClass("Perfmon4jCommandStatsProvider", true);
-    	nestedClass.addInterface(classPool.getCtClass(CommandStatsProvider.class.getName()));
+    	CtClass implementationClass = classPool.makeClass("generated.org.perfmon4j.hystrix.Perfmon4jCommandStatsProvider");
+    	implementationClass.addInterface(classPool.getCtClass(CommandStatsProvider.class.getName()));
 
     	/**
     	 * Create a final field to hold the Hystrix command metrics map.
     	 */
-    	CtField metricsField = CtField.make("private final java.lang.ref.WeakReference metricsRef;", nestedClass);
-    	nestedClass.addField(metricsField);
+    	CtField metricsField = CtField.make("private final java.lang.ref.WeakReference metricsRef;", implementationClass);
+    	implementationClass.addField(metricsField);
     	
     	/**
     	 * Create a new constructor that takes the metrics as a parameter.
@@ -942,8 +941,8 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 			"public Perfmon4jCommandStatsProvider(java.util.Map metrics) {\r\n"
 			+ "  metricsRef = new java.lang.ref.WeakReference(metrics);\r\n"
 			+ "}",
-			nestedClass);
-    	nestedClass.addConstructor(constructor);
+			implementationClass);
+    	implementationClass.addConstructor(constructor);
     	
     	/**
     	 * Create the collectStats method.
@@ -970,10 +969,10 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
     	
 //System.out.println("******************\r\n" + src + "\r\n******************");    	
-    	CtMethod collectStats = CtMethod.make(src, nestedClass);
-    	nestedClass.addMethod(collectStats);
+    	CtMethod collectStats = CtMethod.make(src, implementationClass);
+    	implementationClass.addMethod(collectStats);
     	
-    	nestedClass.toClass(loader);
+    	classPool.toClass(implementationClass, loader, protectionDomain);
     	
 
         /**
@@ -981,7 +980,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
          */
         CtConstructor staticInitializer = clazz.makeClassInitializer();
         staticInitializer.insertAfter("com.netflix.hystrix.HystrixCommandMetrics.p4jStatsProvider = "
-        		+ "new com.netflix.hystrix.HystrixCommandMetrics.Perfmon4jCommandStatsProvider(com.netflix.hystrix.HystrixCommandMetrics.metrics);\r\n"
+        		+ "new generated.org.perfmon4j.hystrix.Perfmon4jCommandStatsProvider(com.netflix.hystrix.HystrixCommandMetrics.metrics);\r\n"
         		+ "org.perfmon4j.hystrix.CommandStatsRegistry.getRegistry().registerProvider(p4jStatsProvider);");
     	
     	

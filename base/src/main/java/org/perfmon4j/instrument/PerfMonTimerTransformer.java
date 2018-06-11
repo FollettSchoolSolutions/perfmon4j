@@ -504,7 +504,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             
             if ("com/netflix/hystrix/HystrixCommandMetrics".equals(className)) {
 	            try {
-		            result = runtimeTimerInjector.installHystrixCommandMetricsHook(classfileBuffer, loader);
+		            result = runtimeTimerInjector.installHystrixCommandMetricsHook(classfileBuffer, loader, protectionDomain);
 		            logger.logInfo("Injected monitor code into HystrixCommandMetrics");
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to inject monitor code into HystrixCommandMetrics", ex);
