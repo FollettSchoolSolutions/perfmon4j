@@ -34,7 +34,6 @@ import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtField;
 import javassist.CtMethod;
-import javassist.CtNewConstructor;
 import javassist.CtNewMethod;
 import javassist.LoaderClassPath;
 import javassist.Modifier;
@@ -927,32 +926,12 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
          */
     	CtClass implementationClass = classPool.makeClass("generated.org.perfmon4j.hystrix.Perfmon4jCommandStatsProvider");
     	implementationClass.addInterface(classPool.getCtClass(CommandStatsProvider.class.getName()));
-
-    	/**
-    	 * Create a final field to hold the Hystrix command metrics map.
-    	 */
-    	CtField metricsField = CtField.make("private final java.lang.ref.WeakReference metricsRef;", implementationClass);
-    	implementationClass.addField(metricsField);
-    	
-    	/**
-    	 * Create a new constructor that takes the metrics as a parameter.
-    	 */
-    	CtConstructor constructor = CtNewConstructor.make(
-			"public Perfmon4jCommandStatsProvider(java.util.Map metrics) {\r\n"
-			+ "  metricsRef = new java.lang.ref.WeakReference(metrics);\r\n"
-			+ "}",
-			implementationClass);
-    	implementationClass.addConstructor(constructor);
-    	
+    
     	/**
     	 * Create the collectStats method.
     	 */
     	String src = "public void collectStats(org.perfmon4j.hystrix.CommandStatsAccumulator accumulator) {\r\n"
-        		+ "\tjava.util.Map metrics = (java.util.Map)metricsRef.get();\r\n"
-        		+ "\tif (metrics == null) {\r\n"
-        		+ "\t\treturn;\r\n"
-        		+ "\t}\r\n"
-        		+ "\tjava.util.Collection set = java.util.Collections.unmodifiableCollection(metrics.values());\r\n"
+        		+ "\tjava.util.Collection set = com.netflix.hystrix.HystrixCommandMetrics.getInstances();\r\n"
         		+ "\tjava.util.Iterator itr = set.iterator();\r\n"
         		+ "\twhile(itr.hasNext()) {\r\n"
         		+ "\t\tcom.netflix.hystrix.HystrixCommandMetrics metrics = (com.netflix.hystrix.HystrixCommandMetrics)itr.next();\r\n"
@@ -980,7 +959,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
          */
         CtConstructor staticInitializer = clazz.makeClassInitializer();
         staticInitializer.insertAfter("com.netflix.hystrix.HystrixCommandMetrics.p4jStatsProvider = "
-        		+ "new generated.org.perfmon4j.hystrix.Perfmon4jCommandStatsProvider(com.netflix.hystrix.HystrixCommandMetrics.metrics);\r\n"
+        		+ "new generated.org.perfmon4j.hystrix.Perfmon4jCommandStatsProvider();\r\n"
         		+ "org.perfmon4j.hystrix.CommandStatsRegistry.getRegistry().registerProvider(p4jStatsProvider);");
     	
     	

@@ -14,8 +14,8 @@ public class HystrixCommandMonitorImpl {
 	private final String instanceName;
 	private static final CommandStatsRegistry registry = CommandStatsRegistry.getRegistry();
 	
-	HystrixCommandMonitorImpl() throws InvalidConfigException {
-		throw new org.perfmon4j.InvalidConfigException("Must specify a HystrixCommand instanceName");
+	public HystrixCommandMonitorImpl() throws InvalidConfigException {
+		instanceName = null;
 	}
 	
 	public HystrixCommandMonitorImpl(String instanceName) {
@@ -24,19 +24,41 @@ public class HystrixCommandMonitorImpl {
 	
 	/* package level for unit test*/ 
 	CommandStats getStats() {
-		return registry.getStats().getStats(instanceName);
+		CommandStats result = null;
+		if (instanceName == null) {
+			result = CommandStats.builder().build();
+			CommandStatsAccumulator allStats = registry.getStats();
+			for (String context : allStats.getContexts()) {
+				result = result.add(allStats.getStats(context));
+			}
+		} else {
+			result = registry.getStats().getStats(instanceName);
+		}
+		return result;
 	}
 	
 	@SnapShotInstanceDefinition
 	static public String[] getInstanceNames() {
 		CommandStatsAccumulator accumulator = registry.getStats();
-		
 		return accumulator.getContexts().toArray(new String[]{});
 	}
 	
 	@SnapShotString(isInstanceName=true)
 	public String getInstanceName() {
-		return instanceName;
+		String result = instanceName;
+		
+		if (result == null) {
+				result = "Composite(";
+				String[] names = getInstanceNames();
+				for (int i = 0; i < names.length; i++) {
+					if (i > 0) {
+						result += ", ";
+					}
+					result += "\"" + names[i] + "\"";
+				}
+				result += ")";
+		}
+		return result;
 	}
 
 	@SnapShotCounter(preferredDisplay=SnapShotCounter.Display.DELTA_PER_MIN)
