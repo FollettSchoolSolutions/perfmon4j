@@ -1,6 +1,5 @@
 package org.perfmon4j.hystrix;
 
-import org.perfmon4j.InvalidConfigException;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -14,7 +13,7 @@ public class HystrixCommandMonitorImpl {
 	private final String instanceName;
 	private static final CommandStatsRegistry registry = CommandStatsRegistry.getRegistry();
 	
-	public HystrixCommandMonitorImpl() throws InvalidConfigException {
+	public HystrixCommandMonitorImpl() {
 		instanceName = null;
 	}
 	

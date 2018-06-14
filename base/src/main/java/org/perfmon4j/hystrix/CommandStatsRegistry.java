@@ -4,12 +4,23 @@ import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TimerTask;
 
-import org.perfmon4j.PerfMon;
-
+/**
+ * You might wonder how Hystrix classes get registered with this CommandStatsRegistry.  
+ * It is done by the Perfmon4J java agent when it discovers 
+ * the class com.netflix.hystrix.HystrixCommandMetrics being loaded.
+ * 
+ * See org.perfmon4j.instrument.JavassistRuntimeTimerInjector.installHystrixCommandMetricsHook() 
+ * for details on the class instrumentation.
+ * 
+ * @author perfmon
+ */
 public class CommandStatsRegistry {
-	private static final CommandStatsRegistry singleton = new CommandStatsRegistry();
+	private static final CommandStatsRegistry singleton = new CommandStatsRegistry(Integer.getInteger(
+			CommandStatsRegistry.class.getName() + "CACHE_DURATION_MILLIS", 2000).intValue());
+	private final int cacheMilliseconds;
+	private CommandStatsAccumulator cachedValue = null;
+	private long cacheLastUpdated = 0;
 	
 	public static CommandStatsRegistry getRegistry() {
 		return singleton;
@@ -23,7 +34,14 @@ public class CommandStatsRegistry {
 	 * 		CommandStatsRegistry.getRegistry();
 	 */
 	/* package scope for unit testing */ CommandStatsRegistry() {
+		this(0); // No caching for unit testing.
 	}
+	
+	
+	private CommandStatsRegistry(int cacheMilliseconds) {
+		this.cacheMilliseconds = cacheMilliseconds;
+	}
+	
 	
 	/**
 	 * Since within an ApplicationServer Hystrix instances can/come and go 
@@ -40,8 +58,7 @@ public class CommandStatsRegistry {
 		int result = 0;
 
 		for (WeakReference<CommandStatsProvider> r : providers) {
-			CommandStatsProvider provider = r.get();
-			if (provider != null) {
+			if (r.get() != null) {
 				result++;
 			}
 		}
@@ -51,6 +68,10 @@ public class CommandStatsRegistry {
 	
 	
 	public CommandStatsAccumulator getStats() {
+		if (cachedValue != null && System.currentTimeMillis() < (cacheLastUpdated + cacheMilliseconds)) {
+			return cachedValue;
+		}
+		
 		CommandStatsAccumulator result = new CommandStatsAccumulator();
 		
 		for (WeakReference<CommandStatsProvider> r : providers) {
@@ -60,23 +81,11 @@ public class CommandStatsRegistry {
 			}
 		}
 		
+		cachedValue = result;
+		cacheLastUpdated = System.currentTimeMillis();
+		
 		return result;
 	}
 
-	static {
-		PerfMon.utilityTimer.schedule(new Timer(), 2000, 2000);
-	}
-	
-	
-	private static class Timer extends TimerTask {
-		@Override
-		public void run() {
-			System.gc();
-			CommandStatsRegistry registry = CommandStatsRegistry.getRegistry();
-			System.out.println("*****************\r\n" 
-					+ registry.getNumActiveProviders() + " Active Providers\r\n"   
-					+ "*****************");
-		}
-	}
 	
 }

@@ -509,8 +509,15 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to inject monitor code into HystrixCommandMetrics", ex);
 	            }
+            } else if ("com/netflix/hystrix/HystrixThreadPoolMetrics".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.installHystrixThreadPoolMetricsHook(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Injected monitor code into HystrixCommandMetrics");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to inject monitor code into HystrixCommandMetrics", ex);
+	            }
             }
-			
+
 			return result;
 		}
     }

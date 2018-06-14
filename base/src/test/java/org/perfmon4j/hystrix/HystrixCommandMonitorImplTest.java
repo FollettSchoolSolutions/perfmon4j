@@ -2,6 +2,7 @@ package org.perfmon4j.hystrix;
 
 import junit.framework.TestCase;
 
+import org.mockito.Mockito;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 
@@ -24,8 +25,8 @@ public class HystrixCommandMonitorImplTest extends TestCase {
 		String instanceName = null;
 		try {
 			gen.generateBundle(HystrixCommandMonitorImpl.class, instanceName);
-			fail("Expected instance name to be required");
 		} catch (GenerateSnapShotException ex) {
+			fail("Instance name is not required");
 		}
 		
 		instanceName = "Test";
@@ -37,24 +38,23 @@ public class HystrixCommandMonitorImplTest extends TestCase {
 	}
 	
 	public void testGettersFromHystrixMetrics() throws Exception {
-		fail("Rewrite this");
-//		HystrixCommandMonitorImpl impl = Mockito.spy(new HystrixCommandMonitorImpl("Test"));
-//		HystrixCommandMetrics metrics = Mockito.mock(HystrixCommandMetrics.class);
-//
-//		Mockito.when(metrics.getCumulativeCount(HystrixEventType.SUCCESS)).thenReturn(Long.valueOf(1));
-//		Mockito.when(metrics.getCumulativeCount(HystrixEventType.FAILURE)).thenReturn(Long.valueOf(2));
-//		Mockito.when(metrics.getCumulativeCount(HystrixEventType.TIMEOUT)).thenReturn(Long.valueOf(3));
-//		Mockito.when(metrics.getCumulativeCount(HystrixEventType.SHORT_CIRCUITED)).thenReturn(Long.valueOf(4));
-//		Mockito.when(metrics.getCumulativeCount(HystrixEventType.THREAD_POOL_REJECTED)).thenReturn(Long.valueOf(5));
-//		Mockito.when(metrics.getCumulativeCount(HystrixEventType.SEMAPHORE_REJECTED)).thenReturn(Long.valueOf(6));
-//		
-//		Mockito.when(impl.getOrCreateMetrics()).thenReturn(metrics);
-//		
-//		assertEquals("Success count", 1, impl.getSuccessCount());
-//		assertEquals("Failure count", 2, impl.getFailureCount());
-//		assertEquals("Timeout count", 3, impl.getTimeoutCount());
-//		assertEquals("Short Circuted count", 4, impl.getShortCircuitedCount());
-//		assertEquals("Thread Pool Rejected count", 5, impl.getThreadPoolRejectedCount());
-//		assertEquals("Semaphore Rejected count", 6, impl.getSemaphoreRejectedCount());
+		HystrixCommandMonitorImpl impl = Mockito.spy(new HystrixCommandMonitorImpl("Test"));
+		CommandStats stats = Mockito.mock(CommandStats.class);
+		
+		Mockito.when(stats.getSuccessCount()).thenReturn(Long.valueOf(1));
+		Mockito.when(stats.getFailureCount()).thenReturn(Long.valueOf(2));
+		Mockito.when(stats.getTimeoutCount()).thenReturn(Long.valueOf(3));
+		Mockito.when(stats.getShortCircuitedCount()).thenReturn(Long.valueOf(4));
+		Mockito.when(stats.getThreadPoolRejectedCount()).thenReturn(Long.valueOf(5));
+		Mockito.when(stats.getSemaphoreRejectedCount()).thenReturn(Long.valueOf(6));
+
+		Mockito.when(impl.getStats()).thenReturn(stats);
+
+		assertEquals("Success count", 1, impl.getSuccessCount());
+		assertEquals("Failure count", 2, impl.getFailureCount());
+		assertEquals("Timeout count", 3, impl.getTimeoutCount());
+		assertEquals("Short Circuted count", 4, impl.getShortCircuitedCount());
+		assertEquals("Thread Pool Rejected count", 5, impl.getThreadPoolRejectedCount());
+		assertEquals("Semaphore Rejected count", 6, impl.getSemaphoreRejectedCount());
 	}
 }

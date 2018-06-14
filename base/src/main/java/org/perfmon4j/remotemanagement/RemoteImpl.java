@@ -34,6 +34,8 @@ import java.util.Map;
 
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.hystrix.HystrixCommandMonitorImpl;
+import org.perfmon4j.hystrix.HystrixThreadPoolMonitorImpl;
 import org.perfmon4j.instrument.InstrumentationMonitor;
 import org.perfmon4j.instrument.TransformerParams;
 import org.perfmon4j.java.management.GarbageCollectorSnapShot;
@@ -81,8 +83,8 @@ public class RemoteImpl implements RemoteInterface {
 		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.GlobalRequestProcessorMonitorImpl");
 		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.ThreadPoolMonitorImpl");
 
-		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.hystrix.HystrixCommandMonitorImpl");
-		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.hystrix.HystrixThreadPoolMonitorImpl");
+		ExternalAppender.registerSnapShotClass(HystrixCommandMonitorImpl.class.getName());
+		ExternalAppender.registerSnapShotClass(HystrixThreadPoolMonitorImpl.class.getName());
 	}
 
 	public static RemoteInterfaceExt1 getSingleton() {
