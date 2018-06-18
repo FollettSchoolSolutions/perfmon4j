@@ -630,7 +630,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         			"add -eVALVE to javaAgent parameters to enable.");
         }
         
-        inst.addTransformer(new HystrixHookInserter());
+        if (t.params.isHystrixInstrumentationEnabled()) {
+        	inst.addTransformer(new HystrixHookInserter());
+        	logger.logInfo("Perfmon4j will attempt to install instrumentation into Hystrix Commands and Thread Pools");
+        } else {
+        	logger.logInfo("Perfmon4j will NOT attempt to install instrumentation into Hystrix Commands and Thread Pools.  If this application uses Hystrix " +
+        			"add -eHYSTRIX to javaAgent parameters to enable.");
+        }
         
         // Check for all the preloaded classes and try to instrument any that might
         // match our perfmon4j javaagent configuration

@@ -76,6 +76,20 @@ public class TransformerParamsTest extends TestCase {
         assertEquals("c:/dave.xml", params.getXmlFileToConfig());
     }
     
+    public void testEnableHystrixIntstrumentation() {
+    	TransformerParams params = new TransformerParams();
+    	
+    	assertFalse("hystrix instrumentation should NOT be on by default", params.isHystrixInstrumentationEnabled());
+    
+    	params = new TransformerParams("e=HYSTRIX");
+    	assertTrue("e=HYSTRIX should enable hystrix instrumentation", params.isHystrixInstrumentationEnabled());
+    	
+    	params = new TransformerParams("-eHYSTRIX");
+    	assertTrue("-eHYSTRIX should enable hystrix instrumentation", params.isHystrixInstrumentationEnabled());
+    	
+    	params = new TransformerParams("-eHystRIX");
+    	assertTrue("-eHystRIX Hystrix should be case insensitive", params.isHystrixInstrumentationEnabled());
+    }
     
     public void testEnableBootstrapClassLoading() {
     	TransformerParams params = new TransformerParams();
