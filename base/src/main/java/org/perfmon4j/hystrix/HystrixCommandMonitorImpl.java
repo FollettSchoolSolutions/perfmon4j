@@ -1,5 +1,8 @@
 package org.perfmon4j.hystrix;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -10,6 +13,7 @@ import org.perfmon4j.instrument.SnapShotString;
 	sqlWriter=SQLWriter.class)
 
 public class HystrixCommandMonitorImpl {
+	public static final String COMPOSITE_INSTANCE_NAME = "Composite";
 	private final String instanceName;
 	private static final CommandStatsRegistry registry = CommandStatsRegistry.getRegistry();
 	
@@ -18,7 +22,7 @@ public class HystrixCommandMonitorImpl {
 	}
 	
 	public HystrixCommandMonitorImpl(String instanceName) {
-		this.instanceName = instanceName;
+		this.instanceName = COMPOSITE_INSTANCE_NAME.equals(instanceName) ? null : instanceName;	
 	}
 	
 	/* package level for unit test*/ 
@@ -38,17 +42,28 @@ public class HystrixCommandMonitorImpl {
 	
 	@SnapShotInstanceDefinition
 	static public String[] getInstanceNames() {
+		return getInstanceNames(true);
+	}	
+
+	static private String[] getInstanceNames(boolean includeComposite) {
+		Set<String> result = new HashSet<String>(); 
 		CommandStatsAccumulator accumulator = registry.getStats();
-		return accumulator.getContexts().toArray(new String[]{});
-	}
+		
+		if (includeComposite) {
+			result.add(COMPOSITE_INSTANCE_NAME);
+		}
+		result.addAll(accumulator.getContexts());
+		
+		return result.toArray(new String[]{});
+	}	
 	
 	@SnapShotString(isInstanceName=true)
 	public String getInstanceName() {
 		String result = instanceName;
 		
 		if (result == null) {
-				result = "Composite(";
-				String[] names = getInstanceNames();
+				result = COMPOSITE_INSTANCE_NAME + "(";
+				String[] names = getInstanceNames(false);
 				for (int i = 0; i < names.length; i++) {
 					if (i > 0) {
 						result += ", ";
