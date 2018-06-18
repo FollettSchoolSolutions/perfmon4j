@@ -1029,7 +1029,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "\t}\r\n"
         		+ "}";
     	
-System.out.println("******************\r\n" + src + "\r\n******************");    	
+//System.out.println("******************\r\n" + src + "\r\n******************");    	
     	CtMethod collectStats = CtMethod.make(src, implementationClass);
     	implementationClass.addMethod(collectStats);
     	
