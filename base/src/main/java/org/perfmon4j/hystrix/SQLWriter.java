@@ -42,6 +42,9 @@ public class SQLWriter implements SnapShotSQLWriterWithDatabaseVersion {
 		schema = (schema == null) ? "" : (schema + ".");
 		String keyName = ((HystrixBaseData)data).getInstanceName();
 		
+		if (keyName.startsWith(HystrixCommandMonitorImpl.COMPOSITE_INSTANCE_NAME + "(")  && keyName.endsWith(")")) {
+			keyName = HystrixCommandMonitorImpl.COMPOSITE_INSTANCE_NAME;
+		}
 		long hystrixKeyID = getOrCreateHystrixKeyID(conn, schema, keyName);
 		
 		if (data instanceof HystrixCommandData) {
@@ -74,12 +77,12 @@ public class SQLWriter implements SnapShotSQLWriterWithDatabaseVersion {
 			stmt.setTimestamp(index++, new Timestamp(data.getEndTime()));
 			stmt.setLong(index++, data.getDuration());
 			
-			stmt.setLong(index++, data.getSuccessCount());
-			stmt.setLong(index++, data.getFailureCount());
-			stmt.setLong(index++, data.getTimeoutCount());
-			stmt.setLong(index++, data.getShortCircuitedCount());
-			stmt.setLong(index++, data.getThreadPoolRejectedCount());
-			stmt.setLong(index++, data.getSemaphoreRejectedCount());
+			stmt.setLong(index++, data.getSuccessCount().getDelta());
+			stmt.setLong(index++, data.getFailureCount().getDelta());
+			stmt.setLong(index++, data.getTimeoutCount().getDelta());
+			stmt.setLong(index++, data.getShortCircuitedCount().getDelta());
+			stmt.setLong(index++, data.getThreadPoolRejectedCount().getDelta());
+			stmt.setLong(index++, data.getSemaphoreRejectedCount().getDelta());
 			
 			int count = stmt.executeUpdate();
 			if (count != 1) {
@@ -110,10 +113,10 @@ public class SQLWriter implements SnapShotSQLWriterWithDatabaseVersion {
 			stmt.setTimestamp(index++, new Timestamp(data.getEndTime()));
 			stmt.setLong(index++, data.getDuration());
 			
-			stmt.setLong(index++, data.getExecutedThreadCount());
-			stmt.setLong(index++, data.getRejectedThreadCount());
-			stmt.setLong(index++, data.getCompletedTaskCount());
-			stmt.setLong(index++, data.getScheduledTaskCount());
+			stmt.setLong(index++, data.getExecutedThreadCount().getDelta());
+			stmt.setLong(index++, data.getRejectedThreadCount().getDelta());
+			stmt.setLong(index++, data.getCompletedTaskCount().getDelta());
+			stmt.setLong(index++, data.getScheduledTaskCount().getDelta());
 			stmt.setLong(index++, data.getMaxActiveThreads());
 			stmt.setLong(index++, data.getCurrentQueueSize());
 			stmt.setLong(index++, data.getCurrentPoolSize());
