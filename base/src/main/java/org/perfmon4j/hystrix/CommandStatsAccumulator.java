@@ -28,6 +28,25 @@ public class CommandStatsAccumulator {
 		}
 	}
 	
+	/**
+	 * 
+	 * @return Returns the sum of all of the stats 
+	 * Note: Group stats are based on Hystrix Command Groups and
+	 * contain rolled up counts of multiple command stats and
+	 * are not included in the calculated sum.
+	 */
+	public CommandStats getCompositeStats() {
+		CommandStats result = CommandStats.builder().build();
+		synchronized(lockToken) {
+			for (CommandStats stat : statsMap.values()) {
+				if (!stat.isGroupStat()) {
+					result = result.add(stat);
+				}
+			}
+		}
+		return result;
+	}
+	
 	public CommandStats getStats(String context) {
 		synchronized(lockToken) {
 			CommandStats result = statsMap.get(context);

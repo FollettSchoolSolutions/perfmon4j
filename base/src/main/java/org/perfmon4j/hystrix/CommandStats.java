@@ -1,6 +1,7 @@
 package org.perfmon4j.hystrix;
 
 public class CommandStats {
+	private final boolean groupStat;
 	private final long successCount;
 	private final long failureCount;
 	private final long timeoutCount;
@@ -16,12 +17,17 @@ public class CommandStats {
 	 * 		.build();
 	 */
 	private CommandStats(CommandStats.Builder builder) {
+		groupStat = builder.isGroupStat();
 		successCount = builder.getSuccessCount();
 		failureCount = builder.getFailureCount();
 		timeoutCount = builder.getTimeoutCount();
 		shortCircuitedCount = builder.getShortCircuitedCount();
 		threadPoolRejectedCount = builder.getThreadPoolRejectedCount();
 		semaphoreRejectedCount = builder.getSemaphoreRejectedCount();
+	}
+	
+	public boolean isGroupStat() {
+		return groupStat;
 	}
 
 	public static CommandStats.Builder builder() {
@@ -57,6 +63,7 @@ public class CommandStats {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + (int) (failureCount ^ (failureCount >>> 32));
+		result = prime * result + (groupStat ? 1231 : 1237);
 		result = prime
 				* result
 				+ (int) (semaphoreRejectedCount ^ (semaphoreRejectedCount >>> 32));
@@ -81,6 +88,8 @@ public class CommandStats {
 		CommandStats other = (CommandStats) obj;
 		if (failureCount != other.failureCount)
 			return false;
+		if (groupStat != other.groupStat)
+			return false;
 		if (semaphoreRejectedCount != other.semaphoreRejectedCount)
 			return false;
 		if (shortCircuitedCount != other.shortCircuitedCount)
@@ -93,18 +102,20 @@ public class CommandStats {
 			return false;
 		return true;
 	}
-	
+
 	@Override
 	public String toString() {
-		return "CommandStats [successCount=" + successCount + ", failureCount="
-				+ failureCount + ", timeoutCount=" + timeoutCount
-				+ ", shortCircuitedCount=" + shortCircuitedCount
-				+ ", threadPoolRejectedCount=" + threadPoolRejectedCount
-				+ ", semaphoreRejectedCount=" + semaphoreRejectedCount + "]";
+		return "CommandStats [groupStat=" + groupStat + ", successCount="
+				+ successCount + ", failureCount=" + failureCount
+				+ ", timeoutCount=" + timeoutCount + ", shortCircuitedCount="
+				+ shortCircuitedCount + ", threadPoolRejectedCount="
+				+ threadPoolRejectedCount + ", semaphoreRejectedCount="
+				+ semaphoreRejectedCount + "]";
 	}
 
 	public CommandStats add(CommandStats stats) {
 		return CommandStats.builder()
+			.setGroupStat(this.isGroupStat() || stats.isGroupStat())	
 			.setSuccessCount(this.getSuccessCount() + ((CommandStats)stats).getSuccessCount())
 			.setFailureCount(this.getFailureCount() + ((CommandStats)stats).getFailureCount())
 			.setTimeoutCount(this.getTimeoutCount() + ((CommandStats)stats).getTimeoutCount())
@@ -115,12 +126,22 @@ public class CommandStats {
 	}
 	
 	public static final class Builder {
+		private boolean groupStat = false;
 		private long successCount = 0;
 		private long failureCount = 0;
 		private long timeoutCount = 0;
 		private long shortCircuitedCount = 0;
 		private long threadPoolRejectedCount = 0;
 		private long semaphoreRejectedCount = 0;
+
+		public boolean isGroupStat() {
+			return groupStat;
+		}
+
+		public Builder setGroupStat(boolean groupStat) {
+			this.groupStat = groupStat;
+			return this;
+		}
 
 		public long getSuccessCount() {
 			return successCount;

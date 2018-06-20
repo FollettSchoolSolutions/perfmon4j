@@ -29,11 +29,7 @@ public class HystrixCommandMonitorImpl {
 	CommandStats getStats() {
 		CommandStats result = null;
 		if (instanceName == null) {
-			result = CommandStats.builder().build();
-			CommandStatsAccumulator allStats = registry.getStats();
-			for (String context : allStats.getContexts()) {
-				result = result.add(allStats.getStats(context));
-			}
+			result = registry.getStats().getCompositeStats();
 		} else {
 			result = registry.getStats().getStats(instanceName);
 		}

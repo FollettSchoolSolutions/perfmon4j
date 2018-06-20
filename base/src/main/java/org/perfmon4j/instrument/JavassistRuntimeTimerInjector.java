@@ -937,6 +937,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "\twhile(itr.hasNext()) {\r\n"
         		+ "\t\tcom.netflix.hystrix.HystrixCommandMetrics metrics = (com.netflix.hystrix.HystrixCommandMetrics)itr.next();\r\n"
         		+ "\t\tjava.lang.String context = metrics.getCommandKey().name();\r\n"
+        		+ "\t\tcom.netflix.hystrix.HystrixCommandGroupKey groupKey = metrics.getCommandGroup();\r\n"
         		+ "\t\torg.perfmon4j.hystrix.CommandStats.Builder builder = org.perfmon4j.hystrix.CommandStats.builder();\r\n"
         		+ "\t\tbuilder.setSuccessCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.SUCCESS));\r\n"
         		+ "\t\tbuilder.setFailureCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.FAILURE));\r\n"
@@ -945,6 +946,9 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "\t\tbuilder.setThreadPoolRejectedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.THREAD_POOL_REJECTED));\r\n"
         		+ "\t\tbuilder.setSemaphoreRejectedCount(metrics.getCumulativeCount(com.netflix.hystrix.HystrixEventType.SEMAPHORE_REJECTED));\r\n"
         		+ "\t\taccumulator.increment(context, builder.build());\r\n"
+        		+ "\t\tif (groupKey != null) {\r\n"
+        		+ "\t\t\taccumulator.increment(\"GROUP:\" + groupKey.name(), builder.setGroupStat(true).build());\r\n"
+        		+ "\t\t}\r\n"
         		+ "\t}\r\n"
         		+ "}";
     	
