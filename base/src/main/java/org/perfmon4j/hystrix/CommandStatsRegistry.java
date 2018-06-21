@@ -17,7 +17,7 @@ import java.util.Set;
  */
 public class CommandStatsRegistry {
 	private static final CommandStatsRegistry singleton = new CommandStatsRegistry(Integer.getInteger(
-			CommandStatsRegistry.class.getName() + "CACHE_DURATION_MILLIS", 2000).intValue());
+			CommandStatsRegistry.class.getName() + ".CACHE_DURATION_MILLIS", 500).intValue());
 	private final int cacheMilliseconds;
 	private CommandStatsAccumulator cachedValue = null;
 	private long cacheLastUpdated = 0;

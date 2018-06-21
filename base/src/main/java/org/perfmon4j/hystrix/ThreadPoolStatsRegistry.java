@@ -17,7 +17,7 @@ import java.util.Set;
  */
 public class ThreadPoolStatsRegistry {
 	private static final ThreadPoolStatsRegistry singleton = new ThreadPoolStatsRegistry(Integer.getInteger(
-			ThreadPoolStatsRegistry.class.getName() + "CACHE_DURATION_MILLIS", 2000).intValue());
+			ThreadPoolStatsRegistry.class.getName() + ".CACHE_DURATION_MILLIS", 500).intValue());
 	private final int cacheMilliseconds;
 	private ThreadPoolStatsAccumulator cachedValue = null;
 	private long cacheLastUpdated = 0;
