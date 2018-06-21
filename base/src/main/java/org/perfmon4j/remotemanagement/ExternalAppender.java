@@ -370,19 +370,21 @@ public class ExternalAppender {
 				Map.Entry<String, RegisteredSnapShotElement> entry = itr.next();
 				String className = entry.getKey();
 				RegisteredSnapShotElement element = entry.getValue();
-				if (element.monitorClass == null || element.monitorClass.get() == null) {
-					// Try loading class and determining the monitor fields...
+				Class<?> clazz = element.monitorClass == null ? null : element.monitorClass.get();
+				if (clazz == null) {
+					// Try loading class
 					try {
-						Class<?> clazz = PerfMon.getClassLoader().loadClass(className);
-						if (clazz != null) {
-							MonitorKeyWithFields m[] = PerfMonTimerTransformer.snapShotGenerator.generateExternalMonitorKeys(clazz);
-							if (m != null) {
-								element.monitors = m;
-								element.monitorClass = new WeakReference<Class<?>>(clazz);
-							}
-						}
+						clazz = PerfMon.getClassLoader().loadClass(className);
+						element.monitorClass = new WeakReference<Class<?>>(clazz);
 					} catch (ClassNotFoundException e) {
 						// Nothing todo....
+					}
+				} 
+				if (clazz != null) {
+					// Refresh all the monitor instances and fields.
+					MonitorKeyWithFields m[] = PerfMonTimerTransformer.snapShotGenerator.generateExternalMonitorKeys(clazz);
+					if (m != null) {
+						element.monitors = m;
 					}
 				}
 				result.add(element);
