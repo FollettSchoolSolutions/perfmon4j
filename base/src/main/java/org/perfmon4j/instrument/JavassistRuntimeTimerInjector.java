@@ -39,7 +39,11 @@ import javassist.Modifier;
 import javassist.NotFoundException;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.AttributeInfo;
+import javassist.bytecode.CodeAttribute;
+import javassist.bytecode.MethodInfo;
 import javassist.bytecode.ParameterAnnotationsAttribute;
+import javassist.bytecode.StackMapTable;
+import javassist.bytecode.stackmap.MapMaker;
 
 import javax.management.ObjectName;
 
@@ -629,6 +633,15 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 //System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
 	        
 	        method.insertAfter(after.toString(), true);
+	        
+	        MethodInfo mi = method.getMethodInfo();
+	        CodeAttribute codeAttribute = mi.getCodeAttribute();
+	        if (codeAttribute != null) {
+		        ClassPool pool = clazz.getClassPool();
+		        StackMapTable smt = MapMaker.make(pool, mi);
+		        codeAttribute.setAttribute(smt);
+	        }
+	        
         } catch (Throwable th) {
         	String msg = "Error inserting timer into class: " + clazz.getName() 
 	    	+ " method: " + method.getName();
