@@ -28,13 +28,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.java.management.GarbageCollectorSnapShot;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
@@ -48,7 +48,7 @@ import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
 
-public class RemoteImplTest extends TestCase {
+public class RemoteImplTest extends PerfMonTestCase {
 	@SuppressWarnings("unused")
 	private static Logger logger = LoggerFactory.initLogger(RemoteImplTest.class);
 	

@@ -21,9 +21,9 @@
 
 package org.perfmon4j.config.xml;
 
-import junit.framework.TestCase;
+import org.perfmon4j.PerfMonTestCase;
 
-public class ConfigElementTest extends TestCase {
+public class ConfigElementTest extends PerfMonTestCase {
 	private ConfigElement a;
 	private ConfigElement b;
 

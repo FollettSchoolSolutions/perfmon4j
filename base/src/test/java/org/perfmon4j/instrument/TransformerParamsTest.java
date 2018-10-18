@@ -27,7 +27,6 @@ import java.sql.SQLWarning;
 
 import javassist.ClassPool;
 import javassist.CtClass;
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -35,8 +34,9 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTestCase;
 
-public class TransformerParamsTest extends TestCase {
+public class TransformerParamsTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 /*----------------------------------------------------------------------------*/
