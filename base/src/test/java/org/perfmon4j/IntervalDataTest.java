@@ -24,14 +24,13 @@ package org.perfmon4j;
 import java.util.Map;
 import java.util.Set;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 
-public class IntervalDataTest extends TestCase {
+public class IntervalDataTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 /*----------------------------------------------------------------------------*/

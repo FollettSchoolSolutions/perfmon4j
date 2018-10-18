@@ -21,14 +21,14 @@
 
 package org.perfmon4j.remotemanagement.intf;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
+import org.perfmon4j.PerfMonTestCase;
 
 
-public class FieldKeyTest extends TestCase {
+public class FieldKeyTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
     
 /*----------------------------------------------------------------------------*/

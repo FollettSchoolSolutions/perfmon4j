@@ -29,7 +29,6 @@ import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.NotFoundException;
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -38,11 +37,12 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
+import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
 
 
-public class RuntimeTimerInjectorTest extends TestCase {
+public class RuntimeTimerInjectorTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
     
     private static JavassistRuntimeTimerInjector runtimeTimerInjector = (JavassistRuntimeTimerInjector)PerfMonTimerTransformer.runtimeTimerInjector;
