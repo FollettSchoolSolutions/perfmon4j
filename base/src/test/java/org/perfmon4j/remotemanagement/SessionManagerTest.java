@@ -21,13 +21,13 @@
 
 package org.perfmon4j.remotemanagement;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
+import org.perfmon4j.PerfMonTestCase;
 
-public class SessionManagerTest extends TestCase {
+public class SessionManagerTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
     private SessionManager<TestSessionData> sessionManager = null;
     

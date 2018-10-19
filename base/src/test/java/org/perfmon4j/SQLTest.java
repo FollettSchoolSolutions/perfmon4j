@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import junit.framework.TestCase;
 import liquibase.Liquibase;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
@@ -16,7 +15,7 @@ import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
 import org.slf4j.LoggerFactory;
 
-public abstract class SQLTest extends TestCase {
+public abstract class SQLTest extends PerfMonTestCase {
 
 	protected JDBCSQLAppender appender = null;
 

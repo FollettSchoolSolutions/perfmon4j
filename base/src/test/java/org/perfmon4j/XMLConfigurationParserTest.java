@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -38,7 +37,7 @@ import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 
-public class XMLConfigurationParserTest extends TestCase {
+public class XMLConfigurationParserTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 /*----------------------------------------------------------------------------*/

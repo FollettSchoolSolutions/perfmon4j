@@ -21,13 +21,12 @@
 
 package org.perfmon4j;
 
-import org.apache.log4j.BasicConfigurator;
-
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-public class PerfMonTimerTest extends TestCase {
+import org.apache.log4j.BasicConfigurator;
+
+public class PerfMonTimerTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 /*----------------------------------------------------------------------------*/

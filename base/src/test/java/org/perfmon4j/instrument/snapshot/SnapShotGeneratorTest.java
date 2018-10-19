@@ -27,7 +27,6 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -35,6 +34,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotSQLWriter;
@@ -55,7 +55,7 @@ import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.MiscHelper;
 
-public class SnapShotGeneratorTest extends TestCase {
+public class SnapShotGeneratorTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 /*----------------------------------------------------------------------------*/

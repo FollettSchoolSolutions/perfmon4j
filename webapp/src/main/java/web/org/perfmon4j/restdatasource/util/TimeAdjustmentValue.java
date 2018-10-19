@@ -91,7 +91,7 @@ public class TimeAdjustmentValue {
 
 	/**
 	 * 
-	 * @param value
+	 * @param value - The starting value
 	 * @return - The input value modified to match the period and increment  
 	 */
 	public long adjustDateTime(long value) {

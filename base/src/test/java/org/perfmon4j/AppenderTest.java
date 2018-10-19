@@ -22,16 +22,16 @@
 package org.perfmon4j;
 
 import java.util.Properties;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
 
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
-public class AppenderTest extends TestCase {
+public class AppenderTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 /*----------------------------------------------------------------------------*/

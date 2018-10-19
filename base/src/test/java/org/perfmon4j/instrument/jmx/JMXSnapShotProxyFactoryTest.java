@@ -28,13 +28,13 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 import javax.management.ObjectName;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SnapShotProviderWrapper;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
@@ -46,7 +46,7 @@ import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory.AttributeConfig;
 import org.perfmon4j.util.ByteFormatter;
 import org.perfmon4j.util.NumberFormatter;
 
-public class JMXSnapShotProxyFactoryTest extends TestCase {
+public class JMXSnapShotProxyFactoryTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
     private MBeanServer mBeanServer = null;

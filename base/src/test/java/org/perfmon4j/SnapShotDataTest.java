@@ -2,7 +2,6 @@ package org.perfmon4j;
 
 import java.util.Map;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -14,7 +13,7 @@ import org.perfmon4j.instrument.snapshot.Ratio;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 
-public class SnapShotDataTest extends TestCase {
+public class SnapShotDataTest extends PerfMonTestCase {
 
     public SnapShotDataTest(String name) {
         super(name);

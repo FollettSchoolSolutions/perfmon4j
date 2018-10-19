@@ -55,7 +55,7 @@ public abstract class DataProvider {
 	public abstract void processResults(Connection conn, RegisteredDatabaseConnections.Database db, ResultAccumulator accumulator, 
 			SeriesField[] fields, long start, long end) throws SQLException;
 
-	/**
+	/* *
 	 * If your Data provider has a "sub-category" for example an instance name, use this to include
 	 * a filter on the aggregatorFactory to limit the calculation to the specified category.
 	 * @param factory

@@ -141,7 +141,7 @@ public class Field implements Comparable<Field>{
 		return requiredChangSet;
 	}
 
-	/**
+	/* *
 	 * Primary indicates fields that are more commonly used.  These will be sorted to the top of the list.
 	 * @return
 	 */
@@ -150,7 +150,7 @@ public class Field implements Comparable<Field>{
 		return this;
 	}
 
-	/**
+	/* *
 	 * This is used if a field is added to an existing category once created and deployed.
 	 * The dataprovider will filter fields to only include them if the specified Liguibase changeset has been applied
 	 * to the database.

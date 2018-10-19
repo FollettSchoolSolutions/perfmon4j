@@ -82,7 +82,8 @@ public class DateTimeValue {
 	 * 
 	 * When this field is null it indicates that date/time was passed in as an fixed or absolute
 	 * value.
-	 * @return
+	 *
+	 * @return - relativeDateTime
 	 */
 	public String getRelativeDateTime() {
 		return relativeDateTime;
@@ -99,15 +100,12 @@ public class DateTimeValue {
 	 * In the case of a date only the time will be:
 	 * 		* The first minute of the day for a start time (i.e. getTimeForStart)
 	 * 		* The last minute of the day for an end time (i.e. getTimeForEnd) 
+	 * @return fixedDateTime
 	 */
 	public String getFixedDateTime() {
 		return fixedDateTime;
 	}
 
-	/**
-	 *  
-	 * 
-	 */
 	public long getTimeForStart() {
 		return timeForStart;
 	}

@@ -26,13 +26,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -42,7 +42,7 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
 
-public class ExternalAppenderTest extends TestCase {
+public class ExternalAppenderTest extends PerfMonTestCase {
 	private static final Logger logger = LoggerFactory.initLogger(ExternalAppenderTest.class);
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 

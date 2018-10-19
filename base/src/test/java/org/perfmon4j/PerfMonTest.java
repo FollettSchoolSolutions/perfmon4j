@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -38,9 +37,10 @@ import org.perfmon4j.instrument.SnapShotProvider;
 
 
 
-public class PerfMonTest extends TestCase {
+public class PerfMonTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
+    
     public void testToAppenderStringWithSQLActive() throws Exception {
     	PerfMon mon = PerfMon.getMonitor("DAVE");
     	IntervalData id = new IntervalData(mon);
@@ -70,6 +70,7 @@ public class PerfMonTest extends TestCase {
 /*----------------------------------------------------------------------------*/    
     public void setUp() throws Exception {
         super.setUp();
+        
         PerfMon.configure();
         BogusAppender.dataStopCount = 0;
     }
@@ -1129,7 +1130,7 @@ public class PerfMonTest extends TestCase {
 
         assertEquals("Should have written a thread trace", 1, appender.output.size());
         ThreadTraceData data = (ThreadTraceData)appender.output.get(0);
-        System.out.println(data.toAppenderString());
+//        System.out.println(data.toAppenderString());
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -1292,8 +1293,9 @@ public class PerfMonTest extends TestCase {
         
         try {
             int val = (int)(Math.random() * 100) + 1;
-            double result = Math.sqrt(val);
-            System.err.println("The square root of " + val + "=" + result);
+            @SuppressWarnings("unused")
+			double result = Math.sqrt(val);
+//            System.err.println("The square root of " + val + "=" + result);
         } finally {
             if (useMon) {
                 PerfMonTimer.stop(timer);
@@ -1397,6 +1399,7 @@ public class PerfMonTest extends TestCase {
         String testType = System.getProperty("UNIT");
         TestSuite newSuite = new TestSuite();
 
+        
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.

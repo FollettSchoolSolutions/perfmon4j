@@ -30,7 +30,7 @@ public class SystemToGroupMapper {
 	}
 	
 	
-	/**
+	/* *
 	 * Removes all of the GroupIDs in the incoming array
 	 * and replaces them with the Systems associated with the Group.
 	 */

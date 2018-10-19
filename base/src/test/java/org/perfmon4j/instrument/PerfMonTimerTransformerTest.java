@@ -34,7 +34,6 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -45,6 +44,7 @@ import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
+import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.util.GlobalClassLoader;
@@ -53,7 +53,7 @@ import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
 
-public class PerfMonTimerTransformerTest extends TestCase {
+public class PerfMonTimerTransformerTest extends PerfMonTestCase {
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
@@ -91,7 +91,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
 		
         MiscHelper.createJarFile(perfmon4jJar.getAbsolutePath(), props, new File[]{classesFolder, testClassesFolder});
         
-        System.out.println("perfmon4j jar file: " + perfmon4jJar.getCanonicalPath());
+//        System.out.println("perfmon4j jar file: " + perfmon4jJar.getCanonicalPath());
     }
     
     
@@ -165,7 +165,7 @@ public class PerfMonTimerTransformerTest extends TestCase {
     public void testAnnotateBootStrapClass() throws Exception {
     	String output = LaunchRunnableInVM.loadClassAndPrintMethods(String.class, "-ejava.lang.String,-btrue", perfmon4jJar);
     	final String validationString = "BootStrapMonitor: java.lang.String.equals";
-System.out.println(output);
+//System.out.println(output);
 
     	assertTrue("Should have added a bootstrap monitor: " + output,
     			output.contains(validationString));
@@ -207,7 +207,7 @@ System.out.println(output);
     public void testGlobalClassLoaderUsesWeakReferences() throws Exception {
     	String output = LaunchRunnableInVM.run(GlobalClassLoaderTester.class, "-dfalse,-ejava.lang.String,-btrue", "", perfmon4jJar);
 
-System.out.println(output);
+//System.out.println(output);
 		final String validateClassLoaderAddedToGlobalClassLoader 
 			= "Loaders added to the GlobalClassLoader: 1";
 		
@@ -398,7 +398,7 @@ System.out.println(output);
 	
     public void testInstrumentSQLStatement() throws Exception {
     	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-dtrue,-eSQL(DERBY)", "", perfmon4jJar);
-    	System.out.println(output);   	
+//    	System.out.println(output);   	
     	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
     }
 
@@ -521,7 +521,7 @@ System.out.println(output);
     	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "true");
     	
     	String output = LaunchRunnableInVM.run(FixupAnnotationsTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", props, perfmon4jJar);
-    	System.out.println(output);   	
+//    	System.out.println(output);   	
     	assertTrue("Parameter annotation should have moved", output.contains("Parameter annotation Moved"));
     }
 
@@ -535,7 +535,7 @@ System.out.println(output);
 	
 	public void testNoPerfmonInstrumentationStaticFlag() throws Exception {
     	String output = LaunchRunnableInVM.run(DontInstrumentMeTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", perfmon4jJar);
-    	System.out.println(output);
+//    	System.out.println(output);
     	
     	assertFalse("Should have skipped file because it contained the static NO_PERFMON4J_INSTRUMENTATION flag",
     			output.contains("Instrumenting class: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DontInstrumentMeTest"));
@@ -547,7 +547,7 @@ System.out.println(output);
     	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "true");
     	
     	String output = LaunchRunnableInVM.run(FixupAnnotationsTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", props, perfmon4jJar);
-    	System.out.println(output);   	
+//    	System.out.println(output);   	
     	assertTrue("Method annotation should have moved", output.contains("Method annotation Moved"));
     }
     
@@ -572,7 +572,7 @@ System.out.println(output);
 	
     public void testDisableSystemGCWithBootstrapEnabled() throws Exception {
     	String output = LaunchRunnableInVM.run(SystemGCDisablerTester.class, "-gtrue,-btrue", "", perfmon4jJar);
-System.out.println(output);
+//System.out.println(output);
     	final String validateInstalled = "System.gc() appears disabled.";
 		assertTrue("SystemGC should have been disabled", output.contains(validateInstalled));
     	
@@ -585,7 +585,7 @@ System.out.println(output);
     	String output = LaunchRunnableInVM.run(SystemGCDisablerTester.class, "-gtrue", "", perfmon4jJar);
     	final String validateInstalled = "System.gc() appears disabled.";
 		assertTrue("SystemGC should have been disabled", output.contains(validateInstalled));
-System.out.println(output);		
+//System.out.println(output);		
     	
     	output = LaunchRunnableInVM.run(SystemGCDisablerTester.class, "-gfalse", "", perfmon4jJar);
     	final String validateNOTInstalled = "System.gc() appears enabled.";
@@ -619,7 +619,7 @@ System.out.println(output);
     
     public void testPerfmon4jLoggerUsesLog4jWhenInitialized() throws Exception {
     	String output = LaunchRunnableInVM.run(Log4jRuntimeLoggerTest.class, "", "", perfmon4jJar);
-    	System.out.println(output);
+//    	System.out.println(output);
     	
     	assertTrue("Before LOG4J initialize, logging should be through java logging",
     			output.contains("info - pre initialize"));
@@ -706,7 +706,7 @@ System.out.println(output);
     	
     	String output = LaunchRunnableInVM.run(ValveInstaller.class, "-eVALVE", "", props, perfmon4jJar);
 //    	String output = LaunchRunnableInVM.loadClassAndPrintMethods(ValveInstaller.class, "", perfmon4jJar);
-System.out.println(output);    	
+//System.out.println(output);    	
 		assertTrue("Should have installed valve hook",
 				output.contains("Valve hook has been installed"));
     }
@@ -784,7 +784,7 @@ System.out.println(output);
     	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "false");
     	
     	String output = LaunchRunnableInVM.run(NoWrapperMethodTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", props, perfmon4jJar);
-    	System.out.println(output);   	
+//    	System.out.println(output);   	
     	
     	assertFalse("Should not have added a wrapper method", output.contains("Found Method: thisMethodShouldInstrumented$"));
     	
@@ -796,7 +796,7 @@ System.out.println(output);
     	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "false");
     	
     	String output = LaunchRunnableInVM.run(NoWrapperMethodTest.class, "-vtrue,-btrue,-eorg.perfmon4j", "", props, perfmon4jJar);
-    	System.out.println(output);   	
+//    	System.out.println(output);   	
     	
     	assertTrue("Should have an extreme monitor active", output.contains("org.perfmon4j.instrument.PerfMonTimerTransformerTest$NoWrapperMethodTest.thisMethodShouldHandleException Completions:1"));
     }
@@ -806,7 +806,7 @@ System.out.println(output);
     	props.setProperty(PerfMonTimerTransformer.USE_LEGACY_INSTRUMENTATION_WRAPPER_PROPERTY, "false");
     	
     	String output = LaunchRunnableInVM.run(NoWrapperMethodTest.class, "-vtrue,-btrue,-eorg.perfmon4j,-aorg.perfmon4j", "", props, perfmon4jJar);
-    	System.out.println(output);   	
+//    	System.out.println(output);   	
     	
     	assertTrue("Should have an annotation monitor", output.contains("PerfmonTest Completions:1"));
     }
@@ -957,7 +957,7 @@ System.out.println(output);
 	 */
     public void testUnbalancedThreadTrace() throws Exception {
     	String output = LaunchRunnableInVM.run(UnbalancedThreadTraceTest.class, "-eorg.perfmon4j", "", perfmon4jJar);
-    	System.out.println(output);
+//    	System.out.println(output);
     	
     	assertTrue("Should not display the startMonitor method", !output.contains(".startMonitor"));
     }

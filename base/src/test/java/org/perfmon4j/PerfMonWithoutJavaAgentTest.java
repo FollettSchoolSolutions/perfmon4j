@@ -23,7 +23,6 @@ package org.perfmon4j;
 import java.io.File;
 import java.util.Properties;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 import org.perfmon4j.instrument.LaunchRunnableInVM;
@@ -34,7 +33,7 @@ import org.perfmon4j.util.MiscHelper;
  * These test validate that Perfmon4j can perform in a Java VM that does not load 
  * perfmon4j as a java agent (Of course without the JavaAgent classes can not be instrumented)
  */
-public class PerfMonWithoutJavaAgentTest extends TestCase {
+public class PerfMonWithoutJavaAgentTest extends PerfMonTestCase {
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
