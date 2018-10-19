@@ -161,7 +161,7 @@ public class LaunchRunnableInVM {
 
     	myClassPath = quoteIfNeeded(myClassPath);
     	
-    	System.out.println("CLASSPATH=" + myClassPath); 
+//    	System.out.println("CLASSPATH=" + myClassPath); 
 		cmdString += " -classpath " + myClassPath;
 
 		

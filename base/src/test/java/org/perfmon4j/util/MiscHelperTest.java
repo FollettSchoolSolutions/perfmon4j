@@ -32,7 +32,6 @@ import java.util.jar.Manifest;
 
 import javax.management.ObjectName;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -40,9 +39,10 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTestCase;
 
 
-public class MiscHelperTest extends TestCase {
+public class MiscHelperTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
     private static final double DELTA = .002;    
 

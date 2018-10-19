@@ -1,6 +1,5 @@
 package org.perfmon4j;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -8,7 +7,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-public class BootConfigurationTest extends TestCase {
+public class BootConfigurationTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
     
 	protected void setUp() throws Exception {
