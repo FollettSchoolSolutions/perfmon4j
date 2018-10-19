@@ -1,8 +1,8 @@
 package web.org.perfmon4j.restdatasource.dataproviders;
 
-import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
 import web.org.perfmon4j.restdatasource.data.Field;
+import web.org.perfmon4j.restdatasource.data.SystemID;
 
 public class TestHelper {
 	public static String buildSeriesDefinitionWithAllFields(SystemID system, String category, CategoryTemplate template) {

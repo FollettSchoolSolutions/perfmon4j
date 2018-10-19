@@ -23,7 +23,6 @@ package org.perfmon4j;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.GregorianCalendar;
 
 import junit.framework.TestSuite;
@@ -49,43 +48,12 @@ public class ThreadTraceDataTest extends SQLTest {
     }
     
 
-    // Full (1.1.0+) schema WITH JDBC/SQL time option.
-    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JThreadTrace(\r\n" +
-	"	SystemID INT NOT NULL,\r\n" +
-	"	ThreadRowID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-	"	ParentRowID INT,\r\n" +
-	"	CategoryID INT NOT NULL,\r\n" +
-	"	StartTime TIMESTAMP NOT NULL,\r\n" +
-	"	EndTime TIMESTAMP NOT NULL,\r\n" +
-	"	Duration INT NOT NULL,\r\n" +
-	"	SQLDuration INT)\r\n";
-
-	final String DERBY_DROP_1 = "DROP TABLE mydb.P4JThreadTrace";
-
 	private Connection conn;
 
 	private void createTables() throws SQLException {
 		conn = appender.getConnection();
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.execute(DERBY_CREATE_1);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
 	}
 
-	private void dropTables() throws SQLException {
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.execute(DERBY_DROP_1);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
-	}
-	
-	
 	boolean originalSQLEnabled = false;
 	protected void setUp() throws Exception {
 		super.setUp();
@@ -95,7 +63,6 @@ public class ThreadTraceDataTest extends SQLTest {
 
 	protected void tearDown() throws Exception {
 		SQLTime.setEnabled(originalSQLEnabled);
-		dropTables();
 		super.tearDown();
 	}
     
@@ -143,7 +110,7 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
 		long parentCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
 			"	FROM mydb.P4JThreadTrace tt\r\n" +
 			"	JOIN mydb.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n" +
-			"	WHERE tt.ThreadRowID = 1\r\n" +
+			"	WHERE tt.TraceRowID = 1\r\n" +
 			"	AND tt.ParentRowID IS NULL\r\n" +
 			"	AND c.CategoryName = 'com.perfmon4j.Test.test'\r\n" +
 			"	AND tt.StartTime = '2007-01-01-01.01.00.0'\r\n" +
@@ -153,7 +120,7 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
 		long childCount = JDBCHelper.getQueryCount(conn, "SELECT COUNT(*)\r\n" + 
 				"	FROM mydb.P4JThreadTrace tt\r\n" +
 				"	JOIN mydb.P4JCategory c ON c.CategoryID = tt.CategoryID\r\n" +
-				"	WHERE tt.ThreadRowID = 2\r\n" +
+				"	WHERE tt.TraceRowID = 2\r\n" +
 				"	AND tt.ParentRowID = 1\r\n" +
 				"	AND c.CategoryName = 'com.perfmon4j.MiscHelper.formatString'\r\n" +
 				"	AND tt.StartTime = '2007-01-01-01.01.01.0'\r\n" +

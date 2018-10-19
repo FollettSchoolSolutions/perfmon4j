@@ -207,6 +207,16 @@ public class JDBCHelper {
 		return result;
 	}
 	
+	public static void executeUpdateOrDelete(Connection conn, String sql) throws SQLException {
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+			stmt.executeUpdate(sql);
+		} finally {
+			closeNoThrow(stmt);
+		}
+	}
+	
 	public static long simpleGetOrCreate(Connection conn, 
 			String tableName, String idColumnName, String descColumnName, String desc) throws SQLException {
 		long result = 0;
@@ -425,7 +435,7 @@ public class JDBCHelper {
      * NOTE -  This is tested in JDBCSQLAppenderTest class.
      * @param conn
      * @param schema
-     * @param monitorID
+     * @param categoryID
      * @return
      * @throws SQLException 
      */

@@ -29,32 +29,7 @@ import org.perfmon4j.util.UserAgentVO;
 
 public class UserAgentSnapShotMonitorTest extends SQLTest {
     
-    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JUserAgentBrowser(\r\n" +
-    	"	BrowserID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-    	"	BrowserName VARCHAR(100) NOT NULL\r\n" +
-    	")\r\n";
-    final String DERBY_CREATE_2 = "CREATE TABLE mydb.P4JUserAgentBrowserVersion(\r\n" +
-		"	BrowserVersionID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-		"	BrowserVersion VARCHAR(50) NOT NULL\r\n" +
-		")\r\n";
-    final String DERBY_CREATE_3 = "CREATE TABLE mydb.P4JUserAgentOS(\r\n" +
-		"	OSID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-		"	OSName VARCHAR(100) NOT NULL\r\n" +
-		")\r\n";
-	final String DERBY_CREATE_4 = "CREATE TABLE mydb.P4JUserAgentOSVersion(\r\n" +
-		"	OSVersionID INT NOT NULL GENERATED ALWAYS AS IDENTITY,\r\n" +
-		"	OSVersion VARCHAR(50) NOT NULL\r\n" +
-		")\r\n";
-	final String DERBY_CREATE_5 = "CREATE TABLE mydb.P4JUserAgentOccurance(\r\n" +
-		"	SystemID INT NOT NULL,\r\n" +
-		"	CollectionDate TIMESTAMP NOT NULL,\r\n" +
-		"	BrowserID INT NOT NULL,\r\n" +
-		"	BrowserVersionID INT,\r\n" +
-		"	OSID INT,\r\n" +
-		"	OSVersionID INT,\r\n" +
-		"	RequestCount INT WITH DEFAULT 0\r\n" +
-		")\r\n";
-	final String DERBY_CREATE_6 = "CREATE VIEW mydb.P4JUserAgentView AS\r\n" +
+	final String DERBY_CREATE_VIEW = "CREATE VIEW mydb.P4JUserAgentView AS\r\n" +
 		"SELECT\r\n" +
 		"	oc.SystemID" + 
 		"	,oc.CollectionDate\r\n" +
@@ -68,13 +43,8 @@ public class UserAgentSnapShotMonitorTest extends SQLTest {
 		"LEFT JOIN mydb.P4JUserAgentBrowserVersion bv ON bv.BrowserVersionID = oc.BrowserVersionID\r\n" +
 		"LEFT JOIN mydb.P4JUserAgentOS os ON os.OSID = oc.OSID\r\n" +
 		"LEFT JOIN mydb.P4JUserAgentOSVersion osv ON osv.OSVersionID = oc.OSVersionID\r\n";
-	
-	final String DERBY_DROP_1 = "DROP TABLE mydb.P4JUserAgentBrowser";
-	final String DERBY_DROP_2 = "DROP TABLE mydb.P4JUserAgentBrowserVersion";
-	final String DERBY_DROP_3 = "DROP TABLE mydb.P4JUserAgentOS";
-	final String DERBY_DROP_4 = "DROP TABLE mydb.P4JUserAgentOSVersion";
-	final String DERBY_DROP_5 = "DROP TABLE mydb.P4JUserAgentOccurance";
-	final String DERBY_DROP_6 = "DROP VIEW mydb.P4JUserAgentView";
+//	
+	final String DERBY_DROP_VIEW = "DROP VIEW mydb.P4JUserAgentView";
     
     private Connection conn;
 	
@@ -85,12 +55,7 @@ public class UserAgentSnapShotMonitorTest extends SQLTest {
 		Statement stmt = null;
 		try {
 			stmt = conn.createStatement();
-			stmt.execute(DERBY_CREATE_1);
-			stmt.execute(DERBY_CREATE_2);
-			stmt.execute(DERBY_CREATE_3);
-			stmt.execute(DERBY_CREATE_4);
-			stmt.execute(DERBY_CREATE_5);
-			stmt.execute(DERBY_CREATE_6);
+			stmt.execute(DERBY_CREATE_VIEW);
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 		}
@@ -100,12 +65,7 @@ public class UserAgentSnapShotMonitorTest extends SQLTest {
 		Statement stmt = null;
 		try {
 			stmt = conn.createStatement();
-			stmt.execute(DERBY_DROP_6);
-			stmt.execute(DERBY_DROP_5);
-			stmt.execute(DERBY_DROP_4);
-			stmt.execute(DERBY_DROP_3);
-			stmt.execute(DERBY_DROP_2);
-			stmt.execute(DERBY_DROP_1);
+			stmt.execute(DERBY_DROP_VIEW);
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 		}

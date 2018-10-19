@@ -23,15 +23,16 @@ package org.perfmon4j.util;
 
 import java.util.Random;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTestCase;
 
-public class MedianCalculatorTest extends TestCase {
+public class MedianCalculatorTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 /*----------------------------------------------------------------------------*/
@@ -210,7 +211,7 @@ public class MedianCalculatorTest extends TestCase {
         assertEquals(MedianCalculator.DEFAULT_FACTOR, calc.getFactor());
 
         // Garbage should set defaults
-        /** @todo It would probably be nicer to give some sort of warning! **/
+        /** todo It would probably be nicer to give some sort of warning! **/
         calc = new MedianCalculator("this is junk");
         
         assertEquals(MedianCalculator.DEFAULT_MAX_ELEMENTS, calc.getMaxElements());

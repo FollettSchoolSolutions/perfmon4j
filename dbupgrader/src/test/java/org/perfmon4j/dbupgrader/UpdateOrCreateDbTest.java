@@ -38,6 +38,7 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb.Parameters;
+import org.slf4j.LoggerFactory;
 
 public class UpdateOrCreateDbTest extends TestCase {
 	private static String SCHEMA = "TEST";
@@ -47,6 +48,9 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public UpdateOrCreateDbTest(String name) {
 		super(name);
+		
+    	ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
+    	logger.setLevel(ch.qos.logback.classic.Level.WARN);		
 	}
 	
 	protected void setUp() throws Exception {
@@ -159,6 +163,49 @@ public class UpdateOrCreateDbTest extends TestCase {
 				
 	}
 	
+	/**
+	 * 4/23/2018
+	 * 
+	 * After 2.5 years of monitoring many systems we overflowed the INTEGER column
+	 * primary key of the P4JIntervalData table and the referenced column in the 
+	 * P4JIntervalThreshold table.  
+	 * 
+	 * Based on the SQL hoops (dropping indexes and constraints) that would be required for an 
+	 * automated upgrade we decided not to upgrade existing tables to a BIGINT. 
+	 * However, new databases will be created with a BIGINT column instead of a INTEGER Column.  
+	 * For those with existing tables they will require a manual update of the columns.
+	 * @throws Exception
+	 */
+	public void testIntervalIDIsCreatedAsABigInt() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA});
+		
+		String dataType = UpdaterUtil.getColumnDataType(conn, SCHEMA, "P4JIntervalData", "IntervalID");
+		assertEquals("P4JIntervalData.IntervalID column should be a BIGINT", "BIGINT", dataType.toUpperCase());
+
+		dataType = UpdaterUtil.getColumnDataType(conn, SCHEMA, "P4JIntervalThreshold", "IntervalID");
+		assertEquals("P4JIntervalThreshold.IntervalID column should be a BIGINT", "BIGINT", dataType.toUpperCase());
+	}
+
+	public void testVersion6Update() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA});
+		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
+				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0006.0'");
+		assertEquals("should have installed 6.0 label", 1, count);
+		
+		boolean groupExists = UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JGroup");
+		boolean joinExists = UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JGroupSystemJoin");
+		
+		assertTrue("New P4JGroup table should exist", groupExists);
+		assertTrue("New P4JGroupSystemJoin table should exist", joinExists);
+	}
 	
 	
 	public void testParseParameters() throws Exception {

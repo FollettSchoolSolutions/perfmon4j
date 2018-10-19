@@ -25,7 +25,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.sql.Timestamp;
 
 import junit.framework.TestSuite;
@@ -50,47 +49,14 @@ public class MemoryPoolSnapShotTest extends SQLTest {
         super(name);
     }
     
-    final String DERBY_CREATE_1 = "CREATE TABLE mydb.P4JMemoryPool(\r\n" +
-	"	SystemID INT NOT NULL,\r\n" +
-	"	InstanceName VARCHAR(200) NOT NULL,\r\n" +
-	"	StartTime TIMESTAMP NOT NULL,\r\n" +
-	"	EndTime TIMESTAMP NOT NULL,\r\n" +
-	"	Duration INT NOT NULL,\r\n" +
-	"	InitialMB DECIMAL(18,2) NOT NULL,\r\n" +
-	"	UsedMB DECIMAL(18,2) NOT NULL,\r\n" +
-	"	CommittedMB DECIMAL(18,2) NOT NULL,\r\n" +
-	"	MaxMB DECIMAL(18,2) NOT NULL,\r\n" +
-	"	MemoryType VARCHAR(50)\r\n" +
-	")\r\n";
-
-    
-    final String DERBY_DROP_1 = "DROP TABLE mydb.P4JMemoryPool";
     private Connection conn;
 
 	protected void setUp() throws Exception {
 		super.setUp();
 		
 		conn = appender.getConnection();
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.execute(DERBY_CREATE_1);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
 	}
 
-	protected void tearDown() throws Exception {
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			stmt.execute(DERBY_DROP_1);
-		} finally {
-			JDBCHelper.closeNoThrow(stmt);
-		}
-		super.tearDown();
-	}
-    
 /*----------------------------------------------------------------------------*/    
     public void testGetMemoryPools() throws Exception {
     	MemoryPoolMXBean mpBeans[] = MemoryPoolSnapShot.getAllMemoryPools();

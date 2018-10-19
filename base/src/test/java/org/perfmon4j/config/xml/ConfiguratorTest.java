@@ -25,20 +25,19 @@ import java.io.StringReader;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import junit.framework.TestCase;
-
 import org.perfmon4j.Appender;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
+import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.XMLPerfMonConfiguration;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 
-public class ConfiguratorTest extends TestCase {
+public class ConfiguratorTest extends PerfMonTestCase {
 	protected void setUp() throws Exception {
 		super.setUp();
 	}

@@ -29,10 +29,10 @@ import java.util.Set;
 
 import org.perfmon4j.RegisteredDatabaseConnections;
 
-import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.CategoryTemplate;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
+import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import web.org.perfmon4j.restdatasource.dataproviders.ProviderField;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
@@ -55,7 +55,7 @@ public abstract class DataProvider {
 	public abstract void processResults(Connection conn, RegisteredDatabaseConnections.Database db, ResultAccumulator accumulator, 
 			SeriesField[] fields, long start, long end) throws SQLException;
 
-	/**
+	/* *
 	 * If your Data provider has a "sub-category" for example an instance name, use this to include
 	 * a filter on the aggregatorFactory to limit the calculation to the specified category.
 	 * @param factory

@@ -32,9 +32,9 @@ import org.perfmon4j.util.JDBCHelper;
 
 import web.org.perfmon4j.restdatasource.BaseDatabaseSetup;
 import web.org.perfmon4j.restdatasource.DataSourceRestImpl;
-import web.org.perfmon4j.restdatasource.DataSourceRestImpl.SystemID;
 import web.org.perfmon4j.restdatasource.data.Category;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
+import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 
 public class GarbageCollectionDataProviderTest extends TestCase {
@@ -108,7 +108,7 @@ public class GarbageCollectionDataProviderTest extends TestCase {
 
 	private SystemID getDefaultSystemID() throws SQLException {
 		String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
-		return SystemID.manualConstructor_TESTONLY(databaseID, 1);
+		return new SystemID(databaseID, 1);
 	}
 	
 	

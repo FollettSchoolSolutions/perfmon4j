@@ -24,6 +24,8 @@ package web.org.perfmon4j.restdatasource;
 
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -177,6 +179,50 @@ public class DataSourceRestImplTest extends TestCase {
 		}
 	}
 
+	public void testGetSystemsIncludesGroups() throws Exception {
+		setUpDatabase();
+		try {
+			String databaseID = JDBCHelper.getDatabaseIdentity(databaseSetup.getConnection(), null);
+			
+			MockHttpResponse response = getSystemsThroughRest("BADID");
+			assertEquals("No database registerd with BADID", 404, response.getStatus());
+			
+			response = getSystemsThroughRest("default");
+			assertEquals("default should be found", 200, response.getStatus());
+			
+			response = getSystemsThroughRest(databaseID);
+			assertEquals("There is a database registered with databaseID", 200, response.getStatus());
+			assertEquals("database does not contain any systems with observations", 0, responseToObject(response, MonitoredSystem[].class).length);
+			
+			// Add an observation to the "Default" system...
+			databaseSetup.addInterval(1L, 1L, "now");
+			
+			response = getSystemsThroughRest(databaseID);
+			MonitoredSystem systems[] = responseToObject(response, MonitoredSystem[].class);
+			
+			assertEquals("The default system has an observation", 1, systems.length);
+			// Verify fields associated with the monitored systems.
+			assertEquals("name", "Default", systems[0].getName());
+			assertEquals("ID", databaseID + ".1", systems[0].getID());
+			
+			// Now add another system with an observation WAY in the past.
+			long systemID = databaseSetup.addSystem("Production");
+			databaseSetup.addInterval(systemID, 1L, "now-100h");
+	
+			response = getSystemsThroughRest(databaseID);
+			systems = responseToObject(response, MonitoredSystem[].class);
+			assertEquals("Still only 1 system has an observation within default start/end time", 1, systems.length);
+	
+			// Now change timeStart to include the observation.
+			response = getSystemsThroughRest(databaseID, "timeStart=now-101h");
+			systems = responseToObject(response, MonitoredSystem[].class);
+			assertEquals("Should now have 2 systems", 2, systems.length);
+		} finally {
+			tearDownDatabase();
+		}
+	}
+	
+	
 	public void testGetSystemsWithNullSecuritySettings() throws Exception {
 		DataSourceSecurityInterceptor.setSecuritySettings(null);
 
@@ -598,6 +644,53 @@ public class DataSourceRestImplTest extends TestCase {
 			tearDownDatabase();
 		}
 	}
+
+	public void testGetStartStop_AdjustStartOnly() {
+		String startTime = "2017-09-28T05:00";
+		String endTime   = "2017-09-28T06:00";   
+
+		Calendar expectedCalStart = new GregorianCalendar(2017, 8, 28, 4, 0); //2017-09-28T04:00
+		Calendar expectedCalEnd = new GregorianCalendar(2017, 8, 28, 5, 0, 59); //2017-09-28T05:00
+		expectedCalEnd.set(Calendar.MILLISECOND, 999);
+		
+		// Add the timeAdjustment only to the startTime.  It should apply to both start and end parameters.
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime + "~ADJ-1H", endTime);
+		
+		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
+		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);
+	}
+	
+	public void testGetStartStop_AdjustEndOnly() {
+		String startTime = "2017-09-28T05:00";
+		String endTime   = "2017-09-28T06:00";   
+
+		Calendar expectedCalStart = new GregorianCalendar(2017, 8, 28, 4, 0); //2017-09-28T04:00
+		Calendar expectedCalEnd = new GregorianCalendar(2017, 8, 28, 5, 0, 59); //2017-09-28T05:00
+		expectedCalEnd.set(Calendar.MILLISECOND, 999);
+		
+		// Add the timeAdjustment only to the endTime.  It should apply to both start and end parameters.
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime, endTime + "~ADJ-1H");
+		
+		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
+		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);
+	}
+
+	public void testGetStartStop_AdjustBothStartAndEnd() {
+		String startTime = "2017-09-28T05:00";
+		String endTime   = "2017-09-28T06:00";   
+
+		Calendar expectedCalStart = new GregorianCalendar(2017, 8, 28, 4, 0); //2017-09-28T04:00
+		Calendar expectedCalEnd = new GregorianCalendar(2017, 8, 28, 6, 0, 59); //2017-09-28T06:00
+		expectedCalEnd.set(Calendar.MILLISECOND, 999);
+		
+		// Move the start time back 1 hour, but leave the endtime the same by appending "{}" to the 
+		// end time.
+		long[] result = DataSourceRestImpl.getStartStopTime(startTime + "~ADJ-1H", endTime + "~ADJ");
+		
+		assertEquals("Start time should have been modified", expectedCalStart.getTimeInMillis(), result[0]);
+		assertEquals("End time should have been modified", expectedCalEnd.getTimeInMillis(), result[1]);
+	}
+	
 	
 	private MockHttpResponse queryThroughRest(String databaseID, String seriesDefinition) throws URISyntaxException {
 		return queryThroughRest(databaseID, seriesDefinition, "");

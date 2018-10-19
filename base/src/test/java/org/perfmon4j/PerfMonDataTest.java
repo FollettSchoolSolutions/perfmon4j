@@ -21,11 +21,10 @@
 
 package org.perfmon4j;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-public class PerfMonDataTest extends TestCase {
+public class PerfMonDataTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 /*----------------------------------------------------------------------------*/

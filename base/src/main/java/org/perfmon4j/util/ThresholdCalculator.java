@@ -152,7 +152,7 @@ public class ThresholdCalculator {
         int offset = Arrays.binarySearch(thresholdMillis, millis);
         if (offset > -1) {
             result = resultArray[offset];
-            /** @todo Might be nice to clone this **/
+            /** todo Might be nice to clone this **/
             result.setTotalCount(totalCount);
         }
         

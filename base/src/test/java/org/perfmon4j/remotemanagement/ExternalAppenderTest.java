@@ -26,13 +26,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -42,7 +42,7 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
 
-public class ExternalAppenderTest extends TestCase {
+public class ExternalAppenderTest extends PerfMonTestCase {
 	private static final Logger logger = LoggerFactory.initLogger(ExternalAppenderTest.class);
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
@@ -203,7 +203,7 @@ public class ExternalAppenderTest extends TestCase {
         String result = (String)map.get(threadTraceKey);
         assertTrue("Thread trace should have been truncated...", result.contains("Thread Trace Limit Exceeded -- Data truncated"));
         
-        System.out.println(result);
+//        System.out.println(result);
     }
 
     /*----------------------------------------------------------------------------*/    
@@ -236,7 +236,7 @@ public class ExternalAppenderTest extends TestCase {
         
         assertTrue("Thread trace should have filtered element with short duration...", 
         		!result.contains("shouldbefiltered"));
-        System.out.println(result);
+//        System.out.println(result);
     }
     
     /*----------------------------------------------------------------------------*/    
@@ -267,7 +267,7 @@ public class ExternalAppenderTest extends TestCase {
         
         assertEquals("map.size()", 1, map.size());
         String result = (String)map.get(threadTraceKey);
-        System.out.println(result);
+//        System.out.println(result);
         
         assertTrue("Thread should filter max depth", 
         		!result.contains("shouldbefiltered"));
@@ -318,7 +318,7 @@ public class ExternalAppenderTest extends TestCase {
     	
     	assertNotNull("Should have millisPerSecond field", data.get(millisPerSecond));
     	
-    	System.out.println(data.get(millisPerSecond));
+//    	System.out.println(data.get(millisPerSecond));
     }
     
     
