@@ -1,8 +1,12 @@
 language: java
-branches:
-  only:
-  - master
-  - develop
+#branches:
+#  only:
+#  - master
+#  - develop
+stages:
+  - name: deploy
+    # Only deploy develop or master branches to bintray and maven central
+    if: branch = master || branch = develop
 env:
   global:
   - secure: T7QOqfTx3GXwIe+xBsYPu0YzCuxdcRJBe8ea2RMKNDT3KuQalzvxncQpHsupZKPURZgUPRj8Uq2qTXKpiVzFFc0rsaubJnOnxkBP/urmIvCvTP18DJDedupW/nvujPyTv0LB2f0cJM9n/59wlEXlT7L4MAMLJc2NelIlvvrMKP0=
@@ -13,7 +17,7 @@ env:
 before_install:
 - openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc
   -out .travis/secring.gpg -d
-after_success:
+deploy:
 - mvn deploy --settings ./settings.xml -DskipTests=true
 - mvn assembly:assembly -DskipTests=true
 - .bintray/publishToBintray.sh
