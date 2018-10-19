@@ -14,11 +14,10 @@ before_install:
 - openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc
   -out .travis/secring.gpg -d
 after_success:
-# Publish artifacts to maven central and bintray (Only master or develop branches)
-- if [ $TRAVIS_BRANCH == "master" || $TRAVIS_BRANCH == "develop" ]; then
+- if [ $TRAVIS_BRANCH == 'master' || $TRAVIS_BRANCH == 'develop' ]; then
       mvn deploy --settings ./settings.xml -DskipTests=true;
 	  mvn assembly:assembly -DskipTests=true;
 	  .bintray/publishToBintray.sh;
-    fi
+   fi
 
 
