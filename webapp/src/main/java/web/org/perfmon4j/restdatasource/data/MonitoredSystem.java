@@ -52,7 +52,7 @@ public class MonitoredSystem implements Comparable<MonitoredSystem> {
 		this.name = name;
 	}
 	
-	/**
+	/* *
 	 * A monitor can be associated with a system or a group of
 	 * systems (group==true)
 	 * 
