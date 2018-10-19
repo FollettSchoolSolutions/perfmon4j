@@ -4,7 +4,7 @@ language: java
 #  - master
 #  - develop
 stages:
-  - name: deploy
+  - name: after_success
     # Only deploy develop or master branches to bintray and maven central
     if: branch = master || branch = develop
 env:
@@ -17,7 +17,10 @@ env:
 before_install:
 - openssl aes-256-cbc -pass pass:$KEY_ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc
   -out .travis/secring.gpg -d
-deploy:
+after_success:
+# Publish artifacts to maven central
 - mvn deploy --settings ./settings.xml -DskipTests=true
+# Build the assembly - zipped up release
 - mvn assembly:assembly -DskipTests=true
+# Push the assembly to bintray
 - .bintray/publishToBintray.sh
