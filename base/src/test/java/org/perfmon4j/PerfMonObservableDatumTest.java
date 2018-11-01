@@ -6,8 +6,6 @@ import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.instrument.snapshot.Ratio;
 
 public class PerfMonObservableDatumTest extends TestCase {
-	private final String FIELD_NAME = "fieldName";
-	
 	public PerfMonObservableDatumTest(String name) {
 		super(name);
 	}
@@ -15,7 +13,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 	public void testRatio() {
 		Ratio ratio = new Ratio(2, 3);
 		
-		PerfMonObservableDatum<Ratio> obv = PerfMonObservableDatum.newDatum(FIELD_NAME, ratio);
+		PerfMonObservableDatum<Ratio> obv = PerfMonObservableDatum.newDatum(ratio);
 		assertFalse("isDelta",  obv.isDelta());
 		assertTrue("isRatio",  obv.isRatio());
 		assertEquals("value", 1, Math.round(obv.getValue().doubleValue()));
@@ -26,7 +24,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 	public void testDelta() {
 		Delta delta = new Delta(0, 100, 1000);
 		
-		PerfMonObservableDatum<Delta> obv = PerfMonObservableDatum.newDatum(FIELD_NAME, delta);
+		PerfMonObservableDatum<Delta> obv = PerfMonObservableDatum.newDatum(delta);
 		assertTrue("isDelta",  obv.isDelta());
 		assertFalse("isRatio",  obv.isRatio());
 		assertEquals("value by default will be throughput per second", 100, Math.round(obv.getValue().doubleValue()));
@@ -37,7 +35,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 	public void testInteger() {
 		Integer value = Integer.valueOf(100);
 		
-		PerfMonObservableDatum<? extends Number> obv = PerfMonObservableDatum.newDatum(FIELD_NAME, value);
+		PerfMonObservableDatum<? extends Number> obv = PerfMonObservableDatum.newDatum(value);
 		assertFalse("isDelta",  obv.isDelta());
 		assertFalse("isRatio",  obv.isRatio());
 		assertEquals("value", value, obv.getValue());		
@@ -48,7 +46,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 	public void testDouble() {
 		Double value = Double.valueOf(12345.6789);
 		
-		PerfMonObservableDatum<? extends Number> obv = PerfMonObservableDatum.newDatum(FIELD_NAME, value);
+		PerfMonObservableDatum<? extends Number> obv = PerfMonObservableDatum.newDatum(value);
 		assertFalse("isDelta",  obv.isDelta());
 		assertFalse("isRatio",  obv.isRatio());
 		assertEquals("value", value, obv.getValue());		
