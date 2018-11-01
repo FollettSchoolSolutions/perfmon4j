@@ -7,37 +7,51 @@ import org.perfmon4j.instrument.snapshot.Ratio;
 
 
 public class PerfMonObservableDatum<T> {
-	private final String fieldName;
 	private final boolean ratio;
 	private final boolean delta;
 	private final Number value;
 	private final T complexObject;
 	
-	static public <X extends Number> PerfMonObservableDatum<X> newDatum(String fieldName, X number) {
-		return new PerfMonObservableDatum<X>(fieldName, number);
+
+	static public PerfMonObservableDatum<Integer> newDatum(int value) {
+		return newDatum(Integer.valueOf(value));
 	}
 
-	static public <X extends Ratio> PerfMonObservableDatum<X> newDatum(String fieldName, X ratio) {
-		return new PerfMonObservableDatum<X>(fieldName, true, false, Float.valueOf(ratio.getRatio()), ratio);
+	static public PerfMonObservableDatum<Long> newDatum(long value) {
+		return newDatum(Long.valueOf(value));
 	}
 	
-	static public <X extends Delta> PerfMonObservableDatum<X> newDatum(String fieldName, X delta) {
-		return new PerfMonObservableDatum<X>(fieldName, false, true, delta.getDeltaPerSecond_object(), delta);
+	static public PerfMonObservableDatum<Float> newDatum(float value) {
+		return newDatum(Float.valueOf(value));
+	}
+
+	static public PerfMonObservableDatum<Double> newDatum(double value) {
+		return newDatum(Double.valueOf(value));
 	}
 	
-	private PerfMonObservableDatum(String fieldName, Number value) {
+	static public <X extends Number> PerfMonObservableDatum<X> newDatum(X number) {
+		return new PerfMonObservableDatum<X>(number);
+	}
+
+	static public <X extends Ratio> PerfMonObservableDatum<X> newDatum(X ratio) {
+		return new PerfMonObservableDatum<X>(true, false, Float.valueOf(ratio.getRatio()), ratio);
+	}
+	
+	static public <X extends Delta> PerfMonObservableDatum<X> newDatum(X delta) {
+		return new PerfMonObservableDatum<X>(false, true, delta.getDeltaPerSecond_object(), delta);
+	}
+	
+	private PerfMonObservableDatum(Number value) {
 		super();
-		this.fieldName = fieldName;
 		this.ratio = false;
 		this.delta = false;
 		this.complexObject = null;
 		this.value = value;
 	}
 	
-	private PerfMonObservableDatum(String fieldName, boolean ratio,
+	private PerfMonObservableDatum(boolean ratio,
 			boolean delta, Number value, T complexObject) {
 		super();
-		this.fieldName = fieldName;
 		this.ratio = ratio;
 		this.delta = delta;
 		this.value = value;
@@ -60,10 +74,6 @@ public class PerfMonObservableDatum<T> {
 		return complexObject;
 	}
 	
-	public String getFieldName() {
-		return fieldName;
-	}
-
 	@Override
 	public String toString() {
 		String result = "";
@@ -80,37 +90,5 @@ public class PerfMonObservableDatum<T> {
 		}
 		
 		return result;
-	}
-
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((fieldName == null) ? 0 : fieldName.hashCode());
-		result = prime * result + ((value == null) ? 0 : value.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		PerfMonObservableDatum<?> other = (PerfMonObservableDatum<?>) obj;
-		if (fieldName == null) {
-			if (other.fieldName != null)
-				return false;
-		} else if (!fieldName.equals(other.fieldName))
-			return false;
-		if (value == null) {
-			if (other.value != null)
-				return false;
-		} else if (!value.equals(other.value))
-			return false;
-		return true;
 	}
 }
