@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.Map;
 
 import junit.framework.AssertionFailedError;
 import junit.framework.TestSuite;
@@ -34,6 +35,9 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonObservableData;
+import org.perfmon4j.PerfMonObservableDatum;
+import org.perfmon4j.PerfMonObservableDatumTest;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SnapShotData;
@@ -199,7 +203,7 @@ System.out.println(appenderString);
 	  	d.setName("Bogus");
 	  	assertEquals("name", "Bogus", d.getName());
     }
-    
+
     public static interface SimpleRatio {
     	public Ratio getKeywordCacheHitRatio();
     	public Ratio getAvailableEntityRatio();
@@ -960,7 +964,121 @@ System.out.println(appenderString);
 
     	validateContainsField(keys[0], "value", FieldKey.INTEGER_TYPE);
     }
+  
+    @SnapShotProvider
+	@SnapShotRatio(name="cacheHitRatio", denominator="totalSearches", numerator="searchCacheHits")
+	public static class SimpleObservationProvider {
+    	private int counter = 5;
+    	private int searchCacheHits = 0;
+    	private int totalSearches = 0;
+    	
+    	public void incrementCounters() {
+    		counter++;
+    		searchCacheHits += 7;
+    		totalSearches += 10;
+    	}
+
+    	@SnapShotCounter
+    	public int getSearchCacheHits() {
+    		return searchCacheHits;
+    	}
+    	
+    	@SnapShotCounter
+    	public int getTotalSearches() {
+    		return totalSearches;
+    	}
+    	
+    	@SnapShotCounter
+    	public int getCounter() {
+    		return counter;
+    	}
+    	
+    	// Add all supported gauge types...
+    	@SnapShotGauge
+    	public boolean getBooleanValue() {
+    		return true;
+    	}
+
+    	@SnapShotGauge
+    	public long getLongValue() {
+    		return 2;
+    	}
+
+    	@SnapShotGauge
+    	public int getIntValue() {
+    		return 3;
+    	}
+
+    	@SnapShotGauge
+    	public short getShortValue() {
+    		return 4;
+    	}
+
+    	@SnapShotGauge
+    	public float getFloatValue() {
+    		return 5.0f;
+    	}
+
+    	@SnapShotGauge
+    	public double getDoubleValue() {
+    		return 6.0;
+    	}
+    }
     
+    public void testImplementsPerfMonObservableData() throws Exception {
+	  	Class<?> clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(SimpleObservationProvider.class);
+	  	Object obj = clazz.newInstance();
+	  	
+	  	SimpleObservationProvider provider = new SimpleObservationProvider();
+
+	  	// Run our data object through it's lifecycle.. 
+	  	((SnapShotLifecycle)obj).init(provider, 1000);
+	  	provider.incrementCounters(); // Increment our counter
+	  	((SnapShotLifecycle)obj).takeSnapShot(provider, 2000);
+	  	
+	  	assertTrue("Shold have implemented the PerfMonObservableData interface", 
+	  			obj instanceof PerfMonObservableData);
+	  	PerfMonObservableData data = (PerfMonObservableData)obj;
+	  	
+	  	((SnapShotData)data).setName("Main");
+	  	assertEquals("categoryName", "Snapshot.Main", data.getDataCategory());
+	  	assertEquals("timestamp", 2000, data.getTimestamp());
+	  	assertEquals("durationMillis", 1000, data.getDurationMillis());
+	  	
+	  	Map<String, PerfMonObservableDatum<?>> observations = data.getObservations();
+	  	assertNotNull("Should have returned observations", observations);
+	  	assertTrue("Should have some observations in the map", !observations.isEmpty());
+	  	
+	  	// Validate all of the gauge observations...
+	  	validateObservation(observations, "booleanValue", "1");
+	  	validateObservation(observations, "longValue", "2");
+	  	validateObservation(observations, "intValue", "3");
+	  	validateObservation(observations, "shortValue", "4");
+	  	validateObservation(observations, "floatValue", "5.000");
+	  	validateObservation(observations, "doubleValue", "6.000");
+	  	
+	  	// Validate a delta
+	  	validateObservation(observations, "counter", "1.000");
+
+	  	@SuppressWarnings("unchecked")
+		PerfMonObservableDatum<Delta> delta = (PerfMonObservableDatum<Delta>)observations.get("counter");
+	  	assertEquals("delta initial value", 5, delta.getComplexObject().getInitalValue());
+	  	assertEquals("delta final value", 6, delta.getComplexObject().getFinalValue());
+	  	assertEquals("The defalt observation value from a delta should be deltaPerSecond", Double.valueOf(1.0), 
+	  			delta.getComplexObject().getDeltaPerSecond_object());
+	  	
+	  	// Validate a ratio
+	  	validateObservation(observations, "cacheHitRatio", "0.700");
+
+	  	@SuppressWarnings("unchecked")
+		PerfMonObservableDatum<Ratio> ratio = (PerfMonObservableDatum<Ratio>)observations.get("cacheHitRatio");
+	  	assertEquals("ratio", Float.valueOf(0.7f), Float.valueOf(ratio.getComplexObject().getRatio()));
+    }
+    
+ 	void validateObservation(Map<String, PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
+ 		PerfMonObservableDatumTest.validateObservation(observations, label, expectedValue);
+     }
+
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
 //    	System.setProperty("UNIT", "arg1");
