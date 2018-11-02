@@ -12,7 +12,14 @@ public class PerfMonObservableDatum<T> {
 	private final Number value;
 	private final T complexObject;
 	
+	static public PerfMonObservableDatum<Short> newDatum(boolean value) {
+		return newDatum(Short.valueOf((short)(value ? 1 : 0)));
+	}
 
+	static public PerfMonObservableDatum<Short> newDatum(short value) {
+		return newDatum(Short.valueOf(value));
+	}
+	
 	static public PerfMonObservableDatum<Integer> newDatum(int value) {
 		return newDatum(Integer.valueOf(value));
 	}
