@@ -1,5 +1,7 @@
 package org.perfmon4j;
 
+import java.util.Map;
+
 import junit.framework.TestCase;
 
 import org.perfmon4j.instrument.snapshot.Delta;
@@ -9,6 +11,13 @@ public class PerfMonObservableDatumTest extends TestCase {
 	public PerfMonObservableDatumTest(String name) {
 		super(name);
 	}
+
+ 	static public void validateObservation(Map<String, PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
+ 		PerfMonObservableDatum<?> observation = observations.get(label);
+ 		assertNotNull("observation should have been included: " + label, observation);
+ 		assertEquals(label, expectedValue, observation.toString());
+    }
+
 	
 	public void testRatio() {
 		Ratio ratio = new Ratio(2, 3);

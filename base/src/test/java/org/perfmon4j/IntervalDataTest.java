@@ -195,15 +195,11 @@ public class IntervalDataTest extends PerfMonTestCase {
       	 validateObservation(observations, "percentOver_1_second", "100.000");
     }
  	
- 	
-     private void validateObservation(Map<String, PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
-    	 PerfMonObservableDatum<?> observation = observations.get(label);
-    	 assertNotNull("observation should have been included: " + label, observation);
-    	 assertEquals(label, expectedValue, observation.toString());
+ 	void validateObservation(Map<String, PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
+ 		PerfMonObservableDatumTest.validateObservation(observations, label, expectedValue);
      }
      
-   	 
-
+   
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         String[] testCaseName = {IntervalDataTest.class.getName()};
