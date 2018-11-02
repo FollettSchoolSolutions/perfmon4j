@@ -277,7 +277,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		boolean writerIncludesDatabaseVersion = false;
 		
 		SnapShotProvider provider =  (SnapShotProvider)dataProvider.getAnnotation(SnapShotProvider.class);
-		if (provider == null) {
+		if (provider == null && !useJMXConfig) {
 			throw new GenerateSnapShotException("Provider class must include a SnapShotProvider annotation");
 		}
 
