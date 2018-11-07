@@ -2,6 +2,7 @@ package org.perfmon4j.util;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -35,10 +36,16 @@ public class HttpHelper {
 				out.close();
 			}
 			responseCode = conn.getResponseCode();
-			conn.getResponseMessage();
+			responseMessage = conn.getResponseMessage();
+			InputStream bodyStream = null;
 			if (responseCode == HttpURLConnection.HTTP_OK) {
+				bodyStream = conn.getInputStream();
+			} else if (responseCode >= 400) {
+				bodyStream = conn.getErrorStream();
+			}
+			if (bodyStream != null) {
 				StringBuilder builder = null;
-				BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+				BufferedReader in = new BufferedReader(new InputStreamReader(bodyStream));
 				try {
 					String line;
 					while ((line = in.readLine()) != null) {
@@ -88,6 +95,28 @@ public class HttpHelper {
 		
 		public String getResponseBody() {
 			return responseBody;
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder result = new StringBuilder();
+			
+			result.append("Response [responseCode=");
+			result.append(responseCode);
+			if (responseMessage != null) {
+				result.append(", responseMessage=\"")
+					.append(responseMessage)
+					.append("\"");
+				
+			}
+			if (responseBody != null) {
+				result.append(", responseBody=\"")
+					.append(responseBody)
+					.append("\"");
+			}
+			result.append("]");
+			
+			return  result.toString();
 		}
 	}
 	
