@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
@@ -33,9 +34,22 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	private String username = null;
 	private String password = null;
 	private String retentionPolicy = null;
+	private boolean numericOnly = false;
 	private int batchSeconds = 5; // How long to delay before sending a batch out.
 	private final HttpHelper helper = new HttpHelper();
 	private final AtomicInteger batchWritersPending = new AtomicInteger(0);
+	
+	private static String ESCAPED_DOUBLE_QUOTE = "\\\\\"";
+	private static final Pattern DOUBLE_QUOTE_PATTERN = Pattern.compile("\"");
+	private static String ESCAPED_SPACE = "\\\\ ";
+	private static final Pattern SPACE_PATTERN = Pattern.compile(" ");
+	private static String ESCAPED_COMMA = "\\\\,";
+	private static final Pattern COMMA_PATTERN = Pattern.compile("\\,");
+	private static String ESCAPED_BACKSLASH = "\\\\\\\\";
+	private static final Pattern BACKSLASH_PATTERN = Pattern.compile("\\\\");
+	private static String ESCAPED_EQUALS = "\\\\=";
+	private static final Pattern EQUALS_PATTERN = Pattern.compile("\\=");
+	
 	
 	private Object lockToken = new Object();
 	private List<String> writeQueue = new ArrayList<String>();
@@ -47,13 +61,59 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		this.setExcludeCWDHashFromSystemName(true);
 	}
 	
-	private String quoteIfNeeded(String value) {
-		if (value != null && value.contains(" ")) {
-			value = "\"" + value + "\"";
+	/* package level for testing */ 
+	/**
+	 * Review https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/ for information
+	 * on escaping characters.
+	 */
+	String decorateDatumForInflux(PerfMonObservableDatum<?> datum) {
+		String result = datum.toString();
+		
+		if (datum.isNumeric()) {
+			Number value = datum.getValue();
+			Object complexValue = datum.getComplexObject();
+			if ((complexValue != null) && (complexValue instanceof Boolean)) {
+				result = ((Boolean)complexValue).booleanValue() ? "true" : "false";
+			} else if (value instanceof Short || value instanceof Integer || value instanceof Long) {
+				// Signed 64-bit integers (Which includes java Long) are suffixed with an i
+				result = result + "i";
+			}
+		} else {
+			// Escape any quotes in the string
+			result = DOUBLE_QUOTE_PATTERN.matcher(result).replaceAll(ESCAPED_DOUBLE_QUOTE);
+			result = "\"" + result + "\"";
 		}
-		return value;
+		
+		return result;
+	}
+	
+	/* package level for testing  */ 
+	/**
+	 * Review https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/ for information
+	 * on escaping characters.
+	 */
+	String decorateMeasurementForInflux(String measurement) {
+		measurement = BACKSLASH_PATTERN.matcher(measurement).replaceAll(ESCAPED_BACKSLASH);
+		measurement = SPACE_PATTERN.matcher(measurement).replaceAll(ESCAPED_SPACE);
+		measurement = COMMA_PATTERN.matcher(measurement).replaceAll(ESCAPED_COMMA);
+		
+		return measurement;
 	}
 
+	/* package level for testing  */ 
+	/**
+	 * Review https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/ for information
+	 * on escaping characters.
+	 */
+	String decorateTagKeyTagValueFieldKeyForInflux(String value) {
+		// Escape backslash, space and comma just like measurement.
+		value = decorateMeasurementForInflux(value);
+		value = EQUALS_PATTERN.matcher(value).replaceAll(ESCAPED_EQUALS);
+		
+		return value;
+	}
+	
+	
 	/* package level for testing */ String buildPostURL() {
 		StringBuilder url = new StringBuilder();
 		url.append(baseURL);
@@ -86,32 +146,37 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	
 	/* package level for testing */ String buildPostDataLine(PerfMonObservableData data) {
 		StringBuilder postLine = new StringBuilder();
-		postLine.append(quoteIfNeeded(data.getDataCategory()))
+		
+		postLine.append(decorateMeasurementForInflux(data.getDataCategory()))
 			.append(",system=")
-			.append(quoteIfNeeded(this.getSystemName()));
+			.append(decorateTagKeyTagValueFieldKeyForInflux(this.getSystemName()));
 		
 		String[] groups = getGroupsAsArray();
 		if (groups.length > 0) {
 			postLine.append(",group=")
-				.append(quoteIfNeeded(groups[0]));
+				.append(decorateTagKeyTagValueFieldKeyForInflux(groups[0]));
 		}
 		postLine.append(" ");
 		
 		boolean first = true;
+		int numDataElements = 0;
 		for(Map.Entry<String, PerfMonObservableDatum<?>> entry : ((PerfMonObservableData) data).getObservations().entrySet()) {
-			if (first) {
-				first = false;
-			} else {
-				postLine.append(",");
+			if (!numericOnly || entry.getValue().isNumeric()) {
+				if (first) {
+					first = false;
+				} else {
+					postLine.append(",");
+				}
+				numDataElements++;
+				postLine.append(decorateTagKeyTagValueFieldKeyForInflux(entry.getKey()))
+					.append("=")
+					.append(decorateDatumForInflux(entry.getValue()));
 			}
-			postLine.append(quoteIfNeeded(entry.getKey()))
-				.append("=")
-				.append(entry.getValue().toString());
 		}
 		postLine.append(" ");
 		postLine.append(Long.toString(data.getTimestamp() / 1000));
 		
-		return postLine.toString();
+		return numDataElements > 0 ? postLine.toString() : null;
 	}
 	
 	private void appendDataLine(String line) {
@@ -137,9 +202,15 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	public void outputData(PerfMonData data) {
 		if (data instanceof PerfMonObservableData) {
 			String dataLine = buildPostDataLine((PerfMonObservableData)data);
-			appendDataLine(dataLine);
-			if (batchWritersPending.intValue() <= 0) {
-				PerfMon.utilityTimer.schedule(new BatchWriter(), getBatchSeconds() * 1000);
+			if (dataLine != null) {
+				appendDataLine(dataLine);
+				if (batchWritersPending.intValue() <= 0) {
+					PerfMon.utilityTimer.schedule(new BatchWriter(), getBatchSeconds() * 1000);
+				}
+			} else {
+				String numeric = numericOnly ? "numeric " : "";
+				logger.logWarn("No " + numeric + "observable data elements found.  Skipping output of data: " + 
+						((PerfMonObservableData)data).getDataCategory());
 			}
 		} else {
 			logger.logWarn("Unable to write data to influxdb. Data class does not implement PerfMonObservableData. "
@@ -201,6 +272,14 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	
 	public HttpHelper getHelper() {
 		return helper;
+	}
+	
+	public boolean isNumericOnly() {
+		return numericOnly;
+	}
+
+	public void setNumericOnly(boolean numericOnly) {
+		this.numericOnly = numericOnly;
 	}
 
 	private class BatchWriter extends TimerTask {

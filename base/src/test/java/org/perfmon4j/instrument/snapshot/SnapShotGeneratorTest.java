@@ -968,6 +968,7 @@ System.out.println(appenderString);
     @SnapShotProvider
 	@SnapShotRatio(name="cacheHitRatio", denominator="totalSearches", numerator="searchCacheHits")
 	public static class SimpleObservationProvider {
+    	private static final StringBuffer STRING_BUFFER = new StringBuffer("This is a StringBuffer");
     	private int counter = 5;
     	private int searchCacheHits = 0;
     	private int totalSearches = 0;
@@ -978,6 +979,16 @@ System.out.println(appenderString);
     		totalSearches += 10;
     	}
 
+    	@SnapShotString
+    	public String getStringValue() {
+    		return "This is a string";
+    	}
+
+    	@SnapShotString
+    	public StringBuffer getStringBuffer() {
+    		return STRING_BUFFER;
+    	}
+    	
     	@SnapShotCounter
     	public int getSearchCacheHits() {
     		return searchCacheHits;
@@ -1073,6 +1084,19 @@ System.out.println(appenderString);
 	  	@SuppressWarnings("unchecked")
 		PerfMonObservableDatum<Ratio> ratio = (PerfMonObservableDatum<Ratio>)observations.get("cacheHitRatio");
 	  	assertEquals("ratio", Float.valueOf(0.7f), Float.valueOf(ratio.getComplexObject().getRatio()));
+	  	
+	  	// Validate the String
+	  	validateObservation(observations, "stringValue", "This is a string");
+		@SuppressWarnings("unchecked")
+		PerfMonObservableDatum<String> stringDatum = (PerfMonObservableDatum<String>)observations.get("stringValue");
+	  	assertFalse("String is not a numeric datum", stringDatum.isNumeric());
+
+	  	// Validate the StringBuffer
+	  	validateObservation(observations, "stringBuffer", "This is a StringBuffer");
+		@SuppressWarnings("unchecked")
+		PerfMonObservableDatum<StringBuffer> stringBufferDatum = (PerfMonObservableDatum<StringBuffer>)observations.get("stringBuffer");
+	  	assertFalse("StringBuffer is not a numeric datum", stringBufferDatum.isNumeric());
+	  	assertEquals("The StringBuffer should be the complexObject", SimpleObservationProvider.STRING_BUFFER, stringBufferDatum.getComplexObject());
     }
     
  	void validateObservation(Map<String, PerfMonObservableDatum<?>> observations, String label, String expectedValue) {

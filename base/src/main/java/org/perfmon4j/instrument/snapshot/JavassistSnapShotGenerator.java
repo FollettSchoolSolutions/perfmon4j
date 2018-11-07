@@ -90,10 +90,18 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		boolean displayAsDuration = ratio.displayAsDuration();
 		
 		String methodSource = "public org.perfmon4j.instrument.snapshot.Ratio " + methodName + "() {" +
-				"return org.perfmon4j.instrument.snapshot.Ratio.generateRatio(" + numeratorMethod + "(), " + denominatorMethod + "());}"; 
-
-		String appendToGetObservations = " result.put(\"" + ratio.name() + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
-				+ methodName + "()));\r\n";
+				"return org.perfmon4j.instrument.snapshot.Ratio.generateRatio(" + numeratorMethod + "(), " + denominatorMethod + "());}";
+		
+		String observationKey = ratio.name();
+		String formatAsPercent = Boolean.FALSE.toString();
+		
+		if (ratio.displayAsPercentage()) {
+			observationKey = observationKey + "%";
+			formatAsPercent = Boolean.TRUE.toString();
+		} 
+	
+		String appendToGetObservations = " result.put(\"" + observationKey + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
+				+ methodName + "()," + formatAsPercent + "));\r\n";
 		logger.logDebug("Appending to getObservations: " + appendToGetObservations);
 		getObservationsBody.append(appendToGetObservations);
 		
@@ -229,7 +237,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		toAppenderStringBody.append(appendToAppenderString);
 	}
 
-	private void generateStringAnnotation(Method method, CtClass cls, StringBuffer providerBody, StringBuffer toAppenderStringBody, SnapShotString stringAnnotation) throws CannotCompileException {
+	private void generateStringAnnotation(Method method, CtClass cls, StringBuffer providerBody, StringBuffer toAppenderStringBody, StringBuffer getObservationsBody, SnapShotString stringAnnotation) throws CannotCompileException {
 		Class<?> retType = method.getReturnType();
 		if (retType.isPrimitive()) {
 			throw new IllegalArgumentException("Invalid field type: " + retType.getName());
@@ -249,6 +257,11 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		String appendToProvider =  "this." + fieldName + "= provider." + method.getName() + "();\r\n" ;
 		logger.logDebug("Appending to provideData: " + appendToProvider);
 		providerBody.append(appendToProvider);
+		
+		String appendToGetObservations = " result.put(\"" + fieldName + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
+				+ method.getName() + "()));\r\n";
+		logger.logDebug("Appending to getObservations: " + appendToGetObservations);
+		getObservationsBody.append(appendToGetObservations);		
 
 		String appendToAppenderString = " stringFormatter = org.perfmon4j.instrument.SnapShotStringFormatter.newInstance(\"" + stringAnnotation.formatter().getName() + "\");\r\n" +
 				"result +=  stringFormatter.format(25, \"" + fieldName + "\", " + fieldName + ");\r\n";
@@ -438,7 +451,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 						
 						if (stringAnnotation != null) {
 							if (Modifier.isPublic(modifiers)) {
-								generateStringAnnotation(m, ctClass, providerBody, toAppenderStringBody, stringAnnotation);
+								generateStringAnnotation(m, ctClass, providerBody, toAppenderStringBody, getObservationsBody, stringAnnotation);
 							} else {
 								logger.logError("Unable to implemnent SnapShot String for inaccessible method: " +  
 										ctClass.getName() + "." + m.getName());

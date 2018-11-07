@@ -25,7 +25,7 @@ public class InfluxAppenderTest extends TestCase {
 		appender = new InfluxAppender(AppenderID.getAppenderID(InfluxAppender.class.getName()));
 		
 		mockData = Mockito.mock(PerfMonObservableData.class);
-		Mockito.when(mockData.getDataCategory()).thenReturn("MyCategory");
+		Mockito.when(mockData.getDataCategory()).thenReturn("MyCategory");  //Comma, space should be escaped, but not the equals sign,
 		Mockito.when(mockData.getTimestamp()).thenReturn(Long.valueOf(1000));
 	
 		Map<String, PerfMonObservableDatum<?>> map = new HashMap<String, PerfMonObservableDatum<?>>();
@@ -77,16 +77,99 @@ public class InfluxAppenderTest extends TestCase {
 	
 	public void testBuildDataLine() {
 		appender.setSystemNameBody("MySystemName");
+		appender.setGroups("My =\\Group"); //Comma (Perfmon4j does not allow comma in group name), space AND the equals sign should be escaped
+		
+		Mockito.when(mockData.getDataCategory()).thenReturn("My, \\=Category");  //Comma and space should be escaped, but not the equals sign,
+
+		assertEquals("My\\,\\ \\\\=Category,system=MySystemName,group=My\\ \\=\\\\Group throughput=25i 1",
+			appender.buildPostDataLine(mockData));
+	}
+
+	public void testBuildDataLine_NoData() {
+		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("MyGroup");
 		
-		assertEquals("MyCategory,system=MySystemName,group=MyGroup throughput=25 1",
-			appender.buildPostDataLine(mockData));
+		Map<String, PerfMonObservableDatum<?>> map = new HashMap<String, PerfMonObservableDatum<?>>();
+ 		Mockito.when(mockData.getObservations()).thenReturn(map);
+		
+		assertNull("There are no data elements to report so should return null", appender.buildPostDataLine(mockData));
+	}
+	
+	public void testBuildDataLine_OnlyNonNumericData() {
+		appender.setSystemNameBody("MySystemName");
+		appender.setGroups("MyGroup");
+		
+		Map<String, PerfMonObservableDatum<?>> map = new HashMap<String, PerfMonObservableDatum<?>>();
+		map.put("stringData", PerfMonObservableDatum.newDatum("This is a string value"));
+ 		Mockito.when(mockData.getObservations()).thenReturn(map);
+		
+		assertNotNull("numericOnly is false so should return a data line", appender.buildPostDataLine(mockData));
+		
+		// Now set numericOnly=true on the appender
+		appender.setNumericOnly(true);
+		assertNull("numericOnly is true should return null", appender.buildPostDataLine(mockData));
 	}
 	
 	public void testBuildDataLineNoGroup() {
 		appender.setSystemNameBody("MySystemName");
 		
-		assertEquals("MyCategory,system=MySystemName throughput=25 1",
+		assertEquals("MyCategory,system=MySystemName throughput=25i 1",
 			appender.buildPostDataLine(mockData));
 	}
+	
+	public void testDecorateBooleanForOutput() {
+		assertEquals("true", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(true)));
+		assertEquals("false", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(false)));
+	}
+	
+	public void testDecorateShortForOutput() {
+		short value = 10;
+		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+	}
+	
+	public void testDecorateIntegerForOutput() {
+		int value = 10;
+		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+	}
+	
+	public void testDecorateLongForOutput() {
+		long value = 10L;
+		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+	}
+
+	public void testDecorateFloatForOutput() {
+		float value = 10.0f;
+		assertEquals("10.000", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+	}
+
+	public void testDecorateDoubleForOutput() {
+		double value = 10.0d;
+		assertEquals("10.000", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+	}
+
+	public void testDecorateFieldValueForOutput() {
+		assertEquals("\"QuoteThis\"", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("QuoteThis")));
+
+		// Must escape nested quotes in field values
+		assertEquals("\"Quote\\\"This\"", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("Quote\"This")));
+
+	}
+
+	/**
+	 * Review https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/ for information
+	 * on escaping characters.
+	 */
+	public void testDecorateMeasurementForOutput() {
+		assertEquals("Should escape spaces", "Hits\\ per\\ second", appender.decorateMeasurementForInflux("Hits per second"));
+		assertEquals("Should escape commas", "Hits\\,per\\,second", appender.decorateMeasurementForInflux("Hits,per,second"));
+		assertEquals("Should NOT escape the escape character", "Hits\\\\per\\\\second", appender.decorateMeasurementForInflux("Hits\\per\\second"));
+	}
+	
+	public void testDecorateTagKeyTagValuesAndFieldKeys() {
+		assertEquals("Should escape spaces", "DAP\\ CLUSTER", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP CLUSTER"));
+		assertEquals("Should escape commas", "DAP\\,DD", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP,DD"));
+		assertEquals("Should escape equals", "DAP\\=TODAY", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP=TODAY"));
+		assertEquals("Should NOT escape the escape character", "DAP\\\\TODAY", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP\\TODAY"));
+	}
+
 }
