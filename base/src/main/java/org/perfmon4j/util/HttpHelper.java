@@ -13,6 +13,30 @@ public class HttpHelper {
 	private int connectTimeoutMillis = 2500;
 	private int readTimeoutMillis = 2500;
 	
+	public String getUserAgent() {
+		return userAgent;
+	}
+
+	public void setUserAgent(String userAgent) {
+		this.userAgent = userAgent;
+	}
+
+	public int getConnectTimeoutMillis() {
+		return connectTimeoutMillis;
+	}
+
+	public void setConnectTimeoutMillis(int connectTimeoutMillis) {
+		this.connectTimeoutMillis = connectTimeoutMillis;
+	}
+
+	public int getReadTimeoutMillis() {
+		return readTimeoutMillis;
+	}
+
+	public void setReadTimeoutMillis(int readTimeoutMillis) {
+		this.readTimeoutMillis = readTimeoutMillis;
+	}
+
 	public Response doPost(String urlparam, String body) throws IOException {
 		URL url = new URL(urlparam);
 		int responseCode;
@@ -26,11 +50,13 @@ public class HttpHelper {
 			conn.setReadTimeout(readTimeoutMillis);
 			conn.setRequestProperty("User-Agent", userAgent);
 			
+			byte[] outBytes = body.getBytes("UTF-8");
 			conn.setDoOutput(true);
+			conn.setFixedLengthStreamingMode(outBytes.length);
 			
 			OutputStream out = conn.getOutputStream();
 			try {
-				out.write(body.getBytes());
+				out.write(outBytes);
 				out.flush();
 			} finally {
 				out.close();
@@ -45,7 +71,7 @@ public class HttpHelper {
 			}
 			if (bodyStream != null) {
 				StringBuilder builder = null;
-				BufferedReader in = new BufferedReader(new InputStreamReader(bodyStream));
+				BufferedReader in = new BufferedReader(new InputStreamReader(bodyStream, "UTF-8"));
 				try {
 					String line;
 					while ((line = in.readLine()) != null) {
