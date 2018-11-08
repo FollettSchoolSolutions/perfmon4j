@@ -152,7 +152,6 @@ public class InfluxAppenderTest extends TestCase {
 
 		// Must escape nested quotes in field values
 		assertEquals("\"Quote\\\"This\"", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("Quote\"This")));
-
 	}
 
 	/**
@@ -162,14 +161,14 @@ public class InfluxAppenderTest extends TestCase {
 	public void testDecorateMeasurementForOutput() {
 		assertEquals("Should escape spaces", "Hits\\ per\\ second", appender.decorateMeasurementForInflux("Hits per second"));
 		assertEquals("Should escape commas", "Hits\\,per\\,second", appender.decorateMeasurementForInflux("Hits,per,second"));
-		assertEquals("Should NOT escape the escape character", "Hits\\\\per\\\\second", appender.decorateMeasurementForInflux("Hits\\per\\second"));
+		assertEquals("Should escape the escape character", "Hits\\\\per\\\\second", appender.decorateMeasurementForInflux("Hits\\per\\second"));
 	}
 	
 	public void testDecorateTagKeyTagValuesAndFieldKeys() {
 		assertEquals("Should escape spaces", "DAP\\ CLUSTER", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP CLUSTER"));
 		assertEquals("Should escape commas", "DAP\\,DD", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP,DD"));
 		assertEquals("Should escape equals", "DAP\\=TODAY", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP=TODAY"));
-		assertEquals("Should NOT escape the escape character", "DAP\\\\TODAY", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP\\TODAY"));
+		assertEquals("Should escape the escape character", "DAP\\\\TODAY", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP\\TODAY"));
 	}
 
 }
