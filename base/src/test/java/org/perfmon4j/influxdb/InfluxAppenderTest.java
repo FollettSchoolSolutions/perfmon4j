@@ -57,7 +57,7 @@ public class InfluxAppenderTest extends TestCase {
 	public void testBuildPostURLAddsUserNameAndPassword() {
 		appender.setBaseURL("http://localhost:8086/");
 		appender.setDatabase("perfmon4j");
-		appender.setUsername("dave");
+		appender.setUserName("dave");
 		appender.setPassword("fish");
 		
 		assertEquals("baseURL", 

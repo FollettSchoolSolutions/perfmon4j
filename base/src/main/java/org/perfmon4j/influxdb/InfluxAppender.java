@@ -31,7 +31,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	private static final Logger logger = LoggerFactory.initLogger(InfluxAppender.class);
 	private String baseURL = null;
 	private String database = null;
-	private String username = null;
+	private String userName = null;
 	private String password = null;
 	private String retentionPolicy = null;
 	private boolean numericOnly = false;
@@ -127,9 +127,9 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 			.append("&precision=")
 			.append(precision);
 		
-		if (username != null) {
+		if (userName != null) {
 			url.append("&u=")
-				.append(username);
+				.append(userName);
 		}
 		if (password != null) {
 			url.append("&p=")
@@ -234,12 +234,12 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		this.database = database;
 	}
 
-	public String getUsername() {
-		return username;
+	public String getUserName() {
+		return userName;
 	}
 
-	public void setUsername(String username) {
-		this.username = username;
+	public void setUserName(String userName) {
+		this.userName = userName;
 	}
 
 	public String getPassword() {
