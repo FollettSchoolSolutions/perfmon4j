@@ -3,13 +3,15 @@ package org.perfmon4j.influxdb;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.PerfMonObservableDatum;
@@ -35,7 +37,8 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	private String password = null;
 	private String retentionPolicy = null;
 	private boolean numericOnly = false;
-	private int batchSeconds = 5; // How long to delay before sending a batch out.
+	private int batchSeconds = 5; // How long to delay before sending a batch of measurements out.
+	private int maxMeasurementsPerBatch = 1000;  // Max number of measurements to send per post.
 	private final HttpHelper helper = new HttpHelper();
 	private final AtomicInteger batchWritersPending = new AtomicInteger(0);
 	
@@ -50,14 +53,20 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	private static String ESCAPED_EQUALS = "\\\\=";
 	private static final Pattern EQUALS_PATTERN = Pattern.compile("\\=");
 	
+	private final Object writeQueueLockTokan = new Object();
+	private final List<String> writeQueue = new ArrayList<String>();
 	
-	private Object lockToken = new Object();
-	private List<String> writeQueue = new ArrayList<String>();
+	private static final Object dedicatedTimerThreadLockTocken = new Object();
+	private static Timer dedicatedTimerThread = null;
 	
 	private final String precision = "s";
+
+	// This is a fail safe to prevent failure of writing to influxDb to allow measurements
+	// to continue to accumulate and run out of memory.
+	private final int maxWriteQueueSize = Integer.getInteger(InfluxAppender.class.getName() + ".maxQueueWriteSize" ,1000000).intValue();
 	
 	public InfluxAppender(AppenderID id) {
-		super(id);
+		super(id, false);
 		this.setExcludeCWDHashFromSystemName(true);
 	}
 	
@@ -180,21 +189,32 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	}
 	
 	private void appendDataLine(String line) {
-		synchronized (lockToken) {
-			writeQueue.add(line);
+		synchronized (writeQueueLockTokan) {
+			if (writeQueue.size() < maxWriteQueueSize) {
+				writeQueue.add(line);
+			} else {
+				logger.logWarn("InfluxAppender execeeded maxWriteQueueSize.  Measurement is being dropped");
+			}
+		}
+		if (batchWritersPending.intValue() <= 0) {
+			synchronized (dedicatedTimerThreadLockTocken) {
+				if (dedicatedTimerThread == null) {
+					dedicatedTimerThread = new Timer("PerfMon4J.InfluxAppenderHttpWriteThread", true);
+				}
+			}
+			dedicatedTimerThread.schedule(new BatchWriter(), getBatchSeconds() * 1000);
 		}
 	}
 	
-	private List<String> getBatch() {
-		List<String> result = null;
-		synchronized (lockToken) {
+	private Deque<String> getBatch() {
+		Deque<String> result = null;
+		synchronized (writeQueueLockTokan) {
 			if (!writeQueue.isEmpty()) {
-				result = new ArrayList<String>();
+				result = new LinkedList<String>();
 				result.addAll(writeQueue);
 				writeQueue.clear();
 			}
 		}
-		
 		return result;
 	}
 	
@@ -204,9 +224,6 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 			String dataLine = buildPostDataLine((PerfMonObservableData)data);
 			if (dataLine != null) {
 				appendDataLine(dataLine);
-				if (batchWritersPending.intValue() <= 0) {
-					PerfMon.utilityTimer.schedule(new BatchWriter(), getBatchSeconds() * 1000);
-				}
 			} else {
 				String numeric = numericOnly ? "numeric " : "";
 				logger.logWarn("No " + numeric + "observable data elements found.  Skipping output of data: " + 
@@ -270,6 +287,14 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		this.batchSeconds = batchSeconds;
 	}
 	
+	public int getMaxMeasurementsPerBatch() {
+		return maxMeasurementsPerBatch;
+	}
+
+	public void setMaxMeasurementsPerBatch(int maxMeasurementsPerBatch) {
+		this.maxMeasurementsPerBatch = maxMeasurementsPerBatch;
+	}
+
 	public HttpHelper getHelper() {
 		return helper;
 	}
@@ -281,6 +306,22 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	public void setNumericOnly(boolean numericOnly) {
 		this.numericOnly = numericOnly;
 	}
+	
+	public void setConnectTimeoutMillis(int connectTimeoutMillis) {
+		helper.setConnectTimeoutMillis(connectTimeoutMillis);
+	}
+	
+	public int getConnectTimeoutMillis() {
+		return helper.getConnectTimeoutMillis();
+	}
+	
+	public void setReadTimeoutMillis(int readTimeoutMillis) {
+		helper.setReadTimeoutMillis(readTimeoutMillis);
+	}
+
+	public int getReadTimeoutMillis() {
+		return helper.getReadTimeoutMillis();
+	}
 
 	private class BatchWriter extends TimerTask {
 		BatchWriter() {
@@ -291,10 +332,12 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		public void run() {
 			batchWritersPending.decrementAndGet();
 			
-			List<String> batch = getBatch();
-			if (batch != null) {
+			Deque<String> batch = getBatch();
+			while (batch != null && !batch.isEmpty()) {
+				int batchSize = 0;
 				StringBuilder postBody = null;
-				for (String line : batch) {
+				for (;batchSize < maxMeasurementsPerBatch && !batch.isEmpty(); batchSize++) {
+					String line = batch.remove();
 					if (postBody == null) {
 						postBody = new StringBuilder();
 					} else {
@@ -310,6 +353,8 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 						String message = "Http error writing to InfluxDb using postURL: \"" + postURL + 
 							"\" Response: " + response.toString();
 						logger.logWarn(message);
+					} else if (logger.isDebugEnabled()) {
+						logger.logDebug("Measurements written to influxDb. BatchSize: " + batchSize);
 					}
 				} catch (IOException e) {
 					String message = "Exception writing to InfluxDb using postURL: \"" + postURL + "\"";
