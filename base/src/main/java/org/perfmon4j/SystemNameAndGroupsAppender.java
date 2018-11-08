@@ -32,6 +32,17 @@ public abstract class SystemNameAndGroupsAppender extends Appender {
 	public SystemNameAndGroupsAppender(AppenderID id) {
 		super(id);
 	}
+
+	/**
+	 * 
+	 * @param id
+	 * @param useAsyncWriter - This should almost always be true.  
+	 * See comment in Appender(AppenderID id, boolean useAsyncWriter) 
+	 * for more info.
+	 */
+	public SystemNameAndGroupsAppender(AppenderID id, boolean useAsyncWriter) {
+		super(id, useAsyncWriter);
+	}
 	
 	public String getSystemName() {
 		return (systemNamePrefix == null ? "" : systemNamePrefix)
