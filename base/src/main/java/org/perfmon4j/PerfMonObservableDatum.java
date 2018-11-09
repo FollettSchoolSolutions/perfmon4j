@@ -7,17 +7,27 @@ import org.perfmon4j.instrument.snapshot.Ratio;
 
 
 public class PerfMonObservableDatum<T> {
+	public static final Ratio NULL_RATIO = new Ratio(0, 0);
+	public static final Delta NULL_DELTA = new Delta(0, 0, 0);
+	public static final Number NULL_NUMBER = new Integer(-1);
+	
 	private final boolean ratio;
 	private final boolean delta;
+	private final boolean inputWasNull;
 	private final Number value;
 	private final T complexObject;
 	private final String stringValue;
 	private final boolean isNumeric;
 	
+
 	static public PerfMonObservableDatum<Boolean> newDatum(boolean value) {
-		return new PerfMonObservableDatum<Boolean>(Boolean.valueOf(value));
+		return newDatum(Boolean.valueOf(value));
 	}
 
+	static public PerfMonObservableDatum<Boolean> newDatum(Boolean value) {
+		return new PerfMonObservableDatum<Boolean>(value);
+	}
+	
 	static public PerfMonObservableDatum<Short> newDatum(short value) {
 		return newDatum(Short.valueOf(value));
 	}
@@ -47,12 +57,11 @@ public class PerfMonObservableDatum<T> {
 	}
 
 	static public <X extends Ratio> PerfMonObservableDatum<X> newDatum(X ratio, boolean formatAsPercent) {
-		float multiplier = formatAsPercent ? 100 : 1;
-		return new PerfMonObservableDatum<X>(true, false, Float.valueOf(ratio.getRatio()*multiplier), ratio);
+		return new PerfMonObservableDatum<X>(ratio, formatAsPercent);
 	}
 	
 	static public <X extends Delta> PerfMonObservableDatum<X> newDatum(X delta) {
-		return new PerfMonObservableDatum<X>(false, true, delta.getDeltaPerSecond_object(), delta);
+		return new PerfMonObservableDatum<X>(delta);
 	}
 
 	static public PerfMonObservableDatum<String> newDatum(String value) {
@@ -66,6 +75,13 @@ public class PerfMonObservableDatum<T> {
 	@SuppressWarnings("unchecked")
 	private PerfMonObservableDatum(Boolean booleanValue) {
 		super();
+		if (booleanValue == null) {
+			booleanValue = Boolean.FALSE;
+			this.inputWasNull = true;
+		} else {
+			this.inputWasNull = false;
+		}
+		
 		this.ratio = false;
 		this.delta = false;
 		this.complexObject = (T)booleanValue;
@@ -74,9 +90,14 @@ public class PerfMonObservableDatum<T> {
 		this.isNumeric = true;
 	}
 
-	
 	private PerfMonObservableDatum(Number value) {
 		super();
+		if (value == null) {
+			value = NULL_NUMBER;
+			this.inputWasNull = true;
+		} else {
+			this.inputWasNull = false;
+		}
 		this.ratio = false;
 		this.delta = false;
 		this.complexObject = null;
@@ -85,35 +106,71 @@ public class PerfMonObservableDatum<T> {
 		this.isNumeric = true;
 	}
 	
-	private PerfMonObservableDatum(boolean ratio,
-			boolean delta, Number value, T complexObject) {
-		super();
-		this.ratio = ratio;
-		this.delta = delta;
-		this.value = value;
-		this.stringValue = buildStringValue(value);
-		this.complexObject = complexObject;
-		this.isNumeric = true;
-	}
-	
 	@SuppressWarnings("unchecked")
 	private PerfMonObservableDatum(String value) {
 		super();
+		if (value == null) {
+			this.inputWasNull = true;
+			this.stringValue = "null";
+		} else {
+			this.inputWasNull = false;
+			this.stringValue = value;
+		}
 		this.ratio = false;
 		this.delta = false;
 		this.value = null;
-		this.stringValue = value;
 		this.complexObject = (T)value;
 		this.isNumeric = false;
 	}
+
+	@SuppressWarnings("unchecked")
+	private PerfMonObservableDatum(Ratio value, boolean formatAsPercent) {
+		super();
+		if (value == null) {
+			this.inputWasNull = true;
+			value = NULL_RATIO;
+		} else {
+			this.inputWasNull = false;
+		}
+		this.ratio = true;
+		this.delta = false;
+		this.value = Float.valueOf(value.getRatio() * (formatAsPercent ? 100 : 1));
+		this.complexObject = (T)value;
+		this.stringValue = buildStringValue(this.value);
+		this.isNumeric = true;
+	}
+
+	@SuppressWarnings("unchecked")
+	private PerfMonObservableDatum(Delta value) {
+		super();
+		if (value == null) {
+			this.inputWasNull = true;
+			value = NULL_DELTA;
+		} else {
+			this.inputWasNull = false;
+		}
+		this.ratio = false;
+		this.delta = true;
+		this.value = value.getDeltaPerSecond_object();
+		this.complexObject = (T)value;
+		this.stringValue = buildStringValue(this.value);
+		this.isNumeric = true;
+	}
+	
 	
 	@SuppressWarnings("unchecked")
 	private PerfMonObservableDatum(Object value) {
 		super();
+		if (value == null) {
+			this.inputWasNull = true;
+			this.stringValue = "null";
+		} else {
+			this.inputWasNull = false;
+			this.stringValue = value.toString();
+		}
 		this.ratio = false;
 		this.delta = false;
 		this.value = null;
-		this.stringValue = value.toString();
 		this.complexObject = (T)value;
 		this.isNumeric = false;
 	}
@@ -139,6 +196,9 @@ public class PerfMonObservableDatum<T> {
 		return isNumeric;
 	}
 	
+	public boolean getInputValueWasNull() {
+		return inputWasNull;
+	}
 
 	static private String buildStringValue(Number n) {
 		String result;
@@ -147,8 +207,10 @@ public class PerfMonObservableDatum<T> {
 			BigDecimal bd = new BigDecimal(Double.toString(n.doubleValue()));
 			bd = bd.setScale(3, BigDecimal.ROUND_HALF_UP);       
 			result = bd.toPlainString();
-		} else {
+		} else if (n != null) {
 			result = n.toString();
+		} else {
+			result = "";
 		}
 		
 		return result;
