@@ -202,22 +202,24 @@ public abstract class Appender {
     
     public void flush() {
         List<PerfMonData> outputList = null;
-        synchronized (eventQueueLockToken) {
-            if (!eventQueue.isEmpty()) {
-                outputList = new ArrayList<PerfMonData>(eventQueue.size());
-                outputList.addAll(eventQueue);
-                eventQueue.clear();
-            }
-        }
-        if (outputList != null) {
-            Iterator<PerfMonData> itr = outputList.iterator();
-            while (itr.hasNext()) {
-                try {
-                    outputData(itr.next());
-                } catch (Exception ex) {
-                    logger.logError("Unable to output data to appender", ex);
-                }
-            }
+        if (eventQueue != null) {
+	        synchronized (eventQueueLockToken) {
+	            if (!eventQueue.isEmpty()) {
+	                outputList = new ArrayList<PerfMonData>(eventQueue.size());
+	                outputList.addAll(eventQueue);
+	                eventQueue.clear();
+	            }
+	        }
+	        if (outputList != null) {
+	            Iterator<PerfMonData> itr = outputList.iterator();
+	            while (itr.hasNext()) {
+	                try {
+	                    outputData(itr.next());
+	                } catch (Exception ex) {
+	                    logger.logError("Unable to output data to appender", ex);
+	                }
+	            }
+	        }
         }
     }
     
