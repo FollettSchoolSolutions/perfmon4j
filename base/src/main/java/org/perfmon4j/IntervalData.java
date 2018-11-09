@@ -790,7 +790,11 @@ public class IntervalData implements PerfMonObservableData {
 		result.put("throughputPerSecond", PerfMonObservableDatum.newDatum(getThroughputPerSecond()));
 		MedianCalculator mc = getMedianCalculator();
 		if (mc != null) {
-			result.put("medianDuration", PerfMonObservableDatum.newDatum(mc.getMedian().getResult()));
+			Double v = mc.getMedian().getResult();
+			if (v == null) {
+				v = Double.valueOf(0.0d);
+			}
+			result.put("medianDuration", PerfMonObservableDatum.newDatum(v));
 		}
 		ThresholdCalculator tc = getThresholdCalculator();
 		if (tc != null) {
