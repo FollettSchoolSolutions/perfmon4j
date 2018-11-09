@@ -140,6 +140,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 		assertEquals("toString should return the numeric value", "1", obv.toString());
 		assertTrue("Since for all practical purposes, outside of the complexValue, a boolean is the "
 				+ "same as a short (1 or 0) and is considered numeric", obv.isNumeric());
+		assertFalse("inputWasNull", obv.getInputValueWasNull());
 		
 		obv = PerfMonObservableDatum.newDatum(false);
 		
@@ -147,6 +148,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 		assertEquals("false == 0", Short.valueOf((short)0), obv.getValue());
 		assertEquals("complexValue should be a Boolean", Boolean.FALSE, obv.getComplexObject());
 		assertEquals("toString should return the numeric value", "0", obv.toString());
+		assertFalse("inputWasNull", obv.getInputValueWasNull());
 	}
 
 	public void testNullBoolean() {
@@ -184,6 +186,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 		assertEquals("String itself is the \"complexValue\"", "This is my string", obv.getComplexObject());
 		assertEquals("toString", "This is my string", obv.toString());
 		assertFalse("isNumeric", obv.isNumeric());
+		assertFalse("inputWasNull", obv.getInputValueWasNull());
 	}
 	
 	
@@ -197,6 +200,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 		assertEquals("StringBuilder should be the complex object", complexObject, obv.getComplexObject());
 		assertEquals("Should be the value of the toString from the complex object", "This is from a StringBuilder", obv.toString());
 		assertFalse("isNumeric", obv.isNumeric());
+		assertFalse("inputWasNull", obv.getInputValueWasNull());
 	}
 	
 	public void testNullComplexObject() {

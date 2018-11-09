@@ -95,6 +95,23 @@ public class InfluxAppenderTest extends TestCase {
 		assertNull("There are no data elements to report so should return null", appender.buildPostDataLine(mockData));
 	}
 	
+	
+	public void testBuildDataLine_IgnoresDataumWithNullInput() {
+		appender.setSystemNameBody("MySystemName");
+		appender.setGroups("MyGroup");
+		
+		Number nullValue = null;
+		
+		Map<String, PerfMonObservableDatum<?>> map = new HashMap<String, PerfMonObservableDatum<?>>();
+ 		map.put("this was null input and shouldn't be sent to influxDb", PerfMonObservableDatum.newDatum(nullValue));
+		
+		Mockito.when(mockData.getObservations()).thenReturn(map);
+ 		
+		
+		assertNull("There are no data elements to report so should return null", appender.buildPostDataLine(mockData));
+	}
+	
+	
 	public void testBuildDataLine_OnlyNonNumericData() {
 		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("MyGroup");

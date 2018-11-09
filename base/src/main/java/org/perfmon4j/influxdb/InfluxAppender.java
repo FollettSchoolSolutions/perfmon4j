@@ -170,7 +170,8 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		boolean first = true;
 		int numDataElements = 0;
 		for(Map.Entry<String, PerfMonObservableDatum<?>> entry : ((PerfMonObservableData) data).getObservations().entrySet()) {
-			if (!numericOnly || entry.getValue().isNumeric()) {
+			PerfMonObservableDatum<?> datum = entry.getValue();
+			if (!datum.getInputValueWasNull() && (!numericOnly || datum.isNumeric())) {
 				if (first) {
 					first = false;
 				} else {
@@ -179,7 +180,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 				numDataElements++;
 				postLine.append(decorateTagKeyTagValueFieldKeyForInflux(entry.getKey()))
 					.append("=")
-					.append(decorateDatumForInflux(entry.getValue()));
+					.append(decorateDatumForInflux(datum));
 			}
 		}
 		postLine.append(" ");
