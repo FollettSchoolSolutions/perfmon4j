@@ -413,7 +413,12 @@ public class MiscHelper {
 					result += ((Number)obj).longValue();
 				}
 			} catch (Exception e) {
-				logger.logWarn("Unable to retrieve attribute: " + attrName + " from Object: " + objName.toString(), e);
+				String msg = "Unable to retrieve attribute: " + attrName + " from Object: " + objName.toString();
+				if (logger.isDebugEnabled()) {
+					logger.logWarn(msg, e);
+				} else {
+					logger.logWarn(msg);
+				}
 			}
 		}
 		return result;
