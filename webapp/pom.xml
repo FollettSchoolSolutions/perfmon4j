@@ -78,13 +78,13 @@
 		<dependency>
 			<groupId>org.apache.derby</groupId>
 			<artifactId>derby</artifactId>
-			<version>10.10.2.0</version>
+			<version>${DERBY_VERSION}</version>
 		</dependency>
 
 		<dependency>
 		    <groupId>org.apache.derby</groupId>
 		    <artifactId>derbytools</artifactId>
-		    <version>10.10.2.0</version>
+		    <version>${DERBY_VERSION}</version>
 			<scope>test</scope>
 		</dependency>		
 		
