@@ -50,6 +50,7 @@ public class PerfMonNDCFilter extends PerfMonFilter {
     private boolean pushClientInfo = false;
     private String[] pushCookies = null;
     private String[] pushSessionAttributes = null;
+    private Boolean canLoadNDC = null;
     
     public PerfMonNDCFilter() {
     	super();
@@ -150,7 +151,7 @@ public class PerfMonNDCFilter extends PerfMonFilter {
     protected void doFilterHttpRequest(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {    
         boolean pushedNDC = false;
         try {
-            if (pushURLOnNDC || pushClientInfo || (pushCookies != null) || (pushSessionAttributes != null)) {
+            if ((pushURLOnNDC || pushClientInfo || (pushCookies != null) || (pushSessionAttributes != null)) && isCanLoadNDC()) {
             	StringBuilder myNDC = new StringBuilder();
             	
             	if (pushURLOnNDC) {
@@ -200,5 +201,18 @@ public class PerfMonNDCFilter extends PerfMonFilter {
                 NDC.pop();
             }
         }
+    }
+    
+    private boolean isCanLoadNDC() {
+    	if (canLoadNDC == null) {
+    		try {
+				Class.forName("org.apache.log4j.NDC");
+				canLoadNDC = Boolean.TRUE;	
+			} catch (ClassNotFoundException e) {
+				logger.logWarn("PerfMon4j filter push to NDC functions not available.  Log4j NDC not found.");
+				canLoadNDC = Boolean.FALSE;
+			}
+    	}
+    	return canLoadNDC.booleanValue();
     }
 }

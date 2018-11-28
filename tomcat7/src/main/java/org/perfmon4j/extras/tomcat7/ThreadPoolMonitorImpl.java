@@ -66,22 +66,22 @@ public class ThreadPoolMonitorImpl extends JMXMonitorBase {
 	@SnapShotInstanceDefinition
 	static public String[] getInstanceNames() throws MalformedObjectNameException, NullPointerException {
 		MBeanServer mBeanServer = MiscHelper.findMBeanServer(MiscHelper.isRunningInJBossAppServer() ? "jboss" : null);
-		return MiscHelper.getAllObjectName(mBeanServer, new ObjectName(buildBaseObjectName()), "name");
+		return MiscHelper.getAllObjectName(mBeanServer, new ObjectName(buildBaseObjectName()), "name", true);
 	}
 	
 	@SnapShotString(isInstanceName=true)
 	public String getInstanceName() {
-		return MiscHelper.getInstanceNames(getMBeanServer(), getQueryObjectName(), "name");
+		return MiscHelper.getInstanceNames(getMBeanServer(), getQueryObjectName(), "name", true);
 	}
 
 	@SnapShotGauge
 	public long getCurrentThreadsBusy() {
-		return MiscHelper.sumMBeanAttributes(getMBeanServer(), getQueryObjectName(), "currentThreadsBusy");
+		return MiscHelper.sumMBeanAttributes(getMBeanServer(), getQueryObjectName(), "currentThreadsBusy", true);
 	}
 	
 	@SnapShotGauge
 	public long getCurrentThreadCount() {
-		return MiscHelper.sumMBeanAttributes(getMBeanServer(), getQueryObjectName(), "currentThreadCount");
+		return MiscHelper.sumMBeanAttributes(getMBeanServer(), getQueryObjectName(), "currentThreadCount", true);
 	}
 	
 	public static class SQLWriter implements SnapShotSQLWriter {

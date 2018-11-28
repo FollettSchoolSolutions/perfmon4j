@@ -31,14 +31,16 @@ import org.perfmon4j.util.MiscHelper;
 public abstract class JMXMonitorBase {
 	final private MBeanServer mBeanServer;
 	final private ObjectName queryObjectName;
-	private String domainName = null;
 	
 	public JMXMonitorBase(String baseObjectName, String instanceNameKey, String instanceNameValue) {
 		String instanceName = "," + instanceNameKey + "=" + instanceNameValue;
 		if (instanceNameValue == null || "".equals(instanceNameValue)) {
-			instanceName = ",*";
+			if (instanceNameKey == null || "".equals(instanceNameKey)) {
+				instanceName = ",*";
+			} else {
+				instanceName = "," + instanceNameKey + "=*";
+			}
 		} 
-
 		mBeanServer = MiscHelper.findMBeanServer(MiscHelper.isRunningInJBossAppServer() ? "jboss" : null);
 		if (mBeanServer == null) {
 			throw new RuntimeException("Unable to find mBeanServer");

@@ -98,4 +98,47 @@ public class Delta {
 	public Double getDurationMillis_object() {
 		return new Double(durationMillis);
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (int) (delta ^ (delta >>> 32));
+		long temp;
+		temp = Double.doubleToLongBits(deltaPerMinute);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		temp = Double.doubleToLongBits(deltaPerSecond);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		result = prime * result
+				+ (int) (durationMillis ^ (durationMillis >>> 32));
+		result = prime * result + (int) (finalValue ^ (finalValue >>> 32));
+		result = prime * result + (int) (initialValue ^ (initialValue >>> 32));
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Delta other = (Delta) obj;
+		if (delta != other.delta)
+			return false;
+		if (Double.doubleToLongBits(deltaPerMinute) != Double
+				.doubleToLongBits(other.deltaPerMinute))
+			return false;
+		if (Double.doubleToLongBits(deltaPerSecond) != Double
+				.doubleToLongBits(other.deltaPerSecond))
+			return false;
+		if (durationMillis != other.durationMillis)
+			return false;
+		if (finalValue != other.finalValue)
+			return false;
+		if (initialValue != other.initialValue)
+			return false;
+		return true;
+	}
 }
