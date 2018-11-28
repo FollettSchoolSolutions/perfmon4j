@@ -34,11 +34,10 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.MedianCalculator.MedianResult;
-import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
 import org.perfmon4j.util.ThresholdCalculator.ThresholdResult;
 
-public abstract class SQLAppender extends Appender {
+public abstract class SQLAppender extends SystemNameAndGroupsAppender {
 	private static final Logger logger = LoggerFactory.initLogger(SQLAppender.class);
 	private String dbSchema = null;
 	private String insertCategoryPS = null;
@@ -49,13 +48,9 @@ public abstract class SQLAppender extends Appender {
 	private String groupToSystemJoinExistsPS = null;
 	private String insertIntervalPS = null;
 	private String insertThresholdPS = null;
-	private String systemNamePrefix = null;
-	private String systemNameBody = null;
-	private String systemNameSuffix = null;
-	private boolean excludeCWDHashFromSystemName = false;
-	private String[] groups = new String[]{};
 	private Long systemID = null;
-	private final AtomicBoolean groupsHaveChanged = new AtomicBoolean(true);
+	protected final AtomicBoolean groupsHaveChanged = new AtomicBoolean(true);
+
 	
 	public SQLAppender(AppenderID id) {
 		super(id);
@@ -80,12 +75,12 @@ public abstract class SQLAppender extends Appender {
 		}
 		
 		try {
+			long systemIDToUse = getSystemID();
 			conn = getConnection();
 			if (groupsHaveChanged.get() && databaseVersion >= 6.0) {
-				long systemID = getSystemID();
 				for (String groupName : getGroupsAsArray()) {
 					long groupID = getOrCreateGroup(conn, groupName);
-					joinGroupToSystemIfNotExists(conn, groupID, systemID);
+					joinGroupToSystemIfNotExists(conn, groupID, systemIDToUse);
 				}
 				groupsHaveChanged.set(false);
 			}
@@ -93,9 +88,9 @@ public abstract class SQLAppender extends Appender {
 				if (data instanceof IntervalData) {
 					outputIntervalData(conn, (IntervalData)data);
 				} else if (data instanceof SQLWriteable){
-					((SQLWriteable)data).writeToSQL(conn, dbSchema, getSystemID());
+					((SQLWriteable)data).writeToSQL(conn, dbSchema, systemIDToUse);
 				} else if (data instanceof SQLWriteableWithDatabaseVersion){
-					((SQLWriteableWithDatabaseVersion)data).writeToSQL(conn, dbSchema, getSystemID(), databaseVersion);
+					((SQLWriteableWithDatabaseVersion)data).writeToSQL(conn, dbSchema, systemIDToUse, databaseVersion);
 				} else {
 					logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
 				}
@@ -507,12 +502,6 @@ public abstract class SQLAppender extends Appender {
 		this.selectCategoryPS = null;
 	}
 	
-	public String getSystemName() {
-		return (systemNamePrefix == null ? "" : systemNamePrefix)
-			+ getSystemNameBody()
-			+ (systemNameSuffix == null ? "" : systemNameSuffix);
-	}
-	
 	public long getSystemID() throws SQLException {
 		long result;
 		
@@ -529,61 +518,24 @@ public abstract class SQLAppender extends Appender {
 	}
 	
 	public void setSystemNameBody(String systemName) {
-		this.systemNameBody = systemName;
+		super.setSystemNameBody(systemName);
 		this.systemID = null;
 	}
 	
-	public String getSystemNameBody() {
-		if (systemNameBody == null) {
-			boolean includeCWDHash = !excludeCWDHashFromSystemName;
-			return MiscHelper.getDefaultSystemName(includeCWDHash);
-		} else {
-			return systemNameBody;
-		}
-	}
-
-	public String getSystemNamePrefix() {
-		return systemNamePrefix;
-	}
 
 	public void setSystemNamePrefix(String systemNamePrefix) {
-		this.systemNamePrefix = systemNamePrefix;
+		super.setSystemNamePrefix(systemNamePrefix);
 		this.systemID = null;
-	}
-
-	public String getSystemNameSuffix() {
-		return systemNameSuffix;
 	}
 
 	public void setSystemNameSuffix(String systemNameSuffix) {
-		this.systemNameSuffix = systemNameSuffix;
+		super.setSystemNameSuffix(systemNameSuffix);
 		this.systemID = null;
 	}
 	
-
-	public boolean isExcludeCWDHashFromSystemName() {
-		return excludeCWDHashFromSystemName;
-	}
-
-	/**
-	 * If this is set to true the cwdHash will NOT be appended to the system name.
-	 * This is very useful when you do not want the system name to change if the 
-	 * path of the application changes.
-	 * 
-	 * By default the CWD has is included.
-	 *   
-	 * @param excludeCWDHashFromSystemName
-	 */
-	public void setExcludeCWDHashFromSystemName(boolean excludeCWDHashFromSystemName) {
-		this.excludeCWDHashFromSystemName = excludeCWDHashFromSystemName;
-	}
-
-	public String[] getGroupsAsArray() {
-		return groups;
-	}
-
 	public void setGroups(String csvGroups) {
+		super.setGroups(csvGroups);
 		groupsHaveChanged.set(true);
-		this.groups = MiscHelper.tokenizeCSVString(csvGroups);
 	}
+	
 }
