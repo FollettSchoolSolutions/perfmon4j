@@ -71,5 +71,34 @@ public class Ratio {
 	public static Ratio generateRatio(int numerator, int denominator) {
 		return new Ratio(numerator, denominator);
 	}
-
+	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		long temp;
+		temp = Double.doubleToLongBits(denominator);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		temp = Double.doubleToLongBits(numerator);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		return result;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Ratio other = (Ratio) obj;
+		if (Double.doubleToLongBits(denominator) != Double
+				.doubleToLongBits(other.denominator))
+			return false;
+		if (Double.doubleToLongBits(numerator) != Double
+				.doubleToLongBits(other.numerator))
+			return false;
+		return true;
+	}
 }

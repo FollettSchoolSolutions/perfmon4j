@@ -65,11 +65,22 @@ public abstract class Appender {
      * to ensure that we have singleton objects...
      */
     protected Appender(AppenderID id) {
+    	this(id, true);
+    }
+
+    /**
+     * 
+     * @param id
+     * @param useAsyncWriter - This should almost ALWAYS be set to true.  The only
+     *  reason not to use an asyncWriter would be if your derived appender already
+     *  has its own async mechanism.  See InfluxAppender as an example. 
+     */
+    protected Appender(AppenderID id, boolean useAsyncWriter) {
     	this.myAppenderID = id;
         this.intervalMillis = id.intervalMillis;
         maxQueueSize = Integer.getInteger(PERFMON_APPENDER_QUEUE_SIZE, DEFAULT_APPENDER_QUEUE_SIZE).intValue();
         long timerMillis = Long.getLong(PERFMON_APPENDER_ASYNC_TIMER_MILLIS, DEFUALT_APPENDER_ASYNC_TIMER_MILLIS).longValue();
-        if (maxQueueSize > 0 && timerMillis > 0) {
+        if (useAsyncWriter && maxQueueSize > 0 && timerMillis > 0) {
             eventQueue =  new ArrayList<PerfMonData>(maxQueueSize);
             timerTask = new AsyncAppenderTimerTask();
             PerfMon.getUtilityTimer().schedule(timerTask, timerMillis, timerMillis);
@@ -191,22 +202,24 @@ public abstract class Appender {
     
     public void flush() {
         List<PerfMonData> outputList = null;
-        synchronized (eventQueueLockToken) {
-            if (!eventQueue.isEmpty()) {
-                outputList = new ArrayList<PerfMonData>(eventQueue.size());
-                outputList.addAll(eventQueue);
-                eventQueue.clear();
-            }
-        }
-        if (outputList != null) {
-            Iterator<PerfMonData> itr = outputList.iterator();
-            while (itr.hasNext()) {
-                try {
-                    outputData(itr.next());
-                } catch (Exception ex) {
-                    logger.logError("Unable to output data to appender", ex);
-                }
-            }
+        if (eventQueue != null) {
+	        synchronized (eventQueueLockToken) {
+	            if (!eventQueue.isEmpty()) {
+	                outputList = new ArrayList<PerfMonData>(eventQueue.size());
+	                outputList.addAll(eventQueue);
+	                eventQueue.clear();
+	            }
+	        }
+	        if (outputList != null) {
+	            Iterator<PerfMonData> itr = outputList.iterator();
+	            while (itr.hasNext()) {
+	                try {
+	                    outputData(itr.next());
+	                } catch (Exception ex) {
+	                    logger.logError("Unable to output data to appender", ex);
+	                }
+	            }
+	        }
         }
     }
     
