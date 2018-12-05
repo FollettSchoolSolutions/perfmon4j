@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -169,8 +168,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		
 		boolean first = true;
 		int numDataElements = 0;
-		for(Map.Entry<String, PerfMonObservableDatum<?>> entry : ((PerfMonObservableData) data).getObservations().entrySet()) {
-			PerfMonObservableDatum<?> datum = entry.getValue();
+		for(PerfMonObservableDatum<?> datum : ((PerfMonObservableData) data).getObservations()) {
 			if (!datum.getInputValueWasNull() && (!numericOnly || datum.isNumeric())) {
 				if (first) {
 					first = false;
@@ -178,7 +176,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 					postLine.append(",");
 				}
 				numDataElements++;
-				postLine.append(decorateTagKeyTagValueFieldKeyForInflux(entry.getKey()))
+				postLine.append(decorateTagKeyTagValueFieldKeyForInflux(datum.getDefaultDisplayName()))
 					.append("=")
 					.append(decorateDatumForInflux(datum));
 			}
