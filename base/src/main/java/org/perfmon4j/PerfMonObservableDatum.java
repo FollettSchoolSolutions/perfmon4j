@@ -59,9 +59,13 @@ public class PerfMonObservableDatum<T> {
 	static public <X extends Ratio> PerfMonObservableDatum<X> newDatum(X ratio, boolean formatAsPercent) {
 		return new PerfMonObservableDatum<X>(ratio, formatAsPercent);
 	}
-	
+
 	static public <X extends Delta> PerfMonObservableDatum<X> newDatum(X delta) {
-		return new PerfMonObservableDatum<X>(delta);
+		return new PerfMonObservableDatum<X>(delta, false);
+	}
+	
+	static public <X extends Delta> PerfMonObservableDatum<X> newDatum(X delta, boolean formatAsPerSecond) {
+		return new PerfMonObservableDatum<X>(delta, formatAsPerSecond);
 	}
 
 	static public PerfMonObservableDatum<String> newDatum(String value) {
@@ -139,9 +143,9 @@ public class PerfMonObservableDatum<T> {
 		this.stringValue = buildStringValue(this.value);
 		this.isNumeric = true;
 	}
-
+	
 	@SuppressWarnings("unchecked")
-	private PerfMonObservableDatum(Delta value) {
+	private PerfMonObservableDatum(Delta value, boolean formatAsPerSecond) {
 		super();
 		if (value == null) {
 			this.inputWasNull = true;
@@ -151,7 +155,11 @@ public class PerfMonObservableDatum<T> {
 		}
 		this.ratio = false;
 		this.delta = true;
-		this.value = value.getDeltaPerSecond_object();
+		if (formatAsPerSecond) {
+			this.value = value.getDeltaPerSecond_object();
+		} else {
+			this.value = value.getDelta_object();
+		}
 		this.complexObject = (T)value;
 		this.stringValue = buildStringValue(this.value);
 		this.isNumeric = true;

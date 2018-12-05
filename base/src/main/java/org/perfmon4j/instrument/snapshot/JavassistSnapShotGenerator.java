@@ -148,8 +148,12 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		String appendToProvider = fieldName + "_final = new java.lang.Long((long)provider." + method.getName() + "());\r\n";
 		providerBody.append(appendToProvider);
 
-		String appendToGetObservations = " result.put(\"" + fieldName + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
-				+ method.getName() + "()));\r\n";
+		boolean formatAsPerSecond = SnapShotCounter.Display.DELTA_PER_MIN.equals(counterAnnotation.preferredDisplay()) 
+				|| SnapShotCounter.Display.DELTA_PER_SECOND.equals(counterAnnotation.preferredDisplay());
+		
+		String observationName = formatAsPerSecond ? fieldName + "PerSec" : fieldName;
+		String appendToGetObservations = " result.put(\"" + observationName + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
+				+ method.getName() + "(), " + Boolean.toString(formatAsPerSecond) + "));\r\n";
 		logger.logDebug("Appending to getObservations: " + appendToGetObservations);
 		getObservationsBody.append(appendToGetObservations);
 		

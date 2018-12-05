@@ -46,16 +46,29 @@ public class PerfMonObservableDatumTest extends TestCase {
 		assertTrue("inputWasNull", obv.getInputValueWasNull());
 	}
 	
-	
 	public void testDelta() {
-		Delta delta = new Delta(0, 100, 1000);
+		Delta delta = new Delta(0, 100, 5000);
 		
 		PerfMonObservableDatum<Delta> obv = PerfMonObservableDatum.newDatum(delta);
 		assertTrue("isDelta",  obv.isDelta());
 		assertFalse("isRatio",  obv.isRatio());
-		assertEquals("value by default will be throughput per second", 100, Math.round(obv.getValue().doubleValue()));
+		assertEquals("value by default will be delta", 100, obv.getValue().intValue());
 		assertEquals("complexValue", delta, obv.getComplexObject());
-		assertEquals("toString", "100.000", obv.toString());
+		assertEquals("toString", "100", obv.toString());
+		assertTrue("isNumeric", obv.isNumeric());
+		assertFalse("inputWasNull", obv.getInputValueWasNull());
+	}
+
+	
+	public void testDeltaFormatAsSecond() {
+		Delta delta = new Delta(0, 100, 5000);
+		
+		PerfMonObservableDatum<Delta> obv = PerfMonObservableDatum.newDatum(delta, true);
+		assertTrue("isDelta",  obv.isDelta());
+		assertFalse("isRatio",  obv.isRatio());
+		assertEquals("value by default will be throughput per second", 20, Math.round(obv.getValue().doubleValue()));
+		assertEquals("complexValue", delta, obv.getComplexObject());
+		assertEquals("toString", "20.000", obv.toString());
 		assertTrue("isNumeric", obv.isNumeric());
 		assertFalse("inputWasNull", obv.getInputValueWasNull());
 	}
@@ -68,7 +81,7 @@ public class PerfMonObservableDatumTest extends TestCase {
 		assertFalse("isRatio",  obv.isRatio());
 		assertEquals("value by default will be throughput per second", 0, Math.round(obv.getValue().doubleValue()));
 		assertEquals("complexValue", PerfMonObservableDatum.NULL_DELTA, obv.getComplexObject());
-		assertEquals("toString", "0.000", obv.toString());
+		assertEquals("toString", "0", obv.toString());
 		assertTrue("isNumeric", obv.isNumeric());
 		assertTrue("inputWasNull", obv.getInputValueWasNull());
 	}
