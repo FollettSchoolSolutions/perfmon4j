@@ -360,7 +360,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 					if (logger.isDebugEnabled()) {
 						logger.logWarn(message, e);
 					} else {
-						message += " Exception: " + e.getMessage();
+						message += " Exception(" + e.getClass().getName() + "): " + e.getMessage();
 						logger.logWarn(message);
 					}
 				}
