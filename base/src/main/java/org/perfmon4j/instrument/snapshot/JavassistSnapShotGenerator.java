@@ -92,15 +92,13 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		String methodSource = "public org.perfmon4j.instrument.snapshot.Ratio " + methodName + "() {" +
 				"return org.perfmon4j.instrument.snapshot.Ratio.generateRatio(" + numeratorMethod + "(), " + denominatorMethod + "());}";
 		
-		String observationKey = ratio.name();
 		String formatAsPercent = Boolean.FALSE.toString();
 		
 		if (ratio.displayAsPercentage()) {
-			observationKey = observationKey + "%";
 			formatAsPercent = Boolean.TRUE.toString();
 		} 
 	
-		String appendToGetObservations = " result.put(\"" + observationKey + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
+		String appendToGetObservations = " result.add(org.perfmon4j.PerfMonObservableDatum.newDatum(\"" + ratio.name() + "\", "
 				+ methodName + "()," + formatAsPercent + "));\r\n";
 		logger.logDebug("Appending to getObservations: " + appendToGetObservations);
 		getObservationsBody.append(appendToGetObservations);
@@ -148,8 +146,11 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		String appendToProvider = fieldName + "_final = new java.lang.Long((long)provider." + method.getName() + "());\r\n";
 		providerBody.append(appendToProvider);
 
-		String appendToGetObservations = " result.put(\"" + fieldName + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
-				+ method.getName() + "()));\r\n";
+		boolean formatAsPerSecond = SnapShotCounter.Display.DELTA_PER_MIN.equals(counterAnnotation.preferredDisplay()) 
+				|| SnapShotCounter.Display.DELTA_PER_SECOND.equals(counterAnnotation.preferredDisplay());
+		
+		String appendToGetObservations = "result.add(org.perfmon4j.PerfMonObservableDatum.newDatum(\"" + fieldName + "\", "
+				+ method.getName() + "(), " + Boolean.toString(formatAsPerSecond) + "));\r\n";
 		logger.logDebug("Appending to getObservations: " + appendToGetObservations);
 		getObservationsBody.append(appendToGetObservations);
 		
@@ -218,7 +219,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		logger.logDebug("Appending to provideData: " + appendToProvider);
 		providerBody.append(appendToProvider);
 
-		String appendToGetObservations = " result.put(\"" + fieldName + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
+		String appendToGetObservations = " result.add(org.perfmon4j.PerfMonObservableDatum.newDatum(\"" + fieldName + "\", "  
 				+ method.getName() + "()));\r\n";
 		logger.logDebug("Appending to getObservations: " + appendToGetObservations);
 		getObservationsBody.append(appendToGetObservations);
@@ -258,7 +259,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		logger.logDebug("Appending to provideData: " + appendToProvider);
 		providerBody.append(appendToProvider);
 		
-		String appendToGetObservations = " result.put(\"" + fieldName + "\", org.perfmon4j.PerfMonObservableDatum.newDatum("
+		String appendToGetObservations = " result.add(org.perfmon4j.PerfMonObservableDatum.newDatum(\"" + fieldName + "\", " 
 				+ method.getName() + "()));\r\n";
 		logger.logDebug("Appending to getObservations: " + appendToGetObservations);
 		getObservationsBody.append(appendToGetObservations);		
@@ -388,8 +389,8 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 			addMethod(ctClass, "public long getTimestamp() {return getEndTime();}");
 			addMethod(ctClass, "public long getDurationMillis() {return getEndTime() - getStartTime();}");
 			StringBuffer getObservationsBody = new StringBuffer();
-			getObservationsBody.append("public java.util.Map getObservations() {\r\n")
-				.append(" java.util.Map result = new java.util.HashMap();\r\n");
+			getObservationsBody.append("public java.util.Set getObservations() {\r\n")
+				.append(" java.util.Set result = new java.util.HashSet();\r\n");
 			
 			
 
