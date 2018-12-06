@@ -1,7 +1,7 @@
 package org.perfmon4j.influxdb;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -28,10 +28,10 @@ public class InfluxAppenderTest extends TestCase {
 		Mockito.when(mockData.getDataCategory()).thenReturn("MyCategory");  //Comma, space should be escaped, but not the equals sign,
 		Mockito.when(mockData.getTimestamp()).thenReturn(Long.valueOf(1000));
 	
-		Map<String, PerfMonObservableDatum<?>> map = new HashMap<String, PerfMonObservableDatum<?>>();
- 		map.put("throughput",PerfMonObservableDatum.newDatum(25));
+		Set<PerfMonObservableDatum<?>> set = new HashSet<PerfMonObservableDatum<?>>();
+ 		set.add(PerfMonObservableDatum.newDatum("throughput", 25));
  		
- 		Mockito.when(mockData.getObservations()).thenReturn(map);
+ 		Mockito.when(mockData.getObservations()).thenReturn(set);
 	}
 
 	protected void tearDown() throws Exception {
@@ -89,8 +89,8 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("MyGroup");
 		
-		Map<String, PerfMonObservableDatum<?>> map = new HashMap<String, PerfMonObservableDatum<?>>();
- 		Mockito.when(mockData.getObservations()).thenReturn(map);
+		Set<PerfMonObservableDatum<?>> set = new HashSet<PerfMonObservableDatum<?>>();
+ 		Mockito.when(mockData.getObservations()).thenReturn(set);
 		
 		assertNull("There are no data elements to report so should return null", appender.buildPostDataLine(mockData));
 	}
@@ -102,10 +102,10 @@ public class InfluxAppenderTest extends TestCase {
 		
 		Number nullValue = null;
 		
-		Map<String, PerfMonObservableDatum<?>> map = new HashMap<String, PerfMonObservableDatum<?>>();
- 		map.put("this was null input and shouldn't be sent to influxDb", PerfMonObservableDatum.newDatum(nullValue));
+		Set<PerfMonObservableDatum<?>> set = new HashSet<PerfMonObservableDatum<?>>();
+ 		set.add(PerfMonObservableDatum.newDatum("this was null input and shouldn't be sent to influxDb", nullValue));
 		
-		Mockito.when(mockData.getObservations()).thenReturn(map);
+		Mockito.when(mockData.getObservations()).thenReturn(set);
  		
 		
 		assertNull("There are no data elements to report so should return null", appender.buildPostDataLine(mockData));
@@ -116,9 +116,9 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("MyGroup");
 		
-		Map<String, PerfMonObservableDatum<?>> map = new HashMap<String, PerfMonObservableDatum<?>>();
-		map.put("stringData", PerfMonObservableDatum.newDatum("This is a string value"));
- 		Mockito.when(mockData.getObservations()).thenReturn(map);
+		Set<PerfMonObservableDatum<?>> set = new HashSet<PerfMonObservableDatum<?>>();
+		set.add(PerfMonObservableDatum.newDatum("stringData", "This is a string value"));
+ 		Mockito.when(mockData.getObservations()).thenReturn(set);
 		
 		assertNotNull("numericOnly is false so should return a data line", appender.buildPostDataLine(mockData));
 		
@@ -135,40 +135,40 @@ public class InfluxAppenderTest extends TestCase {
 	}
 	
 	public void testDecorateBooleanForOutput() {
-		assertEquals("true", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(true)));
-		assertEquals("false", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(false)));
+		assertEquals("true", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", true)));
+		assertEquals("false", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", false)));
 	}
 	
 	public void testDecorateShortForOutput() {
 		short value = 10;
-		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", value)));
 	}
 	
 	public void testDecorateIntegerForOutput() {
 		int value = 10;
-		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", value)));
 	}
 	
 	public void testDecorateLongForOutput() {
 		long value = 10L;
-		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+		assertEquals("10i", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", value)));
 	}
 
 	public void testDecorateFloatForOutput() {
 		float value = 10.0f;
-		assertEquals("10.000", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+		assertEquals("10.000", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", value)));
 	}
 
 	public void testDecorateDoubleForOutput() {
 		double value = 10.0d;
-		assertEquals("10.000", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum(value)));
+		assertEquals("10.000", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", value)));
 	}
 
 	public void testDecorateFieldValueForOutput() {
-		assertEquals("\"QuoteThis\"", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("QuoteThis")));
+		assertEquals("\"QuoteThis\"", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", "QuoteThis")));
 
 		// Must escape nested quotes in field values
-		assertEquals("\"Quote\\\"This\"", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("Quote\"This")));
+		assertEquals("\"Quote\\\"This\"", appender.decorateDatumForInflux(PerfMonObservableDatum.newDatum("fieldName", "Quote\"This")));
 	}
 
 	/**

@@ -25,7 +25,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import java.util.Map;
+import java.util.Set;
 
 import junit.framework.AssertionFailedError;
 import junit.framework.TestSuite;
@@ -999,7 +999,7 @@ System.out.println(appenderString);
     		return totalSearches;
     	}
     	
-    	@SnapShotCounter
+    	@SnapShotCounter(preferredDisplay=SnapShotCounter.Display.DELTA)
     	public int getCounter() {
     		return counter;
     	}
@@ -1056,7 +1056,7 @@ System.out.println(appenderString);
 	  	assertEquals("timestamp", 2000, data.getTimestamp());
 	  	assertEquals("durationMillis", 1000, data.getDurationMillis());
 	  	
-	  	Map<String, PerfMonObservableDatum<?>> observations = data.getObservations();
+	  	Set<PerfMonObservableDatum<?>> observations = data.getObservations();
 	  	assertNotNull("Should have returned observations", observations);
 	  	assertTrue("Should have some observations in the map", !observations.isEmpty());
 	  	
@@ -1069,10 +1069,12 @@ System.out.println(appenderString);
 	  	validateObservation(observations, "doubleValue", "6.000");
 	  	
 	  	// Validate a delta
-	  	validateObservation(observations, "counter", "1.000");
+	  	validateObservation(observations, "counter", "1");
 
+	  	
+	  	
 	  	@SuppressWarnings("unchecked")
-		PerfMonObservableDatum<Delta> delta = (PerfMonObservableDatum<Delta>)observations.get("counter");
+		PerfMonObservableDatum<Delta> delta = (PerfMonObservableDatum<Delta>)PerfMonObservableDatum.findObservationByFieldName("counter", observations);
 	  	assertEquals("delta initial value", 5, delta.getComplexObject().getInitalValue());
 	  	assertEquals("delta final value", 6, delta.getComplexObject().getFinalValue());
 	  	assertEquals("The defalt observation value from a delta should be deltaPerSecond", Double.valueOf(1.0), 
@@ -1080,26 +1082,86 @@ System.out.println(appenderString);
 	  	
 	  	// Validate a ratio
 	  	validateObservation(observations, "cacheHitRatio", "0.700");
-
 	  	@SuppressWarnings("unchecked")
-		PerfMonObservableDatum<Ratio> ratio = (PerfMonObservableDatum<Ratio>)observations.get("cacheHitRatio");
+		PerfMonObservableDatum<Ratio> ratio = (PerfMonObservableDatum<Ratio>)PerfMonObservableDatum.findObservationByFieldName("cacheHitRatio", observations);
 	  	assertEquals("ratio", Float.valueOf(0.7f), Float.valueOf(ratio.getComplexObject().getRatio()));
 	  	
 	  	// Validate the String
 	  	validateObservation(observations, "stringValue", "This is a string");
 		@SuppressWarnings("unchecked")
-		PerfMonObservableDatum<String> stringDatum = (PerfMonObservableDatum<String>)observations.get("stringValue");
+		PerfMonObservableDatum<String> stringDatum = (PerfMonObservableDatum<String>)PerfMonObservableDatum.findObservationByFieldName("stringValue", observations);
 	  	assertFalse("String is not a numeric datum", stringDatum.isNumeric());
 
 	  	// Validate the StringBuffer
 	  	validateObservation(observations, "stringBuffer", "This is a StringBuffer");
 		@SuppressWarnings("unchecked")
-		PerfMonObservableDatum<StringBuffer> stringBufferDatum = (PerfMonObservableDatum<StringBuffer>)observations.get("stringBuffer");
+		PerfMonObservableDatum<StringBuffer> stringBufferDatum = (PerfMonObservableDatum<StringBuffer>)PerfMonObservableDatum.findObservationByFieldName("stringBuffer", observations);
 	  	assertFalse("StringBuffer is not a numeric datum", stringBufferDatum.isNumeric());
 	  	assertEquals("The StringBuffer should be the complexObject", SimpleObservationProvider.STRING_BUFFER, stringBufferDatum.getComplexObject());
     }
+
+    @SnapShotProvider
+	public static class CounterObservableOptons {
+    	private int count = 0;
+    	
+    	private void incCount(int value) {
+    		count += value;
+    	}
+    	
+    	// Should return datum named "countAPerSec"
+    	@SnapShotCounter(preferredDisplay=SnapShotCounter.Display.DELTA_PER_MIN)
+    	public int getCountA() {
+    		return count;
+    	}
+    	
+    	// Should return datum named "countBPerSec"
+    	@SnapShotCounter(preferredDisplay=SnapShotCounter.Display.DELTA_PER_SECOND)
+    	public int getCountB() {
+    		return count;
+    	}
+    	
+    	// Should return datum named "countC"
+    	@SnapShotCounter()
+    	public int getCountC() {
+    		return count;
+    	}
+    }
     
- 	void validateObservation(Map<String, PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
+    public void testPerfMonObservableCounterOptions() throws Exception {
+	  	Class<?> clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(CounterObservableOptons.class);
+	  	Object obj = clazz.newInstance();
+	  	
+	  	CounterObservableOptons provider = new CounterObservableOptons();
+
+	  	// Run our data object through it's lifecycle.. 
+	  	((SnapShotLifecycle)obj).init(provider, 1000);
+	  	provider.incCount(5); // Increment our counter
+	  	((SnapShotLifecycle)obj).takeSnapShot(provider, 6000); // 5 second observation window
+	  	
+	  	assertTrue("Shold have implemented the PerfMonObservableData interface", 
+	  			obj instanceof PerfMonObservableData);
+	  	PerfMonObservableData data = (PerfMonObservableData)obj;
+	  	
+	  	Set<PerfMonObservableDatum<?>> observations = data.getObservations();
+	  	assertNotNull("Should have returned observations", observations);
+	  	assertTrue("Should have some observations in the map", !observations.isEmpty());
+	  	
+		PerfMonObservableDatum<?> countA = PerfMonObservableDatum.findObservationByDefaultDisplayName("countAPerSec", observations);
+		assertNotNull("Display type of perMin should be returned with a 'PerSec' suffix", countA);
+		validateObservation(observations, "countA", "1.000");
+		
+		PerfMonObservableDatum<?> countB = PerfMonObservableDatum.findObservationByDefaultDisplayName("countBPerSec", observations);
+		assertNotNull("Display type of perSec should be returned with a 'PerSec' suffix", countB);
+		validateObservation(observations, "countB", "1.000");
+		
+		PerfMonObservableDatum<?> countC = PerfMonObservableDatum.findObservationByDefaultDisplayName("countC", observations);
+		assertNotNull("Display type of default should not have a suffix", countC);
+		// Should just return the delta between start and end.
+		validateObservation(observations, "countC", "5");
+    }
+    
+    
+ 	void validateObservation(Set<PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
  		PerfMonObservableDatumTest.validateObservation(observations, label, expectedValue);
      }
 

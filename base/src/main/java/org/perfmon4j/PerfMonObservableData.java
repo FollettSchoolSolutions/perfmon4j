@@ -21,7 +21,7 @@
 
 package org.perfmon4j;
 
-import java.util.Map;
+import java.util.Set;
 
 /*
  * Data elements should implement this method if they want
@@ -29,7 +29,7 @@ import java.util.Map;
  * (For example the InfluxAppender that writes to InfluxDb)
  */
 public interface PerfMonObservableData extends PerfMonData {
-    public Map<String, PerfMonObservableDatum<?>> getObservations();
+    public Set<PerfMonObservableDatum<?>> getObservations();
     
     /**
      * @return The timestamp of the end of the monitoring period captured by this element;
