@@ -767,40 +767,40 @@ public class IntervalData implements PerfMonObservableData {
     			fields);
     }
 
-    public Map<String, PerfMonObservableDatum<?>> getObservations() {
-		Map<String, PerfMonObservableDatum<?>> result = new HashMap<String, PerfMonObservableDatum<?>>(); 
+    public Set<PerfMonObservableDatum<?>> getObservations() {
+		Set<PerfMonObservableDatum<?>> result = new HashSet<PerfMonObservableDatum<?>>(); 
 		
-		result.put("totalHits", PerfMonObservableDatum.newDatum(getTotalHits()));
-		result.put("totalCompletions", PerfMonObservableDatum.newDatum(getTotalCompletions()));
+		result.add(PerfMonObservableDatum.newDatum("totalHits", getTotalHits()));
+		result.add(PerfMonObservableDatum.newDatum("totalCompletions", getTotalCompletions()));
 		
-		result.put("durationSum", PerfMonObservableDatum.newDatum(getTotalDuration()));
-		result.put("durationSumOfSquares", PerfMonObservableDatum.newDatum(getSumOfSquares()));
-		result.put("sqlDuration", PerfMonObservableDatum.newDatum(getTotalSQLDuration()));
-		result.put("sqlDurationSumOfSquares", PerfMonObservableDatum.newDatum(getSumOfSQLSquares()));
+		result.add(PerfMonObservableDatum.newDatum("durationSum", getTotalDuration()));
+		result.add(PerfMonObservableDatum.newDatum("durationSumOfSquares", getSumOfSquares()));
+		result.add(PerfMonObservableDatum.newDatum("sqlDuration", getTotalSQLDuration()));
+		result.add(PerfMonObservableDatum.newDatum("sqlDurationSumOfSquares", getSumOfSQLSquares()));
 		
-		result.put("averageDuration", PerfMonObservableDatum.newDatum(getAverageDuration()));
-		result.put("maxDuration", PerfMonObservableDatum.newDatum(getMaxDuration()));
-		result.put("minDuration", PerfMonObservableDatum.newDatum(getMinDuration()));
-		result.put("stdDeviation", PerfMonObservableDatum.newDatum(getStdDeviation()));
-		result.put("averageSQLDuration", PerfMonObservableDatum.newDatum(getAverageSQLDuration()));
-		result.put("maxSQLDuration", PerfMonObservableDatum.newDatum(getMaxSQLDuration()));
-		result.put("minSQLDuration", PerfMonObservableDatum.newDatum(getMinSQLDuration()));
-		result.put("sqlStdDeviation", PerfMonObservableDatum.newDatum(getSQLStdDeviation()));
-		result.put("maxActiveThreadCount", PerfMonObservableDatum.newDatum(getMaxActiveThreadCount()));
-		result.put("throughputPerSecond", PerfMonObservableDatum.newDatum(getThroughputPerSecond()));
+		result.add(PerfMonObservableDatum.newDatum("averageDuration", getAverageDuration()));
+		result.add(PerfMonObservableDatum.newDatum("maxDuration", getMaxDuration()));
+		result.add(PerfMonObservableDatum.newDatum("minDuration", getMinDuration()));
+		result.add(PerfMonObservableDatum.newDatum("stdDeviation", getStdDeviation()));
+		result.add(PerfMonObservableDatum.newDatum("averageSQLDuration", getAverageSQLDuration()));
+		result.add(PerfMonObservableDatum.newDatum("maxSQLDuration", getMaxSQLDuration()));
+		result.add(PerfMonObservableDatum.newDatum("minSQLDuration", getMinSQLDuration()));
+		result.add(PerfMonObservableDatum.newDatum("sqlStdDeviation", getSQLStdDeviation()));
+		result.add(PerfMonObservableDatum.newDatum("maxActiveThreadCount", getMaxActiveThreadCount()));
+		result.add(PerfMonObservableDatum.newDatum("throughputPerSecond", getThroughputPerSecond()));
 		MedianCalculator mc = getMedianCalculator();
 		if (mc != null) {
 			Double v = mc.getMedian().getResult();
 			if (v == null) {
 				v = Double.valueOf(0.0d);
 			}
-			result.put("medianDuration", PerfMonObservableDatum.newDatum(v));
+			result.add(PerfMonObservableDatum.newDatum("medianDuration", v));
 		}
 		ThresholdCalculator tc = getThresholdCalculator();
 		if (tc != null) {
 			for(long millis : tc.getThresholdMillis()) {
 				String label = "percentOver_" + MiscHelper.getMillisDisplayable(millis, "_");
-				result.put(label, PerfMonObservableDatum.newDatum(tc.getResult(millis).getPercentOverThreshold()));
+				result.add(PerfMonObservableDatum.newDatum(label, tc.getResult(millis).getPercentOverThreshold()));
 			}
 		}
 		return result;

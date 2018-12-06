@@ -135,7 +135,7 @@ public class IntervalDataTest extends PerfMonTestCase {
        	 Mockito.when(data.getMaxActiveThreadCount()).thenReturn(Integer.valueOf(15));
        	 Mockito.when(data.getThroughputPerSecond()).thenReturn(Double.valueOf(16));
        	 
-       	 Map<String, PerfMonObservableDatum<?>> observations = data.getObservations();
+       	 Set<PerfMonObservableDatum<?>> observations = data.getObservations();
        	 assertNotNull(observations);
        	 assertFalse(observations.isEmpty());
 
@@ -162,8 +162,8 @@ public class IntervalDataTest extends PerfMonTestCase {
       	 IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), NOW-1, null, null, NOW);
       	 
       	 // First try with no median calculator present.
-      	 Map<String, PerfMonObservableDatum<?>> observations = data.getObservations();
-      	 assertNull("Should not include a medianDuration", observations.get("medianDuration"));
+      	 Set<PerfMonObservableDatum<?>> observations = data.getObservations();
+      	 assertNull("Should not include a medianDuration", PerfMonObservableDatum.findObservationByFieldName("medianDuration", observations));
 
       	 
       	 // Now add a median calculator...should return median
@@ -182,8 +182,8 @@ public class IntervalDataTest extends PerfMonTestCase {
       	 IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), NOW-1, null, null, NOW);
       	 
       	 // First try with no threshold calculator present
-      	 Map<String, PerfMonObservableDatum<?>> observations = data.getObservations();
-      	 assertNull("Should not include a percentOver_1_Second", observations.get("percentOver_1_second"));
+      	 Set<PerfMonObservableDatum<?>> observations = data.getObservations();
+      	 assertNull("Should not include a percentOver_1_Second", PerfMonObservableDatum.findObservationByFieldName("percentOver_1_second", observations));
 
       	 // Now add a threshold calculator...should return percent
       	 ThresholdCalculator calc = new ThresholdCalculator("1 second");
@@ -195,8 +195,8 @@ public class IntervalDataTest extends PerfMonTestCase {
       	 validateObservation(observations, "percentOver_1_second", "100.000");
     }
  	
- 	void validateObservation(Map<String, PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
- 		PerfMonObservableDatumTest.validateObservation(observations, label, expectedValue);
+ 	void validateObservation(Set<PerfMonObservableDatum<?>> observations, String fieldName, String expectedValue) {
+ 		PerfMonObservableDatumTest.validateObservation(observations, fieldName, expectedValue);
      }
      
    
