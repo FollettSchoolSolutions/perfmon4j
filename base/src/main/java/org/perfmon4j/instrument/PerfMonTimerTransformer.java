@@ -164,29 +164,31 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 				// Check to see if we can access and load javassist classes from the embedded javassist.jar.
 				embeddedJavassist = Thread.currentThread().getContextClassLoader().getResource("lib/javassist.jar");
 				File tempJavassistJarFile = null;
-				InputStream in = null;
-				OutputStream out = null;
-				
-				try {
-					tempJavassistJarFile = File.createTempFile("javassist.", ".jar");
-					tempJavassistJarFile.deleteOnExit();
-					out = new FileOutputStream(tempJavassistJarFile);
-					in = embeddedJavassist.openStream();
-					byte[] buffer = new byte[5120];
-					int byteCount;
-					while ((byteCount = in.read(buffer)) != -1) {
-					   out.write(buffer, 0, byteCount);
-					}
-					embeddedJavassist = tempJavassistJarFile.toURI().toURL();
-				} catch (IOException ioex) {
-					try { tempJavassistJarFile.delete(); } catch (Exception ex) {}
-					tempJavassistJarFile = null;
-				} finally {
-					if (in != null) {
-						try { in.close(); } catch (Exception ex) {}
-					}
-					if (out != null) {
-						try { out.close(); } catch (Exception ex) {}
+				if (embeddedJavassist != null) {
+					InputStream in = null;
+					OutputStream out = null;
+					
+					try {	
+						tempJavassistJarFile = File.createTempFile("javassist.", ".jar");
+						tempJavassistJarFile.deleteOnExit();
+						out = new FileOutputStream(tempJavassistJarFile);
+						in = embeddedJavassist.openStream();
+						byte[] buffer = new byte[5120];
+						int byteCount;
+						while ((byteCount = in.read(buffer)) != -1) {
+						   out.write(buffer, 0, byteCount);
+						}
+						embeddedJavassist = tempJavassistJarFile.toURI().toURL();
+					} catch (IOException ioex) {
+						try { tempJavassistJarFile.delete(); } catch (Exception ex) {}
+						tempJavassistJarFile = null;
+					} finally {
+						if (in != null) {
+							try { in.close(); } catch (Exception ex) {}
+						}
+						if (out != null) {
+							try { out.close(); } catch (Exception ex) {}
+						}
 					}
 				}
 				
