@@ -104,6 +104,11 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     /*----------------------------------------------------------------------------*/
     public void testLazyCreateOnDynamicTimerOneLevel() throws Exception {
     	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerOneLevel.child.grandchild";
+    	
+    	// The appender pattern "/*" indicates to monitor each child of
+    	// the root monitor.  In this case it indicates we should monitor 
+    	// testLazyCreateOnDynamicTimerOneLevel, but not its child or
+    	// grandchild monitors.
     	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID(), "/*");
    
     	int numAtStart = PerfMon.getMonitorKeys().size();
@@ -111,12 +116,15 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     	PerfMonTimer timer = PerfMonTimer.start(dynamicMonitorName, true);
     	PerfMonTimer.stop(timer);
     	
-    	assertEquals("One level should have been created", numAtStart + 2, PerfMon.getMonitorKeys().size());
+    	assertEquals("One level should have been created", numAtStart + 1, PerfMon.getMonitorKeys().size());
     }
 
     /*----------------------------------------------------------------------------*/
     public void testLazyCreateOnDynamicTimerAllLevels() throws Exception {
-    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerOneLevel.child.grandchild.greatgrandchild";
+    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerAllLevels.child.grandchild.greatgrandchild";
+
+    	// The appender pattern "/**" indicates to monitor all descendents
+    	// of the root monitor.  
     	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID(), "/**");
    
     	int numAtStart = PerfMon.getMonitorKeys().size();
