@@ -126,6 +126,8 @@ public class RemoteImpl implements RemoteInterface {
 			
 			bound = true;
 			registeredPort = Integer.valueOf(port);
+			ExternalAppender.setEnabled(true);
+			
 	        System.setProperty(RemoteInterface.P4J_LISTENER_PORT, registeredPort.toString());
 	        logger.logInfo("Perfmon4j management interface listening on port: " + port);
 		} catch (RemoteException e) {
@@ -154,6 +156,9 @@ public class RemoteImpl implements RemoteInterface {
 		    registry = null;
 		    registeredPort = null;
 	        System.getProperties().remove(RemoteInterface.P4J_LISTENER_PORT);
+
+	        
+	        ExternalAppender.setEnabled(false);
 	        logger.logInfo("Perfmon4j management interface is unbound");
 		}
 	}
