@@ -47,6 +47,7 @@ public class ExternalAppenderTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
     private String sessionID = null;
+    private boolean originalExternalAppenderEnabled = false;
     
 /*----------------------------------------------------------------------------*/
     public ExternalAppenderTest(String name) {
@@ -56,12 +57,15 @@ public class ExternalAppenderTest extends PerfMonTestCase {
     /*----------------------------------------------------------------------------*/    
     public void setUp() throws Exception {
         super.setUp();
+        originalExternalAppenderEnabled = ExternalAppender.isEnabled();
+        ExternalAppender.setEnabled(true);
         sessionID = ExternalAppender.connect();
     }
     
     /*----------------------------------------------------------------------------*/    
     public void tearDown() throws Exception {
     	ExternalAppender.disconnect(sessionID);
+    	ExternalAppender.setEnabled(originalExternalAppenderEnabled);
     	sessionID = null;
     }
     
