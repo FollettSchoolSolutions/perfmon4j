@@ -178,7 +178,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 	    }
 	    
 	    int numTimers = injectPerfMonTimers(clazz, beingRedefined, params, loader, protectionDomain);
-	    return new TimerInjectionReturn(numTimers, clazz.toBytecode());
+	    return new TimerInjectionReturn(numTimers, clazz.toBytecode(), 0);
     }
     
     
@@ -312,19 +312,27 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
                         
                         String extremeSQLKey = null;
                         if (extremeSQLClass) {
-                        	extremeSQLKey = "SQL";  // Any method on a JDBC Class will be monitored...
-                    		extremeSQLKey += "." + method.getName();
+                            if (params.isLegacyAddIntervalMonitorsToSQLMethods() 
+                            	&& Modifier.isPublic(method.getModifiers())) {
+                                	extremeSQLKey = "SQL";  // Any method on a JDBC Class will be monitored...
+                            		extremeSQLKey += "." + method.getName();
+                            } else {
+                            	// Only increment sqlTime on the thread...
+                            	// do not add an interval timer!
+                            	extremeSQLKey = PendingTimer.SQL_TIME_ONLY;
+                            }
                         }
+                        
                         if ((timerKeyAnnotation != null) || (timerKeyExtreme != null) || (extremeSQLKey != null)) {
                             numTimers += timerKeyAnnotation != null ? 1 : 0;
                             numTimers += timerKeyExtreme != null ? 1 : 0;
-                            numTimers += extremeSQLKey != null ? 1 : 0;
+                            numTimers += (extremeSQLKey != null && !PendingTimer.SQL_TIME_ONLY.equals(extremeSQLKey)) ? 1 : 0;
                             pendingTimers.add(new PendingTimer(originalMethodName, method, timerKeyAnnotation, timerKeyExtreme, extremeSQLKey));
                         }
                     }
                 }
                 
-                if (numTimers > 0) {
+                if (!pendingTimers.isEmpty()) {
                     logger.logDebug("Injecting timer into: " + clazz.getName());
                 	
             		Class<?> externalClazzForMonitors = null;
@@ -394,7 +402,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
                         		verboseMessages.addExtremeMsg(t.timerKeyExtreme);
                         	}
 
-                        	if (t.extremeSQLKey != null) {
+                        	if (t.extremeSQLKey != null && !PendingTimer.SQL_TIME_ONLY.equals(t.extremeSQLKey)) {
                         		verboseMessages.addExtremeSQLMsg(t.extremeSQLKey);
                         	}
                         }
@@ -425,6 +433,8 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 	
     
     private static class PendingTimer {
+    	final static String SQL_TIME_ONLY = "!!MonitorSQLTimeOnly!!";
+    	
     	final String originalMethodName;
         final CtMethod method;
         final String timerKeyAnnotation;
@@ -580,7 +590,9 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     
     private int insertPerfMonTimer(CtClass clazz, CtMethod method, String timerKeyAnnotation, 
             String timerKeyExtreme, String extremeSQLKey, int offset, boolean mustMaintainSerialVersion, Class<?> externalClazzForMonitors) throws NotFoundException {
-        try {
+    	final boolean sqlTimeOnly =  PendingTimer.SQL_TIME_ONLY.equals(extremeSQLKey);
+
+    	try {
 	        // Create the body of the code for the new method...
 	        StringBuilder before = new StringBuilder();
 	        before.append("{\n");
@@ -596,16 +608,20 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 	            offset++;
 	        }
 	        if (extremeSQLKey != null) {
-	        	before.append(buildMonitorJavaSource(offset, extremeSQLKey, "extremeSQLTimer", mustMaintainSerialVersion, externalClazzForMonitors))
-	        		.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
-	            offset++;
+	        	if (!sqlTimeOnly) {
+	        		before.append(buildMonitorJavaSource(offset, extremeSQLKey, "extremeSQLTimer", mustMaintainSerialVersion, externalClazzForMonitors));
+	        		offset++;
+	        	}
+	        	before.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
 	        }	        
 	        
 	        before.append("}\n");
 	        
-//System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
-//System.err.println(before);	        
-//System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+if (extremeSQLKey != null) {
+	System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+	System.err.println(before);	        
+	System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+}
 	        
 	        method.insertBefore(before.toString());
 	        
@@ -613,8 +629,10 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 	        after.append("{\n");
 	        after.append("\torg.perfmon4j.NoWrapTimerContainer perfmon4j$ContainerFinally = ((org.perfmon4j.NoWrapTimerContainer.ArrayStack)org.perfmon4j.NoWrapTimerContainer.callStack.get()).pop();\n");
 	        if (extremeSQLKey != null) {
-	        	after.append("\torg.perfmon4j.PerfMonTimer.stop(perfmon4j$ContainerFinally.extremeSQLTimer);\n")
-	        		.append("\torg.perfmon4j.SQLTime.stopTimerForThread();\n");
+	        	if (!sqlTimeOnly) {
+		        	after.append("\torg.perfmon4j.PerfMonTimer.stop(perfmon4j$ContainerFinally.extremeSQLTimer);\n");
+	        	}
+	        	after.append("\torg.perfmon4j.SQLTime.stopTimerForThread();\n");
 	        }
 	        if (timerKeyExtreme != null) {
 	        	after.append("\torg.perfmon4j.PerfMonTimer.stop(perfmon4j$ContainerFinally.extremeTimer);\n");
@@ -623,10 +641,12 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 	        	after.append("\torg.perfmon4j.PerfMonTimer.stop(perfmon4j$ContainerFinally.annotationTimer);\n");
 	        }
 	        after.append("}\n");
-
-//System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
-//System.err.println(after);	        
-//System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+	        
+//if (extremeSQLKey != null) {
+	System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	        
+	System.out.println(after);	        
+	System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");	      
+//}
 	        
 	        method.insertAfter(after.toString(), true);
         } catch (Throwable th) {
@@ -643,6 +663,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     
     private int insertPerfMonTimerWithLegacyWrapper(CtClass clazz, CtMethod method, String timerKeyAnnotation, 
         String timerKeyExtreme, String extremeSQLKey, int offset) throws NotFoundException {
+    	final boolean sqlTimeOnly =  PendingTimer.SQL_TIME_ONLY.equals(extremeSQLKey);
     	
         final String originalMethodName = method.getName();
         final int originalModifiers = method.getModifiers();
@@ -690,12 +711,14 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 	            offset++;
 	        }
 	        if (extremeSQLKey != null) {
-	            body.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
-	                .append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + extremeSQLKey + "\");\n")
-	                .append("\t}\n")
-	                .append("\torg.perfmon4j.PerfMonTimer pm$TimerExtremeSQL = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n")
-                	.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
-	            offset++;
+	        	if (!sqlTimeOnly) {
+		            body.append("\tif (" + monitorArrayName + "[" + offset + "] == null) {\n")
+		                .append("\t\t" + monitorArrayName + "[" + offset + "] = org.perfmon4j.PerfMon.getMonitor(\"" + extremeSQLKey + "\");\n")
+		                .append("\t}\n")
+		                .append("\torg.perfmon4j.PerfMonTimer pm$TimerExtremeSQL = org.perfmon4j.PerfMonTimer.start(" + monitorArrayName + "[" + offset + "]);\n");
+		            offset++;
+	        	}
+	            body.append("\torg.perfmon4j.SQLTime.startTimerForThread();\n");
 	        }
 	        body.append("\ttry {\n");
 	        
@@ -709,8 +732,10 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 	            body.append("\t\torg.perfmon4j.PerfMonTimer.stop(pm$TimerAnnotation);\n");
 	        }
 	        if (extremeSQLKey != null) {
-	            body.append("\t\torg.perfmon4j.PerfMonTimer.stop(pm$TimerExtremeSQL);\n")
-            		.append("\torg.perfmon4j.SQLTime.stopTimerForThread();\n");
+	        	if (!sqlTimeOnly) {
+	        		body.append("\t\torg.perfmon4j.PerfMonTimer.stop(pm$TimerExtremeSQL);\n");
+	        	}
+	            body.append("\torg.perfmon4j.SQLTime.stopTimerForThread();\n");
 	        }
 	        body.append("\t}\n")
 	            .append("}");

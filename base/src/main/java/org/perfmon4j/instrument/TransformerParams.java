@@ -89,6 +89,7 @@ public class TransformerParams {
 	private boolean remoteManagementEnabled = false;
 	private int remoteManagementPort = REMOTE_PORT_DISABLED;
 	private boolean installServletValve = false;
+	private final boolean legacyAddIntervalMonitorsToSQLMethods = Boolean.getBoolean("PerfMon4j.legacyAddIntervalMonitorsToSQLMethods");
 	
 	public static final int REMOTE_PORT_DISABLED = -1;
 	public static final int REMOTE_PORT_AUTO = 0;
@@ -517,5 +518,9 @@ public class TransformerParams {
 
 	public boolean isInstallServletValve() {
 		return installServletValve;
+	}
+
+	public boolean isLegacyAddIntervalMonitorsToSQLMethods() {
+		return legacyAddIntervalMonitorsToSQLMethods;
 	}
 }

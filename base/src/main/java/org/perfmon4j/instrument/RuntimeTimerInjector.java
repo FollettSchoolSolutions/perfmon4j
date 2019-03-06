@@ -43,19 +43,33 @@ public abstract class RuntimeTimerInjector {
 	public static class TimerInjectionReturn {
 		private final int numTimersAdded;
 		private final byte[] classBytes;
+		private final int numSQLTimeCounters;
 		
-		public TimerInjectionReturn(int numTimersAdded, byte[] classBytes) {
+//		public TimerInjectionReturn(int numTimersAdded, byte[] classBytes) {
+//		}
+
+		public TimerInjectionReturn(int numTimersAdded, byte[] classBytes, int numSQLTimeCounters) {
 			super();
 			this.numTimersAdded = numTimersAdded;
 			this.classBytes = classBytes;
+			this.numSQLTimeCounters = numSQLTimeCounters;
 		}
-
+		
+		
 		public int getNumTimersAdded() {
 			return numTimersAdded;
 		}
 
 		public byte[] getClassBytes() {
 			return classBytes;
+		}
+
+		public int getNumSQLTimeCounters() {
+			return numSQLTimeCounters;
+		}
+		
+		public boolean wasClassModified() {
+			return numSQLTimeCounters > 0 || numTimersAdded > 0;
 		}
 	}
 

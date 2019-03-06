@@ -395,16 +395,51 @@ public class PerfMonTimerTransformerTest extends PerfMonTestCase {
 			}
 		}
 	}
+
 	
-    public void testInstrumentSQLStatement() throws Exception {
+	/**
+	 * To reduce default overhead starting in Perfmon4j 1.3.5 Interval monitors are not
+	 * automatically added to SQL methods when -eSQL is enabled (although the SQL time is
+	 * still supported).
+	 * 
+	 * To restore the legacy behavior add the system property PerfMon4j.legacyAddIntervalMonitorsToSQLMethods=true.
+	 * 
+	 * Note: Prior to 1.3.5 all methods on JDBC driver classes received an interval timer.  Now
+	 * even when the legacy flag is set only public methods will have an interval timer added.
+	 * 
+	 * @throws Exception
+	 */
+    public void testInstrumentSQLDoesntInstrumentPrivateMethods() throws Exception {
     	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-dtrue,-eSQL(DERBY)", "", perfmon4jJar);
+    	assertFalse("Should NOT have added interval monitor to SQL methods", 
+    			output.contains("SQL.executeQuery Completions:1"));
+    	
+    	
+    	Properties sysProps = new Properties();
+    	sysProps.setProperty("PerfMon4j.legacyAddIntervalMonitorsToSQLMethods", "true");
+    	output = LaunchRunnableInVM.run(SQLStatementTester.class, "-dtrue,-eSQL(DERBY)", 
+    			"", sysProps, perfmon4jJar);
+    	assertTrue("Should have added interval monitor to SQL "
+    			+ "public methods when PerfMon4j.legacyAddIntervalMonitorsToSQLMethods system property is set", 
+    			output.contains("SQL.executeQuery Completions:1"));
+    }
+	
+
+   
+    public void testInstrumentSQLStatement() throws Exception {
+    	// Add legacy flag...
+    	Properties sysProps = new Properties();
+    	sysProps.setProperty("PerfMon4j.legacyAddIntervalMonitorsToSQLMethods", "true");
+
+    	
+    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-dtrue,-eSQL(DERBY)", "", sysProps, perfmon4jJar);
 //    	System.out.println(output);   	
     	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
     }
 
     public void testThreadTraceWithSQLTime() throws Exception {
     	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-eSQL(DERBY)", "", perfmon4jJar);
-//System.out.println(output);    
+System.out.println(output);    
     	// Running with extreme SQL instrumentation enabled...
     	// Looking for a line like:
     	// +-14:37:29:653 (5436)(SQL:3211) MyManualTimer
