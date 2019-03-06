@@ -21,6 +21,9 @@
 
 package org.perfmon4j;
 
+
+import java.util.Random;
+
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -85,6 +88,57 @@ public class PerfMonTimerTest extends PerfMonTestCase {
         PerfMonTimer.stop(timer);
     }    
     
+    /*----------------------------------------------------------------------------*/
+    public void testLazyCreateOnDynamicTimer() throws Exception {
+    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimer.child.grandchild";
+    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID(), ".");
+    
+    	int numAtStart = PerfMon.getMonitorKeys().size();
+    	
+    	PerfMonTimer timer = PerfMonTimer.start(dynamicMonitorName, true);
+    	PerfMonTimer.stop(timer);
+    	
+    	assertEquals("Should not have created monitors", numAtStart, PerfMon.getMonitorKeys().size());
+    }
+
+    /*----------------------------------------------------------------------------*/
+    public void testLazyCreateOnDynamicTimerOneLevel() throws Exception {
+    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerOneLevel.child.grandchild";
+    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID(), "/*");
+   
+    	int numAtStart = PerfMon.getMonitorKeys().size();
+    	
+    	PerfMonTimer timer = PerfMonTimer.start(dynamicMonitorName, true);
+    	PerfMonTimer.stop(timer);
+    	
+    	assertEquals("One level should have been created", numAtStart + 2, PerfMon.getMonitorKeys().size());
+    }
+
+    /*----------------------------------------------------------------------------*/
+    public void testLazyCreateOnDynamicTimerAllLevels() throws Exception {
+    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerOneLevel.child.grandchild.greatgrandchild";
+    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID(), "/**");
+   
+    	int numAtStart = PerfMon.getMonitorKeys().size();
+    	
+    	PerfMonTimer timer = PerfMonTimer.start(dynamicMonitorName, true);
+    	PerfMonTimer.stop(timer);
+    	
+    	assertEquals("One level should have been created", numAtStart + 4, PerfMon.getMonitorKeys().size());
+    }
+   
+    /*----------------------------------------------------------------------------*/
+    public void testEagerCreateOnDefaultTimer() throws Exception {
+    	final String monitorName = "testEagerCreateOnDefaultTimer." + new Random().nextInt();
+    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID());
+    
+    	int numAtStart = PerfMon.getMonitorKeys().size();
+    	
+    	PerfMonTimer timer = PerfMonTimer.start(monitorName, false);
+    	PerfMonTimer.stop(timer);
+    	
+    	assertEquals("Monitors should have been created immediately", numAtStart + 2, PerfMon.getMonitorKeys().size());
+    }
     
 /*----------------------------------------------------------------------------*/
     private static class TestAppender extends Appender {
