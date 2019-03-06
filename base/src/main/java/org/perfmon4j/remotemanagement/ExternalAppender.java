@@ -192,13 +192,22 @@ public class ExternalAppender {
 //	}
 	
 	public static boolean isActive() {
-		return enabled || sessionManager.getSessionCount() > 0;
+		return enabled && sessionManager.getSessionCount() > 0;
 	}
 
 	public static boolean isEnabled() {
 		return enabled;
 	}
-	
+
+	/**
+	 * Is enabled/disabled when the remote RMIPort
+	 * is opened for the external appender.
+	 * 
+	 * This requires that the perfmon4j agent is started
+	 * with the "-p" flag.
+	 * 
+	 * @param onOff
+	 */
 	public static void setEnabled(boolean onOff) {
 		enabled = onOff;
 	}
