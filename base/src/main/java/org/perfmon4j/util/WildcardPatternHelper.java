@@ -21,8 +21,15 @@
 
 package org.perfmon4j.util;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 public class WildcardPatternHelper {
+	private static final Pattern validPattern = Pattern.compile("^(\\./|/)(\\S+)");
+	private static final Pattern packageSplit = Pattern.compile("(\\.|/)"); // Can separate with a '.' or a '/'
+	
+	
 	static public PatternInfo massagePattern(String pattern) {
 		String remainder = "";
 		
@@ -31,7 +38,7 @@ public class WildcardPatternHelper {
 	
 		// Find the first section in case pattern 
 		// represents multiple levels
-		String[] split = pattern.split("\\.");
+		String[] split = packageSplit.split(pattern);
 		if (split.length > 1) {
 			remainder = pattern.substring(split[0].length() + 1, pattern.length());
 			pattern = split[0];
@@ -42,6 +49,33 @@ public class WildcardPatternHelper {
 	   
 		return new PatternInfo(pattern, remainder);
 	}
+	
+	static public boolean validateAppenderPattern(String pattern) {
+		boolean result = false;
+		
+		Matcher m = validPattern.matcher(pattern);
+		if (m.matches()) {
+			// Remove the prefix
+			pattern = m.group(2);
+			
+			// Don't allow empty packages
+			String[] packages = packageSplit.split(pattern);
+			if (packages.length > 0) { // Must specify at least one package
+				result = true;
+				for (String p : packages) {
+					if (p.isEmpty()) { // Empty packages are not allowed
+						result = false;
+						break;
+					}
+				}
+			}
+		}
+		
+		
+		return result;
+	}
+	
+	
 
 	static public class PatternInfo {
 		   private final String regEx;

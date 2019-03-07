@@ -76,4 +76,25 @@ public class WildcardPatternHelperTest extends TestCase {
     	// Should also work if prefix just starts with a '/' 
     	assertEquals("Every thing after first period is the remainder", "a#.#", WildcardPatternHelper.massagePattern("/abcd.a#.#").getRemainder());
     }
+
+    public void testAlternateForwardSlashAsPackage() throws Exception {
+    	assertEquals("Can separate packages with '.' or '/'", "ab", WildcardPatternHelper.massagePattern("./ab/cd").getRegEx());
+    	assertEquals("Can separate packages with '.' or '/'", "cd", WildcardPatternHelper.massagePattern("./ab/cd").getRemainder());
+    }
+    
+    public void testValidateEnhancedPattern() {
+    	assertTrue("Valid starts with '/' prefix", WildcardPatternHelper.validateAppenderPattern("/abc#*"));
+    	assertTrue("Valid starts with './' prefix", WildcardPatternHelper.validateAppenderPattern("./abc#*"));
+    	assertFalse("Not valid must start with a valid prefix", WildcardPatternHelper.validateAppenderPattern("noprefix"));
+
+    	assertFalse("Must have at least 1 package", WildcardPatternHelper.validateAppenderPattern("/"));
+    	assertFalse("Must have at least 1 package", WildcardPatternHelper.validateAppenderPattern("./"));
+    	
+    	// Packages can be separated by a '.' or a '/'
+    	assertFalse("Must not have an empty package (Separated by /)", WildcardPatternHelper.validateAppenderPattern("//abc#*"));
+    	assertFalse("Must not have an empty package (Separated by .)", WildcardPatternHelper.validateAppenderPattern("/.abc#*"));
+    	
+    	assertFalse("Whitespace not allowed", WildcardPatternHelper.validateAppenderPattern("/a b"));
+    }
+    
 }

@@ -36,6 +36,7 @@ import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.WildcardPatternHelper;
 
 
 public class PerfMonConfiguration {
@@ -203,9 +204,12 @@ public class PerfMonConfiguration {
     			PerfMon.APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS.equals(pattern)) {
     		result = pattern;
     	} else {
-    		if (!".".equals(pattern)) {
+    		if (".".equals(pattern)) {
     			// Don't warn if we are simply replacing '.' with './', '.' can be considered a synonym for './' 
-    			logger.logWarn("Invalid appender pattern found: '" + pattern + "' Replacing with default: '" + result + "'");
+    		} else if (WildcardPatternHelper.validateAppenderPattern(pattern)) {
+    			result = pattern;
+    		} else {
+       			logger.logWarn("Invalid appender pattern found: '" + pattern + "' Replacing with default: '" + result + "'");
     		}
     	}
     	
