@@ -41,6 +41,7 @@ import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.WildcardPatternHelper;
 
 
 public class PerfMon {
@@ -204,7 +205,7 @@ public class PerfMon {
             Iterator<Appender> itr = parent.appenderList.iterator();
             while (itr.hasNext()) {
                 Appender appender = itr.next();
-                String childPattern = parentToChildConversion(parent.appenderPatternMap.get(appender));
+                String childPattern = parentToChildConversion(parent.appenderPatternMap.get(appender), parent, this);
                 if (!APPENDER_PATTERN_NA.equals(childPattern)) {
                     addAppender(appender, true, childPattern);
                 }
@@ -798,14 +799,16 @@ public class PerfMon {
                 }
             }
         }
-        String childPattern = parentToChildConversion(appenderPattern);
-        if (cascadeToChildren && !childPattern.equals(APPENDER_PATTERN_NA)) {
-            PerfMon children[] = getChildMonitors();
-            for (int i = 0; i < children.length; i++) {
-                PerfMon child = children[i];
-                child.addAppender(appender, cascadeToChildren, childPattern);
-            }
+        
+        if (cascadeToChildren) {
+        	for (PerfMon child : getChildMonitors()) {
+        		String childPattern = parentToChildConversion(appenderPattern, this, child);
+        		if (!childPattern.equals(APPENDER_PATTERN_NA)) {
+        			child.addAppender(appender, cascadeToChildren, childPattern);
+        		}
+        	}
         }
+        
         clearCachedPerfMonTimer();    
     }
     
@@ -834,7 +837,7 @@ public class PerfMon {
             PerfMon children[] = getChildMonitors();
             for (int i = 0; i < children.length; i++) {
                 PerfMon child = children[i];
-                child.removeAppender(appender, true, parentToChildConversion(appenderPattern),
+                child.removeAppender(appender, true, parentToChildConversion(appenderPattern, this, child),
                     deinitUnusedAppenders);
             }
         }
@@ -1043,7 +1046,7 @@ public class PerfMon {
         for (int i = 0; i < children.length; i++) {
             PerfMon child = children[i];
             if (!isInChildIgnoreList(child, childIgnoreList)) {
-                child.resetAppenders(parentToChildConversion(appenders), childIgnoreList);
+                child.resetAppenders(parentToChildConversion(appenders, this, child), childIgnoreList);
             }
         }
         
@@ -1235,11 +1238,12 @@ public class PerfMon {
         }
     }
 
+    
 /*----------------------------------------------------------------------------*/    
     /**
      * Package level to allow unit test
      */
-    static String parentToChildConversion(String pattern) {
+    static String parentToChildConversion(String pattern, PerfMon parent, PerfMon child) {
         String result = APPENDER_PATTERN_NA;
         
         if (APPENDER_PATTERN_ALL_DESCENDENTS.equals(pattern) || 
@@ -1247,21 +1251,38 @@ public class PerfMon {
             result = APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS;
         } else if (APPENDER_PATTERN_CHILDREN_ONLY.equals(pattern)  || APPENDER_PATTERN_PARENT_AND_CHILDREN_ONLY.equals(pattern)) {
             result = APPENDER_PATTERN_PARENT_ONLY;
-        } 
+        } else if (!APPENDER_PATTERN_NA.equals(pattern)){
+        	String childName = child.getName();
+        	String parentName = parent.getName();
+
+        	if (childName.length() > parentName.length()) {
+	        	String simpleName = childName.substring(parentName.length() + 1, childName.length());
+	        	
+	        	WildcardPatternHelper.PatternInfo info = WildcardPatternHelper.massagePattern(pattern);
+	        	if (simpleName.matches(info.getRegEx())) {
+	        		String remainder = info.getRemainder();
+	        		if (remainder.isEmpty()) {
+	        			result = APPENDER_PATTERN_PARENT_ONLY;
+	        		} else {
+	        			result = "/" + remainder;
+	        		}
+	        	}
+        	}
+        }
         
         return result;
     }
     
     
     static private PerfMonConfiguration.AppenderAndPattern[] parentToChildConversion (
-        PerfMonConfiguration.AppenderAndPattern[] appenders) throws InvalidConfigException {
+        PerfMonConfiguration.AppenderAndPattern[] appenders, PerfMon parent, PerfMon child) throws InvalidConfigException {
         
         List<PerfMonConfiguration.AppenderAndPattern> result = 
             new ArrayList<PerfMonConfiguration.AppenderAndPattern>();
         
         for (int i = 0; i < appenders.length; i++) {
             PerfMonConfiguration.AppenderAndPattern appender = appenders[i];
-            String childPattern = parentToChildConversion(appender.getAppenderPattern());
+            String childPattern = parentToChildConversion(appender.getAppenderPattern(), parent, child);
             if (!APPENDER_PATTERN_NA.equals(childPattern)) {
                 result.add(new PerfMonConfiguration.AppenderAndPattern(appender.getAppender().getMyAppenderID(),
                     childPattern));

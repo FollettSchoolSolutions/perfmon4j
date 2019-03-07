@@ -31,6 +31,7 @@ import junit.textui.TestRunner;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.mockito.Mockito;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
@@ -818,19 +819,55 @@ public class PerfMonTest extends PerfMonTestCase {
         
     }
     
+    private PerfMon buildMockWithName(String name) {
+    	PerfMon result = Mockito.mock(PerfMon.class);
+    	Mockito.when(result.getName()).thenReturn(name);
+    	
+    	return result;
+    }
+    
+    
 /*----------------------------------------------------------------------------*/    
     public void testAppenderPatternParentChildConversion() throws Exception {
+    	PerfMon parent = buildMockWithName("a");
+    	PerfMon child = buildMockWithName("a.b");
+    
+    	
         final String PATTERN_PARENT_ONLY = "./";
         final String PATTERN_CHILDREN_ONLY = "/*";
         final String PATTERN_ALL_DESCENDENTS = "/**";
         final String PATTERN_PARENT_AND_ALL_DESCENDENTS = "./**";
         
-        assertEquals("Parent only to child", "", PerfMon.parentToChildConversion(PATTERN_PARENT_ONLY));
-        assertEquals("children only to child", PATTERN_PARENT_ONLY, PerfMon.parentToChildConversion(PATTERN_CHILDREN_ONLY));
-        assertEquals("all descendents to child", PATTERN_PARENT_AND_ALL_DESCENDENTS, PerfMon.parentToChildConversion(PATTERN_ALL_DESCENDENTS));
-        assertEquals("parent and all descendents to child", PATTERN_PARENT_AND_ALL_DESCENDENTS, PerfMon.parentToChildConversion(PATTERN_PARENT_AND_ALL_DESCENDENTS));
+        assertEquals("Parent only to child", "", PerfMon.parentToChildConversion(PATTERN_PARENT_ONLY, parent, child));
+        assertEquals("children only to child", PATTERN_PARENT_ONLY, PerfMon.parentToChildConversion(PATTERN_CHILDREN_ONLY, parent, child));
+        assertEquals("all descendents to child", PATTERN_PARENT_AND_ALL_DESCENDENTS, PerfMon.parentToChildConversion(PATTERN_ALL_DESCENDENTS, parent, child));
+        assertEquals("parent and all descendents to child", PATTERN_PARENT_AND_ALL_DESCENDENTS, PerfMon.parentToChildConversion(PATTERN_PARENT_AND_ALL_DESCENDENTS, parent, child));
+    }
+    
+/*----------------------------------------------------------------------------*/    
+    public void testWildcardPatternSingleLevel() throws Exception {
+        final String PARENT_PATTERN = "/abc#";
+        
+        PerfMon parent = buildMockWithName("a"); 
+        PerfMon matchingChild = buildMockWithName("a.abcd"); 
+        PerfMon nonMatchingChild = buildMockWithName("a.Abcd"); 
+
+        assertEquals("Matching child",  PerfMon.APPENDER_PATTERN_PARENT_ONLY, PerfMon.parentToChildConversion(PARENT_PATTERN, parent, matchingChild));
+        assertEquals("Non Matching child", PerfMon.APPENDER_PATTERN_NA, PerfMon.parentToChildConversion(PARENT_PATTERN, parent, nonMatchingChild));
     }
 
+
+/*----------------------------------------------------------------------------*/    
+    public void testWildcardPatternMultiLevel() throws Exception {
+        final String PARENT_PATTERN = "/abc#.#.Xyz*";
+        
+        PerfMon parent = buildMockWithName("a"); 
+        PerfMon matchingChild = buildMockWithName("a.abcd"); 
+
+        assertEquals("Potentially matches grandchildren", "/#.Xyz*", 
+        		PerfMon.parentToChildConversion(PARENT_PATTERN, parent, matchingChild));
+    }
+    
 /*----------------------------------------------------------------------------*/    
     public void testMonitorResetsWhenMadeInactive() throws Exception {
         final String MON_NAME = "base";
