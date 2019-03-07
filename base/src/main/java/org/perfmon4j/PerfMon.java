@@ -41,7 +41,7 @@ import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
-import org.perfmon4j.util.WildcardPatternHelper;
+import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 
 
 public class PerfMon {
@@ -1258,7 +1258,7 @@ public class PerfMon {
         	if (childName.length() > parentName.length()) {
 	        	String simpleName = childName.substring(parentName.length() + 1, childName.length());
 	        	
-	        	WildcardPatternHelper.PatternInfo info = WildcardPatternHelper.massagePattern(pattern);
+	        	EnhancedAppenderPatternHelper.PatternInfo info = EnhancedAppenderPatternHelper.massagePattern(pattern);
 	        	if (simpleName.matches(info.getRegEx())) {
 	        		String remainder = info.getRemainder();
 	        		if (remainder.isEmpty()) {

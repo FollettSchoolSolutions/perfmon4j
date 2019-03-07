@@ -25,7 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-public class WildcardPatternHelper {
+public class EnhancedAppenderPatternHelper {
 	private static final Pattern validPattern = Pattern.compile("^(\\./|/)(\\S+)");
 	private static final Pattern packageSplit = Pattern.compile("(\\.|/)"); // Can separate with a '.' or a '/'
 	
