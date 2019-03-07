@@ -24,6 +24,8 @@ package org.perfmon4j.util;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.perfmon4j.PerfMon;
+
 
 public class EnhancedAppenderPatternHelper {
 	private static final Pattern validPattern = Pattern.compile("^(\\./|/)(\\S+)");
@@ -48,6 +50,17 @@ public class EnhancedAppenderPatternHelper {
 		pattern = pattern.replaceAll("#", "\\\\w");
 	   
 		return new PatternInfo(pattern, remainder);
+	}
+	
+	static public boolean isTraditionalPattern(String pattern) {
+		return PerfMon.APPENDER_PATTERN_PARENT_ONLY.equals(pattern)
+			|| PerfMon.APPENDER_PATTERN_NA.equals(pattern)
+			|| PerfMon.APPENDER_PATTERN_PARENT_ONLY.equals(pattern)
+			|| PerfMon.APPENDER_PATTERN_PARENT_AND_CHILDREN_ONLY.equals(pattern)
+			|| PerfMon.APPENDER_PATTERN_CHILDREN_ONLY.equals(pattern)
+			|| PerfMon.APPENDER_PATTERN_ALL_DESCENDENTS.equals(pattern)
+			|| PerfMon.APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS.equals(pattern)
+			|| ".".equals(pattern);
 	}
 	
 	static public boolean validateAppenderPattern(String pattern) {
@@ -94,6 +107,15 @@ public class EnhancedAppenderPatternHelper {
 			public String getRemainder() {
 				return remainder;
 			}
+			
+			public boolean couldApplyToCurrent() {
+				return !regEx.isEmpty() && remainder.isEmpty();
+			}
+			
+			public boolean couldApplyToDescendants() {
+				return !remainder.isEmpty();
+			}
+
 	}
 }
 

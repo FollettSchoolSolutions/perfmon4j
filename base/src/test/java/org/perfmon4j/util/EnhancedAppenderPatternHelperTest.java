@@ -96,5 +96,36 @@ public class EnhancedAppenderPatternHelperTest extends TestCase {
     	
     	assertFalse("Whitespace not allowed", EnhancedAppenderPatternHelper.validateAppenderPattern("/a b"));
     }
+
+    
+    /**
+     * Checks to see if the pattern matches the traditional/legacy hard coded patterns
+     */
+    public void testIsTraditionalPattern() {
+    	assertTrue("traditional pattern", EnhancedAppenderPatternHelper.isTraditionalPattern("."));
+    	assertTrue("traditional pattern", EnhancedAppenderPatternHelper.isTraditionalPattern("./"));
+    	assertTrue("traditional pattern", EnhancedAppenderPatternHelper.isTraditionalPattern("/*"));
+    	assertTrue("traditional pattern", EnhancedAppenderPatternHelper.isTraditionalPattern("./*"));
+    	assertTrue("traditional pattern", EnhancedAppenderPatternHelper.isTraditionalPattern("/**"));
+    	assertTrue("traditional pattern", EnhancedAppenderPatternHelper.isTraditionalPattern("./**"));
+    	assertTrue("traditional pattern", EnhancedAppenderPatternHelper.isTraditionalPattern(""));
+    	
+    	assertFalse("This is an enhanced pattern", EnhancedAppenderPatternHelper.isTraditionalPattern("/#*"));
+    }
+
+    
+    public void testCouldApplyToDescendents() throws Exception {
+    	assertTrue("Because there is a package separator, descendents could match", 
+    			EnhancedAppenderPatternHelper.massagePattern("./abcd/#").couldApplyToDescendants());
+    	assertFalse("Since there is no package separator descendents can't possibly match ", 
+    			EnhancedAppenderPatternHelper.massagePattern("./abcd").couldApplyToDescendants());
+    }
+
+    public void testCouldApplyToCurrent() throws Exception {
+    	assertFalse("Since there is a path sparator only descendents of the current monitor could match", 
+    			EnhancedAppenderPatternHelper.massagePattern("./abcd/#").couldApplyToCurrent());
+    	assertTrue("Since there is no package the current monitor could match", 
+    			EnhancedAppenderPatternHelper.massagePattern("./abcd").couldApplyToCurrent());
+    }
     
 }
