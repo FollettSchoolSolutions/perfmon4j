@@ -22,6 +22,7 @@
 package org.perfmon4j;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,12 +37,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.FailSafeTimerTask;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
-import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 
 
 public class PerfMon {
@@ -115,8 +116,6 @@ public class PerfMon {
     }
     
     private final List<Appender> appenderList = Collections.synchronizedList(new ArrayList<Appender>());
-    private final Map<Appender, String> appenderPatternMap = Collections.synchronizedMap(new HashMap<Appender, String>());
-    private final Set<Appender> appendersAssociatedWithChildren = Collections.synchronizedSet(new HashSet<Appender>());
     
     private final Lock dataArrayInsertLock = new ReentrantLock();
     
@@ -202,14 +201,7 @@ public class PerfMon {
         
         // Assign any Appenders associated with our parent to us...
         if (parent != null) {
-            Iterator<Appender> itr = parent.appenderList.iterator();
-            while (itr.hasNext()) {
-                Appender appender = itr.next();
-                String childPattern = parentToChildConversion(parent.appenderPatternMap.get(appender), parent, this);
-                if (!APPENDER_PATTERN_NA.equals(childPattern)) {
-                    addAppender(appender, true, childPattern);
-                }
-            }
+        	this.resetAppenders(mapper);
         }
     }
 
@@ -267,6 +259,18 @@ public class PerfMon {
         	result.add(MonitorKey.newIntervalKey(mon.getName()));
         }
         return result;
+    }
+
+    /*----------------------------------------------------------------------------*/    
+    private static List<PerfMon> getMonitors() {
+        List<PerfMon> monitors = new ArrayList<PerfMon>(getNumMonitors());
+        mapMonitorLock.lock();
+        try {
+        	monitors.addAll(mapMonitors.values());
+        } finally {
+        	mapMonitorLock.unlock();
+        }
+        return monitors;
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -352,7 +356,7 @@ public class PerfMon {
                 } else {
                     parent = rootMonitor;
                 }
-                if (!isDynamicPath || parent.shouldChildBeDynamicallyCreated()) {
+                if (!isDynamicPath || parent.shouldChildBeDynamicallyCreated(key)) {
                 	result = new PerfMon(parent, key);
                 	mapMonitors.put(key, result);
                 } else {
@@ -553,6 +557,12 @@ public class PerfMon {
     public String getName() {
         return name;
     }
+
+/*----------------------------------------------------------------------------*/    
+    public String getSimpleName() {
+    	String[] split = name.split("\\.");
+        return split[split.length-1];
+    }
     
 /*----------------------------------------------------------------------------*/    
 	private ReferenceCount getThreadLocalReferenceCount() {
@@ -720,60 +730,31 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-    public void addAppender(Appender.AppenderID id) throws InvalidConfigException {
+    private void addAppender(Appender.AppenderID id) throws InvalidConfigException {
         addAppender(Appender.getOrCreateAppender(id));
     }
 
+
 /*----------------------------------------------------------------------------*/    
-    public void addAppender(Appender.AppenderID id, String appenderPattern) throws InvalidConfigException {
-        addAppender(Appender.getOrCreateAppender(id), true, appenderPattern);
+    private boolean shouldChildBeDynamicallyCreated(String key) {
+    	return mapper.hasAppendersForMonitor(key) || !forceDynamicPathWeakMap.isEmpty();
     }
+    
     
 /*----------------------------------------------------------------------------*/    
     private void addAppender(Appender appender)  {
-        addAppender(appender, true);
-    }
-
-/*----------------------------------------------------------------------------*/    
-    private void addAppender(Appender appender, boolean cascadeToChildren)  {
-        addAppender(appender, cascadeToChildren, APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS);
-    }
-
-
-/*----------------------------------------------------------------------------*/    
-    private boolean shouldChildBeDynamicallyCreated() {
-    	return !appendersAssociatedWithChildren.isEmpty() || !forceDynamicPathWeakMap.isEmpty();
-    }
-    
-/*----------------------------------------------------------------------------*/    
-    private void addAppender(Appender appender, boolean cascadeToChildren, String appenderPattern)  {
         boolean hasAppender = appenderList.contains(appender);
-        if (hasAppender) {
-            String currentPattern = appenderPatternMap.get(appender);
-            if (!appenderPattern.equals(currentPattern)) {
-                // We have the appender, but we are changing the pattern
-                // We must remove and reset.
-                removeAppender(appender, false, APPENDER_PATTERN_NA, false);
-                hasAppender = false;
-            }
-        }
         
         if (!hasAppender) {
             if (logger.isDebugEnabled()) {
-                logger.logDebug("Adding appender " + appender + " to monitor " 
-                    + this + " with appenderPattern \"" + appenderPattern + "\"");
+                logger.logDebug("Adding appender " + appender + " to monitor ");
             }
             appenderList.add(appender);
-            appenderPatternMap.put(appender, appenderPattern);
             
-            if (appenderPattern != null && appenderPattern.endsWith("*")) {
-                appendersAssociatedWithChildren.add(appender);
-            }
             
             int index = -1;
             
-            if (!isRootMonitor() && !APPENDER_PATTERN_ALL_DESCENDENTS.equals(appenderPattern)
-                && !APPENDER_PATTERN_CHILDREN_ONLY.equals(appenderPattern)) {
+            if (!isRootMonitor() ) {
             	dataArrayInsertLock.lock();
                 try {
                     for (int i = 0; i < dataArray.length; i++) {
@@ -799,103 +780,40 @@ public class PerfMon {
                 }
             }
         }
-        
-        if (cascadeToChildren) {
-        	for (PerfMon child : getChildMonitors()) {
-        		String childPattern = parentToChildConversion(appenderPattern, this, child);
-        		if (!childPattern.equals(APPENDER_PATTERN_NA)) {
-        			child.addAppender(appender, cascadeToChildren, childPattern);
-        		}
-        	}
-        }
-        
         clearCachedPerfMonTimer();    
     }
     
 /*----------------------------------------------------------------------------*/    
-    public void removeAppender(Appender.AppenderID id) throws InvalidConfigException {
-        removeAppender(id, APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS);
-    }
-
-    
-/*----------------------------------------------------------------------------*/    
-    public void removeAppender(Appender.AppenderID id, String appenderPattern) throws InvalidConfigException {
-        removeAppender(Appender.getOrCreateAppender(id), true, appenderPattern, true);
-    }
-
-/*----------------------------------------------------------------------------*/    
-    private void removeAppender(Appender appender, boolean cascadeToChildren, String appenderPattern,
-        boolean deinitUnusedAppenders)  {
+    private void removeAppender(Appender appender)  {
         
-    	appendersAssociatedWithChildren.remove(appender);
-    	
-    	if (cascadeToChildren && APPENDER_PATTERN_PARENT_ONLY.equals(appenderPattern)) {
-            cascadeToChildren = false;
-        }
-        
-        if (cascadeToChildren) {
-            PerfMon children[] = getChildMonitors();
-            for (int i = 0; i < children.length; i++) {
-                PerfMon child = children[i];
-                child.removeAppender(appender, true, parentToChildConversion(appenderPattern, this, child),
-                    deinitUnusedAppenders);
+        if (appenderList.contains(appender)) {
+            if (logger.isDebugEnabled()) {
+                logger.logDebug("Removing appender " + appender + " from monitor " 
+                    + this);
             }
-        }
-        
-        final boolean INCLUDE_PARENT = !APPENDER_PATTERN_CHILDREN_ONLY.equals(appenderPattern)
-            && !APPENDER_PATTERN_ALL_DESCENDENTS.equals(appenderPattern);
-        
-        if (INCLUDE_PARENT) {
-            if (appenderList.contains(appender)) {
-                if (logger.isDebugEnabled()) {
-                    logger.logDebug("Removing appender " + appender + " from monitor " 
-                        + this);
-                }
-                dataArrayInsertLock.lock();
-                try {
-                    appenderPatternMap.remove(appender);
-                    appenderList.remove(appender);
-                    
-                    // If we are the last one to remove the appender...
-                    // Make sure we deInit it...
-                    if (deinitUnusedAppenders && !isAppenderInUseByAnyMonitor(appender)) {
-                        appender.deInit();
-                    }
-                    
-                    for (int i = 0; i < dataArray.length; i++) {
-                        PushAppenderDataTask task = dataArray[i];
-                        if (task != null && task.appender.equals(appender)) {
-                            dataArray[i] = null;
-                            if (!isRootMonitor()) {
-                                makeInactiveIfNoAppenders();
-                                
-                                if (logger.isDebugEnabled()) {
-                                    logger.logDebug("Canceling appender task: " + task);
-                                }
-                                task.cancel();
+            dataArrayInsertLock.lock();
+            try {
+                appenderList.remove(appender);
+                
+                for (int i = 0; i < dataArray.length; i++) {
+                    PushAppenderDataTask task = dataArray[i];
+                    if (task != null && task.appender.equals(appender)) {
+                        dataArray[i] = null;
+                        if (!isRootMonitor()) {
+                            makeInactiveIfNoAppenders();
+                            
+                            if (logger.isDebugEnabled()) {
+                                logger.logDebug("Canceling appender task: " + task);
                             }
+                            task.cancel();
                         }
                     }
-                } finally {
-                	dataArrayInsertLock.unlock();
                 }
-            }
-            clearCachedPerfMonTimer();
-        }
-    }
-    
-/*----------------------------------------------------------------------------*/    
-    private boolean isInChildIgnoreList(PerfMon monitor, String[] childIgnoreList) {
-        boolean result = false;
-        if (childIgnoreList != null) {
-            for (int i = 0; i < childIgnoreList.length; i++) {
-                if (childIgnoreList[i].equalsIgnoreCase(monitor.getName())) {
-                    result = true;
-                    break;
-                }
+            } finally {
+            	dataArrayInsertLock.unlock();
             }
         }
-        return result;
+        clearCachedPerfMonTimer();
     }
 
     
@@ -1025,44 +943,24 @@ public class PerfMon {
     }
 
     
-/*----------------------------------------------------------------------------*/    
-    private boolean isInArray(Appender appender, PerfMonConfiguration.AppenderAndPattern[] appenders) {
-        boolean result = false;
-        for (int i = 0; i < appenders.length; i++) {
-            // Appenders are singleton objects.... We can use ==
-            if (appenders[i].getAppender()==appender) {
-                result = true;
-               break;
-            }
-        }
-        return result;
-    }
-    
-    
-/*----------------------------------------------------------------------------*/    
-    private void resetAppenders(PerfMonConfiguration.AppenderAndPattern[] appenders, String[] childIgnoreList) throws InvalidConfigException {
-        // First handle our children...
-        PerfMon children[] = getChildMonitors();
-        for (int i = 0; i < children.length; i++) {
-            PerfMon child = children[i];
-            if (!isInChildIgnoreList(child, childIgnoreList)) {
-                child.resetAppenders(parentToChildConversion(appenders, this, child), childIgnoreList);
-            }
-        }
-        
-        // First remove any appenders not in the array
-        int numAppenders = appenderList.size();
-        for (int i = numAppenders; i > 0; i--) {
-            Appender appender = appenderList.get(i-1);
-            if (!isInArray(appender, appenders)) {
-                removeAppender(appender, false, APPENDER_PATTERN_NA, true);
-            }
-        }
-        
-        //Now add any new appenders...
-        for (int i = 0; i < appenders.length; i++) {
-            addAppender(appenders[i].getAppender(), false, appenders[i].getAppenderPattern());
-        }
+    private void resetAppenders(AppenderToMonitorMapper mapper) {
+    	// Add all the appenders (or at least those that are not already on the monitor)
+    	Set<AppenderID> activeAppenders =  new HashSet<AppenderID>(Arrays.asList(mapper.getAppendersForMonitor(this.getName())));
+    	
+    	for (AppenderID appenderID : activeAppenders) {
+    		try {
+				addAppender(appenderID);
+			} catch (InvalidConfigException e) {
+				logger.logDebug("Invalid appender", e);
+			}
+    	}
+    	
+    	// Remove any appenders that are no longer configured...
+    	for (Appender currentAppender :  appenderList.toArray(new Appender[]{})) {
+    		if (!activeAppenders.contains(currentAppender.getMyAppenderID())) {
+    			removeAppender(currentAppender);
+    		}
+    	}
     }
 
     /**
@@ -1162,6 +1060,8 @@ public class PerfMon {
     	return configured && (cookieBasedTriggerCount > 0);
     }
     
+    private static AppenderToMonitorMapper mapper = null;
+    
 /*----------------------------------------------------------------------------*/    
     public static void configure(PerfMonConfiguration config) throws InvalidConfigException {
         // First flush all active appenders..
@@ -1175,24 +1075,17 @@ public class PerfMon {
         
         String monitors[] = config.getMonitorArray();
         
-        boolean handledRootMonitor = false;
-        
-        // Walk through the list in reverse order...
-        // This ensures we handle the child monitors
-        // before their parents...
-        for (int i = monitors.length; i > 0; i--) {
-            String rawMonitorName = monitors[i-1];
-            PerfMon mon = PerfMon.getMonitor(rawMonitorName);
-            PerfMonConfiguration.AppenderAndPattern appenders[] = config.getAppendersForMonitor(rawMonitorName, config);
-            mon.resetAppenders(appenders, monitors);
-            // Check the last monitor to see if we are configuring the ROOT 
-            // monitor... If not we will reset the ROOT anyway...
-            handledRootMonitor = (i == 1) && mon.isRootMonitor();
+        AppenderToMonitorMapper.Builder builder = new AppenderToMonitorMapper.Builder();
+        for (String monitor : monitors) {
+            for (PerfMonConfiguration.AppenderAndPattern appender : config.getAppendersForMonitor(monitor, config)) {
+            	builder.add(monitor, appender.getAppenderPattern(), appender.getAppenderID());
+            }
         }
-        
-        if (!handledRootMonitor) {
-            PerfMon.getRootMonitor().resetAppenders(new PerfMonConfiguration.AppenderAndPattern[]{},
-                monitors);
+        mapper = builder.build();
+
+        // Walk through all the monitors
+        for (PerfMon mon : getMonitors()) {
+        	mon.resetAppenders(mapper);
         }
         
         SnapShotManager.applyConfig(config);

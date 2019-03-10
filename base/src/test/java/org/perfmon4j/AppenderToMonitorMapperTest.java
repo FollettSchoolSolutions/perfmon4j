@@ -104,6 +104,19 @@ public class AppenderToMonitorMapperTest extends TestCase {
 		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.abc.x");
 		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.abc.xyz");
 	}
+
+	public void testAddToRootMonitor() {
+		String monitorName = PerfMon.ROOT_MONITOR_NAME;
+		String pattern = "/*";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+		
+		validatePatternMatches(monitorName, pattern, regEx, "com");
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme");
+		validatePatternMatches(monitorName, pattern, regEx, "org");
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "org.acme");
+	}
+	
 	
 	public void testBuilder() {
 		Builder builder = new Builder();
