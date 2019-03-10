@@ -169,13 +169,11 @@ public class PerfMonTimerTest extends PerfMonTestCase {
 
     
     public void testLazyCreateOnDynamicTimerWithEnhancedPattern() throws Exception {
-    	final String dynamicMonitorName = "a.b.c.d.e.f";
+    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerWithEnhancedPattern.b.c.d.e.f";
     	final String parentOfDynamicMonitorName = dynamicMonitorName.substring(0, dynamicMonitorName.length()-2);
 
-    	// The appender pattern "/**" indicates to monitor all descendents
-    	// of the root monitor.  
     	TestConfigBuilder builder = new TestConfigBuilder();
-    	PerfMon.configure(builder.defineMonitor("a", "/b.c.d.e.f")
+    	PerfMon.configure(builder.defineMonitor("testLazyCreateOnDynamicTimerWithEnhancedPattern", "/b.c.d.e.f")
     		.build(TestAppender.getAppenderID()));
    
     	int numAtStart = PerfMon.getMonitorKeys().size();
