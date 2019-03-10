@@ -201,7 +201,7 @@ public class PerfMon {
         
         // Assign any appenders that have been attached to this monitor.
         if (parent != null) {
-        	this.resetAppenders(mapper);
+        	this.resetAppenders();
         }
     }
 
@@ -949,23 +949,27 @@ public class PerfMon {
     }
 
     
-    private void resetAppenders(AppenderToMonitorMapper mapper) {
-    	// Add all the appenders (or at least those that are not already on the monitor)
-    	Set<AppenderID> activeAppenders =  new HashSet<AppenderID>(Arrays.asList(mapper.getAppendersForMonitor(this.getName())));
-    	
-    	for (AppenderID appenderID : activeAppenders) {
-    		try {
-				addAppender(appenderID);
-			} catch (InvalidConfigException e) {
-				logger.logDebug("Invalid appender", e);
-			}
-    	}
-    	
-    	// Remove any appenders that are no longer configured...
-    	for (Appender currentAppender :  appenderList.toArray(new Appender[]{})) {
-    		if (!activeAppenders.contains(currentAppender.getMyAppenderID())) {
-    			removeAppender(currentAppender);
-    		}
+    private void resetAppenders() {
+    	if (mapper == null) {
+    		logger.logWarn("AppenderToMonitorMapper is null in resetAppenders for monitor: " + getName() + " -- Skipping");
+    	} else {
+	    	// Add all the appenders (or at least those that are not already on the monitor)
+	    	Set<AppenderID> activeAppenders =  new HashSet<AppenderID>(Arrays.asList(mapper.getAppendersForMonitor(this.getName())));
+	    	
+	    	for (AppenderID appenderID : activeAppenders) {
+	    		try {
+					addAppender(appenderID);
+				} catch (InvalidConfigException e) {
+					logger.logDebug("Invalid appender", e);
+				}
+	    	}
+	    	
+	    	// Remove any appenders that are no longer configured...
+	    	for (Appender currentAppender :  appenderList.toArray(new Appender[]{})) {
+	    		if (!activeAppenders.contains(currentAppender.getMyAppenderID())) {
+	    			removeAppender(currentAppender);
+	    		}
+	    	}
     	}
     }
 
@@ -1080,6 +1084,7 @@ public class PerfMon {
         RegisteredDatabaseConnections.config(config);
         
         String monitors[] = config.getMonitorArray();
+
         
         AppenderToMonitorMapper.Builder builder = new AppenderToMonitorMapper.Builder();
         for (String monitor : monitors) {
@@ -1093,9 +1098,21 @@ public class PerfMon {
         }
         mapper = builder.build();
 
+        // After we initialized the MonitorToAppenderMapper.  Go through and
+        // explicitly create all of the monitors.  This is a bit of a legacy/compatibility
+        // process.  Prior to the enhanced appender pattern implementation,
+        // each monitor defined in the perfmonconfig.xml file was created
+        // automatically.
+        for (String monitor : monitors) {
+        	// Explicitly create each monitor that was explicitly defined in the 
+        	// configuration.
+        	PerfMon.getMonitor(monitor); 
+        }
+        
+        
         // Walk through all the monitors
         for (PerfMon mon : getMonitors()) {
-        	mon.resetAppenders(mapper);
+        	mon.resetAppenders();
         }
         
         SnapShotManager.applyConfig(config);
