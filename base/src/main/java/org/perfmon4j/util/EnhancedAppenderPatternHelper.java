@@ -32,6 +32,7 @@ public class EnhancedAppenderPatternHelper {
 	private static final Pattern packageSplit = Pattern.compile("(\\.|/)"); // Can separate with a '.' or a '/'
 	
 	
+	@Deprecated
 	static public PatternInfo massagePattern(String pattern) {
 		String remainder = "";
 		
@@ -63,6 +64,7 @@ public class EnhancedAppenderPatternHelper {
 			|| ".".equals(pattern);
 	}
 	
+	@Deprecated
 	static public boolean validateAppenderPattern(String pattern) {
 		boolean result = false;
 		
@@ -115,7 +117,21 @@ public class EnhancedAppenderPatternHelper {
 			public boolean couldApplyToDescendants() {
 				return !remainder.isEmpty();
 			}
+	}
 
+	public static String buildPattern(String monitorName, String pattern) {
+		if (!isTraditionalPattern(pattern) && (pattern.startsWith("/") || pattern.startsWith("./"))) {
+			// Remove the prefix ("./" or "/") from the pattern.
+			pattern = pattern.replaceFirst("(\\/|\\.\\/)", "");
+			pattern = pattern.replaceAll("\\.", "\\\\.");
+			pattern = pattern.replaceAll("/", "\\\\.");
+			pattern = pattern.replaceAll("#\\*", "\\\\w+");
+			pattern = pattern.replaceAll("#", "\\\\w");
+		   
+			return Pattern.quote(monitorName) + "\\." + pattern;
+		} else {
+			return null;
+		}
 	}
 }
 

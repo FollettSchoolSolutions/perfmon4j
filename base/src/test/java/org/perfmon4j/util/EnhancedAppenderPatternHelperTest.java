@@ -22,6 +22,8 @@ package org.perfmon4j.util;
 
 import junit.framework.TestCase;
 
+import org.perfmon4j.PerfMon;
+
 public class EnhancedAppenderPatternHelperTest extends TestCase {
 
 	public EnhancedAppenderPatternHelperTest(String name) {
@@ -113,6 +115,48 @@ public class EnhancedAppenderPatternHelperTest extends TestCase {
     	assertFalse("This is an enhanced pattern", EnhancedAppenderPatternHelper.isTraditionalPattern("/#*"));
     }
 
+    public void testBuildPattern() {
+    	// Pattern should start with a  "./";
+    	validatePattern("\\Qcom.acme.myMonitor\\E\\.a\\w\\w\\.xy\\w+", "com.acme.myMonitor", "./a##/xy#*");
+
+    	// We will also accept a prefix of  "/";
+    	validatePattern("\\Qcom.acme.myMonitor\\E\\.a\\w\\w\\.xy\\w+", "com.acme.myMonitor", "/a##/xy#*");
+
+    
+    	// Package structure after first character can be separated with a '/' or '.';
+    	validatePattern("\\Qcom.acme.myMonitor\\E\\.a\\w\\w\\.xy\\w+", "com.acme.myMonitor", "/a##.xy#*");
+    }
+
+    public void testBuildWithBadPattern() {
+    	validatePattern(null, "com.acme.myMonitor", "this is bad");
+    }
+
+    public void testBuildWithLegacyPatterns() {
+    	validatePattern(null, "com.acme.myMonitor", PerfMon.APPENDER_PATTERN_NA);
+    	validatePattern(null, "com.acme.myMonitor", PerfMon.APPENDER_PATTERN_PARENT_ONLY);
+    	validatePattern(null, "com.acme.myMonitor", PerfMon.APPENDER_PATTERN_PARENT_AND_CHILDREN_ONLY);
+    	validatePattern(null, "com.acme.myMonitor", PerfMon.APPENDER_PATTERN_CHILDREN_ONLY);
+    	validatePattern(null, "com.acme.myMonitor", PerfMon.APPENDER_PATTERN_ALL_DESCENDENTS);
+    	validatePattern(null, "com.acme.myMonitor", PerfMon.APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS);
+
+    	// Synonym PerfMon.APPENDER_PATTERN_PARENT_ONLY 
+    	validatePattern(null, "com.acme.myMonitor", ".");
+    }
+    
+    
+    private void validatePattern(String expectedRegEx, String monitorName, String pattern) {
+    	if (expectedRegEx == null) {
+	    	assertNull("Expected NULL regEx " 
+	    			+ " from monitorName: '" + monitorName
+	    			+ "' from pattern: '" + pattern + "'"
+	    			, EnhancedAppenderPatternHelper.buildPattern(monitorName, pattern));
+    	} else {
+	    	assertEquals("Expected regEx: '" + expectedRegEx 
+	    			+ "' from monitorName: '" + monitorName
+	    			+ "' from pattern: '" + pattern + "'"
+	    			, expectedRegEx, EnhancedAppenderPatternHelper.buildPattern(monitorName, pattern));
+    	}
+    }
     
     public void testCouldApplyToDescendents() throws Exception {
     	assertTrue("Because there is a package separator, descendents could match", 
