@@ -361,7 +361,7 @@ public class PerfMonTest extends PerfMonTestCase {
     	TestConfigBuilder builder = new TestConfigBuilder();
     	
     	PerfMon.configure(builder
-    		.defineRootMonitor("./*")
+    		.defineRootMonitor("./**")
     		.build(bogusAppenderID));
         
         final String GRANDPARENT_MONITOR_NAME = "testSimpleHirearchy";
@@ -571,14 +571,11 @@ public class PerfMonTest extends PerfMonTestCase {
         final String MONITOR_NAME_GRANDCHILD = MONITOR_NAME_CHILD + ".c";
         
         final long INTERVAL_MILLIS = 100;
-//        PerfMon perfMon = PerfMon.getMonitor(MONITOR_NAME);
-        
         AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
-//        perfMon.addAppender(appenderID, "/*");
     	TestConfigBuilder builder = new TestConfigBuilder();
     	
     	PerfMon.configure(builder
-    		.defineMonitor(MONITOR_NAME, "./*")
+    		.defineMonitor(MONITOR_NAME, "/*")
     		.build(appenderID));
 
         PerfMonTimer timer = PerfMonTimer.start(MONITOR_NAME_GRANDCHILD);
@@ -602,21 +599,21 @@ public class PerfMonTest extends PerfMonTestCase {
         PerfMon rootMon = PerfMon.getRootMonitor();
 
         PerfMon childMon = PerfMon.getMonitor(MONITOR_NAME);
-//        rootMon.addAppender(appenderID);
-    	TestConfigBuilder builder = new TestConfigBuilder();
-    	
-    	PerfMon.configure(builder
-    		.defineMonitor(MONITOR_NAME, "./*")
+    	PerfMon.configure(configBuilder
+    		.defineRootMonitor("./**")
     		.build(appenderID));
         
         
-        assertEquals("Root monitor should have an appender", 1, rootMon.getNumAppenders());
+        assertEquals("Appender is no longer assigned to root monitor", 0, rootMon.getNumAppenders());
         assertEquals("Root monitor should never have tasks associated with it", 0, rootMon.getNumPerfMonTasks());
          
-//        assertEquals("Appender should be associated with child monitor", 1, childMon.getNumPerfMonDataElements());
-        
         PerfMon grandChildMon = PerfMon.getMonitor(MONITOR_NAME + ".grandChild");
+        assertEquals("Appender should be associated with child monitor", 1, childMon.getNumPerfMonTasks());
         assertEquals("Appender should be associated with grandchild monitor", 1, grandChildMon.getNumPerfMonTasks());
+
+    	PerfMon.configure(configBuilder
+        		.defineRootMonitor(".")
+        		.build(appenderID));
         
         assertEquals("Appender should be removed from child monitor", 0, childMon.getNumPerfMonTasks());
         assertEquals("Appender should be removed from grandchild monitor", 0, grandChildMon.getNumPerfMonTasks());
@@ -841,13 +838,11 @@ public class PerfMonTest extends PerfMonTestCase {
         PerfMon child = PerfMon.getMonitor(CHILD_KEY);
         PerfMon grandChild = PerfMon.getMonitor(GRAND_CHILD_KEY);
         
-//        parent.addAppender(appenderID, PATTERN_PARENT_ONLY);
         PerfMon.configure(
             	configBuilder
             		.defineMonitor(PARENT_KEY, PATTERN_PARENT_ONLY)
             		.build(appenderID)
         );
-        
         
         assertEquals("parent appender count", 1, parent.getNumAppenders());
         assertTrue("parent.isActive", parent.isActive());
@@ -860,16 +855,13 @@ public class PerfMonTest extends PerfMonTestCase {
         assertEquals("new child appender count", 0,  PerfMon.getMonitor("a.1").getNumAppenders());
         assertEquals("grandChild appender count", 0, PerfMon.getMonitor("a.1.1").getNumAppenders());
         
-//        parent.addAppender(appenderID, PATTERN_CHILDREN_ONLY);
         PerfMon.configure(
             	configBuilder
             		.defineMonitor(PARENT_KEY, PATTERN_CHILDREN_ONLY)
             		.build(appenderID)
         );
         
-        
-        
-        assertEquals("parent appender count", 1, parent.getNumAppenders());
+        assertEquals("appender should have been removed from parent", 0, parent.getNumAppenders());
         assertFalse("parent.isActive", parent.isActive());
         
         assertEquals("parent should not have a task associated with the appender", 0, parent.getNumPerfMonTasks());
@@ -881,7 +873,6 @@ public class PerfMonTest extends PerfMonTestCase {
         assertEquals("new child appender count", 1,  PerfMon.getMonitor("a.2").getNumAppenders());
         assertEquals("grandChild appender count", 0, PerfMon.getMonitor("a.2.2").getNumAppenders());
         
-//        parent.addAppender(appenderID, PATTERN_ALL_DESCENDENTS);
         PerfMon.configure(
             	configBuilder
             		.defineMonitor(PARENT_KEY, PATTERN_ALL_DESCENDENTS)
@@ -889,7 +880,7 @@ public class PerfMonTest extends PerfMonTestCase {
         );
         
         
-        assertEquals("parent appender count", 1, parent.getNumAppenders());
+        assertEquals("parent appender count", 0, parent.getNumAppenders());
         assertFalse("parent.isActive", parent.isActive());
         assertEquals("parent should not have a task associated with the appender", 0, parent.getNumPerfMonTasks());
         
@@ -901,7 +892,6 @@ public class PerfMonTest extends PerfMonTestCase {
         assertEquals("grandChild appender count", 1, PerfMon.getMonitor("a.3.3").getNumAppenders());
         assertTrue("grandChild.isActive", grandChild.isActive());
         
-//        parent.addAppender(appenderID, PATTERN_PARENT_AND_ALL_DESCENDENTS);
         PerfMon.configure(
             	configBuilder
             		.defineMonitor(PARENT_KEY, PATTERN_PARENT_AND_ALL_DESCENDENTS)
@@ -921,59 +911,12 @@ public class PerfMonTest extends PerfMonTestCase {
         assertTrue("grandChild.isActive", grandChild.isActive());
     }
 
-
-/*----------------------------------------------------------------------------*/    
-    public void testRemoveAppenderRespectsPattern() throws Exception {
-    	fail("See if this needs to be rewritten or obsoleted");
-//        final long INTERVAL_MILLIS = 1000;
-//        Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
-//        
-//        final String PATTERN_PARENT_ONLY = "./";
-//        final String PATTERN_CHILDREN_ONLY = "/*";
-//        final String PATTERN_ALL_DESCENDENTS = "/**";
-//        final String PATTERN_PARENT_AND_ALL_DESCENDENTS = "./**";
-//        
-//        PerfMon parent = PerfMon.getMonitor("a");
-//        PerfMon child = PerfMon.getMonitor("a.b");
-//        PerfMon grandChild = PerfMon.getMonitor("a.b.c");
-//        
-//        parent.addAppender(appenderID);
-//        parent.removeAppender(appenderID, PATTERN_PARENT_AND_ALL_DESCENDENTS);
-//        
-//        assertEquals("parent appender count", 0, parent.getNumAppenders());
-//        assertEquals("child appender count", 0, child.getNumAppenders());
-//        assertEquals("grandChild appender count", 0, grandChild.getNumAppenders());
-//        
-//        parent.addAppender(appenderID);
-//        parent.removeAppender(appenderID, PATTERN_ALL_DESCENDENTS);
-//        
-//        assertEquals("parent appender count", 1, parent.getNumAppenders());
-//        assertEquals("child appender count", 0, child.getNumAppenders());
-//        assertEquals("grandChild appender count", 0, grandChild.getNumAppenders());
-//
-//        parent.addAppender(appenderID);
-//        parent.removeAppender(appenderID, PATTERN_CHILDREN_ONLY);
-//        
-//        assertEquals("parent appender count", 1, parent.getNumAppenders());
-//        assertEquals("child appender count", 0, child.getNumAppenders());
-//        assertEquals("grandChild appender count", 1, grandChild.getNumAppenders());
-//
-//        parent.addAppender(appenderID);
-//        parent.removeAppender(appenderID, PATTERN_PARENT_ONLY);
-//        
-//        assertEquals("parent appender count", 0, parent.getNumAppenders());
-//        assertEquals("child appender count", 1, child.getNumAppenders());
-//        assertEquals("grandChild appender count", 1, grandChild.getNumAppenders());
-//        
-    }
-    
     private PerfMon buildMockWithName(String name) {
     	PerfMon result = Mockito.mock(PerfMon.class);
     	Mockito.when(result.getName()).thenReturn(name);
     	
     	return result;
     }
-    
     
 /*----------------------------------------------------------------------------*/    
     public void testAppenderPatternParentChildConversion() throws Exception {
@@ -1347,39 +1290,45 @@ public class PerfMonTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testRefreshConfig() throws Exception {
-    	fail("This will need to be rewritten");
-//        final String MONITOR_ROOT = PerfMon.ROOT_MONITOR_NAME;
-//        final String DESCENDENT_1 = "aa.b.c";
-//        final String DESCENDENT_2 = "aa.b.c.d";
-//        
-//        // All appenders should now have monitor...
-//        PerfMon.getMonitor(MONITOR_ROOT).addAppender(TestAppender.getAppenderID(1000));
-//        
-//        // Add second Appender to DESCENDENT_1
-//        PerfMon.getMonitor(DESCENDENT_1).addAppender(TestAppender.getAppenderID(5000));
-//        
-//        PerfMonConfiguration config = new PerfMonConfiguration();
-//        // Root will define no monitors at all... Should clear any
-//        // that currently exists..
-//        config.defineMonitor(PerfMon.ROOT_MONITOR_NAME);
-//        
-//        // Will redefine 3 monitors
-//        // 1 added by root and the 1 added by it's parent and a new one
-//        config.defineMonitor(DESCENDENT_2);
-//        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
-//        config.defineAppender("APP2", TestAppender.class.getName(), "5 seconds");
-//        config.defineAppender("APP3", TestAppender.class.getName(), "15 seconds");
-//        
-//        config.attachAppenderToMonitor(DESCENDENT_2, "APP1");
-//        config.attachAppenderToMonitor(DESCENDENT_2, "APP2");
-//        config.attachAppenderToMonitor(DESCENDENT_2, "APP3");
-//        
-//        PerfMon.configure(config);
-//        
-//        assertEquals("Monitor should have been removed", 0, PerfMon.getMonitor(MONITOR_ROOT).getNumAppenders());
-//        assertEquals("Monitor should have been removed", 0, PerfMon.getMonitor(DESCENDENT_1).getNumAppenders());
-//        assertEquals("Monitor should remain on descendent and a new one added", 3, PerfMon.getMonitor(DESCENDENT_2).getNumAppenders());
-//        assertEquals("Should have a task for each appender", 3, PerfMon.getMonitor(DESCENDENT_2).getNumPerfMonTasks());
+        final String MONITOR_ROOT = PerfMon.ROOT_MONITOR_NAME;
+        final String DESCENDENT_1 = "aa.b.c";
+        final String DESCENDENT_2 = "aa.b.c.d";
+
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineAppender("1000", TestAppender.getAppenderID(1000));
+        config.defineAppender("5000", TestAppender.getAppenderID(5000));
+        
+        config.defineMonitor(MONITOR_ROOT);
+        config.defineMonitor(DESCENDENT_1);
+        config.attachAppenderToMonitor(MONITOR_ROOT, "1000", "./**");
+        config.attachAppenderToMonitor(DESCENDENT_1, "5000", "./**");
+               
+        PerfMon.configure(config);
+        
+        assertEquals("Number of appenders", 2, PerfMon.getMonitor(DESCENDENT_1).getNumAppenders());
+        
+        config = new PerfMonConfiguration();
+        // Root will define no monitors at all... Should clear any
+        // that currently exists..
+        config.defineMonitor(PerfMon.ROOT_MONITOR_NAME);
+        
+        // Will redefine 3 monitors
+        // 1 added by root and the 1 added by it's parent and a new one
+        config.defineMonitor(DESCENDENT_2);
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.defineAppender("APP2", TestAppender.class.getName(), "5 seconds");
+        config.defineAppender("APP3", TestAppender.class.getName(), "15 seconds");
+        
+        config.attachAppenderToMonitor(DESCENDENT_2, "APP1");
+        config.attachAppenderToMonitor(DESCENDENT_2, "APP2");
+        config.attachAppenderToMonitor(DESCENDENT_2, "APP3");
+        
+        PerfMon.configure(config);
+        
+        assertEquals("Monitor should have been removed", 0, PerfMon.getMonitor(MONITOR_ROOT).getNumAppenders());
+        assertEquals("Monitor should have been removed", 0, PerfMon.getMonitor(DESCENDENT_1).getNumAppenders());
+        assertEquals("Monitor should remain on descendent and a new one added", 3, PerfMon.getMonitor(DESCENDENT_2).getNumAppenders());
+        assertEquals("Should have a task for each appender", 3, PerfMon.getMonitor(DESCENDENT_2).getNumPerfMonTasks());
     }
     
     // This test validates that when an appender is removed
@@ -1659,9 +1608,27 @@ public class PerfMonTest extends PerfMonTestCase {
     }    
     
     public void testEnhancedAppenderPatternWithDynamicCreate() throws Exception {
-    	fail("Must make sure children only get dynamically created when they match the pattern");
+        final String MATCH = "aa.abcdefg.x.y.z";
+        final String NOMATCH = "aa.abcdefg";
+        
+        final String enhancedPattern = "/abc#*/x/y/z"; // Can use either '/' to separate patterns or '.' 
+
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("aa");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("aa", "APP1", enhancedPattern);
+
+        PerfMon.configure(config);
+        
+        PerfMon mon = PerfMon.getMonitor(MATCH);
+        assertEquals("should have an appender", 1, mon.getNumAppenders());
+
+        mon = PerfMon.getMonitor(NOMATCH);
+        assertEquals("should have an appender", 0, mon.getNumAppenders());
     }
 
+    
     /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
