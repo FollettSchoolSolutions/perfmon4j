@@ -199,7 +199,7 @@ public class PerfMon {
 //        }
         
         
-        // Assign any Appenders associated with our parent to us...
+        // Assign any appenders that have been attached to this monitor.
         if (parent != null) {
         	this.resetAppenders(mapper);
         }
@@ -350,14 +350,20 @@ public class PerfMon {
             }
             if (result == null) {
                 PerfMon parent = null;
-                String[] h = parseMonitorHirearchy(key);
-                if (h.length > 1) {
-                    parent = getMonitor(h[h.length-2], isDynamicPath);
+                String[] hierarchy = parseMonitorHirearchy(key);
+                if (hierarchy.length > 1) {
+                    parent = getMonitor(hierarchy[hierarchy.length-2], isDynamicPath);
                 } else {
                     parent = rootMonitor;
                 }
                 if (!isDynamicPath || parent.shouldChildBeDynamicallyCreated(key)) {
-                	result = new PerfMon(parent, key);
+                	if (isDynamicPath) {
+                		// Since the child is being dynamically created we need
+                		// to fill in it's ancestors.
+                		result = getMonitor(key, false);
+                	} else {
+	                	result = new PerfMon(parent, key);
+                	}
                 	mapMonitors.put(key, result);
                 } else {
                 	result = parent;
@@ -1077,6 +1083,10 @@ public class PerfMon {
         
         AppenderToMonitorMapper.Builder builder = new AppenderToMonitorMapper.Builder();
         for (String monitor : monitors) {
+        	// Explicitly create each monitor that was explicitly defined in the 
+        	// configuration.
+        	PerfMon.getMonitor(monitor); 
+        	
             for (PerfMonConfiguration.AppenderAndPattern appender : config.getAppendersForMonitor(monitor, config)) {
             	builder.add(monitor, appender.getAppenderPattern(), appender.getAppenderID());
             }

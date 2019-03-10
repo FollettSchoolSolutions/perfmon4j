@@ -166,6 +166,33 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     	
     	assertEquals("Monitors should have been created immediately", numAtStart + 2, PerfMon.getMonitorKeys().size());
     }
+
+    
+    public void testLazyCreateOnDynamicTimerWithEnhancedPattern() throws Exception {
+    	final String dynamicMonitorName = "a.b.c.d.e.f";
+    	final String parentOfDynamicMonitorName = dynamicMonitorName.substring(0, dynamicMonitorName.length()-2);
+
+    	// The appender pattern "/**" indicates to monitor all descendents
+    	// of the root monitor.  
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor("a", "/b.c.d.e.f")
+    		.build(TestAppender.getAppenderID()));
+   
+    	int numAtStart = PerfMon.getMonitorKeys().size();
+
+    	PerfMonTimer timer = PerfMonTimer.start(parentOfDynamicMonitorName, true);
+    	PerfMonTimer.stop(timer);
+    	
+    	assertEquals("We didn't get a match, so no new monitors should have been added", 
+    		numAtStart, PerfMon.getMonitorKeys().size());
+
+    	
+    	timer = PerfMonTimer.start(dynamicMonitorName, true);
+    	PerfMonTimer.stop(timer);
+    	
+    	assertEquals("Since we found a match, all ancestors of the match should have been created", 
+    		numAtStart + 5, PerfMon.getMonitorKeys().size());
+    }
     
 /*----------------------------------------------------------------------------*/
     private static class TestAppender extends Appender {
