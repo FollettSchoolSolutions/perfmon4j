@@ -143,6 +143,35 @@ class UpdaterUtil {
 		return result;
 	}
 
+	static boolean doesIndexExist(Connection conn, String schema, String tableName, String indexName) throws Exception {
+		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
+		
+		boolean nullSchema = (schema == null);
+		schema = (schema == null) ? db.getDefaultSchemaName() : schema; 
+		
+		boolean result = false;
+		DatabaseMetaData dbMetaData = null;
+		ResultSet rs = null;
+		try {
+			dbMetaData = conn.getMetaData();
+			rs = dbMetaData.getIndexInfo(null, null, tableName.toUpperCase(), false, false);
+			while (rs.next() && !result) {
+				final String n = rs.getString("INDEX_NAME");
+				final String s = rs.getString("TABLE_SCHEM");
+				
+				boolean schemaMatches = ((s == null) && nullSchema)
+						|| schema.equalsIgnoreCase(s);
+				result = schemaMatches && indexName.equalsIgnoreCase(n);
+			}
+		} finally {
+			closeNoThrow(rs);
+		}
+		
+		return result;
+	}
+
+	
+	
 	static String getColumnDataType(Connection conn, String schema, String tableName, String columnName) throws Exception {
 		String result = null;
 		

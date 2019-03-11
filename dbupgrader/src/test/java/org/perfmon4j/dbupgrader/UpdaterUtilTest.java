@@ -64,6 +64,21 @@ public class UpdaterUtilTest extends TestCase {
 		}
 	}
 	
+	public void testIndexExists() throws Exception {
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+			stmt.execute("CREATE TABLE MyTable(ID int, count int)");
+			stmt.execute("CREATE INDEX MyIndex ON MyTable(count)");
+			
+			assertTrue("Correct Index", UpdaterUtil.doesIndexExist(conn, null, "MyTable", "MyIndex"));
+			assertFalse("Incorrect Index", UpdaterUtil.doesIndexExist(conn, null, "MyTable", "SomeOtherMyIndex"));
+			
+		} finally {
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+	}
+
 	
 	public void testGenerateUniqueIdentity() throws Exception {
 		String identity = UpdaterUtil.generateUniqueIdentity();
