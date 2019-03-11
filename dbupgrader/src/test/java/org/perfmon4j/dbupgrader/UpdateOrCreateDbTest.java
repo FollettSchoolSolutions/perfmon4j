@@ -207,6 +207,20 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertTrue("New P4JGroupSystemJoin table should exist", joinExists);
 	}
 	
+	public void testVersion7Update() throws Exception { 
+		// Start with an empty database...
+		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+				"jdbcURL=" + JDBC_URL,
+				"driverJarFile=EMBEDDED",
+				"schema=" + SCHEMA});
+		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
+				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0007.0'");
+		assertEquals("should have installed 7.0 label", 1, count);
+		
+		boolean indexExists = UpdaterUtil.doesIndexExist(conn, SCHEMA, "P4JIntervalData", "P4JIntervalData_SystemEndTime");
+		assertTrue("New P4JIntervalData_SystemEndTime index should exist", indexExists);
+	}
+
 	
 	public void testParseParameters() throws Exception {
 		String args[] = {
