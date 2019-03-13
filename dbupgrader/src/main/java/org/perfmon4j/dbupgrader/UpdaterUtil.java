@@ -119,7 +119,7 @@ class UpdaterUtil {
 	}	
 	
 	static boolean doesTableExist(Connection conn, String schema, String tableName) throws Exception {
-		boolean nullSchema = (schema == null);
+		schema = (schema == null) ? conn.getSchema() : schema;
 		boolean result = false;
 		DatabaseMetaData dbMetaData = null;
 		ResultSet rs = null;
@@ -130,8 +130,7 @@ class UpdaterUtil {
 				final String n = rs.getString("TABLE_NAME");
 				final String s = rs.getString("TABLE_SCHEM");
 				
-				boolean schemaMatches = ((s == null) && nullSchema)
-						|| schema.equalsIgnoreCase(s);
+				boolean schemaMatches = schema.equalsIgnoreCase(s);
 				result = schemaMatches && tableName.equalsIgnoreCase(n);
 			}
 		} finally {
@@ -142,8 +141,7 @@ class UpdaterUtil {
 	}
 
 	static boolean doesIndexExist(Connection conn, String schema, String tableName, String indexName) throws Exception {
-		boolean nullSchema = (schema == null);
-		
+		schema = (schema == null) ? conn.getSchema() : schema;
 		boolean result = false;
 		DatabaseMetaData dbMetaData = null;
 		ResultSet rs = null;
@@ -154,8 +152,7 @@ class UpdaterUtil {
 				final String n = rs.getString("INDEX_NAME");
 				final String s = rs.getString("TABLE_SCHEM");
 				
-				boolean schemaMatches = ((s == null) && nullSchema)
-						|| schema.equalsIgnoreCase(s);
+				boolean schemaMatches = schema.equalsIgnoreCase(s);
 				result = schemaMatches && indexName.equalsIgnoreCase(n);
 			}
 		} finally {
