@@ -82,6 +82,7 @@ class UpdaterUtil {
 			credentials.setProperty("password", password);
 		}
 		Connection conn = driver.connect(jdbcURL, credentials); 
+		
 		if (conn == null) {
 			throw new SQLException("Unabled to connect with jdbcURL: " + jdbcURL);
 		} 
@@ -118,10 +119,7 @@ class UpdaterUtil {
 	}	
 	
 	static boolean doesTableExist(Connection conn, String schema, String tableName) throws Exception {
-		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
 		boolean nullSchema = (schema == null);
-		schema = (schema == null) ? db.getDefaultSchemaName() : schema; 
-		
 		boolean result = false;
 		DatabaseMetaData dbMetaData = null;
 		ResultSet rs = null;
@@ -144,10 +142,7 @@ class UpdaterUtil {
 	}
 
 	static boolean doesIndexExist(Connection conn, String schema, String tableName, String indexName) throws Exception {
-		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
-		
 		boolean nullSchema = (schema == null);
-		schema = (schema == null) ? db.getDefaultSchemaName() : schema; 
 		
 		boolean result = false;
 		DatabaseMetaData dbMetaData = null;
@@ -176,9 +171,7 @@ class UpdaterUtil {
 		String result = null;
 		
 		if (doesColumnExist(conn, schema, tableName, columnName)) {
-			Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
-			tableName = db.escapeTableName(null, schema, tableName);
-			columnName = db.escapeColumnName(null, schema, tableName, columnName);
+			tableName = schema == null ? tableName : schema + "." + tableName;
 			Statement stmt = null;
 			ResultSet rs = null;
 			try {

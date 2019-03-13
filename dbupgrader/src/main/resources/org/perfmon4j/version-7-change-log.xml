@@ -4,7 +4,11 @@
 	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
 	
 	<changeSet author="ddeucher" id="P4J-AddIndexesForP4JReports">
-
+		<preConditions onFail="MARK_RAN">
+        	<not>
+        		<indexExists schemaName='${defaultSchema}' indexName='P4JIntervalData_SystemEndTime'></indexExists>
+        	</not>
+    	</preConditions>
 		<createIndex indexName="P4JIntervalData_SystemEndTime"
 			tableName="P4JIntervalData" unique="true">
 			<column name="SystemID" />
