@@ -10,7 +10,7 @@
         	</not>
     	</preConditions>
 		<createIndex indexName="P4JIntervalData_SystemEndTime"
-			tableName="P4JIntervalData" unique="true">
+			tableName="P4JIntervalData" unique="false">
 			<column name="SystemID" />
 			<column name="EndTime" />
 		</createIndex>
