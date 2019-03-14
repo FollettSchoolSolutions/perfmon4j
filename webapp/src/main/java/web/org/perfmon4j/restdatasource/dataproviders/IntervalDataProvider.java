@@ -189,10 +189,8 @@ public class IntervalDataProvider extends DataProvider {
 			throws SQLException {
 		Set<Category> result = new HashSet<Category>(); 
 
-		String indexHint = "";
 		String categoryName = "CategoryName";
 		if (db.isMSSQL()  && db.getDatabaseVersion() >= 7.0) {
-			indexHint = " WITH(INDEX(P4JIntervalData_SystemCatEndTime)) ";
 			categoryName = "RTRIM(CategoryName) AS CategoryName";
 		}
 		
@@ -201,14 +199,11 @@ public class IntervalDataProvider extends DataProvider {
 		try {
 			String schema = fixupSchema(db.getSchema());
 			
-			String SQL = "SELECT " + categoryName
-				+ " FROM " + schema + "P4JCategory cat "
-				+ " WHERE EXISTS (SELECT IntervalID " 
-				+ " FROM " + schema + "P4JIntervalData pid"
-				+ 	indexHint
-				+ " WHERE pid.categoryId = cat.categoryID "
-				+ " AND pid.systemID IN " + buildInArrayForSystems(systems)
-				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+			String SQL = "SELECT DISTINCT " + categoryName
+				+ " FROM " + schema + "P4JIntervalData pid "
+				+ " JOIN " + schema + "P4JCategory cat ON  pid.categoryId = cat.categoryID "
+				+ " WHERE pid.systemID IN " + buildInArrayForSystems(systems)
+				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?";
 			
 			if (logger.isDebugEnabled()) {
 				logger.logDebug("getIntervalCategories SQL: " + SQL);
@@ -217,8 +212,9 @@ public class IntervalDataProvider extends DataProvider {
 			stmt = conn.prepareStatement(SQL);
 			stmt.setTimestamp(1, new Timestamp(start));
 			stmt.setTimestamp(2, new Timestamp(end));
-			
+
 			rs = stmt.executeQuery();
+
 			while (rs.next()) {
 				Category cat = new Category("Interval." + rs.getString("CategoryName").trim(), "Interval");
 				result.add(cat);
