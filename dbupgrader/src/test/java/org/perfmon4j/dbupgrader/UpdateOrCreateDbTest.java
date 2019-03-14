@@ -39,7 +39,6 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb.Parameters;
-import org.slf4j.LoggerFactory;
 
 public class UpdateOrCreateDbTest extends TestCase {
 	private static String SCHEMA = "TEST";
@@ -49,24 +48,16 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public UpdateOrCreateDbTest(String name) {
 		super(name);
-		
-    	ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
-    	logger.setLevel(ch.qos.logback.classic.Level.WARN);		
-
-    	logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("org.perfmon4j");
-    	logger.setLevel(ch.qos.logback.classic.Level.WARN);		
 	}
 	
 	protected void setUp() throws Exception {
-		DatabaseFactory factory = DatabaseFactory.getInstance();
-		factory.clearRegistry();
-		factory.register(new NoCloseDerbyDatabase());
+		super.setUp();
+		
+		NoCloseDerbyDatabase.initLiquibaseNoCloseDerbyDatabase();
 		
 		conn = UpdaterUtil.createConnection(JDBC_DRIVER, null, JDBC_URL + ";create=true", null, null);
 		conn.setAutoCommit(true);
 		executeUpdate("CREATE SCHEMA " + SCHEMA);
-		
-		super.setUp();
 	}
 
 	protected void tearDown() throws Exception {
@@ -77,7 +68,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 		} catch (SQLException sn) {
 		}
 		
-		DatabaseFactory.reset();
+		NoCloseDerbyDatabase.deInitLiquibaseNoCloseDerbyDatabase();
 		super.tearDown();
 	}
 	
