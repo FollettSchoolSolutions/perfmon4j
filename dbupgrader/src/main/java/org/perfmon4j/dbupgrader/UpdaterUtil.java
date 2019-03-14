@@ -118,8 +118,27 @@ class UpdaterUtil {
 		return driverClazz.newInstance();
 	}	
 	
+	private static final String getDefaultSchema(Connection conn) throws SQLException {
+		String result = "";
+		
+		try {
+			result = conn.getSchema();
+		} catch (AbstractMethodError ame) {
+			// JDBC Driver does not implement, return default property
+			// from system property if set.
+			result = System.getProperty("P4J_UPDATER_DEFAULT_SCHEMA", "");
+
+			// If not set return "dbo" for Microsoft SQL Server or "" for any other database.
+			if (result.isEmpty() && conn.getMetaData().getDatabaseProductName().contains("Microsoft SQL Server")) {
+				result = "dbo";
+			}
+		}
+		
+		return result;
+	}
+	
 	static boolean doesTableExist(Connection conn, String schema, String tableName) throws Exception {
-		schema = (schema == null) ? conn.getSchema() : schema;
+		schema = (schema == null) ? getDefaultSchema(conn) : schema;
 		boolean result = false;
 		DatabaseMetaData dbMetaData = null;
 		ResultSet rs = null;
@@ -141,7 +160,7 @@ class UpdaterUtil {
 	}
 
 	static boolean doesIndexExist(Connection conn, String schema, String tableName, String indexName) throws Exception {
-		schema = (schema == null) ? conn.getSchema() : schema;
+		schema = (schema == null) ? getDefaultSchema(conn) : schema;
 		boolean result = false;
 		DatabaseMetaData dbMetaData = null;
 		ResultSet rs = null;
