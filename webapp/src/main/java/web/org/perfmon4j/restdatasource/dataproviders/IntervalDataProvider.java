@@ -83,6 +83,11 @@ public class IntervalDataProvider extends DataProvider {
 			+ "AND cat.categoryName IN "+ buildSubCategoryNameSet(fields) + "\r\n"
 			+ "AND pid.EndTime >= ?\r\n"
 			+ "AND pid.EndTime <= ?\r\n";
+		
+		if (logger.isDebugEnabled()) {
+			logger.logDebug("processResults SQL: " + query);
+		}		
+		
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
 		try {
@@ -140,17 +145,26 @@ public class IntervalDataProvider extends DataProvider {
 		Set<MonitoredSystem> result = new HashSet<MonitoredSystem>();
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
+		
+		String indexHint = "";
+		if (database.isMSSQL() && database.getDatabaseVersion() >= 7.0) {
+			indexHint = " WITH(INDEX(P4JIntervalData_SystemEndTime)) ";
+		}
+		
 		try {
 			String schema = fixupSchema(database.getSchema());
 			
 			String SQL = "SELECT SystemID, SystemName "
 				+ " FROM " + schema + "P4JSystem s "
 				+ " WHERE EXISTS (SELECT IntervalID " 
-				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.SystemID = s.SystemID "
+				+ " FROM " + schema + "P4JIntervalData pid"
+				+ indexHint
+				+ " WHERE pid.SystemID = s.SystemID "
 				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
 			if (logger.isDebugEnabled()) {
 				logger.logDebug("getSystems SQL: " + SQL);
 			}
+
 			
 			stmt = conn.prepareStatement(SQL);
 			stmt.setTimestamp(1, new Timestamp(start));
@@ -174,16 +188,25 @@ public class IntervalDataProvider extends DataProvider {
 			Database db, SystemID[] systems, long start, long end)
 			throws SQLException {
 		Set<Category> result = new HashSet<Category>(); 
+
+		String indexHint = "";
+		String categoryName = "CategoryName";
+		if (db.isMSSQL()  && db.getDatabaseVersion() >= 7.0) {
+			indexHint = " WITH(INDEX(P4JIntervalData_SystemCatEndTime)) ";
+			categoryName = "RTRIM(CategoryName) AS CategoryName";
+		}
 		
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
 		try {
 			String schema = fixupSchema(db.getSchema());
 			
-			String SQL = "SELECT CategoryName"
+			String SQL = "SELECT " + categoryName
 				+ " FROM " + schema + "P4JCategory cat "
 				+ " WHERE EXISTS (SELECT IntervalID " 
-				+ " FROM " + schema + "P4JIntervalData pid WHERE pid.categoryId = cat.categoryID "
+				+ " FROM " + schema + "P4JIntervalData pid"
+				+ 	indexHint
+				+ " WHERE pid.categoryId = cat.categoryID "
 				+ " AND pid.systemID IN " + buildInArrayForSystems(systems)
 				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
 			
