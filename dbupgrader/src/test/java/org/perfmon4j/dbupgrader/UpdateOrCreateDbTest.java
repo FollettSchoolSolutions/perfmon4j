@@ -451,6 +451,8 @@ public class UpdateOrCreateDbTest extends TestCase {
 	}
 	
 	public void X_testLiveSQLServer() {
+		DatabaseFactory.reset();
+		
 		String [] args = new String[] {
 			"driverJarFile=/media/sf_shared/tools/common/JDBCDrivers/sqljdbc4.jar", 
 			"driverClass=com.microsoft.sqlserver.jdbc.SQLServerDriver", 
