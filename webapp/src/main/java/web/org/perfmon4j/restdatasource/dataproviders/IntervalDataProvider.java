@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,6 +46,7 @@ import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
+import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
 import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 import web.org.perfmon4j.restdatasource.util.aggregators.decorator.ColumnValueFilterFactory;
@@ -53,6 +55,7 @@ public class IntervalDataProvider extends DataProvider {
 	private static final String TEMPLATE_NAME = "Interval";
 	private final IntervalTemplate categoryTemplate;
 	private static final Logger logger = LoggerFactory.initLogger(IntervalDataProvider.class);
+	private final DateTimeHelper dateTimeHelper = new DateTimeHelper();
 	
 	public IntervalDataProvider() {
 		super(TEMPLATE_NAME);
@@ -81,23 +84,19 @@ public class IntervalDataProvider extends DataProvider {
 			+ "JOIN " + schemaPrefix + "P4JCategory cat ON cat.categoryID = pid.CategoryID\r\n"
 			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
 			+ "AND cat.categoryName IN "+ buildSubCategoryNameSet(fields) + "\r\n"
-			+ "AND pid.EndTime >= ?\r\n"
-			+ "AND pid.EndTime <= ?\r\n";
+			+ "AND pid.EndTime >= " + dateTimeHelper.formatDateTimeForSQL(start) + "\r\n"
+			+ "AND pid.EndTime <= " + dateTimeHelper.formatDateTimeForSQL(end) + "\r\n";
 		
 		if (logger.isDebugEnabled()) {
 			logger.logDebug("processResults SQL: " + query);
 		}		
 		
-		PreparedStatement stmt = null;
+		Statement stmt = null;
 		ResultSet rs = null;
 		try {
-			stmt = conn.prepareStatement(query);
-			stmt.setTimestamp(1, new Timestamp(start));
-			stmt.setTimestamp(2, new Timestamp(end));
-			rs = stmt.executeQuery();
-			while (rs.next()) {
-				accumulator.accumulateResults(TEMPLATE_NAME, rs);
-			}
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+			accumulator.handleResultSet(TEMPLATE_NAME, rs);
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 			JDBCHelper.closeNoThrow(rs);
@@ -190,30 +189,31 @@ public class IntervalDataProvider extends DataProvider {
 		Set<Category> result = new HashSet<Category>(); 
 
 		String categoryName = "CategoryName";
+		String indexHint = "";
 		if (db.isMSSQL()  && db.getDatabaseVersion() >= 7.0) {
 			categoryName = "RTRIM(CategoryName) AS CategoryName";
+			indexHint = " WITH(INDEX(P4JIntervalData_SystemEndTime)) ";
 		}
 		
-		PreparedStatement stmt = null;
+		Statement stmt = null;
 		ResultSet rs = null;
 		try {
 			String schema = fixupSchema(db.getSchema());
 			
 			String SQL = "SELECT DISTINCT " + categoryName
 				+ " FROM " + schema + "P4JIntervalData pid "
+				+ indexHint
 				+ " JOIN " + schema + "P4JCategory cat ON  pid.categoryId = cat.categoryID "
 				+ " WHERE pid.systemID IN " + buildInArrayForSystems(systems)
-				+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?";
+				+ " AND pid.EndTime >= " + dateTimeHelper.formatDateTimeForSQL(start)
+				+ " AND pid.EndTime <= " + dateTimeHelper.formatDateTimeForSQL(end);		
 			
 			if (logger.isDebugEnabled()) {
 				logger.logDebug("getIntervalCategories SQL: " + SQL);
 			}
 			
-			stmt = conn.prepareStatement(SQL);
-			stmt.setTimestamp(1, new Timestamp(start));
-			stmt.setTimestamp(2, new Timestamp(end));
-
-			rs = stmt.executeQuery();
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(SQL);
 
 			while (rs.next()) {
 				Category cat = new Category("Interval." + rs.getString("CategoryName").trim(), "Interval");
