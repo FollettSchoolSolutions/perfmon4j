@@ -72,6 +72,26 @@ public class ResultAccumulator {
 		allSeries.add(series);
 	}
 	
+	public void handleResultSet(String templateName, ResultSet rs) throws SQLException {
+		Set<SeriesWrapper> series = seriesMap.get(templateName);
+		Map<Long, Aggregator[]> aggregatorsCache = new HashMap<Long, Aggregator[]>();
+		
+		while (rs.next()) {
+			this.accumulateResults(series, rs, aggregatorsCache);
+		}		
+	}
+
+	public void accumulateResults(Set<SeriesWrapper> series, ResultSet rs, 
+			Map<Long, Aggregator[]> aggregatorsCache) throws SQLException {
+		long time = rs.getTimestamp("EndTime").getTime();
+		
+		Aggregator[] aggregators = getAggregators(series, time, aggregatorsCache);
+		for (Aggregator a : aggregators) {
+			a.aggreagate(rs);
+		}
+	}
+	
+	@Deprecated
 	public void accumulateResults(String templateName, ResultSet rs) throws SQLException {
 		long time = rs.getTimestamp("EndTime").getTime();
 		
@@ -80,23 +100,37 @@ public class ResultAccumulator {
 			a.aggreagate(rs);
 		}
 	}
-
+	
+	@Deprecated
 	public Aggregator[] getAggregators(String templateName, long time) {
-		Set<SeriesWrapper> series = seriesMap.get(templateName);
-		Aggregator[] result = new Aggregator[series.size()];
-		
+		return getAggregators(seriesMap.get(templateName), time, null);
+	}
+
+	public Aggregator[] getAggregators(Set<SeriesWrapper> series, long time, Map<Long, Aggregator[]> resultsCache) {
 		Long timeKey = Long.valueOf(helper.truncateToMinute(time));
 		times.add(timeKey);
 		
-		int i = 0;
-		for (SeriesWrapper w : series) {
-			Aggregator a = w.map.get(timeKey);
-			if (a == null) {
-				a = w.factory.newAggregator();
-				w.map.put(timeKey, a);
-			}
-			result[i++] = a;
+		Aggregator[] result = null;
+		if (resultsCache != null) {
+			result = resultsCache.get(timeKey);
 		}
+		
+		if (result == null) {
+			result = new Aggregator[series.size()];
+			int i = 0;
+			for (SeriesWrapper w : series) {
+				Aggregator a = w.map.get(timeKey);
+				if (a == null) {
+					a = w.factory.newAggregator();
+					w.map.put(timeKey, a);
+				}
+				result[i++] = a;
+			}
+			
+			if (resultsCache != null) {
+				resultsCache.put(timeKey, result);
+			}
+		} 	
 		
 		return result;
 	}
