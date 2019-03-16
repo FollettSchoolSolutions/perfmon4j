@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,6 +48,7 @@ import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import web.org.perfmon4j.restdatasource.dataproviders.PercentProviderField;
 import web.org.perfmon4j.restdatasource.dataproviders.ProviderField;
+import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
 import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 import web.org.perfmon4j.restdatasource.util.aggregators.decorator.ColumnValueFilterFactory;
@@ -57,6 +59,7 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 	static final String REQUIRED_DATABASE_CHANGESET = "FSS-P4JFetchPolicySnapshot-tableCreate";
 	static final String ADD_ASYNC_COLUMN_CHANGESET = "FSS-addProviderAsyncCountColumn";
 	private static final Logger logger = LoggerFactory.initLogger(FSSFetchPolicyDataProvider.class);
+	private final DateTimeHelper dateTimeHelper = new DateTimeHelper();
 	
 	public FSSFetchPolicyDataProvider() {
 		super(TEMPLATE_NAME);
@@ -114,7 +117,7 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 		Set<MonitoredSystem> result = new HashSet<MonitoredSystem>();
 		
 		if (JDBCHelper.databaseChangeSetExists(conn, database.getSchema(), REQUIRED_DATABASE_CHANGESET)) {
-			PreparedStatement stmt = null;
+			Statement stmt = null;
 			ResultSet rs = null;
 			try {
 				String schema = fixupSchema(database.getSchema());
@@ -123,16 +126,17 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 					+ " FROM " + schema + "P4JSystem s "
 					+ " WHERE EXISTS (SELECT SystemID " 
 					+ " FROM " + schema + "FSSFetchPolicySnapshot pid WHERE pid.SystemID = s.SystemID "
-					+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+					+ " AND pid.EndTime >= " + dateTimeHelper.formatDateTimeForSQL(start)
+					+ " AND pid.EndTime <= " + dateTimeHelper.formatDateTimeForSQL(end)
+					+ ")";
+				
 				if (logger.isDebugEnabled()) {
 					logger.logDebug("getSystems SQL: " + SQL);
 				}
 				
-				stmt = conn.prepareStatement(SQL);
-				stmt.setTimestamp(1, new Timestamp(start));
-				stmt.setTimestamp(2, new Timestamp(end));
+				stmt = conn.createStatement();
 				
-				rs = stmt.executeQuery();
+				rs = stmt.executeQuery(SQL);
 				while (rs.next()) {
 					MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName").trim(), database.getID() + "." + rs.getLong("SystemID"));
 					result.add(ms);
@@ -153,23 +157,21 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 			Set<Category> result = new HashSet<Category>();
 		
 			if (JDBCHelper.databaseChangeSetExists(conn, db.getSchema(), REQUIRED_DATABASE_CHANGESET)) {
-				PreparedStatement stmt = null;
+				Statement stmt = null;
 				ResultSet rs = null;
 				try {
 					String schema = fixupSchema(db.getSchema());
 					
 					String SQL = "SELECT DISTINCT(InstanceName) "
 						+ " FROM " + schema + "FSSFetchPolicySnapshot pid "
-						+ "	WHERE pid.EndTime >= ? "
-						+ " AND pid.EndTime <= ?"
-						+ " AND pid.SystemID IN " + buildInArrayForSystems(systems);
+						+ " WHERE pid.SystemID IN " + buildInArrayForSystems(systems)
+						+ " AND pid.EndTime >= " + dateTimeHelper.formatDateTimeForSQL(start)
+						+ " AND pid.EndTime <= " + dateTimeHelper.formatDateTimeForSQL(end);					
 					if (logger.isDebugEnabled()) {
 						logger.logDebug("getCategories SQL: " + SQL);
 					}
-					stmt = conn.prepareStatement(SQL);
-					stmt.setTimestamp(1, new Timestamp(start));
-					stmt.setTimestamp(2, new Timestamp(end));
-					rs = stmt.executeQuery();
+					stmt = conn.createStatement();
+					rs = stmt.executeQuery(SQL);
 					while (rs.next()) {
 						result.add(new Category(TEMPLATE_NAME + "." + rs.getString(1).trim(), TEMPLATE_NAME));
 					}
