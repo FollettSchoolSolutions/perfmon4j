@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,12 +46,14 @@ import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
+import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
 
 public class JVMDataProvider extends DataProvider {
 	private static final String TEMPLATE_NAME = "JVM";
 	private final JVMTemplate categoryTemplate;
 	private static final Logger logger = LoggerFactory.initLogger(JVMDataProvider.class);
+	private final DateTimeHelper dateTimeHelper = new DateTimeHelper();
 	
 	public JVMDataProvider() {
 		super(TEMPLATE_NAME);
@@ -69,18 +72,15 @@ public class JVMDataProvider extends DataProvider {
 			"SELECT " + commaSeparate(selectList) + "\r\n"
 			+ "FROM " + schemaPrefix + "P4JVMSnapShot pid\r\n"
 			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
-			+ "AND pid.EndTime >= ?\r\n"
-			+ "AND pid.EndTime <= ?\r\n";
-		PreparedStatement stmt = null;
+			+ "AND pid.EndTime >= " + dateTimeHelper.formatDateTimeForSQL(start) + "\r\n"
+			+ "AND pid.EndTime <= " + dateTimeHelper.formatDateTimeForSQL(end) + "\r\n";
+		Statement stmt = null;
 		ResultSet rs = null;
 		try {
-			stmt = conn.prepareStatement(query);
-			stmt.setTimestamp(1, new Timestamp(start));
-			stmt.setTimestamp(2, new Timestamp(end));
-			rs = stmt.executeQuery();
-			while (rs.next()) {
-				accumulator.accumulateResults(TEMPLATE_NAME, rs);
-			}
+			stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+			stmt.setFetchSize(5000);
+			rs = stmt.executeQuery(query);
+			accumulator.handleResultSet(TEMPLATE_NAME, rs);			
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 			JDBCHelper.closeNoThrow(rs);

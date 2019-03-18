@@ -22,11 +22,9 @@
 package web.org.perfmon4j.restdatasource.dataproviders.thirdparty;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -86,18 +84,15 @@ public class FSSFetchPolicyDataProvider extends DataProvider {
 				+ "FROM " + schemaPrefix + "FSSFetchPolicySnapshot pid\r\n"
 				+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
 				+ "AND pid.InstanceName IN "+ buildSubCategoryNameSet(fields) + "\r\n"
-				+ "AND pid.EndTime >= ?\r\n"
-				+ "AND pid.EndTime <= ?\r\n";
-			PreparedStatement stmt = null;
+				+ "AND pid.EndTime >= " + dateTimeHelper.formatDateTimeForSQL(start) + "\r\n"
+				+ "AND pid.EndTime <= " + dateTimeHelper.formatDateTimeForSQL(end) + "\r\n";
+			Statement stmt = null;
 			ResultSet rs = null;
 			try {
-				stmt = conn.prepareStatement(query);
-				stmt.setTimestamp(1, new Timestamp(start));
-				stmt.setTimestamp(2, new Timestamp(end));
-				rs = stmt.executeQuery();
-				while (rs.next()) {
-					accumulator.accumulateResults(TEMPLATE_NAME, rs);
-				}
+				stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+				stmt.setFetchSize(5000);
+				rs = stmt.executeQuery(query);
+				accumulator.handleResultSet(TEMPLATE_NAME, rs);
 			} finally {
 				JDBCHelper.closeNoThrow(stmt);
 				JDBCHelper.closeNoThrow(rs);

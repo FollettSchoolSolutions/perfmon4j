@@ -94,7 +94,8 @@ public class IntervalDataProvider extends DataProvider {
 		Statement stmt = null;
 		ResultSet rs = null;
 		try {
-			stmt = conn.createStatement();
+			stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+			stmt.setFetchSize(5000);
 			rs = stmt.executeQuery(query);
 			accumulator.handleResultSet(TEMPLATE_NAME, rs);
 		} finally {
