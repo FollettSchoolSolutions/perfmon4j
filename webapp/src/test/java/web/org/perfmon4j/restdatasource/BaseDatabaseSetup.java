@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.perfmon4j.dbupgrader.NoCloseDerbyDatabase;
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.JDBCHelper.DriverCache;
@@ -61,23 +62,27 @@ public class BaseDatabaseSetup  {
 
 	
 	public void setUpDatabase(String thirdPartyExtensions) throws Exception {
-		connection = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, JDBC_DRIVER, null, JDBC_URL + ";create=true", null, null);
-		connection.setAutoCommit(true);		
-		
-		Set<String> parameters = new HashSet<String>();
-		parameters.add("driverClass=org.apache.derby.jdbc.EmbeddedDriver");
-		parameters.add("jdbcURL=" + JDBC_URL);
-		parameters.add("driverJarFile=EMBEDDED");
-		
-		if (thirdPartyExtensions != null) {
-			parameters.add("thirdPartyExtensions=" + thirdPartyExtensions);
+		NoCloseDerbyDatabase.initLiquibaseNoCloseDerbyDatabase();
+		try {
+			connection = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, JDBC_DRIVER, null, JDBC_URL + ";create=true", null, null);
+			connection.setAutoCommit(true);		
+			
+			Set<String> parameters = new HashSet<String>();
+			parameters.add("driverClass=org.apache.derby.jdbc.EmbeddedDriver");
+			parameters.add("jdbcURL=" + JDBC_URL);
+			parameters.add("driverJarFile=EMBEDDED");
+			
+			if (thirdPartyExtensions != null) {
+				parameters.add("thirdPartyExtensions=" + thirdPartyExtensions);
+			}
+			
+			// Start with an empty database...
+			UpdateOrCreateDb.main(parameters.toArray(new String[]{}));
+			
+	//		new dblook(new String[]{"-d", JDBC_URL, "-verbose"});
+		} finally {
+			NoCloseDerbyDatabase.deInitLiquibaseNoCloseDerbyDatabase();
 		}
-		
-		// Start with an empty database...
-		UpdateOrCreateDb.main(parameters.toArray(new String[]{}));
-		
-//		new dblook(new String[]{"-d", JDBC_URL, "-verbose"});
-		
 	}
 
 	public void tearDownDatabase() throws Exception {

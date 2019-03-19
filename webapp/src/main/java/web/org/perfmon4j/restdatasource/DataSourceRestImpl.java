@@ -163,7 +163,7 @@ public class DataSourceRestImpl {
 				result.addAll(r);
 	 		}
 		} catch (SQLException e) {
-			logger.logDebug("getSystems", e);
+			logger.logError("getSystems", e);
 			throw new InternalServerErrorException(e);
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
@@ -207,7 +207,7 @@ public class DataSourceRestImpl {
 				result.addAll(r);
 	 		}
 		} catch (SQLException e) {
-			logger.logDebug("getCategories", e);
+			logger.logError("getCategories", e);
 			throw new InternalServerErrorException(e);
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
@@ -314,6 +314,7 @@ public class DataSourceRestImpl {
 			}
 			result = accumulator.buildResults();
 		} catch (SQLException ex) {
+			logger.logError("getQueryObservations", ex);
 			throw new InternalServerErrorException(ex);
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
@@ -476,7 +477,7 @@ public class DataSourceRestImpl {
 					}
 					result = new CategoryTemplate(unFiltered.getName(), filteredFields.toArray(new Field[]{}));
 				} catch (SQLException e) {
-					logger.logDebug("filterFieldsBasedOnDatabaseChangeSet", e);
+					logger.logError("filterFieldsBasedOnDatabaseChangeSet", e);
 					throw new InternalServerErrorException(e);
 				} finally {
 					JDBCHelper.closeNoThrow(conn);

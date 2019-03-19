@@ -25,7 +25,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +47,7 @@ import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
 import web.org.perfmon4j.restdatasource.dataproviders.PercentProviderField;
 import web.org.perfmon4j.restdatasource.dataproviders.ProviderField;
+import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
 
 public class FSSFetchThreadPoolDataProvider extends DataProvider {
@@ -54,6 +55,7 @@ public class FSSFetchThreadPoolDataProvider extends DataProvider {
 	private final FSSFetchThreadPool categoryTemplate;
 	static final String REQUIRED_DATABASE_CHANGESET = "FSS-FSSFetchThreadPoolSnapshot-tableCreate";
 	private static final Logger logger = LoggerFactory.initLogger(FSSFetchThreadPoolDataProvider.class);
+	private final DateTimeHelper dateTimeHelper = new DateTimeHelper();
 	
 	public FSSFetchThreadPoolDataProvider() {
 		super(TEMPLATE_NAME);
@@ -73,18 +75,15 @@ public class FSSFetchThreadPoolDataProvider extends DataProvider {
 				"SELECT " + commaSeparate(selectList) + "\r\n"
 				+ "FROM " + schemaPrefix + "FSSFetchThreadPoolSnapshot pid\r\n"
 				+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
-				+ "AND pid.EndTime >= ?\r\n"
-				+ "AND pid.EndTime <= ?\r\n";
-			PreparedStatement stmt = null;
+				+ "AND pid.EndTime >= " + dateTimeHelper.formatDateTimeForSQL(start) + "\r\n"
+				+ "AND pid.EndTime <= " + dateTimeHelper.formatDateTimeForSQL(end) + "\r\n";
+			Statement stmt = null;
 			ResultSet rs = null;
 			try {
-				stmt = conn.prepareStatement(query);
-				stmt.setTimestamp(1, new Timestamp(start));
-				stmt.setTimestamp(2, new Timestamp(end));
-				rs = stmt.executeQuery();
-				while (rs.next()) {
-					accumulator.accumulateResults(TEMPLATE_NAME, rs);
-				}
+				stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+				stmt.setFetchSize(5000);
+				rs = stmt.executeQuery(query);
+				accumulator.handleResultSet(TEMPLATE_NAME, rs);			
 			} finally {
 				JDBCHelper.closeNoThrow(stmt);
 				JDBCHelper.closeNoThrow(rs);
@@ -104,7 +103,7 @@ public class FSSFetchThreadPoolDataProvider extends DataProvider {
 		Set<MonitoredSystem> result = new HashSet<MonitoredSystem>();
 		
 		if (JDBCHelper.databaseChangeSetExists(conn, database.getSchema(), REQUIRED_DATABASE_CHANGESET)) {
-			PreparedStatement stmt = null;
+			Statement stmt = null;
 			ResultSet rs = null;
 			try {
 				String schema = fixupSchema(database.getSchema());
@@ -113,16 +112,15 @@ public class FSSFetchThreadPoolDataProvider extends DataProvider {
 					+ " FROM " + schema + "P4JSystem s "
 					+ " WHERE EXISTS (SELECT SystemID " 
 					+ " FROM " + schema + "FSSFetchThreadPoolSnapshot pid WHERE pid.SystemID = s.SystemID "
-					+ "	AND pid.EndTime >= ? AND pid.EndTime <= ?)";
+					+ "	AND pid.EndTime >= " + dateTimeHelper.formatDateTimeForSQL(start)  
+					+ " AND pid.EndTime <= " + dateTimeHelper.formatDateTimeForSQL(end) + ")";
 				if (logger.isDebugEnabled()) {
 					logger.logDebug("getSystems SQL: " + SQL);
 				}
 				
-				stmt = conn.prepareStatement(SQL);
-				stmt.setTimestamp(1, new Timestamp(start));
-				stmt.setTimestamp(2, new Timestamp(end));
+				stmt = conn.createStatement();
 				
-				rs = stmt.executeQuery();
+				rs = stmt.executeQuery(SQL);
 				while (rs.next()) {
 					MonitoredSystem ms = new MonitoredSystem(rs.getString("SystemName").trim(), database.getID() + "." + rs.getLong("SystemID"));
 					result.add(ms);
@@ -149,15 +147,13 @@ public class FSSFetchThreadPoolDataProvider extends DataProvider {
 					
 					String SQL = "SELECT COUNT(*) "
 						+ " FROM " + schema + "FSSFetchThreadPoolSnapshot pid "
-						+ "	WHERE pid.EndTime >= ? "
-						+ " AND pid.EndTime <= ?"
+						+ "	WHERE pid.EndTime >=  " + dateTimeHelper.formatDateTimeForSQL(start)
+						+ " AND pid.EndTime <= "  + dateTimeHelper.formatDateTimeForSQL(end)
 						+ " AND pid.SystemID IN " + buildInArrayForSystems(systems);
 					if (logger.isDebugEnabled()) {
 						logger.logDebug("getSystems SQL: " + SQL);
 					}
 					stmt = conn.prepareStatement(SQL);
-					stmt.setTimestamp(1, new Timestamp(start));
-					stmt.setTimestamp(2, new Timestamp(end));
 					if (JDBCHelper.getQueryCount(stmt) > 0) {
 						result.add(new Category(TEMPLATE_NAME, TEMPLATE_NAME));
 					}

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.util.Logger;
@@ -40,6 +41,7 @@ class SessionManager<T extends SessionManager.SessionData> {
 		Integer.getInteger(SessionManager.class.getName() + ".DEFAULT_REAPER_MILLIS",
 				10 * 60 * 1000).intValue(); // Ten minutes by default.
 
+	private final AtomicInteger activeSessionCount = new AtomicInteger();
 	private final Object mapLockToken = new Object();
 	private final Map<String, SessionWrapper> map = new HashMap<String, SessionWrapper>();
 	private final int timerIntervalMillis;
@@ -57,6 +59,7 @@ class SessionManager<T extends SessionManager.SessionData> {
 		String sessionID = UUID.randomUUID().toString();
 		synchronized(mapLockToken) {
 			map.put(sessionID, new SessionWrapper(sessionID, sessionData, timeoutMillis));
+			activeSessionCount.set(map.size());
 			if (timerTask == null) {
 				logger.logDebug("Starting SessionManager timer task");
 				timerTask = new MyTimerTask();
@@ -68,9 +71,7 @@ class SessionManager<T extends SessionManager.SessionData> {
 	}
 	
 	int getSessionCount() {
-		synchronized(mapLockToken) {
-			return map.size();
-		}
+		return activeSessionCount.get();
 	}
 	
 	T getSession(String sessionID) {
@@ -89,6 +90,7 @@ class SessionManager<T extends SessionManager.SessionData> {
 		synchronized(mapLockToken) {
 			SessionWrapper w = map.remove(sessionID);
 			if (w != null) {
+				activeSessionCount.set(map.size());
 				sessionData = w.getSessionData();
 			}
 			if (map.isEmpty() && timerTask != null) {

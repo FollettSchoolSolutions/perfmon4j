@@ -167,6 +167,27 @@
 			referencedTableName="P4JSystem" />
 			
 	</changeSet>
+	
+	<changeSet author="ddeucher" id="P4J-AddIndexesForP4JReports">
+		<preConditions onFail="MARK_RAN">
+        	<not>
+        		<indexExists schemaName='${defaultSchema}' indexName='P4JIntervalData_SystemEndTime'></indexExists>
+        	</not>
+    	</preConditions>
+		<createIndex indexName="P4JIntervalData_SystemEndTime"
+			tableName="P4JIntervalData" unique="false">
+			<column name="SystemID" />
+			<column name="EndTime" />
+		</createIndex>
+	</changeSet>	
+
+	<changeSet author="ddeucher" id="P4J-CreateAppenderControlTable">
+		<createTable tableName="P4JAppenderControl">
+			<column name="pauseAppenderMinutes" type="int">
+				<constraints nullable="true" />
+			</column>
+		</createTable>
+	</changeSet>
 
 	<changeSet author="databaseLabel" id="0007.0"/>
 </databaseChangeLog>
