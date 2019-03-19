@@ -1,3 +1,9 @@
 target
 .project
 .settings
+
+hystrix/\.classpath
+
+hystrix/derby\.log
+/netbeans/Perfmon4jSuite/nbproject/private/
+/netbeans/Perfmon4jMonitor/nbproject/private/

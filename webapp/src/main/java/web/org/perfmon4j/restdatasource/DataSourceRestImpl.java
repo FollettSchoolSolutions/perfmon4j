@@ -65,6 +65,8 @@ import web.org.perfmon4j.restdatasource.data.query.category.Result;
 import web.org.perfmon4j.restdatasource.data.query.category.ResultElement;
 import web.org.perfmon4j.restdatasource.dataproviders.CacheDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.GarbageCollectionDataProvider;
+import web.org.perfmon4j.restdatasource.dataproviders.HystrixCommandDataProvider;
+import web.org.perfmon4j.restdatasource.dataproviders.HystrixThreadPoolDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.IntervalDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.JVMDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.MemoryPoolDataProvider;
@@ -114,6 +116,8 @@ public class DataSourceRestImpl {
 		registry.registerDataProvider(new ThreadPoolDataProvider());
 		registry.registerDataProvider(new FSSFetchPolicyDataProvider());
 		registry.registerDataProvider(new FSSFetchThreadPoolDataProvider());
+		registry.registerDataProvider(new HystrixCommandDataProvider());
+		registry.registerDataProvider(new HystrixThreadPoolDataProvider());
 	}
 
 	@GET
