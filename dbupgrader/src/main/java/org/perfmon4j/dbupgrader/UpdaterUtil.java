@@ -82,6 +82,7 @@ class UpdaterUtil {
 			credentials.setProperty("password", password);
 		}
 		Connection conn = driver.connect(jdbcURL, credentials); 
+		
 		if (conn == null) {
 			throw new SQLException("Unabled to connect with jdbcURL: " + jdbcURL);
 		} 
@@ -117,11 +118,27 @@ class UpdaterUtil {
 		return driverClazz.newInstance();
 	}	
 	
-	static boolean doesTableExist(Connection conn, String schema, String tableName) throws Exception {
-		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
-		boolean nullSchema = (schema == null);
-		schema = (schema == null) ? db.getDefaultSchemaName() : schema; 
+	private static final String getDefaultSchema(Connection conn) throws SQLException {
+		String result = "";
 		
+		try {
+			result = conn.getSchema();
+		} catch (AbstractMethodError ame) {
+			// JDBC Driver does not implement, return default property
+			// from system property if set.
+			result = System.getProperty("P4J_UPDATER_DEFAULT_SCHEMA", "");
+
+			// If not set return "dbo" for Microsoft SQL Server or "" for any other database.
+			if (result.isEmpty() && conn.getMetaData().getDatabaseProductName().contains("Microsoft SQL Server")) {
+				result = "dbo";
+			}
+		}
+		
+		return result;
+	}
+	
+	static boolean doesTableExist(Connection conn, String schema, String tableName) throws Exception {
+		schema = (schema == null) ? getDefaultSchema(conn) : schema;
 		boolean result = false;
 		DatabaseMetaData dbMetaData = null;
 		ResultSet rs = null;
@@ -132,8 +149,7 @@ class UpdaterUtil {
 				final String n = rs.getString("TABLE_NAME");
 				final String s = rs.getString("TABLE_SCHEM");
 				
-				boolean schemaMatches = ((s == null) && nullSchema)
-						|| schema.equalsIgnoreCase(s);
+				boolean schemaMatches = schema.equalsIgnoreCase(s);
 				result = schemaMatches && tableName.equalsIgnoreCase(n);
 			}
 		} finally {
@@ -143,13 +159,35 @@ class UpdaterUtil {
 		return result;
 	}
 
+	static boolean doesIndexExist(Connection conn, String schema, String tableName, String indexName) throws Exception {
+		schema = (schema == null) ? getDefaultSchema(conn) : schema;
+		boolean result = false;
+		DatabaseMetaData dbMetaData = null;
+		ResultSet rs = null;
+		try {
+			dbMetaData = conn.getMetaData();
+			rs = dbMetaData.getIndexInfo(null, null, tableName.toUpperCase(), false, false);
+			while (rs.next() && !result) {
+				final String n = rs.getString("INDEX_NAME");
+				final String s = rs.getString("TABLE_SCHEM");
+				
+				boolean schemaMatches = schema.equalsIgnoreCase(s);
+				result = schemaMatches && indexName.equalsIgnoreCase(n);
+			}
+		} finally {
+			closeNoThrow(rs);
+		}
+		
+		return result;
+	}
+
+	
+	
 	static String getColumnDataType(Connection conn, String schema, String tableName, String columnName) throws Exception {
 		String result = null;
 		
 		if (doesColumnExist(conn, schema, tableName, columnName)) {
-			Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
-			tableName = db.escapeTableName(null, schema, tableName);
-			columnName = db.escapeColumnName(null, schema, tableName, columnName);
+			tableName = schema == null ? tableName : schema + "." + tableName;
 			Statement stmt = null;
 			ResultSet rs = null;
 			try {

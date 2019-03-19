@@ -31,7 +31,6 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.util.JDBCHelper;
-import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
@@ -61,6 +60,7 @@ public class JDBCSQLAppenderTest extends SQLTest {
     
     public void tearDown() throws Exception {
     	SQLTime.setEnabled(originalSQLTimeEnabled);
+		SQLAppender.setTestOnly_testDurationsForAppenderPause(false);
 		super.tearDown();
     }
     
@@ -372,6 +372,40 @@ public class JDBCSQLAppenderTest extends SQLTest {
     	assertEquals("Should have added system row", 1, count);
     }    
     
+    public void testPauseWritesBasedOnAppenderControlRecord() throws Exception {
+		SQLAppender.setTestOnly_testDurationsForAppenderPause(true);
+
+    	long now = System.currentTimeMillis();
+
+    	Connection conn = appender.getConnection();
+		final String countInterval = "SELECT COUNT(*)\r\n" +
+				" FROM mydb.P4JCategory c\r\n" +
+				" JOIN mydb.P4jIntervalData id ON c.categoryID = id.categoryID\r\n" +
+				" WHERE categoryName = 'a.b.c'\r\n";
+
+		appender.outputData(createIntervalData("a.b.c", now, 1000));
+		
+		assertEquals("Should have 1 interval row",1, JDBCHelper.getQueryCount(conn, countInterval));
+
+		// Inform all appenders to pause for 1 minute (actually 1 second for test)
+		JDBCHelper.executeUpdateOrDelete(conn, "INSERT INTO mydb.P4JAppenderControl VALUES(1)");
+
+		// Make sure we check again... in test mode we check every 10 milliseconds
+		Thread.sleep(50);
+		
+		appender.outputData(createIntervalData("a.b.c", now+1000, 1000));
+		assertEquals("Should have discarded output since pause is in effect",
+				1, JDBCHelper.getQueryCount(conn, countInterval));
+
+		// Delete the control record
+		JDBCHelper.executeUpdateOrDelete(conn, "DELETE FROM mydb.P4JAppenderControl");
+		
+		// Wait two seconds for pause to expire.
+		Thread.sleep(2000);
+		
+		appender.outputData(createIntervalData("a.b.c", now+2000, 2000));
+		assertEquals("Should have added row... pause has expired",2, JDBCHelper.getQueryCount(conn, countInterval));
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
