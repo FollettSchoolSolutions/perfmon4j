@@ -16,6 +16,14 @@
 		</createIndex>
 	</changeSet>	
 
+	<changeSet author="ddeucher" id="P4J-CreateAppenderControlTable">
+		<createTable tableName="P4JAppenderControl">
+			<column name="pauseAppenderMinutes" type="int">
+				<constraints nullable="true" />
+			</column>
+		</createTable>
+	</changeSet>
+
 	<changeSet author="databaseLabel" id="0007.0"/>
 </databaseChangeLog>
 
