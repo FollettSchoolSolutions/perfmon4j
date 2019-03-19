@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,6 +46,7 @@ import web.org.perfmon4j.restdatasource.data.Field;
 import web.org.perfmon4j.restdatasource.data.MonitoredSystem;
 import web.org.perfmon4j.restdatasource.data.SystemID;
 import web.org.perfmon4j.restdatasource.data.query.advanced.ResultAccumulator;
+import web.org.perfmon4j.restdatasource.util.DateTimeHelper;
 import web.org.perfmon4j.restdatasource.util.SeriesField;
 import web.org.perfmon4j.restdatasource.util.aggregators.AggregatorFactory;
 import web.org.perfmon4j.restdatasource.util.aggregators.decorator.ColumnValueFilterFactory;
@@ -53,6 +55,8 @@ public class CacheDataProvider extends DataProvider {
 	private static final String TEMPLATE_NAME = "Cache";
 	private final CacheTemplate categoryTemplate;
 	private static final Logger logger = LoggerFactory.initLogger(CacheDataProvider.class);
+	private final DateTimeHelper dateTimeHelper = new DateTimeHelper();
+
 	
 	public CacheDataProvider() {
 		super(TEMPLATE_NAME);
@@ -96,18 +100,15 @@ public class CacheDataProvider extends DataProvider {
 			+ "WHERE pid.systemID IN " + buildSystemIDSet(fields) + "\r\n"
 			+ "AND pid.CacheType IN "+ str[0] + "\r\n"
 			+ "AND pid.InstanceName IN "+ str[1] + "\r\n"
-			+ "AND pid.EndTime >= ?\r\n"
-			+ "AND pid.EndTime <= ?\r\n";
-		PreparedStatement stmt = null;
+			+ "AND pid.EndTime >=" + dateTimeHelper.formatDateTimeForSQL(start) + "\r\n"
+			+ "AND pid.EndTime <=" + dateTimeHelper.formatDateTimeForSQL(end) + "\r\n";
+		Statement stmt = null;
 		ResultSet rs = null;
 		try {
-			stmt = conn.prepareStatement(query);
-			stmt.setTimestamp(1, new Timestamp(start));
-			stmt.setTimestamp(2, new Timestamp(end));
-			rs = stmt.executeQuery();
-			while (rs.next()) {
-				accumulator.accumulateResults(TEMPLATE_NAME, rs);
-			}
+			stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+			stmt.setFetchSize(5000);
+			rs = stmt.executeQuery(query);
+			accumulator.handleResultSet(TEMPLATE_NAME, rs);			
 		} finally {
 			JDBCHelper.closeNoThrow(stmt);
 			JDBCHelper.closeNoThrow(rs);

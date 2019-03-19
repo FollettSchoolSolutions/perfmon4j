@@ -28,6 +28,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.Logger;
@@ -47,10 +48,13 @@ public abstract class SQLAppender extends SystemNameAndGroupsAppender {
 	private String joinGroupToSystemPS = null;
 	private String groupToSystemJoinExistsPS = null;
 	private String insertIntervalPS = null;
+	private String pauseIntervalSQL = null;
 	private String insertThresholdPS = null;
 	private Long systemID = null;
-	protected final AtomicBoolean groupsHaveChanged = new AtomicBoolean(true);
-
+	private final AtomicBoolean groupsHaveChanged = new AtomicBoolean(true);
+	private static final AtomicBoolean testOnly_testDurationsForAppenderPause = new AtomicBoolean(false);
+	private final AtomicLong pauseUntilTime = new AtomicLong(-1);
+	private final AtomicLong nextCheckForPauseFlagTime = new AtomicLong(-1);
 	
 	public SQLAppender(AppenderID id) {
 		super(id);
@@ -77,22 +81,26 @@ public abstract class SQLAppender extends SystemNameAndGroupsAppender {
 		try {
 			long systemIDToUse = getSystemID();
 			conn = getConnection();
-			if (groupsHaveChanged.get() && databaseVersion >= 6.0) {
-				for (String groupName : getGroupsAsArray()) {
-					long groupID = getOrCreateGroup(conn, groupName);
-					joinGroupToSystemIfNotExists(conn, groupID, systemIDToUse);
-				}
-				groupsHaveChanged.set(false);
-			}
+
 			if (conn != null) {
-				if (data instanceof IntervalData) {
-					outputIntervalData(conn, (IntervalData)data);
-				} else if (data instanceof SQLWriteable){
-					((SQLWriteable)data).writeToSQL(conn, dbSchema, systemIDToUse);
-				} else if (data instanceof SQLWriteableWithDatabaseVersion){
-					((SQLWriteableWithDatabaseVersion)data).writeToSQL(conn, dbSchema, systemIDToUse, databaseVersion);
-				} else {
-					logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
+				if (databaseVersion < 7.0 || !isAppenderPaused(conn)) {
+					if (groupsHaveChanged.get() && databaseVersion >= 6.0) {
+						long systemID = getSystemID();
+						for (String groupName : getGroupsAsArray()) {
+							long groupID = getOrCreateGroup(conn, groupName);
+							joinGroupToSystemIfNotExists(conn, groupID, systemID);
+						}
+						groupsHaveChanged.set(false);
+					}
+					if (data instanceof IntervalData) {
+						outputIntervalData(conn, (IntervalData)data);
+					} else if (data instanceof SQLWriteable){
+						((SQLWriteable)data).writeToSQL(conn, dbSchema, getSystemID());
+					} else if (data instanceof SQLWriteableWithDatabaseVersion){
+						((SQLWriteableWithDatabaseVersion)data).writeToSQL(conn, dbSchema, getSystemID(), databaseVersion);
+					} else {
+						logger.logWarn("SKIPPING! Data type not supported by appender: " + data.getClass().getName());
+					}
 				}
 			}
 		} catch(SQLException ex) { 
@@ -105,6 +113,13 @@ public abstract class SQLAppender extends SystemNameAndGroupsAppender {
 		}
 	}
 
+	public String getPauseIntervalSQL() {
+		if (pauseIntervalSQL == null) {
+			pauseIntervalSQL = String.format(PAUSE_INTERVAL_SQL, dbSchema == null ? "" : (dbSchema + "."));
+		}
+		return pauseIntervalSQL;
+	}
+	
 	public String getInsertGroupPS() {
 		if (insertGroupPS == null) {
 			insertGroupPS = String.format(INSERT_GROUP_PS, dbSchema == null ? "" : (dbSchema + "."));
@@ -179,6 +194,8 @@ public abstract class SQLAppender extends SystemNameAndGroupsAppender {
 		"SQLAverageDuration, SQLStandardDeviation, SQLDurationSum, SQLDurationSumOfSquares) " +
 		"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, " +
 		"?, ?, ?, ?)";
+
+	private final static String PAUSE_INTERVAL_SQL = "SELECT pauseAppenderMinutes FROM %sP4JAppenderControl";
 	
 	private final static String INSERT_THRESHOLD_PS = "INSERT INTO %sP4JIntervalThreshold (intervalID, ThresholdMillis, " +
 		"CompletionsOver, PercentOver) VALUES(?, ?, ?, ?)";
@@ -293,6 +310,37 @@ public abstract class SQLAppender extends SystemNameAndGroupsAppender {
 	
 	public double getDatabaseVersion() {
 		return getDatabaseVersion_TestOnly(CACHED_DATABASE_VERISON_MINUTES * 60 * 1000); 
+	}
+	
+	private boolean isAppenderPaused(Connection conn) throws SQLException {
+		long now = System.currentTimeMillis();
+		boolean paused = now < pauseUntilTime.longValue();
+	
+		// Check to see if we are paused already..
+		if (!paused && (now > nextCheckForPauseFlagTime.longValue())) {
+			long pausePeriod = JDBCHelper.getQueryCount(conn, getPauseIntervalSQL());
+			if (pausePeriod > 0) {
+				logger.logInfo("Found appender pause flag set -- Database logging will be suspended. "
+						+ "Will check again in " 
+						+ pausePeriod + " minute(s).");
+				
+				pausePeriod = pausePeriod * 1000;
+				if (!testOnly_testDurationsForAppenderPause.get()) {
+					pausePeriod *= 60;
+				}
+				pauseUntilTime.set(now + pausePeriod);
+				paused = true;
+			} else {
+				// Delay for next check 
+				int delayForNextCheck = 10;  // In test check every 10 milliseconds
+				if (!testOnly_testDurationsForAppenderPause.get()) {
+					delayForNextCheck *= 1000; // In production check every 10 seconds
+				}
+				nextCheckForPauseFlagTime.set(now + delayForNextCheck);
+			}
+		}
+		
+		return paused;
 	}
 	
 	public double getDatabaseVersion_TestOnly(long cacheDuration) {

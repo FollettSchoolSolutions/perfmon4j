@@ -75,6 +75,16 @@
 			<scope>test</scope>
 		</dependency>
 		
+		
+	    <dependency>
+			<groupId>${project.groupId}</groupId>
+			<version>${project.version}</version>
+			<artifactId>perfmon4j-dbupgrader</artifactId>
+			<scope>test</scope>
+	      	<classifier>tests</classifier>
+<!-- 	      	<type>test-jar</type>  -->
+	    </dependency>		
+		
 		<dependency>
 			<groupId>org.apache.derby</groupId>
 			<artifactId>derby</artifactId>

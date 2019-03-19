@@ -9,6 +9,7 @@
 	<include file="org/perfmon4j/version-4-change-log.xml" />
 	<include file="org/perfmon4j/version-5-change-log.xml" />
 	<include file="org/perfmon4j/version-6-change-log.xml" />
+	<include file="org/perfmon4j/version-7-change-log.xml" />
 	<!-- 
 		Important!  When creating a new database update make sure the last line of
 		your changel-log.xml contains a version change log as follows:
