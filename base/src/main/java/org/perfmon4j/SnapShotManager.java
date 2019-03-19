@@ -148,9 +148,13 @@ public class SnapShotManager {
             SnapShotMonitor monitor = null;
             try {
             	monitor = SnapShotManager.getOrCreateMonitor(cfg.getMonitorID());
+            } catch (NoClassDefFoundError nfe) {
+            	config.getClassNotFoundInfo().add("SnapShotMonitor: " + cfg.getMonitorID().getClassName()
+            		+ " - Dependent class not found");
             } catch (ClassNotFoundException nfe) {
             	config.getClassNotFoundInfo().add("SnapShotMonitor: " + cfg.getMonitorID().getClassName());
             }
+            
             if (monitor != null) {
 	            AppenderID appenderIDs[] = cfg.getAppenders();
 	            for (int j = 0; j < appenderIDs.length; j++) {
