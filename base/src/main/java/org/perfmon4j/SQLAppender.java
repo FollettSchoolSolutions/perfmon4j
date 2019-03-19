@@ -586,4 +586,7 @@ public abstract class SQLAppender extends SystemNameAndGroupsAppender {
 		groupsHaveChanged.set(true);
 	}
 	
+	public static void setTestOnly_testDurationsForAppenderPause(boolean value) {
+		testOnly_testDurationsForAppenderPause.set(value);
+	}	
 }
