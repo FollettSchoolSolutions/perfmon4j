@@ -196,10 +196,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public void testVersion7Update_Hystrix() throws Exception { 
 		// Start with an empty database...
-		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-				"jdbcURL=" + JDBC_URL,
-				"driverJarFile=EMBEDDED",
-				"schema=" + SCHEMA});
+		runUpdater();
 		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
 				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0007.0'");
 		assertEquals("should have installed 7.0 label", 1, count);
