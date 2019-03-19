@@ -33,10 +33,14 @@ import liquibase.Liquibase;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
+import liquibase.exception.DatabaseException;
 import liquibase.resource.ClassLoaderResourceAccessor;
+
+import org.slf4j.LoggerFactory;
 
 public class UpdateOrCreateDb {
 	private static final String EMBEDDED_JAR_FILE = "EMBEDDED";
+	private static final ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
 	
 	
 	public static void main(String[] args) {
@@ -45,6 +49,7 @@ public class UpdateOrCreateDb {
 		Parameters params = getParameters(args);
 		if (params.isValid()) {
 			Connection conn = null;
+			Database db = null;
 			try {
 				// Embedded indicates jdbcDriver can be found within the application classpath.
 				if (EMBEDDED_JAR_FILE.equals(params.getDriverJarFile())) {
@@ -52,7 +57,7 @@ public class UpdateOrCreateDb {
 				}
 				
 				conn = UpdaterUtil.createConnection(params.getDriverClass(), params.getDriverJarFile(), params.getJdbcURL(), params.getUserName(), params.getPassword());
-				Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
+				db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
 				String schema = params.getSchema();
 				if (schema != null) {
 					db.setDefaultSchemaName(schema);
@@ -63,22 +68,22 @@ public class UpdateOrCreateDb {
 			
 				if (hasPerfmon4jTables && !hasLiquibaseChangeLogs) {
 					// Install the base change logs...
-					Liquibase initializer = new Liquibase("org/perfmon4j/initial-change-log.xml", new ClassLoaderResourceAccessor(), db);
+					Liquibase initializer = buildLiquibase("org/perfmon4j/initial-change-log.xml", db, schema);
 					initializer.changeLogSync((String)null);
 					
 					boolean hasLegacyVersion2Update = UpdaterUtil.doesColumnExist(conn, schema, "P4JIntervalData", "SQLMaxDuration");
 					if (hasLegacyVersion2Update) {
-						initializer = new Liquibase("org/perfmon4j/version-2-change-log.xml", new ClassLoaderResourceAccessor(), db);
+						initializer = buildLiquibase("org/perfmon4j/version-2-change-log.xml", db, schema);
 						initializer.changeLogSync((String)null);
 
 						boolean hasLegacyVersion3Tables = UpdaterUtil.doesTableExist(conn, schema, "P4JSystem");
 						if (hasLegacyVersion3Tables) {
-							initializer = new Liquibase("org/perfmon4j/version-3-change-log.xml", new ClassLoaderResourceAccessor(), db);
+							initializer = buildLiquibase("org/perfmon4j/version-3-change-log.xml", db, schema);
 							initializer.changeLogSync((String)null);
 						}
 					}
 				}
-				Liquibase updater = new Liquibase("org/perfmon4j/update-change-master-log.xml", new ClassLoaderResourceAccessor(), db);
+				Liquibase updater = buildLiquibase("org/perfmon4j/update-change-master-log.xml", db, schema);
 				updater.setChangeLogParameter("DatabaseIdentifier", UpdaterUtil.generateUniqueIdentity());
 				if (params.isClearChecksums()) {
 					updater.clearCheckSums();
@@ -111,7 +116,7 @@ public class UpdateOrCreateDb {
 				System.err.println();
 				System.err.println("Failure: Database upgrade or install failed.");
 			} finally {
-				closeNoThrow(conn);
+				closeDatabaseNoThrow(db);
 			}
 		} else {
 			System.err.println("Usage: java -jar perfmon4j-dbupgrader.jar driverClass=my.jdbc.Driver jdbcURL=jdbc://myurl driverJarFile=./myjdbc.jar");
@@ -128,6 +133,25 @@ public class UpdateOrCreateDb {
 			}
 		}
 	}
+
+	static private void closeDatabaseNoThrow(Database db) {
+        try {
+			db.close();
+		} catch (DatabaseException e) {
+			logger.warn("Unable to close database after performing update", e);
+		}
+	}
+	
+	static public Liquibase buildLiquibase(String changeLog, Database db, String schema) {
+		if (schema == null) {
+			schema = "";
+		}
+		Liquibase liquiBase = new Liquibase(changeLog, new ClassLoaderResourceAccessor(), db); 
+		liquiBase.setChangeLogParameter("DefaultSchema", schema);
+
+		return liquiBase;
+	}
+	
 
 	static private void applyThirdPartyChanges(Parameters params, Database db, FileWriter writer) throws Exception {
 		for (String s : params.getThirdPartyExtensions()) {

@@ -8,6 +8,8 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
+import org.slf4j.LoggerFactory;
+
 public class UpdaterUtilTest extends TestCase {
 	public static final String JDBC_URL = "jdbc:derby:memory:mydb"; 
 	public static final String JDBC_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";	
@@ -15,6 +17,12 @@ public class UpdaterUtilTest extends TestCase {
 
 	public UpdaterUtilTest(String name) {
 		super(name);
+
+    	ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
+    	logger.setLevel(ch.qos.logback.classic.Level.WARN);		
+
+    	logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("org.perfmon4j");
+    	logger.setLevel(ch.qos.logback.classic.Level.WARN);		
 	}
 
 	protected void setUp() throws Exception {
@@ -64,6 +72,21 @@ public class UpdaterUtilTest extends TestCase {
 		}
 	}
 	
+	public void testIndexExists() throws Exception {
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+			stmt.execute("CREATE TABLE MyTable(ID int, count int)");
+			stmt.execute("CREATE INDEX MyIndex ON MyTable(count)");
+			
+			assertTrue("Correct Index", UpdaterUtil.doesIndexExist(conn, null, "MyTable", "MyIndex"));
+			assertFalse("Incorrect Index", UpdaterUtil.doesIndexExist(conn, null, "MyTable", "SomeOtherMyIndex"));
+			
+		} finally {
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+	}
+
 	
 	public void testGenerateUniqueIdentity() throws Exception {
 		String identity = UpdaterUtil.generateUniqueIdentity();

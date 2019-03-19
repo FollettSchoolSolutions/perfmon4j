@@ -22,6 +22,7 @@
 package org.perfmon4j;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -274,9 +275,24 @@ public final class RegisteredDatabaseConnections {
 	    private String userName; 
 	    private String password;		
 		private double databaseVersion = 0.0;
+		private boolean isMSSQL = false;
 		
-		public abstract Connection openConnection() throws SQLException; 
+		public final Connection openConnection() throws SQLException {
+			Connection result = open();
+			result.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);	
+			
+			DatabaseMetaData md = result.getMetaData();
+			String databaseProductName = md.getDatabaseProductName();
+			
+			isMSSQL = databaseProductName.contains("Microsoft SQL Server");
+			logger.logDebug("Database name:(" + name + ") id:(" + id + ") is on " 
+					+ databaseProductName);
+			
+			return result;
+		}
 
+		protected abstract Connection open() throws SQLException;
+		
 		
 		public boolean isDefault() {
 			return defaultDatabase;
@@ -350,8 +366,10 @@ public final class RegisteredDatabaseConnections {
 			this.databaseVersion = databaseVerson;
 		}
 		
-	
-		
+		public boolean isMSSQL() {
+			return isMSSQL;
+		}
+
 		abstract String getSignature();
 	
 	}
@@ -362,9 +380,8 @@ public final class RegisteredDatabaseConnections {
 	    private String jdbcURL; 
 
 		@Override
-		public Connection openConnection() throws SQLException {
+		protected Connection open() throws SQLException {
 			Connection conn = JDBCHelper.createJDBCConnection(DriverCache.DEFAULT, driverClassName, jarFileName, jdbcURL, getUserName(), getPassword());
-			conn.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);	
 			return conn;
 		}
 
@@ -397,9 +414,8 @@ public final class RegisteredDatabaseConnections {
 		}
 		
 		@Override
-		public Connection openConnection() throws SQLException {
+		protected Connection open() throws SQLException {
 			Connection conn = dataSource.getConnection();
-			conn.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);	
 			return conn;
 		}
 		

@@ -167,6 +167,11 @@ public class DateTimeHelper {
 		return cal;
 	}
 	
+	public String formatDate(long time) { 
+		DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm"); 
+		return format.format(time); 
+	} 
+	
 	static String formatDate(Calendar cal) {
 		DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
 		return format.format(cal.getTime());
@@ -177,11 +182,10 @@ public class DateTimeHelper {
 		return format.format(cal.getTime());
 	}
 
-	public String formatDate(long time) {
-		DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
-		return format.format(time);
+	public String formatDateTimeForSQL(long time) {
+		DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		return "'" + format.format(time) + "'";
 	}
-	
 	
 	public long truncateToMinute(long timeInMillis) {
 		final long ONE_MINUTE = 60000;

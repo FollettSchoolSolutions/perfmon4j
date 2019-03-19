@@ -468,7 +468,7 @@ public class MiscHelper {
 
 	public static String[] getAllObjectName(MBeanServer server, ObjectName baseObjectName, 
 			String propertyName) {
-		return getAllObjectName(server, baseObjectName, propertyName);
+		return getAllObjectName(server, baseObjectName, propertyName, false);
 	}
 
 	public static String[] getAllObjectName(MBeanServer server, ObjectName baseObjectName, 

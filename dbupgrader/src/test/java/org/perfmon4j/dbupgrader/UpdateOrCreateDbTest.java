@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -38,7 +39,6 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 
 import org.perfmon4j.dbupgrader.UpdateOrCreateDb.Parameters;
-import org.slf4j.LoggerFactory;
 
 public class UpdateOrCreateDbTest extends TestCase {
 	private static String SCHEMA = "TEST";
@@ -48,16 +48,16 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public UpdateOrCreateDbTest(String name) {
 		super(name);
-		
-    	ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("liquibase");
-    	logger.setLevel(ch.qos.logback.classic.Level.WARN);		
 	}
 	
 	protected void setUp() throws Exception {
+		super.setUp();
+		
+		NoCloseDerbyDatabase.initLiquibaseNoCloseDerbyDatabase();
+		
 		conn = UpdaterUtil.createConnection(JDBC_DRIVER, null, JDBC_URL + ";create=true", null, null);
 		conn.setAutoCommit(true);
-		
-		super.setUp();
+		executeUpdate("CREATE SCHEMA " + SCHEMA);
 	}
 
 	protected void tearDown() throws Exception {
@@ -68,6 +68,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 		} catch (SQLException sn) {
 		}
 		
+		NoCloseDerbyDatabase.deInitLiquibaseNoCloseDerbyDatabase();
 		super.tearDown();
 	}
 	
@@ -106,10 +107,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public void testPopulateDatabase() throws Exception { 
 		// Start with an empty database...
-		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-				"jdbcURL=" + JDBC_URL,
-				"driverJarFile=EMBEDDED",
-				"schema=" + SCHEMA});
+		runUpdater();
 		
 		assertTrue("Should have a P4JSystem table", UpdaterUtil.doesTableExist(conn, SCHEMA, "P4JSystem"));
 		
@@ -123,10 +121,8 @@ public class UpdateOrCreateDbTest extends TestCase {
 
 	public void testVersion4Update() throws Exception { 
 		// Start with an empty database...
-		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-				"jdbcURL=" + JDBC_URL,
-				"driverJarFile=EMBEDDED",
-				"schema=" + SCHEMA});
+		runUpdater();
+		
 		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
 				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0004.0'");
 		assertEquals("should have installed 4.0 label", 1, count);
@@ -144,10 +140,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public void testVersion5Update() throws Exception { 
 		// Start with an empty database...
-		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-				"jdbcURL=" + JDBC_URL,
-				"driverJarFile=EMBEDDED",
-				"schema=" + SCHEMA});
+		runUpdater();
 		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
 				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0005.0'");
 		assertEquals("should have installed 5.0 label", 1, count);
@@ -178,10 +171,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 	 */
 	public void testIntervalIDIsCreatedAsABigInt() throws Exception { 
 		// Start with an empty database...
-		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-				"jdbcURL=" + JDBC_URL,
-				"driverJarFile=EMBEDDED",
-				"schema=" + SCHEMA});
+		runUpdater();
 		
 		String dataType = UpdaterUtil.getColumnDataType(conn, SCHEMA, "P4JIntervalData", "IntervalID");
 		assertEquals("P4JIntervalData.IntervalID column should be a BIGINT", "BIGINT", dataType.toUpperCase());
@@ -192,10 +182,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 
 	public void testVersion6Update() throws Exception { 
 		// Start with an empty database...
-		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-				"jdbcURL=" + JDBC_URL,
-				"driverJarFile=EMBEDDED",
-				"schema=" + SCHEMA});
+		runUpdater();
 		int count = getQueryCount("SELECT count(*) FROM " + SCHEMA  
 				+ ".DATABASECHANGELOG WHERE author = 'databaseLabel' AND ID = '0006.0'");
 		assertEquals("should have installed 6.0 label", 1, count);
@@ -207,6 +194,44 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertTrue("New P4JGroupSystemJoin table should exist", joinExists);
 	}
 	
+	public void testVersion7Update() throws Exception { 
+		// Start with an empty database...
+		runUpdater();
+		assertTrue("should have installed 7.0 label", databaseLabelExistsInChangeLog("0007.0"));
+		assertTrue("Changelog entry created",  
+				changeLogEntryExistsWithID("P4J-AddIndexesForP4JReports"));
+
+		
+		assertTrue("Should have added control table", UpdaterUtil.doesTableExist(conn, SCHEMA, 
+				"P4JAppenderControl"));
+		assertTrue("Should have added control table", UpdaterUtil.doesColumnExist(conn, SCHEMA, 
+				"P4JAppenderControl", "pauseAppenderMinutes"));
+		assertTrue("Changelog entry created",  
+				changeLogEntryExistsWithID("P4J-CreateAppenderControlTable"));
+		
+		
+		boolean indexExists = UpdaterUtil.doesIndexExist(conn, SCHEMA, "P4JIntervalData", "P4JIntervalData_SystemEndTime");
+		assertTrue("New P4JIntervalData_SystemEndTime index should exist", indexExists);
+		
+		// I fought with Liquibase either closing the entire in-memory
+		// database or not releasing its database lock for far too long.
+		// Don't mess with the rest of this test unless we figure out 
+		// a way around this.
+		boolean weGetPastProblemOfLiquibaseNotReleasingDatabaseLock = false;
+		if (weGetPastProblemOfLiquibaseNotReleasingDatabaseLock) {
+			// Demonstrate index will be skipped if it already exists..
+			deleteChangeLogEntyWithID("P4J-AddIndexesForP4JReports");
+	
+			assertFalse("Make sure change log entry was deleted, this will cause Liquibase to run it again",  
+				changeLogEntryExistsWithID("P4J-AddIndexesForP4JReports"));
+			
+			// Rerun update.  Change log should get re-applied, but skip because index already exists.
+			runUpdater();
+			
+			assertTrue("P4JIntervalData_SystemEndTime entry should have been restored", 
+					changeLogEntryExistsWithID("P4J-AddIndexesForP4JReports"));
+		}
+	}
 	
 	public void testParseParameters() throws Exception {
 		String args[] = {
@@ -271,7 +296,6 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertTrue("Should have Follett Extension", extensions.contains("Follett"));
 	}
 	
-	
 	public void testInsufficientParameters() throws Exception {
 		String args[] = {};
 		
@@ -309,16 +333,15 @@ public class UpdateOrCreateDbTest extends TestCase {
 			// Simulate a database that was created with the Perfmon4j Version 1.0.2
 			// Database scripts.
 			applyChangeLog("org/perfmon4j/initial-change-log.xml");
+
 			dropLiquibaseTables();
+			
 			assertFalse("Make sure version 2.0 changes have not been applied", UpdaterUtil.doesColumnExist(conn, SCHEMA, "P4JIntervalData", "SQLMaxDuration"));
 			
 			// Start with a database that contain the base tables,
 			// but does not contain the liquibase change logs.. 
 			// Should install change.logs and any additional upgrades.
-			UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-					"jdbcURL=" + JDBC_URL,
-					"driverJarFile=EMBEDDED",
-					"schema=" + SCHEMA});
+			runUpdater();
 		} finally {
 			UpdaterUtil.closeNoThrow(stmt);
 		}
@@ -346,10 +369,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 			// Start with a database that contain the base tables,
 			// but does not contain the liquibase change logs.. 
 			// Should install change.logs and any additional upgrades.
-			UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-					"jdbcURL=" + JDBC_URL,
-					"driverJarFile=EMBEDDED",
-					"schema=" + SCHEMA});
+			runUpdater();
 		} finally {
 			UpdaterUtil.closeNoThrow(stmt);
 		}
@@ -380,10 +400,7 @@ public class UpdateOrCreateDbTest extends TestCase {
 			// Start with a database that contain the base tables,
 			// but does not contain the liquibase change logs.. 
 			// Should install change.logs and any additional upgrades.
-			UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-					"jdbcURL=" + JDBC_URL,
-					"driverJarFile=EMBEDDED",
-					"schema=" + SCHEMA});
+			runUpdater();
 		} finally {
 			UpdaterUtil.closeNoThrow(stmt);
 		}
@@ -398,8 +415,9 @@ public class UpdateOrCreateDbTest extends TestCase {
 		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
 				"jdbcURL=" + JDBC_URL,
 				"driverJarFile=EMBEDDED",
-				"schema=" + SCHEMA,
-				"thirdPartyExtensions=FSS"});
+				"schema=" + SCHEMA
+				});
+		runUpdater(new String[]{"thirdPartyExtensions=FSS"});
 		
 		assertTrue("Should have a FSSFetchThreadPoolSnapshot table", UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchThreadPoolSnapshot"));
 		assertTrue("Should have a FSSFetchPolicySnapshot table", UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchPolicySnapshot"));
@@ -408,19 +426,14 @@ public class UpdateOrCreateDbTest extends TestCase {
 		assertTrue("Database change log should reflect databaseLabel 0002.0 applied", databaseLabelExistsInChangeLog("0002.0"));
 	}	
 	
-	
 	public void testWriteSQLScript() throws Exception { 
 		File sqlFile = new File(System.getProperty("java.io.tmpdir"), new Random().nextInt(10000) +  ".sql");
 
 		try {
 			System.out.println(sqlFile.getCanonicalPath());
 			// Start with an empty database...
-			UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-					"jdbcURL=" + JDBC_URL,
-					"driverJarFile=EMBEDDED",
-					"schema=" + SCHEMA,
-					"thirdPartyExtensions=FSS"
-					,"sqlOutputScript=" + sqlFile.getCanonicalPath()});
+			runUpdater("thirdPartyExtensions=FSS"
+					,"sqlOutputScript=" + sqlFile.getCanonicalPath());
 			
 			assertFalse("Should NOT have created database.  We just asked for a srcipt", 
 					UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchPolicySnapshot"));
@@ -445,6 +458,8 @@ public class UpdateOrCreateDbTest extends TestCase {
 	}
 	
 	public void X_testLiveSQLServer() {
+		DatabaseFactory.reset();
+		
 		String [] args = new String[] {
 			"driverJarFile=/media/sf_shared/tools/common/JDBCDrivers/sqljdbc4.jar", 
 			"driverClass=com.microsoft.sqlserver.jdbc.SQLServerDriver", 
@@ -482,6 +497,41 @@ public class UpdateOrCreateDbTest extends TestCase {
 		
 		UpdateOrCreateDb.main(args);
 	}
+
+	private void runUpdater(String... extraParameters) throws Exception {
+		List<String> parameters = new ArrayList<String>(Arrays.
+			asList(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
+			"jdbcURL=" + JDBC_URL,
+			"driverJarFile=EMBEDDED",
+			"schema=" + SCHEMA}));
+		parameters.addAll(Arrays.asList(extraParameters));
+		UpdateOrCreateDb.main(parameters.toArray(new String[]{}));
+	}
+	
+
+	private Database buildLiquibaseDatabaseConnection() throws Exception {
+		return buildLiquibaseDatabaseConnection(JDBC_URL);
+	}
+	
+	
+	private Database buildLiquibaseDatabaseConnection(String jdbcURL) throws Exception {
+		Connection tmpConn = UpdaterUtil.createConnection(JDBC_DRIVER, null, jdbcURL, null, null);
+		
+		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(tmpConn));
+		db.setDefaultSchemaName(SCHEMA);
+		
+		return db;
+	}
+	
+	private void applyChangeLog(String changeLog) throws Exception {
+		Database db = buildLiquibaseDatabaseConnection();
+		try {
+			Liquibase updater = new Liquibase(changeLog, new ClassLoaderResourceAccessor(), db);
+			updater.update((String)null);
+		} finally {
+			db.close();
+		}
+	}
 	
 	private boolean databaseLabelExistsInChangeLog(String label) throws Exception {
 		boolean result = false;
@@ -499,6 +549,44 @@ public class UpdateOrCreateDbTest extends TestCase {
 		
 		return result;
 	}
+
+	private boolean changeLogEntryExistsWithID(String changeLogID) throws Exception {
+		boolean result = false;
+		Statement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery("SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG "
+					+ "WHERE ID='" + changeLogID + "'");
+			result = rs.next();
+		} finally {
+			UpdaterUtil.closeNoThrow(rs);
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+		
+		return result;
+	}
+	
+	private void deleteChangeLogEntyWithID(String changeLogID) throws Exception {
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+			stmt.executeUpdate("DELETE FROM " + SCHEMA + ".DATABASECHANGELOG "
+					+ "WHERE ID='" + changeLogID + "'");
+		} finally {
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+	}
+	
+	private void executeUpdate(String sql) throws Exception {
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+			stmt.executeUpdate(sql);
+		} finally {
+			UpdaterUtil.closeNoThrow(stmt);
+		}
+	}
 	
 	private int getQueryCount(String query) throws Exception {
 		int result = 0;
@@ -515,13 +603,9 @@ public class UpdateOrCreateDbTest extends TestCase {
 		}
 		return result;
 	}
-	
-	private void applyChangeLog(String changeLog) throws Exception {
-		Database db = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn));
-		db.setDefaultSchemaName(SCHEMA);
-		
-		Liquibase updater = new Liquibase(changeLog, new ClassLoaderResourceAccessor(), db);
-		updater.update((String)null);
+
+	private void dumpChangeLog() throws Exception {
+		System.out.println(dumpQuery(conn, "SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG"));
 	}
 	
 	private void dropLiquibaseTables() throws Exception {
@@ -530,7 +614,6 @@ public class UpdateOrCreateDbTest extends TestCase {
 		try {
 			stmt = conn.createStatement();
 			stmt.execute("DROP TABLE " + SCHEMA + ".DATABASECHANGELOG");
-			conn.commit();
 		} finally {
 			UpdaterUtil.closeNoThrow(stmt);
 		}
