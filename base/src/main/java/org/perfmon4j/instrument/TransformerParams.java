@@ -90,6 +90,7 @@ public class TransformerParams {
 	private int remoteManagementPort = REMOTE_PORT_DISABLED;
 	private boolean installServletValve = false;
 	private final boolean legacyAddIntervalMonitorsToSQLMethods = Boolean.getBoolean("PerfMon4j.legacyAddIntervalMonitorsToSQLMethods");
+	private boolean hystrixInstrumentationEnabled = false;
 	
 	public static final int REMOTE_PORT_DISABLED = -1;
 	public static final int REMOTE_PORT_AUTO = 0;
@@ -152,6 +153,8 @@ public class TransformerParams {
                     
                     if ("VALVE".equals(nextParam.parameter)) {
                     	installServletValve = true;
+                    } else if ("HYSTRIX".equalsIgnoreCase(nextParam.parameter)) {
+                    	hystrixInstrumentationEnabled = true;
                     } else if ("SQL".equals(nextParam.parameter)) {
                     	extremeSQLMonitorEnabled = true;
                 		extremeSQLPackages.add("org.postgresql");
@@ -178,8 +181,6 @@ public class TransformerParams {
                     	} else {
                     		extremeSQLPackages.add(m.group(1));
                     	}
-                    	
-                    	                    	
                     } else {
 	                     TransformOptions o = parseOptions(nextParam);
 	                     if (o == null) {
@@ -522,5 +523,9 @@ public class TransformerParams {
 
 	public boolean isLegacyAddIntervalMonitorsToSQLMethods() {
 		return legacyAddIntervalMonitorsToSQLMethods;
+	}
+
+	public boolean isHystrixInstrumentationEnabled() {
+		return hystrixInstrumentationEnabled;
 	}
 }

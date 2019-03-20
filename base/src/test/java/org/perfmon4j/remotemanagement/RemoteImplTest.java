@@ -147,21 +147,23 @@ public class RemoteImplTest extends PerfMonTestCase {
     }
     
     public void testGetMonitorsIncludesIntervalMonitors() throws Exception {
-    	ExternalAppender.setEnabled(true);
-    	
-    	PerfMonTimer t = PerfMonTimer.start("testGetMonitorsIncludesIntervalMonitors");
-    	PerfMonTimer.stop(t);
-    	PerfMon.deInit();	
-    	
-    	String result = ThinRunnableInVM.run(SimpleRunnable.TestGetMonitors.class, "", perfmon4jManagementInterface);
-    	ExternalAppender.setEnabled(true);
-
-    	System.out.println(result);
-		assertTrue("Should contain the interval monitor", 
-				result.contains("Monitor: INTERVAL(name=testGetMonitorsIncludesIntervalMonitors)"));
-		
-		assertTrue("Validate we retrieved the interval fields", 
-				result.contains("FieldDefinition: INTERVAL(name=testGetMonitorsIncludesIntervalMonitors):FIELD(name=AverageDuration;type=LONG)"));
+    	String sessionID = ExternalAppender.connect(1);
+    	try {
+	    	PerfMonTimer t = PerfMonTimer.start("testGetMonitorsIncludesIntervalMonitors");
+	    	PerfMonTimer.stop(t);
+	    	PerfMon.deInit();	
+	    	
+	    	String result = ThinRunnableInVM.run(SimpleRunnable.TestGetMonitors.class, "", perfmon4jManagementInterface);
+	
+	    	System.out.println(result);
+			assertTrue("Should contain the interval monitor", 
+					result.contains("Monitor: INTERVAL(name=testGetMonitorsIncludesIntervalMonitors)"));
+			
+			assertTrue("Validate we retrieved the interval fields", 
+					result.contains("FieldDefinition: INTERVAL(name=testGetMonitorsIncludesIntervalMonitors):FIELD(name=AverageDuration;type=LONG)"));
+    	} finally {
+    		ExternalAppender.disconnect(sessionID);
+    	}
     }
 
     public void testGetMonitorsIncludesSnapShotMonitors() throws Exception {
@@ -281,8 +283,6 @@ System.err.println(traceData);
     }
     
     public void testSubscribeToIntervalMonitor() throws Exception {
-    	ExternalAppender.setEnabled(true);
-    	
     	String keyX = "INTERVAL(name=x):FIELD(name=AverageDuration;type=LONG)";
     	String keyY = "INTERVAL(name=y):FIELD(name=AverageDuration;type=LONG)";
     	String keyZ = "INTERVAL(name=z):FIELD(name=AverageDuration;type=LONG)";
@@ -397,7 +397,7 @@ System.err.println(traceData);
         // Here is where you can specify a list of specific tests to run.
         // If there are no tests specified, the entire suite will be set in the if
         // statement below.
-		newSuite.addTest(new RemoteImplTest("testConnect"));
+//		newSuite.addTest(new RemoteImplTest("testConnect"));
 
         // Here we test if we are running testunit or testacceptance (testType will
         // be set) or if no test cases were added to the test suite above, then

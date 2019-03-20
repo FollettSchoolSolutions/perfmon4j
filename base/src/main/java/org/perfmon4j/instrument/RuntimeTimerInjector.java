@@ -9,7 +9,8 @@ public abstract class RuntimeTimerInjector {
 	public abstract byte[] installUndertowOrTomcatSetValveHook(byte[] classfileBuffer, ClassLoader loader) throws Exception;	
     public abstract byte[] wrapTomcatRegistry(byte[] classfileBuffer, ClassLoader loader) throws Exception;
     public abstract byte[] disableSystemGC(byte[] classfileBuffer, ClassLoader loader) throws Exception;
-	
+    public abstract byte[] installHystrixCommandMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	public abstract byte[] installHystrixThreadPoolMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
     
     private ThreadLocal<Boolean> singnalThreadInTimer = new ThreadLocal<Boolean>() {
         public Boolean initialValue() {
@@ -72,5 +73,4 @@ public abstract class RuntimeTimerInjector {
 			return numSQLTimeCounters > 0 || numTimersAdded > 0;
 		}
 	}
-
 }

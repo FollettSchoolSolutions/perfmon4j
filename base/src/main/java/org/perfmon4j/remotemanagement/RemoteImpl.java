@@ -34,6 +34,8 @@ import java.util.Map;
 
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.hystrix.HystrixCommandMonitorImpl;
+import org.perfmon4j.hystrix.HystrixThreadPoolMonitorImpl;
 import org.perfmon4j.instrument.InstrumentationMonitor;
 import org.perfmon4j.instrument.TransformerParams;
 import org.perfmon4j.java.management.GarbageCollectorSnapShot;
@@ -80,6 +82,9 @@ public class RemoteImpl implements RemoteInterface {
 		
 		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.GlobalRequestProcessorMonitorImpl");
 		ExternalAppender.registerSnapShotClass("org.perfmon4j.extras.tomcat7.ThreadPoolMonitorImpl");
+
+		ExternalAppender.registerSnapShotClass(HystrixCommandMonitorImpl.class.getName());
+		ExternalAppender.registerSnapShotClass(HystrixThreadPoolMonitorImpl.class.getName());
 	}
 
 	public static RemoteInterfaceExt1 getSingleton() {
@@ -126,6 +131,8 @@ public class RemoteImpl implements RemoteInterface {
 			
 			bound = true;
 			registeredPort = Integer.valueOf(port);
+			ExternalAppender.setEnabled(true);
+			
 	        System.setProperty(RemoteInterface.P4J_LISTENER_PORT, registeredPort.toString());
 	        logger.logInfo("Perfmon4j management interface listening on port: " + port);
 		} catch (RemoteException e) {
@@ -154,6 +161,9 @@ public class RemoteImpl implements RemoteInterface {
 		    registry = null;
 		    registeredPort = null;
 	        System.getProperties().remove(RemoteInterface.P4J_LISTENER_PORT);
+
+	        
+	        ExternalAppender.setEnabled(false);
 	        logger.logInfo("Perfmon4j management interface is unbound");
 		}
 	}

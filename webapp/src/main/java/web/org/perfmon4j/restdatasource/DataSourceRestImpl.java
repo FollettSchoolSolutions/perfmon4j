@@ -65,6 +65,8 @@ import web.org.perfmon4j.restdatasource.data.query.category.Result;
 import web.org.perfmon4j.restdatasource.data.query.category.ResultElement;
 import web.org.perfmon4j.restdatasource.dataproviders.CacheDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.GarbageCollectionDataProvider;
+import web.org.perfmon4j.restdatasource.dataproviders.HystrixCommandDataProvider;
+import web.org.perfmon4j.restdatasource.dataproviders.HystrixThreadPoolDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.IntervalDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.JVMDataProvider;
 import web.org.perfmon4j.restdatasource.dataproviders.MemoryPoolDataProvider;
@@ -114,6 +116,8 @@ public class DataSourceRestImpl {
 		registry.registerDataProvider(new ThreadPoolDataProvider());
 		registry.registerDataProvider(new FSSFetchPolicyDataProvider());
 		registry.registerDataProvider(new FSSFetchThreadPoolDataProvider());
+		registry.registerDataProvider(new HystrixCommandDataProvider());
+		registry.registerDataProvider(new HystrixThreadPoolDataProvider());
 	}
 
 	@GET
@@ -159,7 +163,7 @@ public class DataSourceRestImpl {
 				result.addAll(r);
 	 		}
 		} catch (SQLException e) {
-			logger.logDebug("getSystems", e);
+			logger.logError("getSystems", e);
 			throw new InternalServerErrorException(e);
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
@@ -203,7 +207,7 @@ public class DataSourceRestImpl {
 				result.addAll(r);
 	 		}
 		} catch (SQLException e) {
-			logger.logDebug("getCategories", e);
+			logger.logError("getCategories", e);
 			throw new InternalServerErrorException(e);
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
@@ -310,6 +314,7 @@ public class DataSourceRestImpl {
 			}
 			result = accumulator.buildResults();
 		} catch (SQLException ex) {
+			logger.logError("getQueryObservations", ex);
 			throw new InternalServerErrorException(ex);
 		} finally {
 			JDBCHelper.closeNoThrow(conn);
@@ -472,7 +477,7 @@ public class DataSourceRestImpl {
 					}
 					result = new CategoryTemplate(unFiltered.getName(), filteredFields.toArray(new Field[]{}));
 				} catch (SQLException e) {
-					logger.logDebug("filterFieldsBasedOnDatabaseChangeSet", e);
+					logger.logError("filterFieldsBasedOnDatabaseChangeSet", e);
 					throw new InternalServerErrorException(e);
 				} finally {
 					JDBCHelper.closeNoThrow(conn);

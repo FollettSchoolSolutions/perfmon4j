@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+	
+	<changeSet author="ddeucher" id="P4JHystrixKey-tableCreate">
+		<createTable tableName="P4JHystrixKey">
+			<column autoIncrement="true" name="KeyID" type="BIGINT">
+				<constraints primaryKey="true" primaryKeyName="P4JHystrixKey_pk" />
+			</column>
+			<column name="KeyName" type="VARCHAR(255)">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+		<createIndex indexName="P4JHystrixKey_KeyName_idx"
+			tableName="P4JHystrixKey" unique="true">
+			<column name="KeyName" />
+		</createIndex>
+	</changeSet>
+
+	<changeSet author="ddeucher" id="P4JHystrixCommand-tableCreate">
+		<createTable tableName="P4JHystrixCommand">
+			<column name="SystemID" type="INT">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="KeyID" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+		
+			<column name="StartTime" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="EndTime" type="datetime">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="Duration" type="int">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="SuccessCount" type="int">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="FailureCount" type="int">
+				<constraints nullable="false" />
+			</column>
+	
+			<column name="TimeoutCount" type="int">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="ShortCircuitedCount" type="int">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="ThreadPoolRejectedCount" type="int">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="SemaphoreRejectedCount" type="int">
+				<constraints nullable="false" />
+			</column>
+			
+		</createTable>
+		<addPrimaryKey columnNames="SystemID, KeyID, EndTime, StartTime"
+			constraintName="P4JHystrixCommand_pk" tableName="P4JHystrixCommand" />
+
+		<addForeignKeyConstraint
+			baseColumnNames="KeyID"
+			baseTableName="P4JHystrixCommand" 
+			constraintName="P4JHC_KeyID_fk"
+			deferrable="false" 
+			initiallyDeferred="false" 
+			onDelete="CASCADE"
+			onUpdate="NO ACTION" 
+			referencedColumnNames="KeyID"
+			referencedTableName="P4JHystrixKey" />
+
+		<addForeignKeyConstraint baseColumnNames="SystemID"
+			baseTableName="P4JHystrixCommand" 
+			constraintName="P4JHC_SysID_fk"
+			deferrable="false" 
+			initiallyDeferred="false" 
+			onDelete="CASCADE"
+			onUpdate="NO ACTION" 
+			referencedColumnNames="SystemID"
+			referencedTableName="P4JSystem" />
+			
+	</changeSet>
+
+	<changeSet author="ddeucher" id="P4JHystrixThreadPool-tableCreate">
+		<createTable tableName="P4JHystrixThreadPool">
+			<column name="SystemID" type="INT">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="KeyID" type="BIGINT">
+				<constraints nullable="false" />
+			</column>
+		
+			<column name="StartTime" type="datetime">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="EndTime" type="datetime">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="Duration" type="int">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="ExecutedThreadCount" type="int">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="RejectedThreadCount" type="int">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="CompletedTaskCount" type="int">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="ScheduledTaskCount" type="int">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="MaxActiveThreads" type="int">
+				<constraints nullable="false" />
+			</column>
+
+			<column name="CurrentQueueSize" type="int">
+				<constraints nullable="false" />
+			</column>
+			
+			<column name="CurrentPoolSize" type="int">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+		
+		<addPrimaryKey columnNames="SystemID, KeyID, EndTime, StartTime"
+			constraintName="P4JHystrixThreadPool_pk" tableName="P4JHystrixThreadPool" />
+
+		<addForeignKeyConstraint
+			baseColumnNames="KeyID"
+			baseTableName="P4JHystrixThreadPool" 
+			constraintName="P4JHTP_KeyID_fk"
+			deferrable="false" 
+			initiallyDeferred="false" 
+			onDelete="CASCADE"
+			onUpdate="NO ACTION" 
+			referencedColumnNames="KeyID"
+			referencedTableName="P4JHystrixKey" />
+
+		<addForeignKeyConstraint baseColumnNames="SystemID"
+			baseTableName="P4JHystrixThreadPool" 
+			constraintName="P4JHTP_SysID_fk"
+			deferrable="false" 
+			initiallyDeferred="false" 
+			onDelete="CASCADE"
+			onUpdate="NO ACTION" 
+			referencedColumnNames="SystemID"
+			referencedTableName="P4JSystem" />
+			
+	</changeSet>
+	
+	<changeSet author="ddeucher" id="P4J-AddIndexesForP4JReports">
+		<preConditions onFail="MARK_RAN">
+        	<not>
+        		<indexExists schemaName='${defaultSchema}' indexName='P4JIntervalData_SystemEndTime'></indexExists>
+        	</not>
+    	</preConditions>
+		<createIndex indexName="P4JIntervalData_SystemEndTime"
+			tableName="P4JIntervalData" unique="false">
+			<column name="SystemID" />
+			<column name="EndTime" />
+		</createIndex>
+	</changeSet>	
+
+	<changeSet author="ddeucher" id="P4J-CreateAppenderControlTable">
+		<createTable tableName="P4JAppenderControl">
+			<column name="pauseAppenderMinutes" type="int">
+				<constraints nullable="true" />
+			</column>
+		</createTable>
+	</changeSet>
+
+	<changeSet author="databaseLabel" id="0007.0"/>
+</databaseChangeLog>
