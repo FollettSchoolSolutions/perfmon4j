@@ -20,7 +20,6 @@
 */
 package org.perfmon4j.demo;
 
-import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -66,6 +65,9 @@ public class DynamicStressTester {
         config.attachAppenderToSnapShotMonitor("JVM Memory", "60 Second Monitor");
         
         PerfMon.configure(config);
+        
+        final int oneSecond = 1000;
+        
 
         for (int i = 0; i < 50000; i++) {
         	// fill up hashmap with monitors to simulate
@@ -81,11 +83,10 @@ public class DynamicStressTester {
         }
         
         AtomicBoolean stopper = new AtomicBoolean(false);
-        Timer timerThread = new Timer(true);
         
-        timerThread.schedule(new Announcement("START"), 1000 * 60);
-        timerThread.schedule(new Announcement("END"), 1000 * 60 * 2);
-        timerThread.schedule(new Stopper(stopper), (1000 * 60 * 2) + 10000);
+        PerfMon.utilityTimer.schedule(new Announcement("START"), 60 * oneSecond);
+        PerfMon.utilityTimer.schedule(new Announcement("END"), 120 * oneSecond);
+        PerfMon.utilityTimer.schedule(new Stopper(stopper), (120 * oneSecond) + (10 * oneSecond));
         
         while (!stopper.get()) {
             PerfMonTimer timer = PerfMonTimer.start("SimpleExample.outer.active", true);
@@ -132,12 +133,16 @@ public class DynamicStressTester {
     	static void startThread(String threadType, boolean dynamic, int threadNum) {
     		String threadName = threadType + ".runner_" + threadNum; 
     		String monitorName =  "SimpleExample." + threadName;
-            new Thread(null, new RunnerImpl(monitorName, dynamic), threadName).start();
+            Thread t = new Thread(null, new RunnerImpl(monitorName, dynamic), threadName);
+            t.setDaemon(true);
+            t.start();
     	}
 
     	static void startThread(PerfMon mon) {
     		String threadName = mon.getName().replaceFirst("SimpleExample\\.", ""); 
-            new Thread(null, new RunnerImpl(mon), threadName).start();
+            Thread t = new Thread(null, new RunnerImpl(mon), threadName);
+            t.setDaemon(true);
+            t.start();
     	}
     	
     	RunnerImpl(String monitorName, boolean dynamic) {
