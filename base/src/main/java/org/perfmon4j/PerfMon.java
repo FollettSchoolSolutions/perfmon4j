@@ -356,7 +356,7 @@ public class PerfMon {
                 } else {
                     parent = rootMonitor;
                 }
-                if (!isDynamicPath || parent.shouldChildBeDynamicallyCreated(key)) {
+                if (!isDynamicPath || (ExternalAppender.isActive() && parent.shouldChildBeDynamicallyCreated(key))) {
                 	if (isDynamicPath) {
                 		// Since the child is being dynamically created we need
                 		// to fill in it's ancestors.
