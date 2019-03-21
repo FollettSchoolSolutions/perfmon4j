@@ -33,9 +33,12 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.WeakHashMap;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.perfmon4j.Appender.AppenderID;
+import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.FailSafeTimerTask;
@@ -67,6 +70,8 @@ public class PerfMon {
     	Integer.getInteger(PerfMon.class.getName() + ".MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS", 2500).intValue();
     
     
+    public static final boolean USE_LEGACY_MONITOR_MAP_LOCK =
+    	Boolean.getBoolean(PerfMon.class.getName() + ".USE_LEGACY_MONITOR_MAP_LOCK");
     
     public static final String ROOT_MONITOR_NAME;
     private final String name;
@@ -134,9 +139,22 @@ public class PerfMon {
      * Make sure to synchronize on the mapMonitorLockToken when you access
      * the mapMonitors Map...
      */
-    private static Map<String, PerfMon> mapMonitors = new HashMap<String, PerfMon>();
+    private static Map<String, PerfMon> mapMonitors = new HashMap<String, PerfMon>(10240);
     
-    private static final Lock mapMonitorLock = new ReentrantLock();
+    private static final Lock mapMonitorReadLock;
+    private static final Lock mapMonitorWriteLock;
+    
+    static {
+    	if (USE_LEGACY_MONITOR_MAP_LOCK) {
+    		ReentrantLock lock = new ReentrantLock();
+    		mapMonitorReadLock = mapMonitorWriteLock = lock;
+    	} else {
+    		ReadWriteLock lock = new ReentrantReadWriteLock();
+    		mapMonitorReadLock = lock.readLock();
+    		mapMonitorWriteLock = lock.writeLock();
+    	}
+    }
+    
     private static final Set<String> monitorsWithThreadTraceConfigAttached = Collections.synchronizedSet(new HashSet<String>());
     
     private final Long monitorID;
@@ -220,11 +238,11 @@ public class PerfMon {
     public static int getNumMonitors() {
     	int result = 0;
 
-    	mapMonitorLock.lock();
+    	mapMonitorReadLock.lock();
         try {
         	result = mapMonitors.size();
         } finally {
-        	mapMonitorLock.unlock();
+        	mapMonitorReadLock.unlock();
         }
         return result;
     }
@@ -234,11 +252,11 @@ public class PerfMon {
     public static List<String> getMonitorNames() {
         List<String> result = new ArrayList<String>(getNumMonitors());
         
-        mapMonitorLock.lock();
+        mapMonitorReadLock.lock();
         try {
         	result.addAll(mapMonitors.keySet());
         } finally {
-        	mapMonitorLock.unlock();
+        	mapMonitorReadLock.unlock();
         }
         
         return result;
@@ -249,11 +267,11 @@ public class PerfMon {
         List<MonitorKey> result = new ArrayList<MonitorKey>(getNumMonitors());
  
         List<PerfMon> monitors = new ArrayList<PerfMon>(getNumMonitors());
-        mapMonitorLock.lock();
+        mapMonitorReadLock.lock();
         try {
         	monitors.addAll(mapMonitors.values());
         } finally {
-        	mapMonitorLock.unlock();
+        	mapMonitorReadLock.unlock();
         }
         for (PerfMon mon : monitors) {
         	result.add(MonitorKey.newIntervalKey(mon.getName()));
@@ -264,29 +282,13 @@ public class PerfMon {
     /*----------------------------------------------------------------------------*/    
     private static List<PerfMon> getMonitors() {
         List<PerfMon> monitors = new ArrayList<PerfMon>(getNumMonitors());
-        mapMonitorLock.lock();
+        mapMonitorReadLock.lock();
         try {
         	monitors.addAll(mapMonitors.values());
         } finally {
-        	mapMonitorLock.unlock();
+        	mapMonitorReadLock.unlock();
         }
         return monitors;
-    }
-    
-/*----------------------------------------------------------------------------*/    
-    private static boolean isAppenderInUseByAnyMonitor(Appender appender) {
-        boolean result = false;
-        
-        mapMonitorLock.lock();
-        try {
-            Iterator<PerfMon> itr = mapMonitors.values().iterator();
-            while (itr.hasNext() && !result) {
-                result = itr.next().appenderList.contains(appender);
-            }
-        } finally {
-        	mapMonitorLock.unlock();
-        }
-        return result;
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -319,11 +321,11 @@ public class PerfMon {
     
 /*----------------------------------------------------------------------------*/
     public static PerfMon getMonitorNoCreate_PERFMON_USE_ONLY(String key) {
-    	mapMonitorLock.lock();
+    	mapMonitorReadLock.lock();
     	try {
 			return mapMonitors.get(key);
 		} finally {
-			mapMonitorLock.unlock();
+			mapMonitorReadLock.unlock();
 		}
     }
 
@@ -341,36 +343,44 @@ public class PerfMon {
      */
     public static PerfMon getMonitor(String key, boolean isDynamicPath) {
         PerfMon result = null;
-        mapMonitorLock.lock();
-        try {
-            if (ROOT_MONITOR_NAME.equals(key)) {
-                result = rootMonitor;
-            } else {
+        if (ROOT_MONITOR_NAME.equals(key)) {
+            result = rootMonitor;
+        } else {
+        	try {
+                mapMonitorReadLock.lock();
                 result = mapMonitors.get(key);
-            }
-            if (result == null) {
-                PerfMon parent = null;
-                String[] hierarchy = parseMonitorHirearchy(key);
-                if (hierarchy.length > 1) {
-                    parent = getMonitor(hierarchy[hierarchy.length-2], isDynamicPath);
+        	} finally {
+        		mapMonitorReadLock.unlock();
+        	}
+        }
+        if (result == null) {
+            PerfMon parent = null;
+            String[] hierarchy = parseMonitorHirearchy(key);
+            if (hierarchy.length > 1) {
+                parent = getMonitor(hierarchy[hierarchy.length-2], isDynamicPath);
                 } else {
                     parent = rootMonitor;
                 }
-                if (!isDynamicPath || parent.shouldChildBeDynamicallyCreated(key)) {
+                if (!isDynamicPath || (ExternalAppender.isActive() && parent.shouldChildBeDynamicallyCreated(key))) {
                 	if (isDynamicPath) {
                 		// Since the child is being dynamically created we need
                 		// to fill in it's ancestors.
-                		result = getMonitor(key, false);
-                	} else {
-	                	result = new PerfMon(parent, key);
-                	}
-                	mapMonitors.put(key, result);
-                } else {
-                	result = parent;
-                }
+            		result = getMonitor(key, false);
+            	} else {
+            		try {
+            			mapMonitorWriteLock.lock();
+                    	result = mapMonitors.get(key);
+                    	if (result == null) {
+    	                	result = new PerfMon(parent, key);
+    	                	mapMonitors.put(key, result);
+                    	}
+            		} finally {
+            			mapMonitorWriteLock.unlock();
+            		}
+            	}
+            } else {
+            	result = parent;
             }
-        } finally {
-        	mapMonitorLock.unlock();
         }
         return result;
     }
@@ -1011,11 +1021,11 @@ public class PerfMon {
      */
     public static void deInitAndCleanMonitors_TESTONLY() {
     	deInit();
-    	mapMonitorLock.lock();
+    	mapMonitorWriteLock.lock();
     	try {
     		mapMonitors.clear();
 		} finally {
-			mapMonitorLock.unlock();
+			mapMonitorWriteLock.unlock();
 		}
     }
     
