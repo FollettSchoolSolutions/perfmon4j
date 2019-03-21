@@ -358,11 +358,11 @@ public class PerfMon {
             String[] hierarchy = parseMonitorHirearchy(key);
             if (hierarchy.length > 1) {
                 parent = getMonitor(hierarchy[hierarchy.length-2], isDynamicPath);
-                } else {
-                    parent = rootMonitor;
-                }
-                if (!isDynamicPath || (ExternalAppender.isActive() && parent.shouldChildBeDynamicallyCreated(key))) {
-                	if (isDynamicPath) {
+            } else {
+                parent = rootMonitor;
+            }
+            if (!isDynamicPath || parent.shouldChildBeDynamicallyCreated(key)) {
+            	if (isDynamicPath) {
                 		// Since the child is being dynamically created we need
                 		// to fill in it's ancestors.
             		result = getMonitor(key, false);
@@ -753,7 +753,8 @@ public class PerfMon {
 
 /*----------------------------------------------------------------------------*/    
     private boolean shouldChildBeDynamicallyCreated(String key) {
-    	return mapper.hasAppendersForMonitor(key) || !forceDynamicPathWeakMap.isEmpty();
+    	return mapper.hasAppendersForMonitor(key) || 
+    			(ExternalAppender.isActive() && !forceDynamicPathWeakMap.isEmpty());
     }
     
     

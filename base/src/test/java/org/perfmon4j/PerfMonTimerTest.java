@@ -45,7 +45,7 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void tearDown() throws Exception {
-        PerfMon.deInit();
+        PerfMon.deInitAndCleanMonitors_TESTONLY();
         super.tearDown();
     }
     
