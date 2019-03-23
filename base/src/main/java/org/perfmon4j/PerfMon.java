@@ -83,8 +83,6 @@ public class PerfMon {
     public static final String APPENDER_PATTERN_ALL_DESCENDENTS = "/**";
     public static final String APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS = "./**";
     
-    private final Lock startStopLock = new ReentrantLock();
-
     /** todo Make these timers lazy initialized.... If PerfMon is never instantiated
      * we dont want to start these thread... **/
     
@@ -200,10 +198,19 @@ public class PerfMon {
              return new HashMap<Long, ReferenceCount>();
          }
     };
+
+    private final Lock startStopWriteLock;
+    private final Lock startStopReadLock;
     
 /*----------------------------------------------------------------------------*/    
     private PerfMon(PerfMon parent, String name) {
-        this.name = parent == null ? ROOT_MONITOR_NAME : name;
+//    	ReadWriteLock startStopLock = new ReentrantReadWriteLock();
+//  	Using Read/Write locks actually degraded performance.
+//        startStopReadLock = startStopLock.readLock(); 
+//        startStopWriteLock = startStopLock.writeLock();
+    	startStopReadLock = startStopWriteLock = new ReentrantLock();
+        
+    	this.name = parent == null ? ROOT_MONITOR_NAME : name;
         monitorID = new Long(++nextMonitorID);
         
         this.parent = parent;
@@ -411,7 +418,7 @@ public class PerfMon {
                 tOnStack.start(getName(), internalConfig.getMaxDepth(), internalConfig.getMinDurationToCapture(), systemTime);
             }
             
-            startStopLock.lock();
+            startStopWriteLock.lock();
             try {
                 activeThreadCount++;
                 if (isActive()) {
@@ -436,7 +443,7 @@ public class PerfMon {
                     }
                 }
             } finally {
-            	startStopLock.unlock();
+            	startStopWriteLock.unlock();
             }
         }
     }
@@ -472,7 +479,7 @@ public class PerfMon {
                 }
             }
             
-            startStopLock.lock();
+            startStopWriteLock.lock();
             try {
                 long eventStartTime = count.getStartTime();
                 activeThreadCount--;
@@ -554,7 +561,7 @@ public class PerfMon {
                     }
                 }
             } finally {
-            	startStopLock.unlock();
+            	startStopWriteLock.unlock();
             }
         }
     }
@@ -671,22 +678,22 @@ public class PerfMon {
 
 /*----------------------------------------------------------------------------*/    
     public long getAverageDuration() {
-    	startStopLock.lock();
+    	startStopReadLock.lock();
         try {
             return totalCompletions > 0 ?
                 totalDuration / totalCompletions : 0;
         } finally {
-        	startStopLock.unlock();
+        	startStopReadLock.unlock();
         }
     }
     
 /*----------------------------------------------------------------------------*/    
     public double getStdDeviation() {
-    	startStopLock.lock();
+    	startStopReadLock.lock();
         try {
             return MiscHelper.calcStdDeviation(totalCompletions, totalDuration, sumOfSquares);
         } finally {
-        	startStopLock.unlock();
+        	startStopReadLock.unlock();
         }
     }
     
@@ -931,11 +938,11 @@ public class PerfMon {
             this.appender = appender;
             this.offset = offset;
             
-            startStopLock.lock();
+            startStopReadLock.lock();
             try {
                 perfMonData = appender.newIntervalData(owner, MiscHelper.currentTimeWithMilliResolution());
             } finally {
-            	startStopLock.unlock();
+            	startStopReadLock.unlock();
             }
             dataArray[offset] = this;
         }
@@ -1228,9 +1235,9 @@ public class PerfMon {
     }
     
     private void makeInactiveIfNoAppenders() {
-    	startStopLock.lock();
-        try {
-        	if ((getNumPerfMonTasks() + getNumExternalAppenderTasks()) < 1) {
+    	if ((getNumPerfMonTasks() + getNumExternalAppenderTasks()) < 1) {
+	    	startStopWriteLock.lock();
+	        try {
 	            startTime = null;
 	            totalHits = 0;
 	            totalCompletions = 0;
@@ -1240,24 +1247,24 @@ public class PerfMon {
 	            sumOfSquares = 0;
 	            maxActiveThreadCount = 0;
 	            maxThroughputPerMinute = null;
-        	}
-        } finally {
-        	startStopLock.unlock();
-        }
+	        } finally {
+	        	startStopWriteLock.unlock();
+	        }
+    	}
     }
     
     private void makeActive() {
-    	startStopLock.lock();
-        try {
-        	if (!isActive()) {
-	            if (logger.isDebugEnabled()) {
-	                logger.logDebug("Activating monitor " + this);
-	            }
+    	if (!isActive()) {
+            if (logger.isDebugEnabled()) {
+                logger.logDebug("Activating monitor " + this);
+            }
+	    	startStopWriteLock.lock();
+	        try {
 	            startTime = new Long(MiscHelper.currentTimeWithMilliResolution());
-        	}
-        } finally {
-        	startStopLock.unlock();
-        }
+	        } finally {
+	        	startStopWriteLock.unlock();
+	        }
+    	}
     }
     
     public long getStartTime() {
