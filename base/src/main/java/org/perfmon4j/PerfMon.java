@@ -108,18 +108,6 @@ public class PerfMon {
     public static final String PERFMON4J_COPYRIGHT = "Perfmon4j.copyright";
     public static final String PERFMON4J_CWD_HASH = "Perfmon4j.cwdHash";  // This is a unique hash within a single system.
     
-    
-    static {
-        // Order of these is important....
-        nextMonitorID = 0;
-        ROOT_MONITOR_NAME = "<ROOT>";
-        rootMonitor = new PerfMon(null, ROOT_MONITOR_NAME);
-        
-        System.setProperty(PERFMON4J_VERSION, getImplementationVersion());
-        System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
-        System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015 Follett School Solutions, Inc");
-    }
-    
     private final List<Appender> appenderList = Collections.synchronizedList(new ArrayList<Appender>());
     
     private final Lock dataArrayInsertLock = new ReentrantLock();
@@ -143,12 +131,26 @@ public class PerfMon {
     
     private static final Lock mapMonitorReadLock;
     private static final Lock mapMonitorWriteLock;
+
     
     static {
+        // Order of these is important....
+        nextMonitorID = 0;
+        ROOT_MONITOR_NAME = "<ROOT>";
+        rootMonitor = new PerfMon(null, ROOT_MONITOR_NAME);
+        
+        System.setProperty(PERFMON4J_VERSION, getImplementationVersion());
+        System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
+        System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015 Follett School Solutions, Inc");
+
     	if (USE_LEGACY_MONITOR_MAP_LOCK) {
+    		System.out.println("***Using Legacy Monitor Map Lock***");
+    		
     		ReentrantLock lock = new ReentrantLock();
     		mapMonitorReadLock = mapMonitorWriteLock = lock;
     	} else {
+    		System.out.println("***Using Read/Write Monitor Map Lock***");
+    		
     		ReadWriteLock lock = new ReentrantReadWriteLock();
     		mapMonitorReadLock = lock.readLock();
     		mapMonitorWriteLock = lock.writeLock();
