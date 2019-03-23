@@ -141,16 +141,14 @@ public class PerfMon {
         
         System.setProperty(PERFMON4J_VERSION, getImplementationVersion());
         System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
-        System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015 Follett School Solutions, Inc");
+        System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015,2019 Follett School Solutions, Inc");
 
     	if (USE_LEGACY_MONITOR_MAP_LOCK) {
-    		System.out.println("***Using Legacy Monitor Map Lock***");
+    		System.out.println("***Perfmon4j Using Legacy Monitor Map Lock***");
     		
     		ReentrantLock lock = new ReentrantLock();
     		mapMonitorReadLock = mapMonitorWriteLock = lock;
     	} else {
-    		System.out.println("***Using Read/Write Monitor Map Lock***");
-    		
     		ReadWriteLock lock = new ReentrantReadWriteLock();
     		mapMonitorReadLock = lock.readLock();
     		mapMonitorWriteLock = lock.writeLock();
@@ -1083,7 +1081,7 @@ public class PerfMon {
     	return configured && (cookieBasedTriggerCount > 0);
     }
     
-    private static AppenderToMonitorMapper mapper = null;
+    private static AppenderToMonitorMapper mapper = (new AppenderToMonitorMapper.Builder()).build();
     
 /*----------------------------------------------------------------------------*/    
     public static void configure(PerfMonConfiguration config) throws InvalidConfigException {
