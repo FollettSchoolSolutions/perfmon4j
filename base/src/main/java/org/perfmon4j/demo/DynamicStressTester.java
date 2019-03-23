@@ -52,6 +52,7 @@ public class DynamicStressTester {
     } 
      
     public static void main(String[] args) throws Exception { 
+    	boolean inactive = false;
     	boolean additionalMonitoring = false;
     	boolean monitorEverything = true;
     	
@@ -60,34 +61,30 @@ public class DynamicStressTester {
         Logger.getLogger("org.perfmon4j").setLevel(Level.INFO); 
 //        Logger logger = Logger.getLogger(DynamicStressTester.class); 
          
-        PerfMonConfiguration config = new PerfMonConfiguration(); 
-        config.defineAppender("FastAppender", TextAppender.class.getName(), "10 Seconds"); 
-        config.defineAppender("MediumAppender", TextAppender.class.getName(), "30 Seconds"); 
-        config.defineSnapShotMonitor("JVM Memory", JVMMemory.class.getName()); 
-        config.attachAppenderToSnapShotMonitor("JVM Memory", "MediumAppender"); 
- 
-        // Default Monitoring
-        config.defineMonitor("SimpleExample.outer.active"); 
-        config.attachAppenderToMonitor("SimpleExample.outer.active", "FastAppender", "."); 
-
-        // Additional
-        if (additionalMonitoring) {
-	        config.defineMonitor("SimpleExample"); 
-	        config.attachAppenderToMonitor("SimpleExample", "FastAppender", "/*"); 
+        if (!inactive) {
+	        PerfMonConfiguration config = new PerfMonConfiguration(); 
+	        config.defineAppender("FastAppender", TextAppender.class.getName(), "10 Seconds"); 
+	        config.defineAppender("MediumAppender", TextAppender.class.getName(), "30 Seconds"); 
+	        config.defineSnapShotMonitor("JVM Memory", JVMMemory.class.getName()); 
+	        config.attachAppenderToSnapShotMonitor("JVM Memory", "MediumAppender"); 
+	 
+	        // Default Monitoring
+	        config.defineMonitor("SimpleExample.outer.active"); 
+	        config.attachAppenderToMonitor("SimpleExample.outer.active", "FastAppender", "."); 
+	
+	        // Additional
+	        if (additionalMonitoring) {
+		        config.defineMonitor("SimpleExample"); 
+		        config.attachAppenderToMonitor("SimpleExample", "FastAppender", "/*"); 
+	        }
+	        
+	        if (monitorEverything) {
+		        config.defineMonitor("SimpleExample"); 
+		        config.attachAppenderToMonitor("SimpleExample", "FastAppender", "./**"); 
+	        }
+	         
+	        PerfMon.configure(config);
         }
-        
-        if (monitorEverything) {
-        	// If you turn on monitorEverything you will see messages like the one below
-        	// because the TextAppender will not be able to keep up and will throw away
-        	// logging events.  The textAppender is just not designed to keep up
-        	// with this kind of volume.  Example:
-        	//198652 [PerfMon.priorityTimer] WARN org.perfmon4j.Appender  - Unable to log PerfMonData(owner=PerfMon(monitorID=50084 name=SimpleExample.fixed.runner_25 parent=PerfMon(monitorID=50005 name=SimpleExample.fixed parent=PerfMon(monitorID=2 name=SimpleExample parent=PerfMon(monitorID=1 name=<ROOT> parent=null)))) timeStart=2019-03-23 00:15:28 timeStop=2019-03-23 00:15:41) to appender Appender(className=org.perfmon4j.TextAppender intervalMillis=10000)because event queue is full.
-        	
-	        config.defineMonitor("SimpleExample"); 
-	        config.attachAppenderToMonitor("SimpleExample", "FastAppender", "./**"); 
-        }
-         
-        PerfMon.configure(config); 
          
         final int oneSecond = 1000; 
          
@@ -104,9 +101,9 @@ public class DynamicStressTester {
          
         for (int i = 0; i < 100; i++) { 
         	sleep(1); 
-        	RunnerImpl.startThread("dynamic", true, i, dynamicTimer); 
-        	RunnerImpl.startThread("static", false, i, staticTimer); 
-        	RunnerImpl.startThread(PerfMon.getMonitor("SimpleExample.fixed.runner_" + i), fixedTimer); 
+        	RunnerImpl.startThread(RunnerImpl.MonitorType.DYNAMIC, i, dynamicTimer); 
+        	RunnerImpl.startThread(RunnerImpl.MonitorType.STATIC, i, staticTimer); 
+        	RunnerImpl.startThread(RunnerImpl.MonitorType.FIXED, i, fixedTimer); 
         } 
          
         AtomicBoolean stopper = new AtomicBoolean(false); 
@@ -172,25 +169,31 @@ public class DynamicStressTester {
      
      
     private static class RunnerImpl implements Runnable { 
+    	private static final int THREADS_PER_MONITOR = 20;
+    	static enum MonitorType {
+    		FIXED,
+    		STATIC,
+    		DYNAMIC
+    	}
+    	
     	private final String monitorName; 
     	private final boolean dynamic; 
     	private final PerfMon monitor; 
     	private final NanoTimer nanoTimer; 
     	 
-    	static void startThread(String threadType, boolean dynamic, int threadNum, NanoTimer nanoTimer) { 
-    		String threadName = threadType + ".runner_" + threadNum;  
-    		String monitorName =  "SimpleExample." + threadName; 
-            Thread t = new Thread(null, new RunnerImpl(monitorName, dynamic, nanoTimer), threadName); 
+    	static void startThread(MonitorType monitorType, int threadNum, NanoTimer nanoTimer) { 
+    		String threadName = monitorType.name() + ".runner_" + threadNum;  
+    		String monitorName =  "SimpleExample." + monitorType.name() + ".runner_" + (threadNum / THREADS_PER_MONITOR); 
+    		Thread t = null;
+    		if (!monitorType.equals(MonitorType.FIXED)) {
+    			t = new Thread(null, new RunnerImpl(monitorName, monitorType.equals(MonitorType.DYNAMIC), nanoTimer), threadName); 
+    		} else {
+    			t = new Thread(null, new RunnerImpl(PerfMon.getMonitor(monitorName), nanoTimer), threadName); 
+    		}
             t.setDaemon(true); 
             t.start(); 
     	} 
  
-    	static void startThread(PerfMon mon, NanoTimer nanoTimer) { 
-    		String threadName = mon.getName().replaceFirst("SimpleExample\\.", "");  
-            Thread t = new Thread(null, new RunnerImpl(mon, nanoTimer), threadName); 
-            t.setDaemon(true); 
-            t.start(); 
-    	} 
     	 
     	RunnerImpl(String monitorName, boolean dynamic, NanoTimer nanoTimer) { 
     		this.monitorName = monitorName; 
