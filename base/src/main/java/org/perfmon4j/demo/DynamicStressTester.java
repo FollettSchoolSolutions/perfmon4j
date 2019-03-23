@@ -22,6 +22,8 @@ package org.perfmon4j.demo;
 
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -74,19 +76,23 @@ public class DynamicStressTester {
         	// a production system
         	PerfMon.getMonitor("Monitor" + i);
         }
+
+        NanoTimer dynamicTimer = new NanoTimer("Dynamic");
+        NanoTimer staticTimer = new NanoTimer("Static");
+        NanoTimer fixedTimer = new NanoTimer("Fixed");
         
         for (int i = 0; i < 100; i++) {
         	sleep(1);
-        	RunnerImpl.startThread("dynamic", true, i);
-        	RunnerImpl.startThread("static", false, i);
-        	RunnerImpl.startThread(PerfMon.getMonitor("SimpleExample.fixed.runner_" + i));
+        	RunnerImpl.startThread("dynamic", true, i, dynamicTimer);
+        	RunnerImpl.startThread("static", false, i, staticTimer);
+        	RunnerImpl.startThread(PerfMon.getMonitor("SimpleExample.fixed.runner_" + i), fixedTimer);
         }
         
         AtomicBoolean stopper = new AtomicBoolean(false);
         
-        PerfMon.utilityTimer.schedule(new Announcement("START"), 60 * oneSecond);
-        PerfMon.utilityTimer.schedule(new Announcement("END"), 120 * oneSecond);
-        PerfMon.utilityTimer.schedule(new Stopper(stopper), (120 * oneSecond) + (10 * oneSecond));
+        PerfMon.utilityTimer.schedule(new TestStarter(), 15 * oneSecond);
+        PerfMon.utilityTimer.schedule(new TestEnder(), 45 * oneSecond);
+        PerfMon.utilityTimer.schedule(new Finalizer(stopper), (45 * oneSecond) + (5 * oneSecond));
         
         while (!stopper.get()) {
             PerfMonTimer timer = PerfMonTimer.start("SimpleExample.outer.active", true);
@@ -96,25 +102,44 @@ public class DynamicStressTester {
                 PerfMonTimer.stop(timer);
             }
         }
+        
+        System.out.println(fixedTimer);
+        System.out.println(staticTimer);
+        System.out.println(dynamicTimer);
     }
     
-    public static class Announcement extends TimerTask { 
-    	private final String message;
-    	
-    	Announcement(String message) {
-    		this.message = message;
-    	}
-
+    public static class TestStarter extends TimerTask { 
 		@Override
 		public void run() {
-			System.out.println("!*!*!*!*!*!*!*!*! " + message + " !*!*!*!*!*!*!*!*!");
+			onRun();
+			System.out.println("!*!*!*!*!*!*!*!*! " + getMessage() + " !*!*!*!*!*!*!*!*!");
+			
+		}
+
+		protected String getMessage() {
+			return "START";
+		}
+		
+		protected void onRun() {
+			NanoTimer.start();
 		}
     }
 
-    public static class Stopper extends TimerTask { 
+    public static class TestEnder extends TestStarter { 
+		protected String getMessage() {
+			return "END";
+		}
+		
+		protected void onRun() {
+			NanoTimer.stop();
+		}
+    }
+    
+    
+    public static class Finalizer extends TimerTask { 
     	private final AtomicBoolean stopper;
     	
-    	Stopper(AtomicBoolean stopper) {
+    	Finalizer(AtomicBoolean stopper) {
     		this.stopper = stopper;
     	}
 
@@ -129,50 +154,104 @@ public class DynamicStressTester {
     	private final String monitorName;
     	private final boolean dynamic;
     	private final PerfMon monitor;
+    	private final NanoTimer nanoTimer;
     	
-    	static void startThread(String threadType, boolean dynamic, int threadNum) {
+    	static void startThread(String threadType, boolean dynamic, int threadNum, NanoTimer nanoTimer) {
     		String threadName = threadType + ".runner_" + threadNum; 
     		String monitorName =  "SimpleExample." + threadName;
-            Thread t = new Thread(null, new RunnerImpl(monitorName, dynamic), threadName);
+            Thread t = new Thread(null, new RunnerImpl(monitorName, dynamic, nanoTimer), threadName);
             t.setDaemon(true);
             t.start();
     	}
 
-    	static void startThread(PerfMon mon) {
+    	static void startThread(PerfMon mon, NanoTimer nanoTimer) {
     		String threadName = mon.getName().replaceFirst("SimpleExample\\.", ""); 
-            Thread t = new Thread(null, new RunnerImpl(mon), threadName);
+            Thread t = new Thread(null, new RunnerImpl(mon, nanoTimer), threadName);
             t.setDaemon(true);
             t.start();
     	}
     	
-    	RunnerImpl(String monitorName, boolean dynamic) {
+    	RunnerImpl(String monitorName, boolean dynamic, NanoTimer nanoTimer) {
     		this.monitorName = monitorName;
     		this.dynamic = dynamic;
     		this.monitor = null;
+    		this.nanoTimer = nanoTimer;
     	}
 
-    	RunnerImpl(PerfMon monitor) {
+    	RunnerImpl(PerfMon monitor, NanoTimer nanoTimer) {
     		this.monitorName = null;
     		this.dynamic = false;
     		this.monitor = monitor;
+    		this.nanoTimer = nanoTimer;
     	}
     	
     	
         public void run() {
             while (true) {
                 PerfMonTimer timer = null;
+                
+                long nano = 0l;
                 if (monitor != null) {
+                    nano = System.nanoTime();
                 	timer = PerfMonTimer.start(monitor);
+                    nanoTimer.recordStart(System.nanoTime() - nano);
                 } else {
+                    nano = System.nanoTime();
                 	timer = PerfMonTimer.start(monitorName, dynamic);
+                    nanoTimer.recordStart(System.nanoTime() - nano);
                 }
                 try {
                     sleep();
                 }finally {
+                    nano = System.nanoTime();
                     PerfMonTimer.stop(timer);
+                    nanoTimer.recordStop(System.nanoTime() - nano);
                 }
             }
         }
     }
     
+    
+    private static class NanoTimer {
+    	static private final AtomicBoolean active = new AtomicBoolean(false);
+    	private final AtomicLong startTotal = new AtomicLong(0);
+    	private final AtomicInteger numStarts = new AtomicInteger(0);
+    	private final AtomicLong stopTotal = new AtomicLong(0);
+    	private final AtomicInteger numStops = new AtomicInteger(0);
+    	private final String name;
+    	
+    	NanoTimer(String name) {
+    		this.name = name;
+    	}
+    	
+    	public void recordStart(long nanos) {
+    		if (active.get()) {
+	    		startTotal.addAndGet(nanos);
+	    		numStarts.incrementAndGet();
+    		}
+    	}
+    	
+    	public void recordStop(long nanos) {
+    		if (active.get()) {
+	    		stopTotal.addAndGet(nanos);
+	    		numStops.incrementAndGet();
+    		}
+    	}
+    	
+    	public static void start() {
+    		active.set(true);
+    	}
+
+    	public static void stop() {
+    		active.set(false);
+    	}
+    	
+    	@Override
+    	public String toString() {
+    		float nanosInMillis = 1000000f;
+    		
+    		return name + " start(" + ((startTotal.longValue()/numStarts.intValue())/nanosInMillis) + " millis) stop("
+    				+ ((stopTotal.longValue()/numStops.intValue())/nanosInMillis) + " millis)";
+    	}
+    }
 }
