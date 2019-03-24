@@ -45,20 +45,24 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void tearDown() throws Exception {
-        PerfMon.deInit();
+        PerfMon.deInitAndCleanMonitors_TESTONLY();
         super.tearDown();
     }
     
 /*----------------------------------------------------------------------------*/
     public void testInactiveMonitorsByPassed() throws Exception {
-        PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID());
-        
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor("a", "./*")
+    		.build(TestAppender.getAppenderID()));
+
+    	
         PerfMonTimer timer = PerfMonTimer.start("a.b");
         assertEquals("Should have timer", "a.b", timer.perfMon.getName());
         PerfMonTimer.stop(timer);
         
         // Remove appender from "a.b"
-        PerfMon.getMonitor("a.b").removeAppender(TestAppender.getAppenderID());
+    	PerfMon.configure(builder.defineMonitor("a", "./")
+        		.build(TestAppender.getAppenderID()));
         
         timer = PerfMonTimer.start("a.b");
         assertEquals("Should bypass inactive timer a.b", "a", timer.perfMon.getName());
@@ -66,7 +70,11 @@ public class PerfMonTimerTest extends PerfMonTestCase {
         
         // If the only active timer is the root monitor, we should just
         // get the null timer...
-        PerfMon.getMonitor("a").removeAppender(TestAppender.getAppenderID());
+    	PerfMon.configure(builder
+    			.clearMonitors()
+    			.defineMonitor("d", ".")
+        		.build(TestAppender.getAppenderID()));
+      
         timer = PerfMonTimer.start("a.b");
         assertNull("Should have null timer", timer.perfMon);
         PerfMonTimer.stop(timer);
@@ -80,8 +88,9 @@ public class PerfMonTimerTest extends PerfMonTestCase {
         PerfMonTimer.stop(timer);
         
         // Add an appender to "a.b.c"'s grandparent
-        PerfMon.getMonitor("a").addAppender(TestAppender.getAppenderID(), 
-            PerfMon.APPENDER_PATTERN_PARENT_ONLY);
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor("a", ".")
+    		.build(TestAppender.getAppenderID()));
         
         timer = PerfMonTimer.start("a.b.c");
         assertEquals("Should now get my grandparent's timer", "a", timer.perfMon.getName());
@@ -90,9 +99,12 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     
     /*----------------------------------------------------------------------------*/
     public void testLazyCreateOnDynamicTimer() throws Exception {
-    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimer.child.grandchild";
-    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID(), ".");
-    
+    	final String dynamicMonitorName = "a.testLazyCreateOnDynamicTimer.child.grandchild";
+
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor("a", ".")
+    		.build(TestAppender.getAppenderID()));
+    	
     	int numAtStart = PerfMon.getMonitorKeys().size();
     	
     	PerfMonTimer timer = PerfMonTimer.start(dynamicMonitorName, true);
@@ -103,13 +115,15 @@ public class PerfMonTimerTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/
     public void testLazyCreateOnDynamicTimerOneLevel() throws Exception {
-    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerOneLevel.child.grandchild";
+    	final String dynamicMonitorName = "a.testLazyCreateOnDynamicTimerOneLevel.child.grandchild";
     	
     	// The appender pattern "/*" indicates to monitor each child of
     	// the root monitor.  In this case it indicates we should monitor 
     	// testLazyCreateOnDynamicTimerOneLevel, but not its child or
     	// grandchild monitors.
-    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID(), "/*");
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor("a", "/*")
+    		.build(TestAppender.getAppenderID()));
    
     	int numAtStart = PerfMon.getMonitorKeys().size();
     	
@@ -121,11 +135,13 @@ public class PerfMonTimerTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/
     public void testLazyCreateOnDynamicTimerAllLevels() throws Exception {
-    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerAllLevels.child.grandchild.greatgrandchild";
+    	final String dynamicMonitorName = "a.testLazyCreateOnDynamicTimerAllLevels.child.grandchild.greatgrandchild";
 
     	// The appender pattern "/**" indicates to monitor all descendents
     	// of the root monitor.  
-    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID(), "/**");
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor("a", "/**")
+    		.build(TestAppender.getAppenderID()));
    
     	int numAtStart = PerfMon.getMonitorKeys().size();
     	
@@ -138,7 +154,10 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     /*----------------------------------------------------------------------------*/
     public void testEagerCreateOnDefaultTimer() throws Exception {
     	final String monitorName = "testEagerCreateOnDefaultTimer." + new Random().nextInt();
-    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID());
+//    	PerfMon.getRootMonitor().addAppender(TestAppender.getAppenderID());
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineRootMonitor("/**")
+    		.build(TestAppender.getAppenderID()));
     
     	int numAtStart = PerfMon.getMonitorKeys().size();
     	
@@ -146,6 +165,31 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     	PerfMonTimer.stop(timer);
     	
     	assertEquals("Monitors should have been created immediately", numAtStart + 2, PerfMon.getMonitorKeys().size());
+    }
+
+    
+    public void testLazyCreateOnDynamicTimerWithEnhancedPattern() throws Exception {
+    	final String dynamicMonitorName = "testLazyCreateOnDynamicTimerWithEnhancedPattern.b.c.d.e.f";
+    	final String parentOfDynamicMonitorName = dynamicMonitorName.substring(0, dynamicMonitorName.length()-2);
+
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor("testLazyCreateOnDynamicTimerWithEnhancedPattern", "/b.c.d.e.f")
+    		.build(TestAppender.getAppenderID()));
+   
+    	int numAtStart = PerfMon.getMonitorKeys().size();
+
+    	PerfMonTimer timer = PerfMonTimer.start(parentOfDynamicMonitorName, true);
+    	PerfMonTimer.stop(timer);
+    	
+    	assertEquals("We didn't get a match, so no new monitors should have been added", 
+    		numAtStart, PerfMon.getMonitorKeys().size());
+
+    	
+    	timer = PerfMonTimer.start(dynamicMonitorName, true);
+    	PerfMonTimer.stop(timer);
+    	
+    	assertEquals("Since we found a match, all ancestors of the match should have been created", 
+    		numAtStart + 5, PerfMon.getMonitorKeys().size());
     }
     
 /*----------------------------------------------------------------------------*/

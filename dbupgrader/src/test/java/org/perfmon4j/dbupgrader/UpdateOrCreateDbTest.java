@@ -427,17 +427,12 @@ public class UpdateOrCreateDbTest extends TestCase {
 	
 	public void testApplyThirdPartyChanges() throws Exception { 
 		// Start with an empty database...
-		UpdateOrCreateDb.main(new String[]{"driverClass=org.apache.derby.jdbc.EmbeddedDriver",
-				"jdbcURL=" + JDBC_URL,
-				"driverJarFile=EMBEDDED",
-				"schema=" + SCHEMA
-				});
 		runUpdater(new String[]{"thirdPartyExtensions=FSS"});
 		
 		assertTrue("Should have a FSSFetchThreadPoolSnapshot table", UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchThreadPoolSnapshot"));
 		assertTrue("Should have a FSSFetchPolicySnapshot table", UpdaterUtil.doesTableExist(conn, SCHEMA, "FSSFetchPolicySnapshot"));
 		
-		System.out.println(dumpQuery(conn, "SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG"));
+//		System.out.println(dumpQuery(conn, "SELECT * FROM " + SCHEMA + ".DATABASECHANGELOG"));
 		assertTrue("Database change log should reflect databaseLabel 0002.0 applied", databaseLabelExistsInChangeLog("0002.0"));
 	}	
 	
