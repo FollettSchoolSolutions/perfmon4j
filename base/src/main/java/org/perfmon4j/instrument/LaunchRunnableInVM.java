@@ -130,6 +130,7 @@ public class LaunchRunnableInVM {
     	String myClassPath = "";
     	String originalClasspath = System.getProperty("java.class.path").replaceAll(";/", ";");
     	originalClasspath.split(PATH_SEPERATOR);
+    	File javassistFile = null;
     	
     	for (String part : originalClasspath.split(PATH_SEPERATOR)) {
     		if (part.endsWith("test-classes")) {
@@ -144,6 +145,8 @@ public class LaunchRunnableInVM {
     		} else if (part.contains("log4j")) {
     			// Add log4j classes for log4j tests....
     			myClassPath += part + PATH_SEPERATOR; 
+    		} else if (part.contains("javassist")) {
+    			javassistFile = new File(part) ;
 			} 
     	}
 //    	myClassPath = myClassPath.replaceAll("\\\\", "/");
@@ -153,7 +156,11 @@ public class LaunchRunnableInVM {
 	    	if (javaAgentParams != null) {
 	    		cmdString += "=" + javaAgentParams;
 	    	}
-			cmdString +=  " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
+	    	String endorsedDirs = " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
+	    	if (javassistFile != null) {
+	    		endorsedDirs += PATH_SEPERATOR + quoteIfNeeded(javassistFile.getParentFile().getCanonicalPath());
+	    	}
+			cmdString +=  endorsedDirs;
 		} else {
 			// Just load the perfmon4j.jar onto the classpath.
 			myClassPath += PATH_SEPERATOR + perfmonJar.getCanonicalPath();

@@ -516,7 +516,9 @@ public class MiscHelper {
 		if (file.isDirectory()) {
 			File files[] = file.listFiles(filter);
 			for (File f: files) {
-				addFileToZipOutputStream(stream, f, path, filter);
+				if (!"MANIFEST.MF".equals(f.getName())) {
+					addFileToZipOutputStream(stream, f, path, filter);
+				}
 			}
 		} else {
 			ZipEntry entry = new ZipEntry(path);
