@@ -5,9 +5,9 @@
   version="2.0">
   <persistence-unit name="default">
     <provider>org.hibernate.ejb.HibernatePersistence</provider>
-	<class>web.org.perfmon4j.console.app.data.User</class>
 	<class>web.org.perfmon4j.console.app.data.AppConfig</class>
 	<class>web.org.perfmon4j.console.app.data.OauthToken</class>
+	<class>web.org.perfmon4j.console.app.data.User</class>
     <properties>
       <property name="javax.persistence.jdbc.driver" value="org.apache.derby.jdbc.EmbeddedDriver"/>
       
