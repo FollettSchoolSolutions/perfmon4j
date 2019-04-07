@@ -7,10 +7,10 @@ Perfmon4j is a Java Instrumentation agent used to monitor performance in product
 ## Documentation
 [Perfmon4j Documentation](https://github.com/FollettSchoolSolutions/perfmon4j/wiki)
 
-## Download
-* Snapshot download
+## Releases
+* Latest Snapshot
 [ ![Download](https://api.bintray.com/packages/fss-development/Perfmon4j/Snapshots/images/download.svg) ](https://bintray.com/fss-development/Perfmon4j/Snapshots/_latestVersion)
-* Release download
+* Latest Stable
 [ ![Download](https://api.bintray.com/packages/fss-development/Perfmon4j/Release/images/download.svg) ](https://bintray.com/fss-development/Perfmon4j/Release/_latestVersion)
 
 
