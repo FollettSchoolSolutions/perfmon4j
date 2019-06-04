@@ -1,3 +1,7 @@
 target
 .project
 .settings
+
+agent-api/\.classpath
+
+hystrix-demo/\.classpath
