@@ -164,7 +164,20 @@ using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate cl
 			<version>${project.version}</version>
 			<artifactId>perfmon4j-dbupgrader</artifactId>
 			<scope>test</scope>
-		</dependency>		
+		</dependency>
 		
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<version>${project.version}</version>
+			<artifactId>perfmon4j-agent-api</artifactId>		
+			<scope>test</scope>
+			<!-- IMPORTANT - The perform4j-agent-api jar is OPTIONAL!  Perfmon4j.jar must NOT
+				depend on access to this jar!  (Leave scope as "test"!!)
+				
+				Perfmon4j.jar is typically loaded as a javaagent in the root classloader. 
+				The agent-api will be loaded (if it is loaded at all) by a much later
+				class loader (typically associated with a *.WAR or *.EAR file).
+			 -->
+		</dependency>
 	</dependencies>
 </project>

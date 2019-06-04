@@ -49,11 +49,7 @@ public class PerfMon {
         return false;
     }
     
-    /**
-     * If true the perfmon4j agent was not found and this 
-     * class is operating in a dormant state.
-     */
-    public static boolean isDormant() {
-    	return true;
+    public static boolean hasBeenInstrumented() {
+    	return false;
     }
 }
