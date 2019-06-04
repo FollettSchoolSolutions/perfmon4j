@@ -17,7 +17,7 @@ McHenry, IL 60050
 
 Changes
 
-** 1.4.0
+** 1.4.1
 - Added support for writing PerfMon output data to InfluxDb 
 (https://www.influxdata.com/time-series-platform/influxdb/) with the InfluxAppender class.
 
