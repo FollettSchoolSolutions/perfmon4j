@@ -20,11 +20,10 @@ package org.perfmon4j.agent.api;
 
 /**
  * This class will execute in one of two modes:
- * 	Dormant - When the JVM has not been loaded with the Perfmon4j instrumentation agent this class will 
- * 		execute the code contained in this source file and be executing in a dormant/placeholder state.
- * 	Operating - when this class is loaded in a JVM with the Perfmon4j instrumentation agent this class will
- * 		be re-written to be into a operating state.
- * 
+ * 	Unattached - When running in a JVM that was not booted with the Perfmon4j instrumentation agent this class will 
+ * 		execute the code declared within this source file.  Essentially it will be running in a non-operative state.
+ * 	Attached - When this class is loaded in a JVM that was booted with the Perfmon4j instrumentation agent, The agent  will
+ * 		re-write this class and it will be in an operating state.
  */
 public class PerfMonTimer {
 	private static final PerfMonTimer noOpTimer = new PerfMonTimer();
@@ -62,11 +61,10 @@ public class PerfMonTimer {
     }
     
     /**
-     * If true the perfmon4j agent was not found and this 
-     * class is operating in a dormant state.
+     * If true this class has been rewritten by the Perfmon4j agent.
+     * @return
      */
-    public static boolean isDormant() {
-    	return true;
+    public static boolean isAttachedToAgent() {
+    	return false;
     }
-    
 }

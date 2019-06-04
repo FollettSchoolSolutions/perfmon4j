@@ -88,7 +88,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 
 	public static class AgentAPIUsageTester implements Runnable {
 		public void run() {
-			if (org.perfmon4j.agent.api.PerfMon.hasBeenInstrumented()) {
+			if (org.perfmon4j.agent.api.PerfMon.isAttachedToAgent()) {
 				System.out.println("Agent API for PerfMon class has been instrumented");
 			} else {
 				System.out.println("Agent API for PerfMon class has NOT been instrumented");
@@ -98,6 +98,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     
     public void testObjectsAreOperating() throws Exception {
     	String output = LaunchRunnableInVM.run(AgentAPIUsageTester.class, "-dTRUE", "", perfmon4jJar);
+    	
+    	
 //    	String output = LaunchRunnableInVM.runWithoutPerfmon4jJavaAgent(AgentAPIUsageTester.class, perfmon4jJar);
 System.out.println(output);   	
     }
