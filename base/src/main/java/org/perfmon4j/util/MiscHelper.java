@@ -162,8 +162,11 @@ public class MiscHelper {
         }
         return result;
     }
-
     public static String getMillisDisplayable(long millis) {
+    	return getMillisDisplayable(millis, " ");
+    }
+
+    public static String getMillisDisplayable(long millis, String whitespaceCharacter) {
         String result = null;
         final long second = 1000;
         final long minute = 60 * second;
@@ -171,19 +174,19 @@ public class MiscHelper {
         if (millis % minute == 0) {
             long minutes = millis/minute;
             if (minutes == 1) {
-                result = minutes + " minute";
+                result = minutes + whitespaceCharacter + "minute";
             } else {
-                result = minutes + " minutes";
+                result = minutes + whitespaceCharacter + "minutes";
             }
         } else if (millis % second == 0) {
             long seconds = millis/second;
             if (seconds == 1) {
-                result = seconds + " second";
+                result = seconds + whitespaceCharacter + "second";
             } else {
-                result = seconds + " seconds";
+                result = seconds + whitespaceCharacter + "seconds";
             }
         } else  {
-            result = millis + " ms";
+            result = millis + whitespaceCharacter + "ms";
         }
         
         return result;
@@ -410,7 +413,12 @@ public class MiscHelper {
 					result += ((Number)obj).longValue();
 				}
 			} catch (Exception e) {
-				logger.logWarn("Unable to retrieve attribute: " + attrName + " from Object: " + objName.toString(), e);
+				String msg = "Unable to retrieve attribute: " + attrName + " from Object: " + objName.toString();
+				if (logger.isDebugEnabled()) {
+					logger.logWarn(msg, e);
+				} else {
+					logger.logWarn(msg);
+				}
 			}
 		}
 		return result;
@@ -508,7 +516,9 @@ public class MiscHelper {
 		if (file.isDirectory()) {
 			File files[] = file.listFiles(filter);
 			for (File f: files) {
-				addFileToZipOutputStream(stream, f, path, filter);
+				if (!"MANIFEST.MF".equals(f.getName())) {
+					addFileToZipOutputStream(stream, f, path, filter);
+				}
 			}
 		} else {
 			ZipEntry entry = new ZipEntry(path);

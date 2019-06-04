@@ -45,7 +45,7 @@ public class MedianCalculator {
     private final int maxElements;
     private final int factor;
     private long totalValuesCount = 0;
-    private TreeMap<Long, OccuranceCount> valueMap = new TreeMap();
+    private TreeMap<Long, OccuranceCount> valueMap = new TreeMap<Long, OccuranceCount>();
     
     public static final int OVERFLOW_NONE = 0;
     public static final int OVERFLOW_HIGH = 1;
@@ -100,7 +100,7 @@ public class MedianCalculator {
     
 /*----------------------------------------------------------------------------*/    
     /** todo For performance reasons we may need to create a queue
-     * for storing values when we need to insert beyound this  **/
+     * for storing values when we need to insert beyond this  **/
     public void putValue(long value) {
         if (factor > 1) {
             value = Math.round((double)value / factor);
@@ -174,6 +174,7 @@ public class MedianCalculator {
 /*----------------------------------------------------------------------------*/    
     public MedianResult getMedian() {
         MedianResult result = new MedianResult();
+       
         
         if (totalValuesCount > 0) {
             Long resultA = null;
@@ -195,7 +196,7 @@ public class MedianCalculator {
                     if (need2Values && totalInstances == -1) {
                         entry = entryItr.next();
                         resultB = entry.getKey();
-                        // If we have to average 2 seperate values we are never overflow..
+                        // If we have to average 2 separate values we are never overflow..
                         result.setOverflowFlag(false, false);
                     }
                 }

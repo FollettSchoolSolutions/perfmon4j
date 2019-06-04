@@ -109,6 +109,21 @@
 	</appender>
 -->
 
+<!--
+	The influx appender can write through Http or Https to the InfluxDb
+	through the InfluxDb line protocol.  For information on InfluxDb
+	see there website at: https://www.influxdata.com/time-series-platform/influxdb/ 
+-->
+<!--
+	<appender name='influxdb' className='org.perfmon4j.influxdb.InfluxAppender' 
+		interval='1 second'>
+		<attribute name='baseURL'>http://localhost:8086</attribute>		
+		<attribute name='database'>perfmon4j</attribute>		
+		<attribute name='userName'>username</attribute>		
+		<attribute name='password'>password</attribute>		
+	</appender>
+-->
+
 	<!-- WebRequest appender is only valid for a web based application server.  
 		Requires the PerfMonFilter or PerfMonValve to be installed -->
 	<monitor name='WebRequest'> 
@@ -122,24 +137,7 @@
 			<appender name='jdbc' pattern="."/> 
 		-->
 	</monitor>
-	
-	<!-- UserAgent monitoring can be useful for a web based application to collect data
-		regarding the browser hitting your application
-		
-		In order to collect the data in a usable format you should configure a
-		JDBCAppender  using Option 1 (Direct JDBC connection)
-		or Option 2 (JDBC Pool) defined above.
-		
-		Requires the PerfMonFilter or PerfMonValve to be installed
-		
-		to see the output 
-			"select * from P4JUserAgentView"
-	-->
-	<!--
-	<snapShotMonitor name='UserAgent' className='org.perfmon4j.UserAgentSnapShotMonitor'>
-		<appender name='jdbc'/> 
-	</snapShotMonitor>
-	-->
+
 
 	<snapShotMonitor name='JVMSnapShot' className='org.perfmon4j.java.management.JVMSnapShot'>
 			<appender name='snapshot-appender'/>

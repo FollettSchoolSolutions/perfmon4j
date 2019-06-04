@@ -33,6 +33,7 @@ import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
+import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -62,6 +63,12 @@ public class PerfMonConfiguration {
     public void defineAppender(String name, String className, 
         String interval) {
         defineAppender(name, className, interval, null);
+    }
+
+/*----------------------------------------------------------------------------*/
+    public void defineAppender(String name, AppenderID appenderID) {
+        defineAppender(name, appenderID.getClassName(), appenderID.getIntervalMillis() + " ms", 
+        	appenderID.getAttributes());
     }
     
 /*----------------------------------------------------------------------------*/
@@ -203,9 +210,12 @@ public class PerfMonConfiguration {
     			PerfMon.APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS.equals(pattern)) {
     		result = pattern;
     	} else {
-    		if (!".".equals(pattern)) {
+    		if (".".equals(pattern)) {
     			// Don't warn if we are simply replacing '.' with './', '.' can be considered a synonym for './' 
-    			logger.logWarn("Invalid appender pattern found: '" + pattern + "' Replacing with default: '" + result + "'");
+    		} else if (EnhancedAppenderPatternHelper.validateAppenderPattern(pattern)) {
+    			result = pattern;
+    		} else {
+       			logger.logWarn("Invalid appender pattern found: '" + pattern + "' Replacing with default: '" + result + "'");
     		}
     	}
     	
@@ -261,8 +271,10 @@ public class PerfMonConfiguration {
     public static final class AppenderAndPattern {
         final private Appender appender;
         final private String appenderPattern;
+        final private Appender.AppenderID appenderID;
         
         AppenderAndPattern(Appender.AppenderID appenderID, String appenderPattern) throws InvalidConfigException {
+        	this.appenderID = appenderID;
             this.appender = Appender.getOrCreateAppender(appenderID);
             this.appenderPattern = (appenderPattern == null) ? PerfMon.APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS :
                 appenderPattern;
@@ -275,6 +287,10 @@ public class PerfMonConfiguration {
         public String getAppenderPattern() {
             return appenderPattern;
         }
+
+		public Appender.AppenderID getAppenderID() {
+			return appenderID;
+		}
     }
     
 /*----------------------------------------------------------------------------*/

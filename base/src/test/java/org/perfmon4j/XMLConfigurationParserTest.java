@@ -684,6 +684,22 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         Appender appender = config.getAppendersForMonitor("mon")[0].getAppender();
         return ((MyAppender)appender).extraString;
     }
+
+    public void testExtendedPattern() throws Exception {
+        final String XML_DEFAULT =
+                "<Perfmon4JConfig enabled='true'>" +
+                "   <appender name='5 minute' className='org.perfmon4j.TextAppender' interval='5 min'/>" +
+                "   <monitor name='mon'>" +
+                "    	<appender name='5 minute' pattern='/##.MyPackage#*'/>" +
+                "	</monitor>" +
+                "</Perfmon4JConfig>";        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+        
+        AppenderAndPattern[] appenders = config.getAppendersForMonitor("mon");
+        assertEquals("Should have one appender", 1, appenders.length);		
+        assertEquals("Expected pattern", "/##.MyPackage#*", appenders[0].getAppenderPattern());		
+    }
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

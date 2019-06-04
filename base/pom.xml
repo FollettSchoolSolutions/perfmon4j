@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>1.3.4-HotfixB</version>
+		<version>1.4.0-SNAPSHOT</version>
 	</parent>
   
 	<artifactId>perfmon4j</artifactId>
@@ -38,9 +38,17 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
-				<version>2.5</version>
+				<version>3.1.0</version>
 				<executions>
-					<execution>
+          			<execution>
+          				<id>build-test-jar</id>
+						<phase>package</phase>
+            			<goals>
+              				<goal>test-jar</goal>
+            			</goals>
+          			</execution>
+          			
+ 					<execution>
 						<phase>package</phase>
 						<goals>
 							<goal>jar</goal>
@@ -87,11 +95,11 @@ using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate cl
 							</property>
 							<property>
 								<name>DERBY_EMBEDDED_DRIVER</name>
-								<value>${M2_REPO}/org/apache/derby/derby/10.10.2.0/derby-10.10.2.0.jar</value>								
+								<value>${M2_REPO}/org/apache/derby/derby/${DERBY_VERSION|/derby-${DERBY_VERSION|.jar</value>								
 							</property>
 							<property>
 								<name>LOG4J_JAR</name>
-								<value>${M2_REPO}/log4j/log4j/1.2.14/log4j-1.2.14.jar</value>
+								<value>${M2_REPO}/log4j/log4j/${LOG4J_VERSION}/log4j-${LOG4J_VERSION}.jar</value>
 							</property>
 							<property>
 								<name>maven.runtime.classpath</name>
@@ -147,7 +155,7 @@ using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate cl
 		<dependency>
 			<groupId>org.apache.derby</groupId>
 			<artifactId>derby</artifactId>
-			<version>10.10.2.0</version>
+			<version>${DERBY_VERSION}</version>
 			<scope>test</scope>
 		</dependency>
 

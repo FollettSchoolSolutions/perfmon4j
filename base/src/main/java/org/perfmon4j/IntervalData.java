@@ -38,7 +38,7 @@ import org.perfmon4j.util.ThresholdCalculator;
 import org.perfmon4j.util.ThresholdCalculator.ThresholdResult;
 
 
-public class IntervalData implements PerfMonData {
+public class IntervalData implements PerfMonObservableData {
 	private static final Logger logger = LoggerFactory.initLogger(IntervalData.class);
 	
     private final PerfMon owner;
@@ -766,6 +766,57 @@ public class IntervalData implements PerfMonData {
     	return new MonitorKeyWithFields(monitorKey,
     			fields);
     }
+
+    public Set<PerfMonObservableDatum<?>> getObservations() {
+		Set<PerfMonObservableDatum<?>> result = new HashSet<PerfMonObservableDatum<?>>(); 
+		
+		result.add(PerfMonObservableDatum.newDatum("totalHits", getTotalHits()));
+		result.add(PerfMonObservableDatum.newDatum("totalCompletions", getTotalCompletions()));
+		
+		result.add(PerfMonObservableDatum.newDatum("durationSum", getTotalDuration()));
+		result.add(PerfMonObservableDatum.newDatum("durationSumOfSquares", getSumOfSquares()));
+		result.add(PerfMonObservableDatum.newDatum("sqlDuration", getTotalSQLDuration()));
+		result.add(PerfMonObservableDatum.newDatum("sqlDurationSumOfSquares", getSumOfSQLSquares()));
+		
+		result.add(PerfMonObservableDatum.newDatum("averageDuration", getAverageDuration()));
+		result.add(PerfMonObservableDatum.newDatum("maxDuration", getMaxDuration()));
+		result.add(PerfMonObservableDatum.newDatum("minDuration", getMinDuration()));
+		result.add(PerfMonObservableDatum.newDatum("stdDeviation", getStdDeviation()));
+		result.add(PerfMonObservableDatum.newDatum("averageSQLDuration", getAverageSQLDuration()));
+		result.add(PerfMonObservableDatum.newDatum("maxSQLDuration", getMaxSQLDuration()));
+		result.add(PerfMonObservableDatum.newDatum("minSQLDuration", getMinSQLDuration()));
+		result.add(PerfMonObservableDatum.newDatum("sqlStdDeviation", getSQLStdDeviation()));
+		result.add(PerfMonObservableDatum.newDatum("maxActiveThreadCount", getMaxActiveThreadCount()));
+		result.add(PerfMonObservableDatum.newDatum("throughputPerSecond", getThroughputPerSecond()));
+		MedianCalculator mc = getMedianCalculator();
+		if (mc != null) {
+			Double v = mc.getMedian().getResult();
+			if (v == null) {
+				v = Double.valueOf(0.0d);
+			}
+			result.add(PerfMonObservableDatum.newDatum("medianDuration", v));
+		}
+		ThresholdCalculator tc = getThresholdCalculator();
+		if (tc != null) {
+			for(long millis : tc.getThresholdMillis()) {
+				String label = "percentOver_" + MiscHelper.getMillisDisplayable(millis, "_");
+				result.add(PerfMonObservableDatum.newDatum(label, tc.getResult(millis).getPercentOverThreshold()));
+			}
+		}
+		return result;
+	}
+
+	public String getDataCategory() {
+		return "Interval." + owner.getName();
+	}
+
+	public long getTimestamp() {
+		return this.getTimeStop();
+	}
+
+	public long getDurationMillis() {
+		return this.getTimeStop() - this.getTimeStart(); 
+	}
 }
     
 

@@ -20,6 +20,7 @@
 */
 package org.perfmon4j.instrument;
 
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -152,44 +153,45 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		 * Do NOT use logger here.  Logger depends on PerfMonTimerTransformer class which is being initialized now.
 		 */
 		
-		File agentInstallFolder = findPerfmon4jAgentInstallFolder();
-		if (agentInstallFolder != null) {
-			File perfmon4j = new File(agentInstallFolder, "perfmon4j.jar");
+		File perfmon4j = findPerfmon4jAgentFile();
+		if (perfmon4j != null) {
+			File agentInstallFolder = perfmon4j.getParentFile();
 			File externalJavassistJar = null;
 			URL embeddedJavassist = null;
 
 			boolean useExternalJavassist = Boolean.getBoolean(PROPERTY_FORCE_EXTERNAL_JAVASSIST_JAR);
 			
 			if (!useExternalJavassist) {
+				File tempJavassistJarFile = null;
 				// Check to see if we can access and load javassist classes from the embedded javassist.jar.
 				embeddedJavassist = Thread.currentThread().getContextClassLoader().getResource("lib/javassist.jar");
-				File tempJavassistJarFile = null;
-				InputStream in = null;
-				OutputStream out = null;
-				
-				try {
-					tempJavassistJarFile = File.createTempFile("javassist.", ".jar");
-					tempJavassistJarFile.deleteOnExit();
-					out = new FileOutputStream(tempJavassistJarFile);
-					in = embeddedJavassist.openStream();
-					byte[] buffer = new byte[5120];
-					int byteCount;
-					while ((byteCount = in.read(buffer)) != -1) {
-					   out.write(buffer, 0, byteCount);
-					}
-					embeddedJavassist = tempJavassistJarFile.toURI().toURL();
-				} catch (IOException ioex) {
-					try { tempJavassistJarFile.delete(); } catch (Exception ex) {}
-					tempJavassistJarFile = null;
-				} finally {
-					if (in != null) {
-						try { in.close(); } catch (Exception ex) {}
-					}
-					if (out != null) {
-						try { out.close(); } catch (Exception ex) {}
+				if (embeddedJavassist != null) {
+					InputStream in = null;
+					OutputStream out = null;
+					
+					try {
+						tempJavassistJarFile = File.createTempFile("javassist.", ".jar");
+						tempJavassistJarFile.deleteOnExit();
+						out = new FileOutputStream(tempJavassistJarFile);
+						in = embeddedJavassist.openStream();
+						byte[] buffer = new byte[5120];
+						int byteCount;
+						while ((byteCount = in.read(buffer)) != -1) {
+						   out.write(buffer, 0, byteCount);
+						}
+						embeddedJavassist = tempJavassistJarFile.toURI().toURL();
+					} catch (IOException ioex) {
+						try { tempJavassistJarFile.delete(); } catch (Exception ex) {}
+						tempJavassistJarFile = null;
+					} finally {
+						if (in != null) {
+							try { in.close(); } catch (Exception ex) {}
+						}
+						if (out != null) {
+							try { out.close(); } catch (Exception ex) {}
+						}
 					}
 				}
-				
 				if (tempJavassistJarFile != null) {
 					if (!canJavassistClassesBeLoadedFromEmbeddedJar(perfmon4j, embeddedJavassist)) {
 						try {
@@ -495,6 +497,33 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			return result;
 		}
     }
+
+    private static class HystrixHookInserter implements ClassFileTransformer {
+        public byte[] transform(ClassLoader loader, String className, 
+                Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
+                byte[] classfileBuffer) {
+            byte[] result = null;
+            
+            if ("com/netflix/hystrix/HystrixCommandMetrics".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.installHystrixCommandMetricsHook(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Injected monitor code into HystrixCommandMetrics");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to inject monitor code into HystrixCommandMetrics", ex);
+	            }
+            } else if ("com/netflix/hystrix/HystrixThreadPoolMetrics".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.installHystrixThreadPoolMetricsHook(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Injected monitor code into HystrixThreadPoolMetrics");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to inject monitor code into HystrixCommandMetrics", ex);
+	            }
+            }
+
+			return result;
+		}
+    }
+    
     
     private static void addPerfmon4jToJBoss7SystemPackageList() {
     	// For the JBoss 7 package list, we must set include org.perfmon4j in the
@@ -601,6 +630,14 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         } else {
         	logger.logInfo("Perfmon4j will NOT attempt to install a Servlet Valve.  If this is a tomcat or jbossweb based application, " +
         			"add -eVALVE to javaAgent parameters to enable.");
+        }
+        
+        if (t.params.isHystrixInstrumentationEnabled()) {
+        	inst.addTransformer(new HystrixHookInserter());
+        	logger.logInfo("Perfmon4j will attempt to install instrumentation into Hystrix Commands and Thread Pools");
+        } else {
+        	logger.logInfo("Perfmon4j will NOT attempt to install instrumentation into Hystrix Commands and Thread Pools.  If this application uses Hystrix " +
+        			"add -eHYSTRIX to javaAgent parameters to enable.");
         }
         
         // Check for all the preloaded classes and try to instrument any that might
@@ -778,8 +815,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
      * Look for the perfmon4j.jar javaagent and return the path of the file.
      * @return
      */
-    private static File findPerfmon4jAgentInstallFolder() {
-        final Pattern pattern = Pattern.compile("^\\-javaagent\\:(.*)perfmon4j.jar", Pattern.CASE_INSENSITIVE);
+    private static File findPerfmon4jAgentFile() {
+        final Pattern pattern = Pattern.compile("^\\-javaagent\\:(.*)(perfmon4j.*?\\.jar)", Pattern.CASE_INSENSITIVE);
     	File result = null;
     	
     	List<String> inputArgs = ManagementFactory.getRuntimeMXBean().getInputArguments();
@@ -791,7 +828,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         		if (path.trim().equals("")) {
         			path = ".";
         		}
-        		result = new File(path);
+        		result = new File(path,matcher.group(2));
         	}
     	}
     	
