@@ -1,0 +1,33 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	
+	<parent>
+		<groupId>org.perfmon4j</groupId>
+		<artifactId>perfmon4j-project</artifactId>
+		<version>1.4.2-SNAPSHOT</version>
+	</parent>
+  
+	<artifactId>perfmon4j-agent-api</artifactId>
+	<name>perfmon4j agent api</name>
+	<groupId>org.perfmon4j</groupId>
+	<packaging>jar</packaging>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.5</version>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.17</version>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+	</dependencies>
+</project>

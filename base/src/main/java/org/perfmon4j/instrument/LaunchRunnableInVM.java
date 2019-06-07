@@ -135,24 +135,29 @@ public class LaunchRunnableInVM {
     	for (String part : originalClasspath.split(PATH_SEPERATOR)) {
     		if (part.endsWith("test-classes")) {
     			// Add the perfmon4j test classes...
-    			myClassPath += part + PATH_SEPERATOR; 
+    			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 
     		} else if (part.contains("junit")) {
     			// Add junit classes...
-    			myClassPath += part + PATH_SEPERATOR; 
+    			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 
     		} else if (part.contains("derby")) {
     			// Add derby classes for SQLAppender tests...
-    			myClassPath += part + PATH_SEPERATOR; 
+    			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 
     		} else if (part.contains("log4j")) {
     			// Add log4j classes for log4j tests....
-    			myClassPath += part + PATH_SEPERATOR; 
+    			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 
+    		} else if (part.contains("perfmon4j"+ File.separator + "agent-api")) {
+    			// Add perfmon4j agent.
+    			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 
     		} else if (part.contains("javassist")) {
     			javassistFile = new File(part) ;
 			} 
     	}
-//    	myClassPath = myClassPath.replaceAll("\\\\", "/");
     	
 		if (loadJavaAgent) {
-	    	cmdString +=  " -javaagent:" + quoteIfNeeded(perfmonJar.getCanonicalPath());
+			// For some strange reason it works better to have the classPath before the agent.
+			cmdString += " -classpath " + myClassPath;
+			
+			cmdString +=  " -javaagent:" + quoteIfNeeded(perfmonJar.getCanonicalPath());
 	    	if (javaAgentParams != null) {
 	    		cmdString += "=" + javaAgentParams;
 	    	}
@@ -163,15 +168,11 @@ public class LaunchRunnableInVM {
 			cmdString +=  endorsedDirs;
 		} else {
 			// Just load the perfmon4j.jar onto the classpath.
-			myClassPath += PATH_SEPERATOR + perfmonJar.getCanonicalPath();
+			myClassPath += quoteIfNeeded(perfmonJar.getCanonicalPath()) + PATH_SEPERATOR;
+			cmdString += " -classpath " + myClassPath;
 		}
 
-    	myClassPath = quoteIfNeeded(myClassPath);
     	
-//    	System.out.println("CLASSPATH=" + myClassPath); 
-		cmdString += " -classpath " + myClassPath;
-
-		
 		if (systemProperties != null) {
 			Iterator<Map.Entry<Object,Object>> itr = systemProperties.entrySet().iterator();
 			while (itr.hasNext()) {
@@ -200,7 +201,9 @@ public class LaunchRunnableInVM {
 		try {
 			String classToRun = args[0];
 			System.out.println("Running class: " + classToRun);
-			Class<?> clazz = Class.forName(classToRun);
+
+			ClassLoader loader = ClassLoader.getSystemClassLoader();
+			Class<?> clazz = loader.loadClass(classToRun);
 			System.out.println("Loaded Class: " + clazz.getName());
 			Runnable runnable = (Runnable)clazz.newInstance();
 			if (runnable instanceof ProcessArgs) {

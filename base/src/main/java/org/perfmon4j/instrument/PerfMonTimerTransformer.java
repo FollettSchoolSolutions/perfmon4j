@@ -498,6 +498,40 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		}
     }
 
+    private static class PerfMom4JAPIInserter implements ClassFileTransformer {
+        public byte[] transform(ClassLoader loader, String className, 
+                Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
+                byte[] classfileBuffer) {
+            byte[] result = null;
+            
+            if ("org/perfmon4j/agent/api/PerfMon".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToPerfMonAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached PerfMon API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach PerfMon API class to agent", ex);
+	            }
+            } else if ("org/perfmon4j/agent/api/PerfMonTimer".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToPerfMonTimerAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached PerfMonTimer API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach PerfMonTimer API class to agent", ex);
+	            }
+	        } else if ("org/perfmon4j/agent/api/SQLTime".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToSQLTimeAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached SQLTime API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach SQLTime API class to agent", ex);
+	            }
+	        }
+
+			return result;
+		}
+    }
+    
+    
     private static class HystrixHookInserter implements ClassFileTransformer {
         public byte[] transform(ClassLoader loader, String className, 
                 Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
@@ -639,6 +673,12 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	logger.logInfo("Perfmon4j will NOT attempt to install instrumentation into Hystrix Commands and Thread Pools.  If this application uses Hystrix " +
         			"add -eHYSTRIX to javaAgent parameters to enable.");
         }
+        
+        
+        if (!Boolean.getBoolean("PerfMon4J.IgnoreAgentAPIClasses")) {
+        	inst.addTransformer(new PerfMom4JAPIInserter());
+        	logger.logInfo("Perfmon4j will attempt to install instrumentation into Hystrix Commands and Thread Pools");
+        }        
         
         // Check for all the preloaded classes and try to instrument any that might
         // match our perfmon4j javaagent configuration
