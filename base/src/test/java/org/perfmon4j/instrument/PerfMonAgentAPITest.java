@@ -84,7 +84,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	super.tearDown();
     }
 
-	public static class AgentAPIUsageTester implements Runnable {
+	public static class AgentAPIUsageTest implements Runnable {
 		public void run() {
 			if (org.perfmon4j.agent.api.PerfMon.isAttachedToAgent()) {
 				System.out.println("Agent API for PerfMon class has been instrumented");
@@ -105,7 +105,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	}
 
     public void testObjectsAreAttached() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPIUsageTester.class, "-dFALSE", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(AgentAPIUsageTest.class, "-dFALSE", "", perfmon4jJar);
 //System.out.println(output);   	
     	
     	assertTrue("PerfMon API class was not attached to agent", output.contains("Agent API for PerfMon class has been instrumented"));
@@ -114,7 +114,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     }
 	
 	
-	public static class AgentAPIPerfMonInstTester implements Runnable {
+	public static class AgentAPIPerfMonInstTest implements Runnable {
 		public void run() {
 			try {
 				PerfMonConfiguration config = new PerfMonConfiguration();
@@ -146,7 +146,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	}
 	
     public void testAttachedPerfMonAPI() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPIPerfMonInstTester.class, "", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(AgentAPIPerfMonInstTest.class, "", "", perfmon4jJar);
 //System.out.println(output);    	
     	String failures = extractFailures(output);
     	
@@ -155,7 +155,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	}
     }
 
-	public static class AgentAPIPerfMonTimerInstTester implements Runnable {
+	public static class AgentAPIPerfMonTimerInstTest implements Runnable {
 		public void run() {
 			try {
 				PerfMonConfiguration config = new PerfMonConfiguration();
@@ -200,7 +200,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	
 	
     public void testAttachedPerfMonTimerAPI() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPIPerfMonTimerInstTester.class, "", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(AgentAPIPerfMonTimerInstTest.class, "", "", perfmon4jJar);
 //System.out.println(output);    	
     	String failures = extractFailures(output);
     	
@@ -210,7 +210,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     }
 	
     
-	public static class AgentAPISQLTimeInstTester implements Runnable {
+	public static class AgentAPISQLTimeInstTest implements Runnable {
 		public void run() {
 			try {
 				org.perfmon4j.SQLTime.setEnabled(true);
@@ -239,7 +239,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	
 	
     public void testAttachedSQLTimeAPI() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPISQLTimeInstTester.class, "", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(AgentAPISQLTimeInstTest.class, "", "", perfmon4jJar);
 //System.out.println(output);    	
     	String failures = extractFailures(output);
     	
@@ -247,6 +247,51 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     		fail("One or more failures: " + failures);
     	}
     }
+
+	public static class AgentDeclarePerfMonTimerInstTest implements Runnable {
+		
+		@org.perfmon4j.agent.api.instrument.DeclarePerfMonTimer("test345.category")
+		private void doSomething() {
+			
+		}
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorName = "test345.category";
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorName);
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToMonitor(monitorName, appenderName, "./*");
+				PerfMon.configure(config);
+				
+				// Invoke the annotated method
+				doSomething();
+				
+				PerfMon nativePerfMon = PerfMon.getMonitor(monitorName);
+				if (nativePerfMon.getTotalCompletions() != 1) {
+					System.out.println("**FAIL: expected 1 hit from the annotation");
+				}
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAttachedDeclarePerfmonTimerAPI() throws Exception {
+    	String output = LaunchRunnableInVM.run(AgentDeclarePerfMonTimerInstTest.class, "-a" + AgentDeclarePerfMonTimerInstTest.class.getName(), "", perfmon4jJar);
+//System.out.println(output);    	
+    	String failures = extractFailures(output);
+    	
+    	if (!failures.isEmpty()) {
+    		fail("One or more failures: " + failures);
+    	}
+    }
+    
+    
     
     private String extractFailures(String output) {
     	StringBuilder failures = new StringBuilder();

@@ -22,6 +22,8 @@ package org.perfmon4j.instrument;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -292,13 +294,13 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
                         && !Modifier.isVolatile(method.getModifiers())
 //                        && !Modifier.isTransient(method.getModifiers())
                         && methodHasBody(method)) {
-                        DeclarePerfMonTimer an = getRuntimeAnnotation(method);
+                        String anValue = getRuntimeAnnotationValue(method);
                         String timerKeyAnnotation = null;
                         String timerKeyExtreme = null;
                         
-                        if (an != null && 
+                        if (anValue != null && 
                             ((mode == TransformerParams.MODE_BOTH) || (mode == TransformerParams.MODE_ANNOTATE))) {
-                            timerKeyAnnotation = an.value();
+                            timerKeyAnnotation = anValue;
                         } 
  
                         String originalMethodName = clazz.getName() + "." + method.getName();
@@ -511,13 +513,27 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     }
 
     
-    private DeclarePerfMonTimer getRuntimeAnnotation(CtMethod method) throws ClassNotFoundException {
-        DeclarePerfMonTimer result = null;
+    private String getRuntimeAnnotationValue(CtMethod method) throws ClassNotFoundException {
+        String result = null;
         try {
 	        Object annotations[] = method.getAnnotations();
 	        for (int i = 0; (i < annotations.length) && (result == null); i++) {
-	            if (annotations[i] instanceof DeclarePerfMonTimer) {
-	                result = (DeclarePerfMonTimer)annotations[i];
+            	Annotation an = (Annotation)annotations[i];
+	            if (an instanceof DeclarePerfMonTimer) {
+	                result = ((DeclarePerfMonTimer)an).value();
+	            } else if ("DeclarePerfMonTimer".equals(an.annotationType().getSimpleName())) {
+	            	// This will find the annotation in the agent-api jar.
+	            	Class<?> clazz = an.annotationType();
+	            	Method m = clazz.getDeclaredMethod("value");
+	            	if (m != null 
+	            		&& String.class.equals(m.getReturnType())
+	            		&& m.getParameterCount() == 0) {
+	            		try {
+	            			result = (String) m.invoke(annotations[i]);
+	            		} catch (Exception ex) {
+	            			// Ignore
+	            		}
+	            	}
 	            }
 	        }
         } catch (Exception ex) {
