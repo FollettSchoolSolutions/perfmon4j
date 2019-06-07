@@ -521,8 +521,8 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
             	Annotation an = (Annotation)annotations[i];
 	            if (an instanceof DeclarePerfMonTimer) {
 	                result = ((DeclarePerfMonTimer)an).value();
-	            } else if ("DeclarePerfMonTimer".equals(an.annotationType().getSimpleName())) {
-	            	// This will find the annotation in the agent-api jar.
+	            } else if ("org.perfmon4j.agent.api.instrument.DeclarePerfMonTimer".equals(an.annotationType().getName())) {
+	            	 // This will find the annotation in the agent-api jar.
 	            	Class<?> clazz = an.annotationType();
 	            	Method m = clazz.getDeclaredMethod("value");
 	            	if (m != null 
