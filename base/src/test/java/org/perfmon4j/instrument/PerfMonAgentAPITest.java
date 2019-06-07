@@ -25,7 +25,10 @@ import java.util.Properties;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
+import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTestCase;
+import org.perfmon4j.instrument.PerfMonTimerTransformerTest.SQLStatementTester.BogusAppender;
 import org.perfmon4j.util.MiscHelper;
 
 import junit.framework.TestSuite;
@@ -61,11 +64,6 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 			classesFolder = new File("./base/target/classes");
 		}
 		
-//		File testClassesFolder = new File("./target/test-classes");
-//		if (!testClassesFolder.exists()) {
-//			testClassesFolder = new File("./base/target/test-classes");
-//		}
-		
 		assertTrue("Could not find classes folder in: "  + classesFolder.getCanonicalPath(), classesFolder.exists());
 		
         MiscHelper.createJarFile(perfmon4jJar.getAbsolutePath(), props, new File[]{classesFolder});
@@ -93,89 +91,138 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 			} else {
 				System.out.println("Agent API for PerfMon class has NOT been instrumented");
 			}
+			if (org.perfmon4j.agent.api.PerfMonTimer.isAttachedToAgent()) {
+				System.out.println("Agent API for PerfMonTimer class has been instrumented");
+			} else {
+				System.out.println("Agent API for PerfMonTimer class has NOT been instrumented");
+			}
+			if (org.perfmon4j.agent.api.SQLTime.isAttachedToAgent()) {
+				System.out.println("Agent API for SQLTime class has been instrumented");
+			} else {
+				System.out.println("Agent API for SQLTime class has NOT been instrumented");
+			}
 		}
 	}
+
+    public void testObjectsAreAttached() throws Exception {
+    	String output = LaunchRunnableInVM.run(AgentAPIUsageTester.class, "-dFALSE", "", perfmon4jJar);
+//System.out.println(output);   	
+    	
+    	assertTrue("PerfMon API class was not attached to agent", output.contains("Agent API for PerfMon class has been instrumented"));
+    	assertTrue("PerfMonTimer API class was not attached to agent", output.contains("Agent API for PerfMonTimer class has been instrumented"));
+    	assertTrue("SQLTime API class was not attached to agent", output.contains("Agent API for SQLTime class has been instrumented"));
+    }
+	
+	
+	public static class AgentAPIPerfMonInstTester implements Runnable {
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorName = "test.category";
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorName);
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToMonitor(monitorName, appenderName, "./*");
+				PerfMon.configure(config);
+				
+				org.perfmon4j.agent.api.PerfMon apiPerfMon = org.perfmon4j.agent.api.PerfMon.getMonitor("not.active");
+				if (apiPerfMon.isActive()) {
+					System.out.println("**FAIL: 'not.active' is NOT configured to be monitored/active");
+				}
+				
+				if (!"not.active".equals(apiPerfMon.getName())) {
+					System.out.println("**FAIL: Incorrect monitor name, should have been 'not.active'");
+				}
+
+				apiPerfMon = org.perfmon4j.agent.api.PerfMon.getMonitor("test.category");
+				if (!apiPerfMon.isActive()) {
+					System.out.println("**FAIL: 'test.category' is configured to be monitored/active");
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+    public void testAttachedPerfMonAPI() throws Exception {
+    	String output = LaunchRunnableInVM.run(AgentAPIPerfMonInstTester.class, "", "", perfmon4jJar);
+//System.out.println(output);    	
+    	String failures = extractFailures(output);
+    	
+    	if (!failures.isEmpty()) {
+    		fail("One or more failures: " + failures);
+    	}
+    }
+
+	public static class AgentAPIPerfMonTimerInstTester implements Runnable {
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorName = "test123.category";
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorName);
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToMonitor(monitorName, appenderName, "./*");
+				PerfMon.configure(config);
+				
+				
+				/* Test start with passing in an agent and abort */
+				org.perfmon4j.agent.api.PerfMon apiPerfMon = org.perfmon4j.agent.api.PerfMon.getMonitor(monitorName);
+				org.perfmon4j.agent.api.PerfMonTimer apiTimer = org.perfmon4j.agent.api.PerfMonTimer.start(apiPerfMon);
+				org.perfmon4j.agent.api.PerfMonTimer.abort(apiTimer);
+				
+				PerfMon nativePerfMon = ((PerfMonAgentApiWrapper)apiPerfMon).getNativeObject();
+				if (nativePerfMon.getTotalHits() != 1) {
+					System.out.println("**FAIL: expected 1 hit");
+				}
+				if (nativePerfMon.getTotalCompletions() != 0) {
+					System.out.println("**FAIL: still should have 0 completions, because we aborted");
+				}
+				
+				
+				/* Test start with passing in an string and stop */
+				apiTimer = org.perfmon4j.agent.api.PerfMonTimer.start(monitorName);
+				org.perfmon4j.agent.api.PerfMonTimer.stop(apiTimer);
+				if (nativePerfMon.getTotalHits() != 2) {
+					System.out.println("**FAIL: expected 2 hits");
+				}
+				if (nativePerfMon.getTotalCompletions() != 1) {
+					System.out.println("**FAIL: still should have 1 completion, we aborted first time but passed the second");
+				}
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAttachedPerfMonTimerAPI() throws Exception {
+    	String output = LaunchRunnableInVM.run(AgentAPIPerfMonTimerInstTester.class, "", "", perfmon4jJar);
+//System.out.println(output);    	
+    	String failures = extractFailures(output);
+    	
+    	if (!failures.isEmpty()) {
+    		fail("One or more failures: " + failures);
+    	}
+    }
+	
     
-    public void testObjectsAreOperating() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPIUsageTester.class, "-dTRUE", "", perfmon4jJar);
+    
+    private String extractFailures(String output) {
+    	StringBuilder failures = new StringBuilder();
     	
-    	
-//    	String output = LaunchRunnableInVM.runWithoutPerfmon4jJavaAgent(AgentAPIUsageTester.class, perfmon4jJar);
-System.out.println(output);   	
+    	for (String line : output.split(System.lineSeparator())) {
+    		if (line.contains("**FAIL:")) {
+    			failures.append(System.lineSeparator())
+    				.append(line);
+    		}
+    	}
+    	return failures.toString();
     }
     
-    
-//	public static class SQLStatementTester implements Runnable {
-//		
-//		public static final class BogusAppender extends Appender {
-//			public BogusAppender(AppenderID id) {
-//				super(id);
-//			}
-//			
-//			@Override
-//			public void outputData(PerfMonData data) {
-//				if (data instanceof IntervalData) {
-//					IntervalData d = (IntervalData)data;
-//					System.out.println("Monitor: " + d.getOwner().getName() + " Completions:" + d.getTotalCompletions());
-//				} else {
-//					System.out.println(data.toAppenderString());
-//				}
-//			}
-//		}
-//		
-//	    final String DERBY_CREATE_1 = "CREATE TABLE Bogus(Name VARCHAR(200) NOT NULL)";
-//	    
-//		public void run() {
-//			try {
-//				Connection conn = null;
-//				
-//				Statement s = null;
-//				
-//				try {
-//					PerfMonConfiguration config = new PerfMonConfiguration();
-//					final String monitorName = "SQL.executeQuery";
-//					final String appenderName = "bogus";
-//					
-//					config.defineMonitor(monitorName);
-//					config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
-//					config.attachAppenderToMonitor(monitorName, appenderName, ".");
-//					
-//					ThreadTraceConfig tcConfig = new ThreadTraceConfig();
-//					tcConfig.addAppender(config.getAppenderForName(appenderName));
-//					config.addThreadTraceConfig("MyManualTimer", tcConfig);
-//					
-//					PerfMon.configure(config);
-//
-//					PerfMonTimer timer = null;
-//					try {
-//						Driver driver = (Driver)Class.forName("org.apache.derby.jdbc.EmbeddedDriver", true, PerfMon.getClassLoader()).newInstance();
-//						conn = driver.connect("jdbc:derby:memory:derbyDB;create=true", new Properties());
-//						s = conn.createStatement();
-//						s.execute(DERBY_CREATE_1);						
-//						timer = PerfMonTimer.start("MyManualTimer");
-//						s.executeQuery("SELECT * FROM BOGUS");
-//						Thread.sleep(2000);
-//					} finally {
-//						PerfMonTimer.stop(timer);	
-//					}
-//					Appender.flushAllAppenders();
-//				} finally {
-//					if (conn != null) {
-//						conn.close();
-//					}
-//				}
-//			} catch (Exception ex) {
-//				ex.printStackTrace();
-//			}
-//		}
-//	}
-//	
-//    public void XtestInstrumentSQLStatement() throws Exception {
-//    	String output = LaunchRunnableInVM.run(SQLStatementTester.class, "-dtrue,-eSQL(DERBY)", "", perfmon4jJar);
-//    	System.out.println(output);   	
-//    	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
-//    }
-//
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

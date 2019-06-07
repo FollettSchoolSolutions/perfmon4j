@@ -21,26 +21,13 @@
 package org.perfmon4j.instrument;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import javassist.CannotCompileException;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.CtNewMethod;
-import javassist.LoaderClassPath;
-import javassist.Modifier;
-import javassist.NotFoundException;
-import javassist.bytecode.AnnotationsAttribute;
-import javassist.bytecode.AttributeInfo;
-import javassist.bytecode.ParameterAnnotationsAttribute;
 
 import javax.management.ObjectName;
 
@@ -50,6 +37,21 @@ import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
 import org.perfmon4j.instrument.tomcat.TomcatDataSourceRegistry;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+
+import javassist.CannotCompileException;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtConstructor;
+import javassist.CtField;
+import javassist.CtMethod;
+import javassist.CtNewConstructor;
+import javassist.CtNewMethod;
+import javassist.LoaderClassPath;
+import javassist.Modifier;
+import javassist.NotFoundException;
+import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.AttributeInfo;
+import javassist.bytecode.ParameterAnnotationsAttribute;
 
 public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     final private static String IMPL_METHOD_SUFFIX = "$Impl";
@@ -1051,4 +1053,174 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	return clazz.toBytecode();
 	}
 
+	@Override
+	public byte[] attachAgentToPerfMonAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+    	ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+    	
+        updateIsAttachedToAgent(clazz);
+        
+        clazz.addInterface(classPool.getCtClass(PerfMonAgentApiWrapper.class.getName()));
+        clazz.addField(CtField.make("private org.perfmon4j.PerfMon nativeObject = null;", clazz));
+        
+        String src =
+        		"private PerfMon(org.perfmon4j.PerfMon nativeObject) {\r\n"
+        		+ "	this.nativeObject = nativeObject;\r\n"
+        		+ " this.name = nativeObject.getName();\r\n"
+        		+ "}";
+        clazz.addConstructor(CtNewConstructor.make(src, clazz));
+        
+        CtMethod getMonitorMethod = findMethod(clazz, "getMonitor", 2);
+        src = "{"
+        		+ "org.perfmon4j.PerfMon p = org.perfmon4j.PerfMon.getMonitor($1, $2);\r\n"
+        		+ "return new  org.perfmon4j.agent.api.PerfMon(p);"
+        		+ "}";
+        
+        getMonitorMethod.setBody(src);
+      
+        
+        CtMethod isActiveMethod = findMethod(clazz, "isActive");
+        isActiveMethod.setBody("return nativeObject.isActive();");
+        
+        src = "public org.perfmon4j.PerfMon getNativeObject() {\r\n" 
+        		+ " return nativeObject;\r\n"
+        		+ "}";
+        clazz.addMethod(CtMethod.make(src, clazz));
+        
+        return clazz.toBytecode();
+	}
+	
+	@Override
+	public byte[] attachAgentToPerfMonTimerAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+		ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+    	
+        updateIsAttachedToAgent(clazz);
+
+        clazz.addInterface(classPool.getCtClass(PerfMonTimerAgentApiWrapper.class.getName()));
+        clazz.addField(CtField.make("private org.perfmon4j.PerfMonTimer nativeObject = null;", clazz));
+        
+        String src =
+        		"private PerfMonTimer(org.perfmon4j.PerfMonTimer nativeObject) {\r\n"
+        		+ "	this.nativeObject = nativeObject;\r\n"
+        		+ "}";
+        clazz.addConstructor(CtNewConstructor.make(src, clazz));
+        
+        CtMethod startMethod = findMethod(clazz, "start", org.perfmon4j.agent.api.PerfMon.class.getName());
+        src = "{ "
+        		+ " org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();"  	
+        		+ " return new  org.perfmon4j.agent.api.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon));"
+        		+ "}";
+        startMethod.setBody(src);
+      
+
+        startMethod = findMethod(clazz, "start", 2);
+        src = "{ "
+        		+ " return new  org.perfmon4j.agent.api.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1, $2));"
+        		+ "}";
+        startMethod.setBody(src);
+        
+        
+        
+        CtMethod abortMethod = findMethod(clazz, "abort");
+        src = "{\r\n"
+        		+ " org.perfmon4j.PerfMonTimer.abort(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject());\r\n"  	
+        		+ "}";
+        abortMethod.setBody(src);
+        
+        
+        CtMethod stopMethod = findMethod(clazz, "stop");
+        src = "{\r\n"
+        		+ " org.perfmon4j.PerfMonTimer.stop(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject());\r\n"  	
+        		+ "}";
+        stopMethod.setBody(src);
+        
+        
+        src = "public org.perfmon4j.PerfMonTimer getNativeObject() {\r\n" 
+        		+ " return nativeObject;\r\n"
+        		+ "}";
+        clazz.addMethod(CtMethod.make(src, clazz));
+        
+        return clazz.toBytecode();
+	}
+
+	@Override
+	public byte[] attachAgentToSQLTimeAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+
+		ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+    	
+
+    	updateIsAttachedToAgent(clazz);
+        
+        return clazz.toBytecode();
+	}
+	
+	private void updateIsAttachedToAgent(CtClass clazz) throws Exception {
+        CtMethod method = findMethod(clazz, "isAttachedToAgent");
+        if (method != null) {
+	        method.setBody("return true;");
+        } else {
+        	throw new Exception("Expected API class to have isAttachedToAgent method.  Class:" + clazz.getName());
+        }
+	}
+	
+	
+	private CtMethod findMethod(CtClass clazz, String methodName) throws Exception {
+		return findMethod(clazz, methodName, -1);
+	}
+
+	
+	private CtMethod findMethod(CtClass clazz, String methodName, int numParameters) throws Exception {
+		for (CtMethod method : clazz.getDeclaredMethods()) {
+			if (methodName.equals(method.getName())
+					&& (numParameters == -1 || method.getParameterTypes().length == numParameters)
+					) {
+				return method;
+			}
+		}
+		
+		return null;
+	}
+
+	private CtMethod findMethod(CtClass clazz, String methodName, String argumentType) throws Exception {
+		for (CtMethod method : clazz.getDeclaredMethods()) {
+			if (methodName.equals(method.getName())
+					&&  method.getParameterTypes().length == 1
+					&&  argumentType.equals(method.getParameterTypes()[0].getName())
+					) {
+				return method;
+			}
+		}
+		
+		return null;
+	}
+	
+	
+	
+	private ClassPool getClassPool(ClassLoader loader) {
+    	ClassPool classPool;
+        if (loader == null) {
+            classPool = new ClassPool(true);
+        } else {
+            classPool = new ClassPool(false);
+            classPool.appendClassPath(new LoaderClassPath(loader));
+        }
+        
+        return classPool;
+	}
+	
+	
+	private CtClass getClazz(ClassPool classPool, byte[] classfileBuffer) throws IOException {
+	  	ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+        CtClass clazz = classPool.makeClass(inStream);
+        if (clazz.isFrozen()) {
+            clazz.defrost();
+        }    
+        
+        return clazz;
+	}
 }    

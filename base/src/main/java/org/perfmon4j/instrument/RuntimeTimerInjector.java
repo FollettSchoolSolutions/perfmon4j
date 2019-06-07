@@ -11,7 +11,11 @@ public abstract class RuntimeTimerInjector {
     public abstract byte[] disableSystemGC(byte[] classfileBuffer, ClassLoader loader) throws Exception;
     public abstract byte[] installHystrixCommandMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] installHystrixThreadPoolMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
-    
+
+	public abstract byte[] attachAgentToPerfMonAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	public abstract byte[] attachAgentToPerfMonTimerAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	public abstract byte[] attachAgentToSQLTimeAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	
     private ThreadLocal<Boolean> singnalThreadInTimer = new ThreadLocal<Boolean>() {
         public Boolean initialValue() {
             return Boolean.FALSE;

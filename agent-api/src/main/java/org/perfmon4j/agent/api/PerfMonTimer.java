@@ -36,7 +36,7 @@ public class PerfMonTimer {
 	}
 
     public static PerfMonTimer start(String key) {
-    	return noOpTimer;
+    	return start(key, false);
     }
     
     /**
