@@ -210,6 +210,43 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     }
 	
     
+	public static class AgentAPISQLTimeInstTester implements Runnable {
+		public void run() {
+			try {
+				org.perfmon4j.SQLTime.setEnabled(true);
+				
+				// Call the API code.
+				boolean isEnabled = org.perfmon4j.agent.api.SQLTime.isEnabled();
+				if (!isEnabled) {
+					System.out.println("**FAIL: API should indicate sqlTime is enabled");
+				}
+				
+				org.perfmon4j.SQLTime.startTimerForThread();
+				Thread.sleep(11);
+				org.perfmon4j.SQLTime.stopTimerForThread();
+				
+				long sqlDuration = org.perfmon4j.agent.api.SQLTime.getSQLTime();
+				System.out.println("SQLDuration: " + sqlDuration);
+				
+				if (sqlDuration < 10) {
+					System.out.println("**FAIL: Should have at least 10 millis SQLTime on this thread");
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAttachedSQLTimeAPI() throws Exception {
+    	String output = LaunchRunnableInVM.run(AgentAPISQLTimeInstTester.class, "", "", perfmon4jJar);
+//System.out.println(output);    	
+    	String failures = extractFailures(output);
+    	
+    	if (!failures.isEmpty()) {
+    		fail("One or more failures: " + failures);
+    	}
+    }
     
     private String extractFailures(String output) {
     	StringBuilder failures = new StringBuilder();

@@ -1108,7 +1108,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         clazz.addConstructor(CtNewConstructor.make(src, clazz));
         
-        CtMethod startMethod = findMethod(clazz, "start", org.perfmon4j.agent.api.PerfMon.class.getName());
+        CtMethod startMethod = findMethod(clazz, "start", "org.perfmon4j.agent.api.PerfMon");
         src = "{ "
         		+ " org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();"  	
         		+ " return new  org.perfmon4j.agent.api.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon));"
@@ -1152,7 +1152,14 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 
 		ClassPool classPool = getClassPool(loader);
     	CtClass clazz = getClazz(classPool, classfileBuffer);
+
+        CtMethod method = findMethod(clazz, "isEnabled");
+        String src = "{ return org.perfmon4j.SQLTime.isEnabled(); }";
+        method.setBody(src);
     	
+        method = findMethod(clazz, "getSQLTime");
+        src = "{ return org.perfmon4j.SQLTime.getSQLTime(); }";
+        method.setBody(src);
 
     	updateIsAttachedToAgent(clazz);
         
