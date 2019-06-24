@@ -17,6 +17,8 @@ McHenry, IL 60050
 
 Changes
 
+** 1.4.3 (Version in progress)
+
 ** 1.4.2
 - Added the perfmon4j-agent-api.jar.  Using this jar you can optionally add Perfmon4j
 timers and annotations to classes (bundled in jar,war or ear files). If the
