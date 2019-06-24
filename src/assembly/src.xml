@@ -51,7 +51,10 @@
 			<source>${M2_REPO}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</source>
 			<destName>3rd-party/javassist/${javassist.version}/javassist.jar</destName>
 		</file>
-
+		<file>
+			<source>${basedir}/agent-api/target/perfmon4j-agent-api-${project.version}.jar</source>
+			<destName>perfmon4j-agent-api.jar</destName>
+		</file>
 		<file>
 			<source>${basedir}/base/target/perfmon4j-${project.version}.jar</source>
 			<destName>perfmon4j.jar</destName>

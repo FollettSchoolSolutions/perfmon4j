@@ -17,6 +17,21 @@ McHenry, IL 60050
 
 Changes
 
+** 1.4.2
+- Added the perfmon4j-agent-api.jar.  Using this jar you can optionally add Perfmon4j
+timers and annotations to classes (bundled in jar,war or ear files). If the
+Perfmon4j java agent is loaded at boot time the functionality represented by these
+classes will become activated.  When the Perfmon4j agent is not loaded, these classes
+will be inactive.
+
+- The agent jar includes the following files (which can be used in place of their same
+named counterparts in the Perfmon4j full implementation jar):
+	- org.perfmon4j.agent.api.PerfMon
+	- org.perfmon4j.agent.api.PerfMonTimer
+	- org.perfmon4j.agent.api.SQLTime
+	- org.perfmon4j.agent.api.instrument.DeclarePerfMonTimer (Annotation)
+
+
 ** 1.4.1
 - Added support for writing PerfMon output data to InfluxDb 
 (https://www.influxdata.com/time-series-platform/influxdb/) with the InfluxAppender class.

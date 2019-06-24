@@ -10,3 +10,5 @@ hystrix/derby\.log
 hystrix-demo/\.classpath
 
 agent-api/\.classpath
+
+agent-api/bin/
