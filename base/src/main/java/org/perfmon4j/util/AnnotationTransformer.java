@@ -24,7 +24,9 @@ package org.perfmon4j.util;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.perfmon4j.SnapShotSQLWriter;
@@ -32,6 +34,7 @@ import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
+import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.SnapShotStringFormatter;
 
@@ -46,6 +49,7 @@ public class AnnotationTransformer {
     private static final String API_SNAP_SHOT_GAUGE = "org.perfmon4j.agent.api.instrument.SnapShotGauge";
     private static final String API_SNAP_SHOT_STRING = "org.perfmon4j.agent.api.instrument.SnapShotString";
     private static final String API_SNAP_SHOT_RATIO = "org.perfmon4j.agent.api.instrument.SnapShotRatio";
+    private static final String API_SNAP_SHOT_RATIOS = "org.perfmon4j.agent.api.instrument.SnapShotRatios";
     
     
     public AnnotationTransformer() {
@@ -54,6 +58,7 @@ public class AnnotationTransformer {
     	workers.put(SnapShotGauge.class, new GaugeWorker());
     	workers.put(SnapShotString.class, new StringWorker());
     	workers.put(SnapShotRatio.class, new RatioWorker());
+    	workers.put(SnapShotRatios.class, new RatiosWorker());
     }
 
     public <T extends Annotation> T transform(Class<T> annotationClass, Annotation an) {
@@ -107,7 +112,8 @@ public class AnnotationTransformer {
     }
 
     
-    private static <T> T getNamedProperty(Annotation an, String propertyName, T defaultValue) {
+    @SuppressWarnings("unchecked")
+	private static <T> T getNamedProperty(Annotation an, String propertyName, T defaultValue) {
     	T result = defaultValue;
     	
     	try {
@@ -122,6 +128,8 @@ public class AnnotationTransformer {
 		} catch (IllegalArgumentException e) {
 			// Ignore
 		} catch (InvocationTargetException e) {
+			// Ignore
+		} catch (ClassCastException e) {
 			// Ignore
 		}
     	
@@ -233,16 +241,13 @@ public class AnnotationTransformer {
     }
     
     
-   
-    
-    
     private static class RatioWorker implements Worker<SnapShotRatio> {
 		public SnapShotRatio transform(final Annotation an) {
 	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_RATIO)) {
 	    		return new SnapShotRatio() {
 
 					public Class<? extends Annotation> annotationType() {
-						return SnapShotString.class;
+						return SnapShotRatio.class;
 					}
 
 					public String name() {
@@ -271,4 +276,32 @@ public class AnnotationTransformer {
     }
 
 
+    private static class RatiosWorker implements Worker<SnapShotRatios> {
+		public SnapShotRatios transform(final Annotation an) {
+	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_RATIOS)) {
+	    		return new SnapShotRatios() {
+	    			private final AnnotationTransformer transformer = new AnnotationTransformer();
+
+					public Class<? extends Annotation> annotationType() {
+						return SnapShotRatios.class;
+					}
+
+					public SnapShotRatio[] value() {
+					
+						List<SnapShotRatio> ratios = new ArrayList<SnapShotRatio>();
+						Annotation[] vArray = getNamedProperty(an, "values", new Annotation[]{});
+						
+						for (Annotation v : vArray) {
+							ratios.add(transformer.transform(SnapShotRatio.class, v));
+						}
+						
+						return ratios.toArray(new SnapShotRatio[]{});
+					}
+
+				};
+	    	}
+	    	return null;
+		}
+    }
+    
 } 
