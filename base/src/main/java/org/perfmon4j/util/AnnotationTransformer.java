@@ -113,8 +113,23 @@ public class AnnotationTransformer {
     	
     	return result;
     }
-
     
+    /* package level for testing */ static <T extends Enum<T>> T transformEnumValue(Class<T> enumType, Enum<?>sourceValue, T defaultValue) {
+    	T result = defaultValue;
+    	
+    	if (sourceValue != null) {
+	    	try {
+	        	result = Enum.valueOf(enumType, sourceValue.name()) ;
+	    	} catch (IllegalArgumentException ex) {
+	    		logger.logWarn(enumType + " does not contain a matching value for \"" 
+	    				+ sourceValue.name() + "\". Returning default: \"" + defaultValue.name() + "\"");
+	    	}
+    	} else {
+    		logger.logWarn("null passed in for sourceValue. Returning default: \"" + enumType + "." + defaultValue.name() + "\"");
+    	}
+    	return result;
+    }
+
     @SuppressWarnings("unchecked")
 	private static <T> T getNamedProperty(Annotation an, String propertyName, T defaultValue) {
     	T result = defaultValue;
@@ -140,16 +155,40 @@ public class AnnotationTransformer {
     	return result;
     }
     
+
+	private static Enum<?> getNamedEnumProperty(Annotation an, String enumPropertyName) {
+    	Enum<?> result = null;
+    	
+    	try {
+			Method m = an.getClass().getMethod(enumPropertyName, new Class[]{});
+			result = (Enum<?>)m.invoke(an, new Object[]{});
+		} catch (NoSuchMethodException e) {
+			// Ignore
+		} catch (SecurityException e) {
+			// Ignore
+		} catch (IllegalAccessException e) {
+			// Ignore
+		} catch (IllegalArgumentException e) {
+			// Ignore
+		} catch (InvocationTargetException e) {
+			// Ignore
+		} catch (ClassCastException e) {
+			// Ignore
+		}
+    	
+    	
+    	return result;
+    }
+    
     
     private static interface Worker<T extends Annotation> {
     	public T transform(Annotation an);
     }
 
     private static class CounterWorker implements Worker<SnapShotCounter> {
-		public SnapShotCounter transform(Annotation an) {
+		public SnapShotCounter transform(final Annotation an) {
 	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_COUNTER)) {
 	    		return new SnapShotCounter() {
-					
 					public Class<? extends Annotation> annotationType() {
 						return SnapShotCounter.class;
 					}
@@ -159,7 +198,9 @@ public class AnnotationTransformer {
 					}
 					
 					public Display preferredDisplay() {
-						return SnapShotCounter.Display.DELTA;
+						return AnnotationTransformer.transformEnumValue(SnapShotCounter.Display.class, 
+								AnnotationTransformer.getNamedEnumProperty(an, "preferredDisplay"),
+								SnapShotCounter.Display.DELTA);
 					}
 					
 					public Class<? extends NumberFormatter> formatter() {
@@ -172,10 +213,9 @@ public class AnnotationTransformer {
     }
     
     private static class ProviderWorker implements Worker<SnapShotProvider> {
-		public SnapShotProvider transform(Annotation an) {
-	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_PROVIDER)) {
+		public SnapShotProvider transform(final Annotation an) {
+			if (an.annotationType().getName().equals(API_SNAP_SHOT_PROVIDER)) {
 	    		return new SnapShotProvider() {
-					
 					public Class<? extends Annotation> annotationType() {
 						return SnapShotProvider.class;
 					}
@@ -185,7 +225,9 @@ public class AnnotationTransformer {
 					}
 					
 					public Type type() {
-						return SnapShotProvider.Type.INSTANCE_PER_MONITOR;
+						return AnnotationTransformer.transformEnumValue(SnapShotProvider.Type.class, 
+								AnnotationTransformer.getNamedEnumProperty(an, "type"),
+								SnapShotProvider.Type.INSTANCE_PER_MONITOR);
 					}
 					
 					public Class<?> dataInterface() {
@@ -222,10 +264,9 @@ public class AnnotationTransformer {
     }
     
     private static class StringWorker implements Worker<SnapShotString> {
-		public SnapShotString transform(Annotation an) {
+		public SnapShotString transform(final Annotation an) {
 	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_STRING)) {
 	    		return new SnapShotString() {
-
 					public Class<? extends Annotation> annotationType() {
 						return SnapShotString.class;
 					}
@@ -235,7 +276,7 @@ public class AnnotationTransformer {
 					}
 
 					public boolean isInstanceName() {
-						return false;
+						return AnnotationTransformer.getNamedProperty(an, "isInstanceName", Boolean.FALSE).booleanValue();
 					}
 				};
 	    	}

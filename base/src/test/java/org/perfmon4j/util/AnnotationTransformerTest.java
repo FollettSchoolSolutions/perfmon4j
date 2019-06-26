@@ -39,6 +39,10 @@ public class AnnotationTransformerTest extends TestCase {
 		public Class<? extends Annotation> annotationType() {
 			return org.perfmon4j.agent.api.instrument.SnapShotProvider.class;
 		}
+
+		public Type type() {
+			return org.perfmon4j.agent.api.instrument.SnapShotProvider.Type.STATIC;
+		}
 	};
 	
 	public void testTransformSnapShotProvider() {
@@ -46,7 +50,7 @@ public class AnnotationTransformerTest extends TestCase {
 		
 		assertNotNull(impl);
 		assertFalse("Should not use priorityTimer", impl.usePriorityTimer());
-		assertEquals("Type should be INSTANCE_PER_MONITOR", SnapShotProvider.Type.INSTANCE_PER_MONITOR,
+		assertEquals("Type should be STATIC", SnapShotProvider.Type.STATIC,
 				impl.type());
 		assertEquals("DataInterface should be a void class", void.class,
 				impl.dataInterface());
@@ -58,13 +62,17 @@ public class AnnotationTransformerTest extends TestCase {
 		public Class<? extends Annotation> annotationType() {
 			return org.perfmon4j.agent.api.instrument.SnapShotCounter.class;
 		}
+
+		public Display preferredDisplay() {
+			return org.perfmon4j.agent.api.instrument.SnapShotCounter.Display.DELTA_PER_MIN;
+		}
 	};
 
 	
 	public void testSnapShotCounter() {
 		SnapShotCounter impl = t.transform(SnapShotCounter.class, snapShotCounter); 
 		assertNotNull(impl);
-		assertEquals("preferredDisplay", SnapShotCounter.Display.DELTA, impl.preferredDisplay());
+		assertEquals("preferredDisplay", SnapShotCounter.Display.DELTA_PER_MIN, impl.preferredDisplay());
 		assertEquals("formatter", NumberFormatter.class, impl.formatter());
 		assertEquals("suffix", "", impl.suffix());
 	}
@@ -92,12 +100,16 @@ public class AnnotationTransformerTest extends TestCase {
 		public Class<? extends Annotation> annotationType() {
 			return org.perfmon4j.agent.api.instrument.SnapShotString.class;
 		}
+
+		public boolean isInstanceName() {
+			return true;
+		}
 	};
 	
 	public void testSnapShotString() {
 		SnapShotString impl = t.transform(SnapShotString.class, snapShotString); 
 		assertNotNull(impl);
-		assertFalse("Should not be identified as a instanceName by default", impl.isInstanceName());
+		assertTrue("Should be flagged as an instance name", impl.isInstanceName());
 		assertEquals("Should use default formatter", SnapShotStringFormatter.class, impl.formatter());
 	}
 
@@ -170,4 +182,33 @@ public class AnnotationTransformerTest extends TestCase {
 		SnapShotInstanceDefinition impl = t.transform(SnapShotInstanceDefinition.class, snapShotInstanceDefinition); 
 		assertNotNull(impl);
 	}
+	
+	
+	enum API_ENUM {
+		valueA,
+		valueB,
+		valueC
+	}
+
+	enum AGENT_ENUM {
+		valueA,
+		valueB,
+	}
+	
+	
+	public void testTransformEnumValue() {
+		AGENT_ENUM value = AnnotationTransformer.transformEnumValue(AGENT_ENUM.class, API_ENUM.valueA, AGENT_ENUM.valueA);
+		assertEquals("API valueA should map to agent valueA", AGENT_ENUM.valueA, value);
+		
+		value = AnnotationTransformer.transformEnumValue(AGENT_ENUM.class, API_ENUM.valueB, AGENT_ENUM.valueA);
+		assertEquals("API valueB should map to agent valueB", AGENT_ENUM.valueB, value);
+
+		value = AnnotationTransformer.transformEnumValue(AGENT_ENUM.class, API_ENUM.valueC, AGENT_ENUM.valueA);
+		assertEquals("Since agent does not have a valueC we expect the result", AGENT_ENUM.valueA, value);
+
+		value = AnnotationTransformer.transformEnumValue(AGENT_ENUM.class, null, AGENT_ENUM.valueA);
+		assertEquals("null should just return the default", AGENT_ENUM.valueA, value);
+		
+	}
+	
 }

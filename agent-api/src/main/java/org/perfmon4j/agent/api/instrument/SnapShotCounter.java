@@ -13,7 +13,6 @@ import java.lang.annotation.Target;
  * 
  * The alias provides a simplified implementation using only default
  * values for the following attributes:
- *  perferredDisplay = Display.DELTA
  * 	formatter = NumberFormatter.class
  * 	suffix = ""
  * 
@@ -23,4 +22,13 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface SnapShotCounter {
+	public enum Display {
+		DELTA,
+		DELTA_PER_MIN,
+		DELTA_PER_SECOND,
+		INITIAL_VALUE,
+		FINAL_VALUE
+	}
+	
+	public Display preferredDisplay() default Display.DELTA;
 }

@@ -14,7 +14,6 @@ import java.lang.annotation.Target;
  * The alias provides a simplified implementation using only default
  * values for the following attributes:
  * 	formatter = SnapShotStringFormatter.class
- *  isInstanceName = false;
  * 
  * @author perfmon
  *
@@ -22,4 +21,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface SnapShotString {
+	public boolean isInstanceName() default false; 
 }

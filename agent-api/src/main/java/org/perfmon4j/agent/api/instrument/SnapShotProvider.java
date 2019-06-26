@@ -11,7 +11,6 @@ import java.lang.annotation.Target;
  * 
  * The alias provides a simplified implementation using only default
  * values for the following attributes:
- * 	type (default) INSTANCE_PER_MONITOR
  * 	dataInterface(default) = void.class
  * 	usePriorityTimer(default) = false 
  *  sqlWriter = null
@@ -22,4 +21,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface SnapShotProvider {
+	public static enum Type {
+		INSTANCE_PER_MONITOR,	// A new provider will be instantiated for each monitor (DEFAULT)
+		STATIC,		// The SnapShotManager will access static methods on the class.
+		FACTORY,	// The SnapShotManager will invoke the static method getInstance() OR getInstance(String instanceName) ;
+	}
+	Type type() default Type.INSTANCE_PER_MONITOR;
 }
