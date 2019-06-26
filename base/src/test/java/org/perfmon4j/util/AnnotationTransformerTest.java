@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
+import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
@@ -157,8 +158,16 @@ public class AnnotationTransformerTest extends TestCase {
 	}
 	
 	
-//	public void testSnapShotInstanceDefinition() {
-//		fail("Not implemented");
-//	}
+	private final org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition snapShotInstanceDefinition = 
+			new org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition() {
 
+		public Class<? extends Annotation> annotationType() {
+			return org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition.class;
+		}
+	};
+	
+	public void testSnapShotInstanceDefinition() {
+		SnapShotInstanceDefinition impl = t.transform(SnapShotInstanceDefinition.class, snapShotInstanceDefinition); 
+		assertNotNull(impl);
+	}
 }

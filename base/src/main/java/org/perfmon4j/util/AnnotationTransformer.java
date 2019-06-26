@@ -32,6 +32,7 @@ import java.util.Map;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
+import org.perfmon4j.instrument.SnapShotInstanceDefinition;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
@@ -50,6 +51,7 @@ public class AnnotationTransformer {
     private static final String API_SNAP_SHOT_STRING = "org.perfmon4j.agent.api.instrument.SnapShotString";
     private static final String API_SNAP_SHOT_RATIO = "org.perfmon4j.agent.api.instrument.SnapShotRatio";
     private static final String API_SNAP_SHOT_RATIOS = "org.perfmon4j.agent.api.instrument.SnapShotRatios";
+    private static final String API_SNAP_SHOT_INSTANCE_DEFINITION = "org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition";
     
     
     public AnnotationTransformer() {
@@ -59,6 +61,7 @@ public class AnnotationTransformer {
     	workers.put(SnapShotString.class, new StringWorker());
     	workers.put(SnapShotRatio.class, new RatioWorker());
     	workers.put(SnapShotRatios.class, new RatiosWorker());
+    	workers.put(SnapShotInstanceDefinition.class, new InstanceDefinitionWorker());
     }
 
     public <T extends Annotation> T transform(Class<T> annotationClass, Annotation an) {
@@ -303,5 +306,20 @@ public class AnnotationTransformer {
 	    	return null;
 		}
     }
+
+    private static class InstanceDefinitionWorker implements Worker<SnapShotInstanceDefinition> {
+		public SnapShotInstanceDefinition transform(Annotation an) {
+	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_INSTANCE_DEFINITION)) {
+	    		return new SnapShotInstanceDefinition() {
+
+					public Class<? extends Annotation> annotationType() {
+						return SnapShotInstanceDefinition.class;
+					}
+				};
+	    	}
+	    	return null;
+		}
+    }
+    
     
 } 
