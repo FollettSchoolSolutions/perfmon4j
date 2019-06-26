@@ -29,14 +29,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javassist.CannotCompileException;
-import javassist.ClassClassPath;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.SQLWriteable;
@@ -56,12 +48,22 @@ import org.perfmon4j.instrument.jmx.JavassistJMXSnapShotProxyFactory;
 import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.util.AnnotationTransformer;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.NumberFormatter;
 
+import javassist.CannotCompileException;
+import javassist.ClassClassPath;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtConstructor;
+import javassist.CtField;
+import javassist.CtMethod;
+
 public class JavassistSnapShotGenerator extends SnapShotGenerator {
+	private final AnnotationTransformer transformer = new AnnotationTransformer(); 
     static private final Logger logger = LoggerFactory.initLogger(JavassistSnapShotGenerator.class);
 	private static int SERIAL_NUMBER = 0;
 	
@@ -282,7 +284,6 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		return generateSnapShotDataImpl(dataProvider, null, null);
 	}
 
-	
 	private Class<?> generateSnapShotDataImpl(Class<?> dataProvider, JavassistJMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean useJMXConfig = jmxConfig != null;
 		boolean isStatic = false;
@@ -290,7 +291,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		Class<?> sqlWriter = null;
 		boolean writerIncludesDatabaseVersion = false;
 		
-		SnapShotProvider provider =  (SnapShotProvider)dataProvider.getAnnotation(SnapShotProvider.class);
+		SnapShotProvider provider =  transformer.findAnotation(SnapShotProvider.class, dataProvider);
 		if (provider == null && !useJMXConfig) {
 			throw new GenerateSnapShotException("Provider class must include a SnapShotProvider annotation");
 		}
@@ -300,10 +301,12 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		
 			dataInterface =  provider.dataInterface();
 			sqlWriter = provider.sqlWriter();
-			if (SnapShotSQLWriter.class.equals(sqlWriter)) {
-				sqlWriter = null;
-			} else {
-				writerIncludesDatabaseVersion =  SnapShotSQLWriterWithDatabaseVersion.class.isAssignableFrom(sqlWriter);
+			if (sqlWriter != null) {
+				if (SnapShotSQLWriter.class.equals(sqlWriter)) {
+					sqlWriter = null;
+				} else {
+					writerIncludesDatabaseVersion =  SnapShotSQLWriterWithDatabaseVersion.class.isAssignableFrom(sqlWriter);
+				}
 			}
 			
 			if (void.class.equals(dataInterface)) {
@@ -446,9 +449,9 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 					Method m = methods[i];
 					int modifiers = m.getModifiers();
 					if (isStatic == Modifier.isStatic(modifiers)) {
-						SnapShotString stringAnnotation = m.getAnnotation(SnapShotString.class);
-						SnapShotGauge gaugeAnnotation = m.getAnnotation(SnapShotGauge.class);
-						SnapShotCounter counterAnnotation = m.getAnnotation(SnapShotCounter.class);
+						SnapShotString stringAnnotation = transformer.findAnotation(SnapShotString.class, m);
+						SnapShotGauge gaugeAnnotation = transformer.findAnotation(SnapShotGauge.class, m);
+						SnapShotCounter counterAnnotation = transformer.findAnotation(SnapShotCounter.class, m);
 						
 						if (stringAnnotation != null) {
 							if (Modifier.isPublic(modifiers)) {
@@ -557,7 +560,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		if (isJMXWrapperClass) {
 			providerInstance = jmxWrapper;
 		} else {
-			SnapShotProvider pAnnotation = (SnapShotProvider)provider.getAnnotation(SnapShotProvider.class);
+			SnapShotProvider pAnnotation = transformer.findAnotation(SnapShotProvider.class, provider); 
 			if (pAnnotation == null) {
 				throw new GenerateSnapShotException("Provider class must include a SnapShotProvider annotation");
 			}
@@ -676,12 +679,12 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		for (int i = 0; i < methods.length; i++) {
 			Method method = methods[i];
 			
-			SnapShotCounter counter = method.getAnnotation(SnapShotCounter.class);
+			SnapShotCounter counter = transformer.findAnotation(SnapShotCounter.class, method); 
 			if (counter != null) {
 				fields.addAll(createFields(monitorKey, generateFieldName(method.getName()) + DELTA_FIELD_SUFFIX,
 						FieldKey.DOUBLE_TYPE));
 			}
-			SnapShotGauge gauge = method.getAnnotation(SnapShotGauge.class);
+			SnapShotGauge gauge = transformer.findAnotation(SnapShotGauge.class, method);
 			if (gauge != null) {
 				String fieldType = FieldKey.LONG_TYPE;
 				if (method.getReturnType().equals(Integer.class) || method.getReturnType().equals(int.class)) {
@@ -690,7 +693,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 				fields.addAll(createFields(monitorKey, generateFieldName(method.getName()),
 						fieldType));
 			}
-			SnapShotString str = method.getAnnotation(SnapShotString.class);
+			SnapShotString str = transformer.findAnotation(SnapShotString.class, method);
 			if (str != null && !str.isInstanceName()) {
 				fields.addAll(createFields(monitorKey, generateFieldName(method.getName()),
 						FieldKey.STRING_TYPE));

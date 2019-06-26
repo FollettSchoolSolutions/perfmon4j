@@ -34,9 +34,6 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.Appender;
@@ -51,6 +48,9 @@ import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 
 public class PerfMonTimerTransformerTest extends PerfMonTestCase {

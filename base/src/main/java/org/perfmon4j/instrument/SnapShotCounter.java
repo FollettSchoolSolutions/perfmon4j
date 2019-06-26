@@ -26,8 +26,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.perfmon4j.instrument.SnapShotProvider.Type;
-import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.util.NumberFormatter;
 
 @Retention(RetentionPolicy.RUNTIME)
@@ -42,7 +40,7 @@ public @interface SnapShotCounter {
 		
 		private final String suffix;
 		private final String getter;
-
+ 
 		private Display(String suffix, String getter) {
 			this.suffix = suffix;
 			this.getter = getter;
