@@ -21,7 +21,6 @@
 
 package org.perfmon4j.instrument.snapshot;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -487,7 +486,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 			if (useJMXConfig) {
 				ratios = jmxConfig.getSnapShotRatios();
 			} else {
-				ratios = (SnapShotRatios)dataProvider.getAnnotation(SnapShotRatios.class);
+				ratios =  transformer.findAnotation(SnapShotRatios.class, dataProvider);
 			}
 			if (ratios != null) {
 				SnapShotRatio rArray[] = ratios.value();
@@ -496,7 +495,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 				}
 			} else if (!useJMXConfig) {
 				// A single SnapShotRatio annotation is also supported.
-				SnapShotRatio singleRatio = (SnapShotRatio)dataProvider.getAnnotation(SnapShotRatio.class);
+				SnapShotRatio singleRatio = this.transformer.findAnotation(SnapShotRatio.class, dataProvider);
 				if (singleRatio != null) {
 					generateRatio(singleRatio, ctClass, toAppenderStringBody, getObservationsBody);
 				}
@@ -631,7 +630,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		for (int i = 0; i < methods.length; i++) {
 			Method method = methods[i];
 			
-			SnapShotInstanceDefinition  instanceDef = method.getAnnotation(SnapShotInstanceDefinition.class);
+			SnapShotInstanceDefinition  instanceDef = transformer.findAnotation(SnapShotInstanceDefinition.class, method);
 			if (instanceDef != null) {
 				try {
 					String instances[] = (String[])method.invoke(null, new Object[]{});
@@ -659,22 +658,20 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		
 		List<FieldKey> fields = new ArrayList<FieldKey>();
 		
-		Annotation classAnnotations[] = clazz.getAnnotations();
-		for (int i = 0; i < classAnnotations.length; i++) {
-			Annotation annotation = classAnnotations[i];
-			if (annotation instanceof SnapShotRatio) {
-				SnapShotRatio snapShotRatio = (SnapShotRatio)annotation;
-				fields.addAll(createFields(monitorKey, snapShotRatio.name(),
+		SnapShotRatios snapShotRatios = transformer.findAnotation(SnapShotRatios.class, clazz);
+		if (snapShotRatios != null) {
+			for (SnapShotRatio r : snapShotRatios.value()) {
+				fields.addAll(createFields(monitorKey, r.name(),
 						FieldKey.DOUBLE_TYPE));
-			} else if (annotation instanceof SnapShotRatios) {
-				SnapShotRatios snapShotRatios = (SnapShotRatios)annotation;
-				for (int j = 0; j < snapShotRatios.value().length; j++) {
-					SnapShotRatio snapShotRatio = snapShotRatios.value()[j];
-					fields.addAll(createFields(monitorKey, snapShotRatio.name(),
-							FieldKey.DOUBLE_TYPE));
-				}
 			}
+		}  
+			
+		SnapShotRatio snapShotRatio = transformer.findAnotation(SnapShotRatio.class, clazz);
+		if (snapShotRatio != null) {
+			fields.addAll(createFields(monitorKey, snapShotRatio.name(),
+					FieldKey.DOUBLE_TYPE));
 		}
+		
 		Method methods[] = clazz.getMethods();
 		for (int i = 0; i < methods.length; i++) {
 			Method method = methods[i];

@@ -361,6 +361,56 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     }
     
     
+
+	public static class SnapShotMonitorWithAPIRatiosTest implements Runnable {
+		@org.perfmon4j.agent.api.instrument.SnapShotProvider
+		@org.perfmon4j.agent.api.instrument.SnapShotRatios(values = { 
+			@org.perfmon4j.agent.api.instrument.SnapShotRatio(name="cacheHitRate", numerator="cacheHits", denominator="totalCalls", displayAsPercentage=true) 
+		})
+		public static class MySnapShotClass {
+			private int totalCalls = 0;
+			private int cacheHits = 0;
+
+			@org.perfmon4j.agent.api.instrument.SnapShotCounter
+			public int getTotalCalls() {
+				return totalCalls += 4;
+			}
+			
+			@org.perfmon4j.agent.api.instrument.SnapShotCounter
+			public int getCacheHits() {
+				return ++cacheHits;
+			}
+		}
+		
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String simpleSnapShotName = "Simple";
+				final String appenderName = "bogus";
+				
+				config.defineSnapShotMonitor(simpleSnapShotName, MySnapShotClass.class.getName());
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToSnapShotMonitor(simpleSnapShotName, appenderName);
+				PerfMon.configure(config);
+				
+				Thread.sleep(2000);
+				Appender.flushAllAppenders();
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAPISnapShotRatiosAnnotations() throws Exception {
+    	String output = LaunchRunnableInVM.run(SnapShotMonitorWithAPIRatiosTest.class, "", "", perfmon4jJar);
+//System.out.println(output);    	
+    	
+    	assertTrue("Should have the cacheHitRate value in text output", output.contains("cacheHitRate............. 25.000%"));
+    }
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
