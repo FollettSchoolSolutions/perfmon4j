@@ -22,6 +22,7 @@
 package org.perfmon4j.util;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +31,7 @@ import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
+import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.SnapShotStringFormatter;
 
@@ -43,6 +45,7 @@ public class AnnotationTransformer {
     private static final String API_SNAP_SHOT_PROVIDER = "org.perfmon4j.agent.api.instrument.SnapShotProvider";
     private static final String API_SNAP_SHOT_GAUGE = "org.perfmon4j.agent.api.instrument.SnapShotGauge";
     private static final String API_SNAP_SHOT_STRING = "org.perfmon4j.agent.api.instrument.SnapShotString";
+    private static final String API_SNAP_SHOT_RATIO = "org.perfmon4j.agent.api.instrument.SnapShotRatio";
     
     
     public AnnotationTransformer() {
@@ -50,6 +53,7 @@ public class AnnotationTransformer {
     	workers.put(SnapShotProvider.class, new ProviderWorker());
     	workers.put(SnapShotGauge.class, new GaugeWorker());
     	workers.put(SnapShotString.class, new StringWorker());
+    	workers.put(SnapShotRatio.class, new RatioWorker());
     }
 
     public <T extends Annotation> T transform(Class<T> annotationClass, Annotation an) {
@@ -101,10 +105,33 @@ public class AnnotationTransformer {
     	
     	return result;
     }
+
+    
+    private static <T> T getNamedProperty(Annotation an, String propertyName, T defaultValue) {
+    	T result = defaultValue;
+    	
+    	try {
+			Method m = an.getClass().getMethod(propertyName, new Class[]{});
+			result = (T)m.invoke(an, new Object[]{});
+		} catch (NoSuchMethodException e) {
+			// Ignore
+		} catch (SecurityException e) {
+			// Ignore
+		} catch (IllegalAccessException e) {
+			// Ignore
+		} catch (IllegalArgumentException e) {
+			// Ignore
+		} catch (InvocationTargetException e) {
+			// Ignore
+		}
+    	
+    	
+    	return result;
+    }
     
     
     private static interface Worker<T extends Annotation> {
-    	T transform(Annotation an);
+    	public T transform(Annotation an);
     }
 
     private static class CounterWorker implements Worker<SnapShotCounter> {
@@ -205,4 +232,43 @@ public class AnnotationTransformer {
 		}
     }
     
+    
+   
+    
+    
+    private static class RatioWorker implements Worker<SnapShotRatio> {
+		public SnapShotRatio transform(final Annotation an) {
+	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_RATIO)) {
+	    		return new SnapShotRatio() {
+
+					public Class<? extends Annotation> annotationType() {
+						return SnapShotString.class;
+					}
+
+					public String name() {
+						return getNamedProperty(an, "name", (String)null);
+					}
+
+					public String denominator() {
+						return getNamedProperty(an, "denominator", (String)null);
+					}
+
+					public String numerator() {
+						return getNamedProperty(an, "numerator", (String)null);
+					}
+
+					public boolean displayAsPercentage() {
+						return getNamedProperty(an, "displayAsPercentage", Boolean.FALSE).booleanValue();
+					}
+
+					public boolean displayAsDuration() {
+						return getNamedProperty(an, "displayAsDuration", Boolean.FALSE).booleanValue();
+					}
+				};
+	    	}
+	    	return null;
+		}
+    }
+
+
 } 

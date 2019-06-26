@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
+import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.SnapShotStringFormatter;
 
@@ -105,6 +106,44 @@ public class AnnotationTransformerTest extends TestCase {
 		assertFalse("Should not be identified as a instanceName by default", impl.isInstanceName());
 		assertEquals("Should use default formatter", SnapShotStringFormatter.class, impl.formatter());
 	}
+	
+	public void testSnapShotRatio() {
+		org.perfmon4j.agent.api.instrument.SnapShotRatio aAPI = new org.perfmon4j.agent.api.instrument.SnapShotRatio() {
+
+			public Class<? extends Annotation> annotationType() {
+				return org.perfmon4j.agent.api.instrument.SnapShotRatio.class;
+			}
+
+			public String name() {
+				return "MyName";
+			}
+
+			public String denominator() {
+				return "MyDenominator";
+			}
+
+			public String numerator() {
+				return "MyNumerator";
+			}
+
+			public boolean displayAsPercentage() {
+				return true;
+			}
+
+			public boolean displayAsDuration() {
+				return true;
+			}
+		};
+
+		SnapShotRatio impl = t.transform(SnapShotRatio.class, aAPI); 
+		assertNotNull(impl);
+		assertEquals("name", "MyName", impl.name());
+		assertEquals("denominator", "MyDenominator", impl.denominator());
+		assertEquals("numerator", "MyNumerator", impl.numerator());
+		assertTrue("displayAsPercentage", impl.displayAsPercentage());
+		assertTrue("displayAsDuration", impl.displayAsDuration());
+	}
+
 	
 	
 //	public void testSnapShotInstanceDefinition() {
