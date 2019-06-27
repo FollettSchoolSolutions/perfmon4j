@@ -504,21 +504,21 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
                 byte[] classfileBuffer) {
             byte[] result = null;
             
-            if ("org/perfmon4j/agent/api/PerfMon".equals(className)) {
+            if ("api/org/perfmon4j/agent/PerfMon".equals(className)) {
 	            try {
 		            result = runtimeTimerInjector.attachAgentToPerfMonAPIClass(classfileBuffer, loader, protectionDomain);
 		            logger.logInfo("Attached PerfMon API class to agent");
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to attach PerfMon API class to agent", ex);
 	            }
-            } else if ("org/perfmon4j/agent/api/PerfMonTimer".equals(className)) {
+            } else if ("api/org/perfmon4j/agent/PerfMonTimer".equals(className)) {
 	            try {
 		            result = runtimeTimerInjector.attachAgentToPerfMonTimerAPIClass(classfileBuffer, loader, protectionDomain);
 		            logger.logInfo("Attached PerfMonTimer API class to agent");
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to attach PerfMonTimer API class to agent", ex);
 	            }
-	        } else if ("org/perfmon4j/agent/api/SQLTime".equals(className)) {
+	        } else if ("api/org/perfmon4j/agent/SQLTime".equals(className)) {
 	            try {
 		            result = runtimeTimerInjector.attachAgentToSQLTimeAPIClass(classfileBuffer, loader, protectionDomain);
 		            logger.logInfo("Attached SQLTime API class to agent");
