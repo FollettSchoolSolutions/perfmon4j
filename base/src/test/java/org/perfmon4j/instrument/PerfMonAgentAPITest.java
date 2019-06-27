@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008-2011 Follett Software Company 
+ *	Copyright 2019 Follett School Solutions 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -11,12 +11,9 @@
  * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
  * 	http://www.gnu.org/licenses/
  * 	
- * 	perfmon4j@fsc.follett.com
+ * 	ddeuchert@follett.com
  * 	David Deuchert
- * 	Follett Software Company
- * 	1391 Corporate Drive
- * 	McHenry, IL 60050
- * 
+ * 	Follett School Solutions
 */
 package org.perfmon4j.instrument;
 

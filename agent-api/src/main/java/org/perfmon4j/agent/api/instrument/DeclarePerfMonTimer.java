@@ -13,7 +13,7 @@
  * 	
  * 	ddeuchert@follett.com
  * 	David Deuchert
- * 	Follett School solutions
+ * 	Follett School Solutions
 */
 package org.perfmon4j.agent.api.instrument;
 
