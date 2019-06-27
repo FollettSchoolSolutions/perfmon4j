@@ -1,0 +1,214 @@
+package org.perfmon4j.util;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+
+import org.perfmon4j.instrument.SnapShotCounter;
+import org.perfmon4j.instrument.SnapShotGauge;
+import org.perfmon4j.instrument.SnapShotInstanceDefinition;
+import org.perfmon4j.instrument.SnapShotProvider;
+import org.perfmon4j.instrument.SnapShotRatio;
+import org.perfmon4j.instrument.SnapShotRatios;
+import org.perfmon4j.instrument.SnapShotString;
+import org.perfmon4j.instrument.SnapShotStringFormatter;
+
+import junit.framework.TestCase;
+
+public class AnnotationTransformerTest extends TestCase {
+	private final AnnotationTransformer t = new AnnotationTransformer();
+	
+	
+	@SnapShotCounter
+	public void testNoTransformCounterNeeded() throws Exception {
+		Method m = this.getClass().getMethod("testNoTransformCounterNeeded", new Class[]{});
+		
+		SnapShotCounter counter =  t.transform(SnapShotCounter.class, m.getAnnotations()[0]);
+		assertNotNull(counter);
+	}
+	
+	@org.perfmon4j.agent.api.instrument.SnapShotCounter
+	public void testTransformAPICounter() throws Exception {
+		Method m = this.getClass().getMethod("testTransformAPICounter", new Class[]{});
+		
+		SnapShotCounter counter =  t.transform(SnapShotCounter.class, m.getAnnotations()[0]);
+		assertNotNull(counter);
+	}
+
+	private final org.perfmon4j.agent.api.instrument.SnapShotProvider snapShotProvider = new org.perfmon4j.agent.api.instrument.SnapShotProvider() {
+
+		public Class<? extends Annotation> annotationType() {
+			return org.perfmon4j.agent.api.instrument.SnapShotProvider.class;
+		}
+
+		public Type type() {
+			return org.perfmon4j.agent.api.instrument.SnapShotProvider.Type.STATIC;
+		}
+	};
+	
+	public void testTransformSnapShotProvider() {
+		SnapShotProvider impl = t.transform(SnapShotProvider.class, snapShotProvider);
+		
+		assertNotNull(impl);
+		assertFalse("Should not use priorityTimer", impl.usePriorityTimer());
+		assertEquals("Type should be STATIC", SnapShotProvider.Type.STATIC,
+				impl.type());
+		assertEquals("DataInterface should be a void class", void.class,
+				impl.dataInterface());
+		assertNull("SQLWriter", impl.sqlWriter());
+	}
+	
+	private final org.perfmon4j.agent.api.instrument.SnapShotCounter snapShotCounter = new org.perfmon4j.agent.api.instrument.SnapShotCounter() {
+
+		public Class<? extends Annotation> annotationType() {
+			return org.perfmon4j.agent.api.instrument.SnapShotCounter.class;
+		}
+
+		public Display preferredDisplay() {
+			return org.perfmon4j.agent.api.instrument.SnapShotCounter.Display.DELTA_PER_MIN;
+		}
+	};
+
+	
+	public void testSnapShotCounter() {
+		SnapShotCounter impl = t.transform(SnapShotCounter.class, snapShotCounter); 
+		assertNotNull(impl);
+		assertEquals("preferredDisplay", SnapShotCounter.Display.DELTA_PER_MIN, impl.preferredDisplay());
+		assertEquals("formatter", NumberFormatter.class, impl.formatter());
+		assertEquals("suffix", "", impl.suffix());
+	}
+
+	private final org.perfmon4j.agent.api.instrument.SnapShotGauge snapShotGauge = new org.perfmon4j.agent.api.instrument.SnapShotGauge() {
+
+		public Class<? extends Annotation> annotationType() {
+			return org.perfmon4j.agent.api.instrument.SnapShotGauge.class;
+		}
+	};
+
+	public void testSnapShotGauge() {
+		SnapShotGauge impl = t.transform(SnapShotGauge.class, snapShotGauge); 
+		assertNotNull(impl);
+		assertEquals("formatter", NumberFormatter.class, impl.formatter());
+	}
+	
+	public void testMissCastTransform() {
+		SnapShotCounter impl = t.transform(SnapShotCounter.class, snapShotGauge); 
+		assertNull("Shouldn't expect an API Gauge to be transformed into a SnapShotCounter", impl);
+	}
+
+	private final org.perfmon4j.agent.api.instrument.SnapShotString snapShotString = new org.perfmon4j.agent.api.instrument.SnapShotString() {
+
+		public Class<? extends Annotation> annotationType() {
+			return org.perfmon4j.agent.api.instrument.SnapShotString.class;
+		}
+
+		public boolean isInstanceName() {
+			return true;
+		}
+	};
+	
+	public void testSnapShotString() {
+		SnapShotString impl = t.transform(SnapShotString.class, snapShotString); 
+		assertNotNull(impl);
+		assertTrue("Should be flagged as an instance name", impl.isInstanceName());
+		assertEquals("Should use default formatter", SnapShotStringFormatter.class, impl.formatter());
+	}
+
+	private final org.perfmon4j.agent.api.instrument.SnapShotRatio snapShotRatio = new org.perfmon4j.agent.api.instrument.SnapShotRatio() {
+		public Class<? extends Annotation> annotationType() {
+			return org.perfmon4j.agent.api.instrument.SnapShotRatio.class;
+		}
+
+		public String name() {
+			return "MyName";
+		}
+
+		public String denominator() {
+			return "MyDenominator";
+		}
+
+		public String numerator() {
+			return "MyNumerator";
+		}
+
+		public boolean displayAsPercentage() {
+			return true;
+		}
+
+		public boolean displayAsDuration() {
+			return true;
+		}
+	};
+
+	public void testSnapShotRatio() {
+		SnapShotRatio impl = t.transform(SnapShotRatio.class, snapShotRatio); 
+		assertNotNull(impl);
+		assertEquals("name", "MyName", impl.name());
+		assertEquals("denominator", "MyDenominator", impl.denominator());
+		assertEquals("numerator", "MyNumerator", impl.numerator());
+		assertTrue("displayAsPercentage", impl.displayAsPercentage());
+		assertTrue("displayAsDuration", impl.displayAsDuration());
+	}
+
+	private final org.perfmon4j.agent.api.instrument.SnapShotRatios snapShotRatios = new org.perfmon4j.agent.api.instrument.SnapShotRatios() {
+
+		public Class<? extends Annotation> annotationType() {
+			return org.perfmon4j.agent.api.instrument.SnapShotRatios.class;
+		}
+
+		public org.perfmon4j.agent.api.instrument.SnapShotRatio[] values() {
+			return new org.perfmon4j.agent.api.instrument.SnapShotRatio[]{snapShotRatio};
+		}
+	};
+	
+	public void testSnapShotRatios() {
+		SnapShotRatios impl = t.transform(SnapShotRatios.class, snapShotRatios); 
+		assertNotNull(impl);
+		SnapShotRatio[] values = impl.value();
+		assertNotNull(values);
+		assertEquals("values length", 1, values.length);
+		assertEquals("value name", "MyName", values[0].name());
+	}
+	
+	
+	private final org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition snapShotInstanceDefinition = 
+			new org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition() {
+
+		public Class<? extends Annotation> annotationType() {
+			return org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition.class;
+		}
+	};
+	
+	public void testSnapShotInstanceDefinition() {
+		SnapShotInstanceDefinition impl = t.transform(SnapShotInstanceDefinition.class, snapShotInstanceDefinition); 
+		assertNotNull(impl);
+	}
+	
+	
+	enum API_ENUM {
+		valueA,
+		valueB,
+		valueC
+	}
+
+	enum AGENT_ENUM {
+		valueA,
+		valueB,
+	}
+	
+	
+	public void testTransformEnumValue() {
+		AGENT_ENUM value = AnnotationTransformer.transformEnumValue(AGENT_ENUM.class, API_ENUM.valueA, AGENT_ENUM.valueA);
+		assertEquals("API valueA should map to agent valueA", AGENT_ENUM.valueA, value);
+		
+		value = AnnotationTransformer.transformEnumValue(AGENT_ENUM.class, API_ENUM.valueB, AGENT_ENUM.valueA);
+		assertEquals("API valueB should map to agent valueB", AGENT_ENUM.valueB, value);
+
+		value = AnnotationTransformer.transformEnumValue(AGENT_ENUM.class, API_ENUM.valueC, AGENT_ENUM.valueA);
+		assertEquals("Since agent does not have a valueC we expect the result", AGENT_ENUM.valueA, value);
+
+		value = AnnotationTransformer.transformEnumValue(AGENT_ENUM.class, null, AGENT_ENUM.valueA);
+		assertEquals("null should just return the default", AGENT_ENUM.valueA, value);
+		
+	}
+	
+}

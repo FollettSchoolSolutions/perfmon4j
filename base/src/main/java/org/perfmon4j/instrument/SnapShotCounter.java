@@ -26,14 +26,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.perfmon4j.instrument.SnapShotProvider.Type;
-import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.util.NumberFormatter;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface SnapShotCounter {
-	public enum Display {
+	public static enum Display {
 		DELTA("/per duration", "getDelta_object"),
 		DELTA_PER_MIN("/per minute", "getDeltaPerMinute_object"),
 		DELTA_PER_SECOND("/per second", "getDeltaPerSecond_object"),
@@ -42,7 +40,7 @@ public @interface SnapShotCounter {
 		
 		private final String suffix;
 		private final String getter;
-
+ 
 		private Display(String suffix, String getter) {
 			this.suffix = suffix;
 			this.getter = getter;

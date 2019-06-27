@@ -31,13 +31,13 @@ import org.perfmon4j.SnapShotSQLWriter;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface SnapShotProvider {
-	public enum Type {
+	public static enum Type {
 		INSTANCE_PER_MONITOR,	// A new provider will be instantiated for each monitor (DEFAULT)
 		STATIC,		// The SnapShotManager will access static methods on the class.
 		FACTORY,	// The SnapShotManager will invoke the static method getInstance() OR getInstance(String instanceName) ;
 	}
 	Type type() default Type.INSTANCE_PER_MONITOR;
-    Class dataInterface() default void.class;
+    Class<?> dataInterface() default void.class;
     Class<? extends SnapShotSQLWriter> sqlWriter() default SnapShotSQLWriter.class;
     
     boolean usePriorityTimer() default false; // Indicate interval of snapshot very important.

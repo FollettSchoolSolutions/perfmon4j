@@ -25,6 +25,7 @@ import java.util.Properties;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
+import org.perfmon4j.Appender;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTestCase;
@@ -279,18 +280,18 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 			}
 		}
 	}
-	
-	
-    public void testAttachedDeclarePerfmonTimerAPI() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentDeclarePerfMonTimerInstTest.class, "-a" + AgentDeclarePerfMonTimerInstTest.class.getName(), "", perfmon4jJar);
-//System.out.println(output);    	
-    	String failures = extractFailures(output);
-    	
-    	if (!failures.isEmpty()) {
-    		fail("One or more failures: " + failures);
-    	}
-    }
     
+	
+    public void testAttachedDeclarePerfmonTimerAPI() throws Exception { 
+    	String output = LaunchRunnableInVM.run(AgentDeclarePerfMonTimerInstTest.class, "-a" + AgentDeclarePerfMonTimerInstTest.class.getName(), "", perfmon4jJar); 
+//System.out.println(output);    	 
+    	String failures = extractFailures(output); 
+    	 
+    	if (!failures.isEmpty()) { 
+    		fail("One or more failures: " + failures); 
+    	} 
+    } 
+     	
     
     
     private String extractFailures(String output) {
@@ -304,6 +305,112 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	}
     	return failures.toString();
     }
+    
+
+	public static class SnapShotMonitorWithAPIAnnotationTest implements Runnable {
+		
+		@org.perfmon4j.agent.api.instrument.SnapShotProvider
+		public static class MySnapShotClass {
+			private int counterValue = 0;
+
+			@org.perfmon4j.agent.api.instrument.SnapShotCounter
+			public int getCounter() {
+				return counterValue++;
+			}
+			
+			@org.perfmon4j.agent.api.instrument.SnapShotGauge
+			public int getGauge() {
+				return 1;
+			}
+			
+			@org.perfmon4j.agent.api.instrument.SnapShotString
+			public String getString() {
+				return "MyString";
+			}
+		}
+		
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String simpleSnapShotName = "Simple";
+				final String appenderName = "bogus";
+				
+				config.defineSnapShotMonitor(simpleSnapShotName, MySnapShotClass.class.getName());
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToSnapShotMonitor(simpleSnapShotName, appenderName);
+				PerfMon.configure(config);
+				
+				Thread.sleep(2000);
+				Appender.flushAllAppenders();
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAPISnapShotAnnotations() throws Exception {
+    	String output = LaunchRunnableInVM.run(SnapShotMonitorWithAPIAnnotationTest.class, "", "", perfmon4jJar);
+//System.out.println(output);    	
+    	
+    	assertTrue("Should have the counter value in text output", output.contains("counter.................. 1/per duration"));
+    	assertTrue("Should have the gauge value in text output", output.contains("gauge.................... 1"));
+    	assertTrue("Should have the string value in text output", output.contains("string................... MyString"));
+    }
+    
+    
+
+	public static class SnapShotMonitorWithAPIRatiosTest implements Runnable {
+		@org.perfmon4j.agent.api.instrument.SnapShotProvider
+		@org.perfmon4j.agent.api.instrument.SnapShotRatios(values = { 
+			@org.perfmon4j.agent.api.instrument.SnapShotRatio(name="cacheHitRate", numerator="cacheHits", denominator="totalCalls", displayAsPercentage=true) 
+		})
+		public static class MySnapShotClass {
+			private int totalCalls = 0;
+			private int cacheHits = 0;
+
+			@org.perfmon4j.agent.api.instrument.SnapShotCounter
+			public int getTotalCalls() {
+				return totalCalls += 4;
+			}
+			
+			@org.perfmon4j.agent.api.instrument.SnapShotCounter
+			public int getCacheHits() {
+				return ++cacheHits;
+			}
+		}
+		
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String simpleSnapShotName = "Simple";
+				final String appenderName = "bogus";
+				
+				config.defineSnapShotMonitor(simpleSnapShotName, MySnapShotClass.class.getName());
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToSnapShotMonitor(simpleSnapShotName, appenderName);
+				PerfMon.configure(config);
+				
+				Thread.sleep(2000);
+				Appender.flushAllAppenders();
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAPISnapShotRatiosAnnotations() throws Exception {
+    	String output = LaunchRunnableInVM.run(SnapShotMonitorWithAPIRatiosTest.class, "", "", perfmon4jJar);
+//System.out.println(output);    	
+    	
+    	assertTrue("Should have the cacheHitRate value in text output", output.contains("cacheHitRate............. 25.000%"));
+    }
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

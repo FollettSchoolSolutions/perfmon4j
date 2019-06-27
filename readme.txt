@@ -18,6 +18,18 @@ McHenry, IL 60050
 Changes
 
 ** 1.4.3 (Version in progress)
+- Added SnapShot annotations to the perfmon4j-agent-api.jar. These annotations allow you to
+define SnapShotCounters using only the api jar.  Most of the functionality contained in the 
+existing perfmon4j jar is available using these annotation.  Some missing functionality
+includes the ability to define SQLAppenders and add custom formatting options for the 
+text appender.  Annotations added: 
+  	- org.perfmon4j.agent.api.instrument.SnapShotProvider
+	- org.perfmon4j.agent.api.instrument.SnapShotCounter
+	- org.perfmon4j.agent.api.instrument.SnapShotGauge
+	- org.perfmon4j.agent.api.instrument.SnapShotRatio
+	- org.perfmon4j.agent.api.instrument.SnapShotRatios
+	- org.perfmon4j.agent.api.instrument.SnapShotString
+	- org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition
 
 ** 1.4.2
 - Added the perfmon4j-agent-api.jar.  Using this jar you can optionally add Perfmon4j
