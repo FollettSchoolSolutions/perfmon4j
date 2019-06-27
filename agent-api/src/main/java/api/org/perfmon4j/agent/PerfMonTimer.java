@@ -15,7 +15,7 @@
  * 	David Deuchert
  * 	Follett School solutions
 */
-package org.perfmon4j.agent.api;
+package api.org.perfmon4j.agent;
 
 
 /**
@@ -25,27 +25,39 @@ package org.perfmon4j.agent.api;
  * 	Attached - When this class is loaded in a JVM that was booted with the Perfmon4j instrumentation agent, The agent  will
  * 		re-write this class and it will be in an operating state.
  */
-public class PerfMon {
-	private final String name;
+public class PerfMonTimer {
+	private static final PerfMonTimer noOpTimer = new PerfMonTimer();
 	
-	private PerfMon(String name) {
-		this.name = name;
+	private PerfMonTimer() {
 	}
 
-    public String getName() {
-    	return name;
+	public static PerfMonTimer start(PerfMon mon) {
+		return noOpTimer;
+	}
+
+    public static PerfMonTimer start(String key) {
+    	return start(key, false);
+    }
+    
+    /**
+     * Pass in true if this is a dynamically generated key (i.e. not a method
+     * name or some know value.  This prevents monitors from being created
+     * that are not actively attached to appenders.
+     * 
+     * for example:
+     * 	   private void lookupUser(String userName) {
+     * 		    PerfMonTimer.start("lookupUser." + userName, true); 
+     * 			...
+     * 	   }
+     */
+    public static PerfMonTimer start(String key, boolean isDynamicKey) {
+    	return noOpTimer;
     }
 
-	public static PerfMon getMonitor(String key) {
-    	return getMonitor(key, false);
+    public static void abort(PerfMonTimer timer) {
     }
-	
-    public static PerfMon getMonitor(String key, boolean isDynamicPath) {
-        return new PerfMon(key);
-    }
-
-    public boolean isActive() {
-        return false;
+    
+    public static void stop(PerfMonTimer timer) {
     }
     
     /**
@@ -55,5 +67,4 @@ public class PerfMon {
     public static boolean isAttachedToAgent() {
     	return false;
     }
-    
 }

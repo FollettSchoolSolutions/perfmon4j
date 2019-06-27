@@ -15,7 +15,8 @@
  * 	David Deuchert
  * 	Follett School solutions
 */
-package org.perfmon4j.agent.api;
+package api.org.perfmon4j.agent;
+
 
 /**
  * This class will execute in one of two modes:
@@ -24,16 +25,29 @@ package org.perfmon4j.agent.api;
  * 	Attached - When this class is loaded in a JVM that was booted with the Perfmon4j instrumentation agent, The agent  will
  * 		re-write this class and it will be in an operating state.
  */
-public class SQLTime {
+public class PerfMon {
+	private final String name;
+	
+	private PerfMon(String name) {
+		this.name = name;
+	}
 
-	public static long getSQLTime() {
-		return 0;
-	}
+    public String getName() {
+    	return name;
+    }
+
+	public static PerfMon getMonitor(String key) {
+    	return getMonitor(key, false);
+    }
 	
-	public static boolean isEnabled() {
-		return false;
-	}
-	
+    public static PerfMon getMonitor(String key, boolean isDynamicPath) {
+        return new PerfMon(key);
+    }
+
+    public boolean isActive() {
+        return false;
+    }
+    
     /**
      * If true this class has been rewritten by the Perfmon4j agent.
      * @return
@@ -41,4 +55,5 @@ public class SQLTime {
     public static boolean isAttachedToAgent() {
     	return false;
     }
+    
 }

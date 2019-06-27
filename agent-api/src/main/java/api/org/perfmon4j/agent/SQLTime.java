@@ -15,8 +15,7 @@
  * 	David Deuchert
  * 	Follett School solutions
 */
-package org.perfmon4j.agent.api;
-
+package api.org.perfmon4j.agent;
 
 /**
  * This class will execute in one of two modes:
@@ -25,41 +24,16 @@ package org.perfmon4j.agent.api;
  * 	Attached - When this class is loaded in a JVM that was booted with the Perfmon4j instrumentation agent, The agent  will
  * 		re-write this class and it will be in an operating state.
  */
-public class PerfMonTimer {
-	private static final PerfMonTimer noOpTimer = new PerfMonTimer();
+public class SQLTime {
+
+	public static long getSQLTime() {
+		return 0;
+	}
 	
-	private PerfMonTimer() {
+	public static boolean isEnabled() {
+		return false;
 	}
-
-	public static PerfMonTimer start(PerfMon mon) {
-		return noOpTimer;
-	}
-
-    public static PerfMonTimer start(String key) {
-    	return start(key, false);
-    }
-    
-    /**
-     * Pass in true if this is a dynamically generated key (i.e. not a method
-     * name or some know value.  This prevents monitors from being created
-     * that are not actively attached to appenders.
-     * 
-     * for example:
-     * 	   private void lookupUser(String userName) {
-     * 		    PerfMonTimer.start("lookupUser." + userName, true); 
-     * 			...
-     * 	   }
-     */
-    public static PerfMonTimer start(String key, boolean isDynamicKey) {
-    	return noOpTimer;
-    }
-
-    public static void abort(PerfMonTimer timer) {
-    }
-    
-    public static void stop(PerfMonTimer timer) {
-    }
-    
+	
     /**
      * If true this class has been rewritten by the Perfmon4j agent.
      * @return

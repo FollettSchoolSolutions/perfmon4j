@@ -43,7 +43,7 @@ public class AnnotationTransformerTest extends TestCase {
 		assertNotNull(counter);
 	}
 	
-	@org.perfmon4j.agent.api.instrument.SnapShotCounter
+	@api.org.perfmon4j.agent.instrument.SnapShotCounter
 	public void testTransformAPICounter() throws Exception {
 		Method m = this.getClass().getMethod("testTransformAPICounter", new Class[]{});
 		
@@ -51,14 +51,14 @@ public class AnnotationTransformerTest extends TestCase {
 		assertNotNull(counter);
 	}
 
-	private final org.perfmon4j.agent.api.instrument.SnapShotProvider snapShotProvider = new org.perfmon4j.agent.api.instrument.SnapShotProvider() {
+	private final api.org.perfmon4j.agent.instrument.SnapShotProvider snapShotProvider = new api.org.perfmon4j.agent.instrument.SnapShotProvider() {
 
 		public Class<? extends Annotation> annotationType() {
-			return org.perfmon4j.agent.api.instrument.SnapShotProvider.class;
+			return api.org.perfmon4j.agent.instrument.SnapShotProvider.class;
 		}
 
 		public Type type() {
-			return org.perfmon4j.agent.api.instrument.SnapShotProvider.Type.STATIC;
+			return api.org.perfmon4j.agent.instrument.SnapShotProvider.Type.STATIC;
 		}
 	};
 	
@@ -74,14 +74,14 @@ public class AnnotationTransformerTest extends TestCase {
 		assertNull("SQLWriter", impl.sqlWriter());
 	}
 	
-	private final org.perfmon4j.agent.api.instrument.SnapShotCounter snapShotCounter = new org.perfmon4j.agent.api.instrument.SnapShotCounter() {
+	private final api.org.perfmon4j.agent.instrument.SnapShotCounter snapShotCounter = new api.org.perfmon4j.agent.instrument.SnapShotCounter() {
 
 		public Class<? extends Annotation> annotationType() {
-			return org.perfmon4j.agent.api.instrument.SnapShotCounter.class;
+			return api.org.perfmon4j.agent.instrument.SnapShotCounter.class;
 		}
 
 		public Display preferredDisplay() {
-			return org.perfmon4j.agent.api.instrument.SnapShotCounter.Display.DELTA_PER_MIN;
+			return api.org.perfmon4j.agent.instrument.SnapShotCounter.Display.DELTA_PER_MIN;
 		}
 	};
 
@@ -94,10 +94,10 @@ public class AnnotationTransformerTest extends TestCase {
 		assertEquals("suffix", "", impl.suffix());
 	}
 
-	private final org.perfmon4j.agent.api.instrument.SnapShotGauge snapShotGauge = new org.perfmon4j.agent.api.instrument.SnapShotGauge() {
+	private final api.org.perfmon4j.agent.instrument.SnapShotGauge snapShotGauge = new api.org.perfmon4j.agent.instrument.SnapShotGauge() {
 
 		public Class<? extends Annotation> annotationType() {
-			return org.perfmon4j.agent.api.instrument.SnapShotGauge.class;
+			return api.org.perfmon4j.agent.instrument.SnapShotGauge.class;
 		}
 	};
 
@@ -112,10 +112,10 @@ public class AnnotationTransformerTest extends TestCase {
 		assertNull("Shouldn't expect an API Gauge to be transformed into a SnapShotCounter", impl);
 	}
 
-	private final org.perfmon4j.agent.api.instrument.SnapShotString snapShotString = new org.perfmon4j.agent.api.instrument.SnapShotString() {
+	private final api.org.perfmon4j.agent.instrument.SnapShotString snapShotString = new api.org.perfmon4j.agent.instrument.SnapShotString() {
 
 		public Class<? extends Annotation> annotationType() {
-			return org.perfmon4j.agent.api.instrument.SnapShotString.class;
+			return api.org.perfmon4j.agent.instrument.SnapShotString.class;
 		}
 
 		public boolean isInstanceName() {
@@ -130,9 +130,9 @@ public class AnnotationTransformerTest extends TestCase {
 		assertEquals("Should use default formatter", SnapShotStringFormatter.class, impl.formatter());
 	}
 
-	private final org.perfmon4j.agent.api.instrument.SnapShotRatio snapShotRatio = new org.perfmon4j.agent.api.instrument.SnapShotRatio() {
+	private final api.org.perfmon4j.agent.instrument.SnapShotRatio snapShotRatio = new api.org.perfmon4j.agent.instrument.SnapShotRatio() {
 		public Class<? extends Annotation> annotationType() {
-			return org.perfmon4j.agent.api.instrument.SnapShotRatio.class;
+			return api.org.perfmon4j.agent.instrument.SnapShotRatio.class;
 		}
 
 		public String name() {
@@ -166,14 +166,14 @@ public class AnnotationTransformerTest extends TestCase {
 		assertTrue("displayAsDuration", impl.displayAsDuration());
 	}
 
-	private final org.perfmon4j.agent.api.instrument.SnapShotRatios snapShotRatios = new org.perfmon4j.agent.api.instrument.SnapShotRatios() {
+	private final api.org.perfmon4j.agent.instrument.SnapShotRatios snapShotRatios = new api.org.perfmon4j.agent.instrument.SnapShotRatios() {
 
 		public Class<? extends Annotation> annotationType() {
-			return org.perfmon4j.agent.api.instrument.SnapShotRatios.class;
+			return api.org.perfmon4j.agent.instrument.SnapShotRatios.class;
 		}
 
-		public org.perfmon4j.agent.api.instrument.SnapShotRatio[] values() {
-			return new org.perfmon4j.agent.api.instrument.SnapShotRatio[]{snapShotRatio};
+		public api.org.perfmon4j.agent.instrument.SnapShotRatio[] values() {
+			return new api.org.perfmon4j.agent.instrument.SnapShotRatio[]{snapShotRatio};
 		}
 	};
 	
@@ -187,11 +187,11 @@ public class AnnotationTransformerTest extends TestCase {
 	}
 	
 	
-	private final org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition snapShotInstanceDefinition = 
-			new org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition() {
+	private final api.org.perfmon4j.agent.instrument.SnapShotInstanceDefinition snapShotInstanceDefinition = 
+			new api.org.perfmon4j.agent.instrument.SnapShotInstanceDefinition() {
 
 		public Class<? extends Annotation> annotationType() {
-			return org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition.class;
+			return api.org.perfmon4j.agent.instrument.SnapShotInstanceDefinition.class;
 		}
 	};
 	
