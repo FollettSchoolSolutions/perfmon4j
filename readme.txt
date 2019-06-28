@@ -17,6 +17,25 @@ McHenry, IL 60050
 
 Changes
 
+** 1.4.3 - 2019-06-27
+- Renamed the package of the api jar from "org.perfmon4j.agent.api" to 
+"api.org.perfmon4j.agent".  This is required because when running under JBoss/Wildfly
+classes can only be loaded from the "org.perfmon4j.*" package when loaded
+by the perfmon4j javaagent.
+
+- Added SnapShot annotations to the perfmon4j-agent-api.jar. These annotations allow you to
+define SnapShotCounters using only the api jar.  Most of the functionality contained in the 
+existing perfmon4j jar is available using these annotation.  Some missing functionality
+includes the ability to define SQLAppenders and add custom formatting options for the 
+text appender.  Annotations added: 
+  	- api.org.perfmon4j.agent.instrument.SnapShotProvider
+	- api.org.perfmon4j.agent.instrument.SnapShotCounter
+	- api.org.perfmon4j.agent.instrument.SnapShotGauge
+	- api.org.perfmon4j.agent.instrument.SnapShotRatio
+	- api.org.perfmon4j.agent.instrument.SnapShotRatios
+	- api.org.perfmon4j.agent.instrument.SnapShotString
+	- api.org.perfmon4j.agent.instrument.SnapShotInstanceDefinition
+
 ** 1.4.2
 - Added the perfmon4j-agent-api.jar.  Using this jar you can optionally add Perfmon4j
 timers and annotations to classes (bundled in jar,war or ear files). If the

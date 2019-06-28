@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008-2011 Follett Software Company 
+ *	Copyright 2019 Follett School Solutions 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -11,12 +11,9 @@
  * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
  * 	http://www.gnu.org/licenses/
  * 	
- * 	perfmon4j@fsc.follett.com
+ * 	ddeuchert@follett.com
  * 	David Deuchert
- * 	Follett Software Company
- * 	1391 Corporate Drive
- * 	McHenry, IL 60050
- * 
+ * 	Follett School Solutions
 */
 package org.perfmon4j.instrument;
 
@@ -25,6 +22,7 @@ import java.util.Properties;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
+import org.perfmon4j.Appender;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTestCase;
@@ -86,17 +84,17 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 
 	public static class AgentAPIUsageTest implements Runnable {
 		public void run() {
-			if (org.perfmon4j.agent.api.PerfMon.isAttachedToAgent()) {
+			if (api.org.perfmon4j.agent.PerfMon.isAttachedToAgent()) {
 				System.out.println("Agent API for PerfMon class has been instrumented");
 			} else {
 				System.out.println("Agent API for PerfMon class has NOT been instrumented");
 			}
-			if (org.perfmon4j.agent.api.PerfMonTimer.isAttachedToAgent()) {
+			if (api.org.perfmon4j.agent.PerfMonTimer.isAttachedToAgent()) {
 				System.out.println("Agent API for PerfMonTimer class has been instrumented");
 			} else {
 				System.out.println("Agent API for PerfMonTimer class has NOT been instrumented");
 			}
-			if (org.perfmon4j.agent.api.SQLTime.isAttachedToAgent()) {
+			if (api.org.perfmon4j.agent.SQLTime.isAttachedToAgent()) {
 				System.out.println("Agent API for SQLTime class has been instrumented");
 			} else {
 				System.out.println("Agent API for SQLTime class has NOT been instrumented");
@@ -126,7 +124,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				config.attachAppenderToMonitor(monitorName, appenderName, "./*");
 				PerfMon.configure(config);
 				
-				org.perfmon4j.agent.api.PerfMon apiPerfMon = org.perfmon4j.agent.api.PerfMon.getMonitor("not.active");
+				api.org.perfmon4j.agent.PerfMon apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor("not.active");
 				if (apiPerfMon.isActive()) {
 					System.out.println("**FAIL: 'not.active' is NOT configured to be monitored/active");
 				}
@@ -135,7 +133,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 					System.out.println("**FAIL: Incorrect monitor name, should have been 'not.active'");
 				}
 
-				apiPerfMon = org.perfmon4j.agent.api.PerfMon.getMonitor("test.category");
+				apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor("test.category");
 				if (!apiPerfMon.isActive()) {
 					System.out.println("**FAIL: 'test.category' is configured to be monitored/active");
 				}
@@ -169,9 +167,9 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				
 				
 				/* Test start with passing in an agent and abort */
-				org.perfmon4j.agent.api.PerfMon apiPerfMon = org.perfmon4j.agent.api.PerfMon.getMonitor(monitorName);
-				org.perfmon4j.agent.api.PerfMonTimer apiTimer = org.perfmon4j.agent.api.PerfMonTimer.start(apiPerfMon);
-				org.perfmon4j.agent.api.PerfMonTimer.abort(apiTimer);
+				api.org.perfmon4j.agent.PerfMon apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor(monitorName);
+				api.org.perfmon4j.agent.PerfMonTimer apiTimer = api.org.perfmon4j.agent.PerfMonTimer.start(apiPerfMon);
+				api.org.perfmon4j.agent.PerfMonTimer.abort(apiTimer);
 				
 				PerfMon nativePerfMon = ((PerfMonAgentApiWrapper)apiPerfMon).getNativeObject();
 				if (nativePerfMon.getTotalHits() != 1) {
@@ -183,8 +181,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				
 				
 				/* Test start with passing in an string and stop */
-				apiTimer = org.perfmon4j.agent.api.PerfMonTimer.start(monitorName);
-				org.perfmon4j.agent.api.PerfMonTimer.stop(apiTimer);
+				apiTimer = api.org.perfmon4j.agent.PerfMonTimer.start(monitorName);
+				api.org.perfmon4j.agent.PerfMonTimer.stop(apiTimer);
 				if (nativePerfMon.getTotalHits() != 2) {
 					System.out.println("**FAIL: expected 2 hits");
 				}
@@ -216,7 +214,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				org.perfmon4j.SQLTime.setEnabled(true);
 				
 				// Call the API code.
-				boolean isEnabled = org.perfmon4j.agent.api.SQLTime.isEnabled();
+				boolean isEnabled = api.org.perfmon4j.agent.SQLTime.isEnabled();
 				if (!isEnabled) {
 					System.out.println("**FAIL: API should indicate sqlTime is enabled");
 				}
@@ -225,7 +223,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				Thread.sleep(11);
 				org.perfmon4j.SQLTime.stopTimerForThread();
 				
-				long sqlDuration = org.perfmon4j.agent.api.SQLTime.getSQLTime();
+				long sqlDuration = api.org.perfmon4j.agent.SQLTime.getSQLTime();
 				System.out.println("SQLDuration: " + sqlDuration);
 				
 				if (sqlDuration < 10) {
@@ -250,7 +248,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 
 	public static class AgentDeclarePerfMonTimerInstTest implements Runnable {
 		
-		@org.perfmon4j.agent.api.instrument.DeclarePerfMonTimer("test345.category")
+		@api.org.perfmon4j.agent.instrument.DeclarePerfMonTimer("test345.category")
 		private void doSomething() {
 			
 		}
@@ -279,18 +277,18 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 			}
 		}
 	}
-	
-	
-    public void testAttachedDeclarePerfmonTimerAPI() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentDeclarePerfMonTimerInstTest.class, "-a" + AgentDeclarePerfMonTimerInstTest.class.getName(), "", perfmon4jJar);
-//System.out.println(output);    	
-    	String failures = extractFailures(output);
-    	
-    	if (!failures.isEmpty()) {
-    		fail("One or more failures: " + failures);
-    	}
-    }
     
+	
+    public void testAttachedDeclarePerfmonTimerAPI() throws Exception { 
+    	String output = LaunchRunnableInVM.run(AgentDeclarePerfMonTimerInstTest.class, "-a" + AgentDeclarePerfMonTimerInstTest.class.getName(), "", perfmon4jJar); 
+//System.out.println(output);    	 
+    	String failures = extractFailures(output); 
+    	 
+    	if (!failures.isEmpty()) { 
+    		fail("One or more failures: " + failures); 
+    	} 
+    } 
+     	
     
     
     private String extractFailures(String output) {
@@ -304,6 +302,112 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	}
     	return failures.toString();
     }
+    
+
+	public static class SnapShotMonitorWithAPIAnnotationTest implements Runnable {
+		
+		@api.org.perfmon4j.agent.instrument.SnapShotProvider
+		public static class MySnapShotClass {
+			private int counterValue = 0;
+
+			@api.org.perfmon4j.agent.instrument.SnapShotCounter
+			public int getCounter() {
+				return counterValue++;
+			}
+			
+			@api.org.perfmon4j.agent.instrument.SnapShotGauge
+			public int getGauge() {
+				return 1;
+			}
+			
+			@api.org.perfmon4j.agent.instrument.SnapShotString
+			public String getString() {
+				return "MyString";
+			}
+		}
+		
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String simpleSnapShotName = "Simple";
+				final String appenderName = "bogus";
+				
+				config.defineSnapShotMonitor(simpleSnapShotName, MySnapShotClass.class.getName());
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToSnapShotMonitor(simpleSnapShotName, appenderName);
+				PerfMon.configure(config);
+				
+				Thread.sleep(2000);
+				Appender.flushAllAppenders();
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAPISnapShotAnnotations() throws Exception {
+    	String output = LaunchRunnableInVM.run(SnapShotMonitorWithAPIAnnotationTest.class, "", "", perfmon4jJar);
+//System.out.println(output);    	
+    	
+    	assertTrue("Should have the counter value in text output", output.contains("counter.................. 1/per duration"));
+    	assertTrue("Should have the gauge value in text output", output.contains("gauge.................... 1"));
+    	assertTrue("Should have the string value in text output", output.contains("string................... MyString"));
+    }
+    
+    
+
+	public static class SnapShotMonitorWithAPIRatiosTest implements Runnable {
+		@api.org.perfmon4j.agent.instrument.SnapShotProvider
+		@api.org.perfmon4j.agent.instrument.SnapShotRatios(values = { 
+			@api.org.perfmon4j.agent.instrument.SnapShotRatio(name="cacheHitRate", numerator="cacheHits", denominator="totalCalls", displayAsPercentage=true) 
+		})
+		public static class MySnapShotClass {
+			private int totalCalls = 0;
+			private int cacheHits = 0;
+
+			@api.org.perfmon4j.agent.instrument.SnapShotCounter
+			public int getTotalCalls() {
+				return totalCalls += 4;
+			}
+			
+			@api.org.perfmon4j.agent.instrument.SnapShotCounter
+			public int getCacheHits() {
+				return ++cacheHits;
+			}
+		}
+		
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String simpleSnapShotName = "Simple";
+				final String appenderName = "bogus";
+				
+				config.defineSnapShotMonitor(simpleSnapShotName, MySnapShotClass.class.getName());
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToSnapShotMonitor(simpleSnapShotName, appenderName);
+				PerfMon.configure(config);
+				
+				Thread.sleep(2000);
+				Appender.flushAllAppenders();
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAPISnapShotRatiosAnnotations() throws Exception {
+    	String output = LaunchRunnableInVM.run(SnapShotMonitorWithAPIRatiosTest.class, "", "", perfmon4jJar);
+//System.out.println(output);    	
+    	
+    	assertTrue("Should have the cacheHitRate value in text output", output.contains("cacheHitRate............. 25.000%"));
+    }
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
