@@ -521,7 +521,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
             	Annotation an = (Annotation)annotations[i];
 	            if (an instanceof DeclarePerfMonTimer) {
 	                result = ((DeclarePerfMonTimer)an).value();
-	            } else if ("org.perfmon4j.agent.api.instrument.DeclarePerfMonTimer".equals(an.annotationType().getName())) {
+	            } else if ("api.org.perfmon4j.agent.instrument.DeclarePerfMonTimer".equals(an.annotationType().getName())) {
 	            	 // This will find the annotation in the agent-api jar.
 	            	Class<?> clazz = an.annotationType();
 	            	Method m = clazz.getDeclaredMethod("value");
@@ -1090,7 +1090,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         CtMethod getMonitorMethod = findMethod(clazz, "getMonitor", 2);
         src = "{"
         		+ "org.perfmon4j.PerfMon p = org.perfmon4j.PerfMon.getMonitor($1, $2);\r\n"
-        		+ "return new  org.perfmon4j.agent.api.PerfMon(p);"
+        		+ "return new  api.org.perfmon4j.agent.PerfMon(p);"
         		+ "}";
         
         getMonitorMethod.setBody(src);
@@ -1124,17 +1124,17 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         clazz.addConstructor(CtNewConstructor.make(src, clazz));
         
-        CtMethod startMethod = findMethod(clazz, "start", "org.perfmon4j.agent.api.PerfMon");
+        CtMethod startMethod = findMethod(clazz, "start", "api.org.perfmon4j.agent.PerfMon");
         src = "{ "
         		+ " org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();"  	
-        		+ " return new  org.perfmon4j.agent.api.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon));"
+        		+ " return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon));"
         		+ "}";
         startMethod.setBody(src);
       
 
         startMethod = findMethod(clazz, "start", 2);
         src = "{ "
-        		+ " return new  org.perfmon4j.agent.api.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1, $2));"
+        		+ " return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1, $2));"
         		+ "}";
         startMethod.setBody(src);
         

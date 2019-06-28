@@ -15,7 +15,7 @@
  * 	David Deuchert
  * 	Follett School Solutions
 */
-package org.perfmon4j.agent.api.instrument;
+package api.org.perfmon4j.agent.instrument;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

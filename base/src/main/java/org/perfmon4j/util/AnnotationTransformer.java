@@ -41,13 +41,13 @@ public class AnnotationTransformer {
     static private final Logger logger = LoggerFactory.initLogger(AnnotationTransformer.class);
     private final Map<Class<? extends Annotation>, Worker<?>> workers = new HashMap<Class<? extends Annotation>, Worker<?>>(); 
 
-    private static final String API_SNAP_SHOT_COUNTER = "org.perfmon4j.agent.api.instrument.SnapShotCounter";
-    private static final String API_SNAP_SHOT_PROVIDER = "org.perfmon4j.agent.api.instrument.SnapShotProvider";
-    private static final String API_SNAP_SHOT_GAUGE = "org.perfmon4j.agent.api.instrument.SnapShotGauge";
-    private static final String API_SNAP_SHOT_STRING = "org.perfmon4j.agent.api.instrument.SnapShotString";
-    private static final String API_SNAP_SHOT_RATIO = "org.perfmon4j.agent.api.instrument.SnapShotRatio";
-    private static final String API_SNAP_SHOT_RATIOS = "org.perfmon4j.agent.api.instrument.SnapShotRatios";
-    private static final String API_SNAP_SHOT_INSTANCE_DEFINITION = "org.perfmon4j.agent.api.instrument.SnapShotInstanceDefinition";
+    private static final String API_SNAP_SHOT_COUNTER = "api.org.perfmon4j.agent.instrument.SnapShotCounter";
+    private static final String API_SNAP_SHOT_PROVIDER = "api.org.perfmon4j.agent.instrument.SnapShotProvider";
+    private static final String API_SNAP_SHOT_GAUGE = "api.org.perfmon4j.agent.instrument.SnapShotGauge";
+    private static final String API_SNAP_SHOT_STRING = "api.org.perfmon4j.agent.instrument.SnapShotString";
+    private static final String API_SNAP_SHOT_RATIO = "api.org.perfmon4j.agent.instrument.SnapShotRatio";
+    private static final String API_SNAP_SHOT_RATIOS = "api.org.perfmon4j.agent.instrument.SnapShotRatios";
+    private static final String API_SNAP_SHOT_INSTANCE_DEFINITION = "api.org.perfmon4j.agent.instrument.SnapShotInstanceDefinition";
     
     
     public AnnotationTransformer() {

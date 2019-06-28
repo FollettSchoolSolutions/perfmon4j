@@ -15,7 +15,7 @@
  * 	David Deuchert
  * 	Follett School Solutions
 */
-package org.perfmon4j.agent.api.instrument;
+package api.org.perfmon4j.agent.instrument;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -25,18 +25,15 @@ import java.lang.annotation.Target;
 
 
 /**
- * This class serves as an alias for the SnapShotString Annotation
+ * This class serves as an alias for the SnapShotRatios Annotation
  * implemented in the perfmon4j agent. 
  * 
- * The alias provides a simplified implementation using only default
- * values for the following attributes:
- * 	formatter = SnapShotStringFormatter.class
  * 
  * @author perfmon
  *
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface SnapShotString {
-	public boolean isInstanceName() default false; 
+@Target(ElementType.TYPE)
+public @interface SnapShotRatios {
+	SnapShotRatio[]values();
 }
