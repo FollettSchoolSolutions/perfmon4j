@@ -23,9 +23,6 @@ package org.perfmon4j.util;
 
 import java.lang.reflect.Method;
 import java.util.Enumeration;
-import java.util.Iterator;
-
-import org.perfmon4j.instrument.PerfMonTimerTransformer;
 
 class Log4JLogger implements Logger {
 	final private static Class<?>[] NO_PARAMS = new Class[] {};
@@ -40,6 +37,7 @@ class Log4JLogger implements Logger {
 	static private Method warnMethod = null;
 	static private Method warnMethodWithThrow = null;
 	static private Method infoMethod = null;
+	static private Method infoMethodWithThrow = null;
 	static private Method debugMethod = null;
 	static private Method debugMethodWithThrow = null;
 	static private Method debugEnabledMethod = null;
@@ -115,6 +113,8 @@ class Log4JLogger implements Logger {
 								OBJECT_THROWABLE_PARAMS);
 						infoMethod = tmpLoggerClazz.getMethod("info",
 								OBJECT_PARAMS);
+						infoMethodWithThrow = tmpLoggerClazz.getMethod("info",
+								OBJECT_THROWABLE_PARAMS);
 						debugMethod = tmpLoggerClazz.getMethod("debug",
 								OBJECT_PARAMS);
 						debugMethodWithThrow = tmpLoggerClazz.getMethod(
@@ -234,50 +234,64 @@ class Log4JLogger implements Logger {
 	}
 
 	public void logError(String msg) {
-		try {
-			errorMethod.invoke(loggerObject, new Object[] { msg });
-		} catch (Exception ex) {
-			handleReflectionException(ex);
-		}
+		logError(msg, null, false);
 	}
 
 	public void logError(String msg, Throwable th) {
+		logError(msg, th, false);
+	}
+
+	public void logError(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
 		try {
-			errorMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
+			if (th != null && (!stackTraceOnDebugOnly || isDebugEnabled())) {
+				errorMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
+			} else {
+				errorMethod.invoke(loggerObject, new Object[] { msg });
+			}
 		} catch (Exception ex) {
 			handleReflectionException(ex);
 		}
 	}
-
+	
 	public void logInfo(String msg) {
-		try {
-			infoMethod.invoke(loggerObject, new Object[] { msg });
-		} catch (Exception ex) {
-			handleReflectionException(ex);
-		}
+		logInfo(msg, null, true);
 	}
 
 	public void logInfo(String msg, Throwable th) {
+		logInfo(msg, th, true);
+	}
+
+	public void logInfo(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
 		try {
-			errorMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
+			if (th != null && (!stackTraceOnDebugOnly || isDebugEnabled())) {
+				infoMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
+			} else {
+				infoMethod.invoke(loggerObject, new Object[] { msg });
+			}
 		} catch (Exception ex) {
 			handleReflectionException(ex);
 		}
 	}
-
+	
+	
 	public void logWarn(String msg) {
-		try {
-			warnMethod.invoke(loggerObject, new Object[] { msg });
-		} catch (Exception ex) {
-			handleReflectionException(ex);
-		}
+		logWarn(msg, null, true);
 	}
 
 	public void logWarn(String msg, Throwable th) {
+		logWarn(msg, th, true);
+	}
+
+	public void logWarn(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
 		try {
-			warnMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
+			if (th != null && (!stackTraceOnDebugOnly || isDebugEnabled())) {
+				warnMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
+			} else {
+				warnMethod.invoke(loggerObject, new Object[] { msg });
+			}
 		} catch (Exception ex) {
 			handleReflectionException(ex);
 		}
 	}
+
 }

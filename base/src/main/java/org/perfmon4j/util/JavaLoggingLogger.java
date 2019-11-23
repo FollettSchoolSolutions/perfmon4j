@@ -86,26 +86,50 @@ class JavaLoggingLogger implements Logger {
 	}
 
 	public void logError(String msg) {
-		javaLogger.log(java.util.logging.Level.SEVERE, msg);
+		logError(msg, null, false);
 	}
 
 	public void logError(String msg, Throwable th) {
-		javaLogger.log(java.util.logging.Level.SEVERE, msg, th);
+		logError(msg, th, false);
+	}
+	
+	public void logError(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
+		if (th != null && (!stackTraceOnDebugOnly || isDebugEnabled())) {
+			javaLogger.log(java.util.logging.Level.SEVERE, msg, th);
+		} else {
+			javaLogger.log(java.util.logging.Level.SEVERE, msg);
+		}
 	}
 
 	public void logInfo(String msg) {
-		javaLogger.log(java.util.logging.Level.INFO, msg);
+		logInfo(msg, null, true);
 	}
 
 	public void logInfo(String msg, Throwable th) {
-		javaLogger.log(java.util.logging.Level.INFO, msg, th);
+		logInfo(msg, th, true);
 	}
 
+	public void logInfo(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
+		if (th != null && (!stackTraceOnDebugOnly || isDebugEnabled())) {
+			javaLogger.log(java.util.logging.Level.INFO, msg, th);
+		} else {
+			javaLogger.log(java.util.logging.Level.INFO, msg);
+		}
+	}
+	
 	public void logWarn(String msg) {
-		javaLogger.log(java.util.logging.Level.WARNING, msg);
+		logWarn(msg, null, true);
 	}
 
 	public void logWarn(String msg, Throwable th) {
-		javaLogger.log(java.util.logging.Level.WARNING, msg, th);
+		logWarn(msg, th, true);
+	}
+
+	public void logWarn(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
+		if (th != null && (!stackTraceOnDebugOnly || isDebugEnabled())) {
+			javaLogger.log(java.util.logging.Level.WARNING, msg, th);
+		} else {
+			javaLogger.log(java.util.logging.Level.WARNING, msg);
+		}
 	}
 }

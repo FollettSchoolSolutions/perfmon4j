@@ -280,6 +280,26 @@ class LoggerWrapper implements Logger {
 		}
 	}
 
+	public void logError(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
+		boolean wasOutput = false;
+		try {
+			Logger delgate = getDelegate();
+			if (delgate != null) {
+				delgate.logError(msg, th, stackTraceOnDebugOnly);
+				wasOutput = true;
+			}
+		} catch (Exception ex) {
+			markDelegateSuspect();
+		}
+
+		if (!wasOutput) {
+			System.err.println(msg);
+			th.printStackTrace(System.err);
+		}
+	}
+	
+	
+	
 	public void logInfo(String msg) {
 		boolean wasOutput = false;
 		try {
@@ -315,6 +335,25 @@ class LoggerWrapper implements Logger {
 		}
 	}
 
+	public void logInfo(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
+		boolean wasOutput = false;
+		try {
+			Logger delgate = getDelegate();
+			if (delgate != null) {
+				delgate.logInfo(msg, th, stackTraceOnDebugOnly);
+				wasOutput = true;
+			}
+		} catch (Exception ex) {
+			markDelegateSuspect();
+		}
+
+		if (!wasOutput) {
+			System.out.println(msg);
+			th.printStackTrace();
+		}
+	}
+	
+	
 	public void logWarn(String msg) {
 		boolean wasOutput = false;
 		try {
@@ -349,4 +388,24 @@ class LoggerWrapper implements Logger {
 			th.printStackTrace();
 		}
 	}
+
+
+	public void logWarn(String msg, Throwable th, boolean stackTraceOnDebugOnly) {
+		boolean wasOutput = false;
+		try {
+			Logger delgate = getDelegate();
+			if (delgate != null) {
+				delgate.logWarn(msg, th, stackTraceOnDebugOnly);
+				wasOutput = true;
+			}
+		} catch (Exception ex) {
+			markDelegateSuspect();
+		}
+
+		if (!wasOutput) {
+			System.out.println(msg);
+			th.printStackTrace();
+		}
+	}
+
 }

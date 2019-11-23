@@ -34,9 +34,34 @@ public interface Logger {
     public void logWarn(String msg);
     public void logInfo(String msg);
     public void logDebug(String msg);
-    
-    public void logError(String msg, Throwable th);
-    public void logWarn(String msg, Throwable th);
-    public void logInfo(String msg, Throwable th);
     public void logDebug(String msg, Throwable th);
+
+    /**
+     * Stack trace will always be included in output
+     * when log level is "error" or greater.
+     * @param msg
+     * @param th
+     */
+    public void logError(String msg, Throwable th);
+    public void logError(String msg, Throwable th, boolean stackTraceOnDebugOnly);
+    
+    /**
+     * Stack trace will ONLY be included in output
+     * when log level is "debug" or less. 
+     * @param msg
+     * @param th
+     */
+    public void logWarn(String msg, Throwable th);
+    public void logWarn(String msg, Throwable th, boolean stackTraceOnDebugOnly);
+    
+    /**
+     * Stack trace will ONLY be included in output
+     * when log level is "debug" or less. 
+     * @param msg
+     * @param th
+     */
+    public void logInfo(String msg, Throwable th);
+    public void logInfo(String msg, Throwable th, boolean stackTraceOnDebugOnly);
+    
+    
 }
