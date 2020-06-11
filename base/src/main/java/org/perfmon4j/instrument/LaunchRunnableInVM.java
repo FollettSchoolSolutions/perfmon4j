@@ -115,7 +115,10 @@ public class LaunchRunnableInVM {
 	}
 	
 	
-	
+	private static int getMajorJavaVersion() {
+		String version = System.getProperty("java.version");
+		return Integer.parseInt(version.substring(0, version.indexOf(".")));
+	}
 	
 	
 	private static String run(Class<?> clazz, String javaAgentParams, String args, Properties systemProperties, File perfmonJar, boolean loadJavaAgent) throws Exception {
@@ -161,11 +164,15 @@ public class LaunchRunnableInVM {
 	    	if (javaAgentParams != null) {
 	    		cmdString += "=" + javaAgentParams;
 	    	}
-	    	String endorsedDirs = " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
-	    	if (javassistFile != null) {
-	    		endorsedDirs += PATH_SEPERATOR + quoteIfNeeded(javassistFile.getParentFile().getCanonicalPath());
+	    	if (getMajorJavaVersion() < 11) {
+	    		// Java 11 or better does not support and, at least in this case, does not require
+	    		// endoresedDirs.
+		    	String endorsedDirs = " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
+		    	if (javassistFile != null) {
+		    		endorsedDirs += PATH_SEPERATOR + quoteIfNeeded(javassistFile.getParentFile().getCanonicalPath());
+		    	}
+				cmdString +=  endorsedDirs;
 	    	}
-			cmdString +=  endorsedDirs;
 		} else {
 			// Just load the perfmon4j.jar onto the classpath.
 			myClassPath += quoteIfNeeded(perfmonJar.getCanonicalPath()) + PATH_SEPERATOR;
