@@ -35,7 +35,6 @@
 		<module>dbupgrader</module>
 		<module>base</module>
 		<module>servlet</module>
-		<module>tomcat55</module>
 		<module>tomcat7</module>
 		<module>jbossweb7</module>
 		<module>sunjava6</module>
@@ -131,15 +130,13 @@
 			</plugin>
 
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.1</version>
-				<configuration>
-					<source>1.5</source>
-					<target>1.5</target>
-				</configuration>
+			   <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-compiler-plugin</artifactId>
+			    <version>3.8.0</version>
+			    <configuration>
+			        <release>11</release>
+			    </configuration>
 			</plugin>
-
 	
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
