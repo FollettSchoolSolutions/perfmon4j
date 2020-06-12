@@ -36,6 +36,7 @@
 		<module>base</module>
 		<module>servlet</module>
 		<module>tomcat7</module>
+		<module>tomcat55</module>
 		<module>jbossweb7</module>
 		<module>sunjava6</module>
 		<module>reportconsole</module>
