@@ -48,9 +48,10 @@ public class JDBCSQLAppender extends SQLAppender {
     		logger.logDebug("Closing connection");
     		try {
 				conn.close();
-				conn = null;
 			} catch (SQLException e) {
 				logger.logWarn("Unable to close connection", e);
+			} finally {
+				conn = null; // Make sure we dereference even if close fails.
 			}
     	}
     	super.deInit();

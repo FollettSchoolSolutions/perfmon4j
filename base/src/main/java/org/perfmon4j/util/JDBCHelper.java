@@ -346,13 +346,7 @@ public class JDBCHelper {
 		}
 	}
 
-	public static Driver loadDriver(String driverClassName) throws FileNotFoundException, ClassNotFoundException, 
-		InstantiationException, IllegalAccessException {
-	
-		return loadDriver(driverClassName, null);
-	}
-
-	public static Driver loadDriver(String driverClassName, String jarFileName) throws FileNotFoundException, ClassNotFoundException, 
+	private static Driver loadDriver(String driverClassName, String jarFileName) throws FileNotFoundException, ClassNotFoundException, 
 		InstantiationException, IllegalAccessException {
 		Class<Driver> driverClazz;
 		
@@ -378,7 +372,7 @@ public class JDBCHelper {
 		return driverClazz.newInstance();
 	}
 	
-    public static Connection createJDBCConnection(Driver driver, String jdbcURL, String userName,
+    private static Connection createJDBCConnection(Driver driver, String jdbcURL, String userName,
     	String password) throws SQLException {
     	Connection conn = null;
 		if (driver != null) {

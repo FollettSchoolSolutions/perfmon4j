@@ -17,7 +17,9 @@ McHenry, IL 60050
 
 Changes
 
-** 1.4.4-SNAPSHOT (Next Version)
+** 1.5.0-SNAPSHOT (Next Version)
+-	DO NOT MOVE UP TO THIS VERSION UNLESS YOUR PROJECT IS JAVA 11 OR BETTER  
+-	Changed compiler version to java 11. 	
 
 ** 1.4.3 - 2019-06-27
 - Renamed the package of the api jar from "org.perfmon4j.agent.api" to 

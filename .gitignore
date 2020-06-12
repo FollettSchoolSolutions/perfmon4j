@@ -12,3 +12,5 @@ hystrix-demo/\.classpath
 agent-api/\.classpath
 
 agent-api/bin/
+
+tomcat7/.classpath
