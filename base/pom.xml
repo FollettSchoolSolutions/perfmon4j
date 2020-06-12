@@ -1,11 +1,10 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>1.4.3</version>
+		<version>1.5.0</version>
 	</parent>
   
 	<artifactId>perfmon4j</artifactId>
@@ -26,8 +25,7 @@
             			</goals>
             			<configuration>
 		                <tasks>
-		                    <copy file="${M2_REPO}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar" 
-		                    	tofile="${basedir}/target/classes/lib/javassist.jar"/>
+		                    <copy file="${M2_REPO}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar" tofile="${basedir}/target/classes/lib/javassist.jar" />
 		                    </tasks>
 		                </configuration>
             		</execution>
@@ -141,7 +139,7 @@ using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate cl
 										</goals>
 									</pluginExecutionFilter>
 									<action>
-										<execute/>
+										<execute />
 									</action>
 								</pluginExecution>
 							</pluginExecutions>
