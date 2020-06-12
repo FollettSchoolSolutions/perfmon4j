@@ -7,7 +7,7 @@ WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY
 OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
 License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
 http://www.gnu.org/licenses/
- 	
+
 perfmon4j@fsc.follett.com
 David Deuchert
 Follett Software Company
@@ -17,9 +17,9 @@ McHenry, IL 60050
 
 Changes
 
-** 1.5.0-SNAPSHOT (Next Version)
--	DO NOT MOVE UP TO THIS VERSION UNLESS YOUR PROJECT IS JAVA 11 OR BETTER  
--	Changed compiler version to java 11. 	
+** 1.5.0 - 2020-06-12
+- DO NOT MOVE UP TO THIS VERSION UNLESS YOUR PROJECT IS JAVA 11 OR BETTER  
+Changed compiler version to java 11.
 
 ** 1.4.3 - 2019-06-27
 - Renamed the package of the api jar from "org.perfmon4j.agent.api" to 
