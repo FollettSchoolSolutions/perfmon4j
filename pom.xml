@@ -61,7 +61,8 @@
 						<version>2.10.3</version>
 						<configuration>
 							<doctitle>${project.name} ${project.version}</doctitle>
-							<windowtitle>${project.name} ${project.version}</windowtitle>        					
+							<windowtitle>${project.name} ${project.version}</windowtitle>        			
+        						<source>8</source>
 						</configuration>
 						<executions>
 							<execution>
