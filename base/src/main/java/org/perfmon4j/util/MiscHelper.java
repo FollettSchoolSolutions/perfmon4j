@@ -699,4 +699,19 @@ public class MiscHelper {
 	public static String generateOauthSecret() {
 		return generateOauthKey() + "-" + generateOauthKey();
 	}	
+
+	public static String escapeJSONString(String value) {
+		if (value != null) {
+			value = value
+				.replace("\\", "\\\\")
+				.replace("\"", "\\\"")
+				.replace("\b", "\\b")
+				.replace("\f", "\\f")
+				.replace("\n", "\\n")
+				.replace("\r", "\\r")
+				.replace("\t", "\\t");
+		}
+		return value;
+	}
+
 } 

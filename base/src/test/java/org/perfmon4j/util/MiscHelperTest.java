@@ -372,6 +372,22 @@ public class MiscHelperTest extends PerfMonTestCase {
 		
 		assertMatches(false, "myobject:a=*,c=*", "myobject:a=b,c=d,d=f");
 	}
+	
+	
+	public void testEscapeJSONString() throws Exception {
+		assertEquals("Escaped for JSON", "\\b", MiscHelper.escapeJSONString("\b"));
+		assertEquals("Escaped for JSON", "\\f", MiscHelper.escapeJSONString("\f"));
+		assertEquals("Escaped for JSON", "\\n", MiscHelper.escapeJSONString("\n"));
+		assertEquals("Escaped for JSON", "\\r", MiscHelper.escapeJSONString("\r"));
+		assertEquals("Escaped for JSON", "\\t", MiscHelper.escapeJSONString("\t"));
+		assertEquals("Escaped for JSON", "\\\"", MiscHelper.escapeJSONString("\""));
+		assertEquals("Escaped for JSON", "\\\\", MiscHelper.escapeJSONString("\\"));
+		
+		final String TEST_STRING = "\b\f\n\r\t\"\\\f";
+		final String ESCAPED = MiscHelper.escapeJSONString(TEST_STRING);
+		assertEquals("Escaped for JSON", "\\b\\f\\n\\r\\t\\\"\\\\\\f", ESCAPED);
+	}
+	
 
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
