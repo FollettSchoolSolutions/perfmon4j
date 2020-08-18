@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Map;
 
 public class HttpHelper {
 	private String userAgent = "PerfMon4j";
@@ -36,8 +37,12 @@ public class HttpHelper {
 	public void setReadTimeoutMillis(int readTimeoutMillis) {
 		this.readTimeoutMillis = readTimeoutMillis;
 	}
-
+	
 	public Response doPost(String urlparam, String body) throws IOException {
+		return doPost(urlparam, body, null);
+	}
+
+	public Response doPost(String urlparam, String body, Map<String, String>requestHeaders) throws IOException {
 		URL url = new URL(urlparam);
 		int responseCode;
 		String responseMessage = null;
@@ -53,7 +58,11 @@ public class HttpHelper {
 			byte[] outBytes = body.getBytes("UTF-8");
 			conn.setDoOutput(true);
 			conn.setFixedLengthStreamingMode(outBytes.length);
-			
+			if (requestHeaders != null) {
+				for(Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+					conn.setRequestProperty(entry.getKey(), entry.getValue());
+				}
+			}
 			OutputStream out = conn.getOutputStream();
 			try {
 				out.write(outBytes);
