@@ -3,7 +3,10 @@ package org.perfmon4j.azure;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -127,29 +130,29 @@ public class LogAnalyticsAppenderTest extends TestCase {
 	}
 
 	public void testAzureResourceIDInHeader()  throws Exception {
-		Map<String, String> headers = appender.buildRequestHeaders(1024);
+		Map<String, String> headers = appender.buildRequestHeaders("", 1024);
 		assertNull("No azure resource ID specified, it should not exist in the map", headers.get("x-ms-AzureResourceId"));
 		
 		appender.setAzureResourceID("my.azure.reource.id");
 		
-		headers = appender.buildRequestHeaders(1024);
+		headers = appender.buildRequestHeaders("", 1024);
 		assertEquals("Azure Resource ID", "my.azure.reource.id", headers.get("x-ms-AzureResourceId"));
 	}
 
 	public void testLogTypeInHeader()  throws Exception {
-		Map<String, String> headers = appender.buildRequestHeaders(1024);
-		assertEquals("LogType", "Perfmon4j", headers.get("Log-Type"));
+		Map<String, String> headers = appender.buildRequestHeaders("P4J_Interval", 1024);
+		assertEquals("LogType", "P4J_Interval", headers.get("Log-Type"));
 	}
 
 	public void testTimeGeneratedFieldInHeader()  throws Exception {
-		Map<String, String> headers = appender.buildRequestHeaders(1024);
+		Map<String, String> headers = appender.buildRequestHeaders("", 1024);
 		assertEquals("time-generated-field", "timestamp", headers.get("time-generated-field"));
 	}
 
 	public void testDateTimeFieldInHeader()  throws Exception{
 		DateFormat rfc1123Format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
 		
-		Map<String, String> headers = appender.buildRequestHeaders(1024);
+		Map<String, String> headers = appender.buildRequestHeaders("", 1024);
 		String dateTime = headers.get("x-ms-date");
 		
 		assertNotNull("x-ms-date should be provided", dateTime);
@@ -162,7 +165,7 @@ public class LogAnalyticsAppenderTest extends TestCase {
 	}
 
 	public void testAuthorizationHeader() throws Exception {
-		Map<String, String> headers = appender.buildRequestHeaders(1024);
+		Map<String, String> headers = appender.buildRequestHeaders("", 1024);
 		String authorizationHeader = headers.get("Authorization");
 		
 		assertNotNull("Authorization Header should be provided", authorizationHeader);
@@ -191,7 +194,51 @@ public class LogAnalyticsAppenderTest extends TestCase {
 	
 	public void testCreateSignature() throws Exception {
 		String result = appender.createSignature("POST\n1024\napplication/json\nx-ms-date:Mon, 04 Apr 2016 08:00:00 GMT\n/api/logs");
-		assertEquals("Expected signature", "+TbcCCiIeRZ0wkd0sggjSXlwdgKLVzpM5f2Z7GaovbQ=", result);
+		assertEquals("Expected signature", "pGaBUlChV30AWuN5drYLDLnUpm2jp3lNR3QpO/+WSzI=", result);
 	}
-
+	
+	public void testSnapShotSimpleClassNameToPrefix() {
+		assertEquals("Should remove trailing digits", "P4J_SnapShot_JVM", 
+			LogAnalyticsAppender.QueueElement.snapShotSimpleClassNameToPrefix("JVM123"));
+		assertEquals("Should remove trailing SnapShot(s)", "P4J_SnapShot_JVM", 
+			LogAnalyticsAppender.QueueElement.snapShotSimpleClassNameToPrefix("JVMSnapShotSnapShotSnapShot123"));
+		assertEquals("If all we have is SnapShot(s) and trailing digits, should just return the prefix", "P4J_SnapShot", 
+			LogAnalyticsAppender.QueueElement.snapShotSimpleClassNameToPrefix("SnapShotSnapShotSnapShot123"));
+		assertEquals("Digits not at the end are significant", "P4J_SnapShot_JVM123", 
+			LogAnalyticsAppender.QueueElement.snapShotSimpleClassNameToPrefix("JVM123SnapShotSnapShotSnapShot123"));
+		assertEquals("The word SnapShot is significant if not at the end", "P4J_SnapShot_SnapShotJVM", 
+			LogAnalyticsAppender.QueueElement.snapShotSimpleClassNameToPrefix("SnapShotJVMSnapShotSnapShotSnapShot123"));
+	}
+	
+	public void testSortIntoBatches() {
+		List<LogAnalyticsAppender.QueueElement> queue = new ArrayList<LogAnalyticsAppender.QueueElement>();
+		
+		queue.add(new LogAnalyticsAppender.QueueElement("a", ""));
+		queue.add(new LogAnalyticsAppender.QueueElement("b", ""));
+		queue.add(new LogAnalyticsAppender.QueueElement("c", ""));
+		
+		Map<String, Deque<String>> batches = LogAnalyticsAppender.QueueElement.sortIntoBatches(queue);
+		assertEquals("Should have one 'a' element", 1, batches.get("a").size()); 
+		assertEquals("Should have one 'b' element", 1, batches.get("b").size()); 
+		assertEquals("Should have one 'c' element", 1, batches.get("c").size()); 
+	}
+	
+	// By default Perfmon4h prefixes data category names with "Interval." or "Snapshot."
+	// Since the data is broken out in Azure log analytics this is redundent and not useful
+	public void testTrimPrefixOffCategory() {
+		assertEquals("Should trim off Interval.", "com.follett.CircMainBean", 
+			LogAnalyticsAppender.trimPrefixOffCategory("Interval.com.follett.CircMainBean"));
+		assertEquals("Should trim off Snapshot.", "NewJVM", 
+			LogAnalyticsAppender.trimPrefixOffCategory("Snapshot.NewJVM"));
+		
+		assertEquals("Should trim off Interval. if it is embedded in string", "com.Interval.com.follett.CircMainBean", 
+				LogAnalyticsAppender.trimPrefixOffCategory("com.Interval.com.follett.CircMainBean"));
+		assertEquals("Should trim off Snapshot. if it is embeded in string", "other.Snapshot.NewJVM", 
+			LogAnalyticsAppender.trimPrefixOffCategory("other.Snapshot.NewJVM"));
+		
+		assertEquals("Should not level empty string", "Interval", 
+				LogAnalyticsAppender.trimPrefixOffCategory("Interval"));
+		assertEquals("Should not level empty string", "Snapshot", 
+				LogAnalyticsAppender.trimPrefixOffCategory("Snapshot"));
+	}
 }

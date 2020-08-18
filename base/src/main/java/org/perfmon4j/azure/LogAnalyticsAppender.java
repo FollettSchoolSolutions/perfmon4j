@@ -17,9 +17,11 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.PerfMonObservableDatum;
+import org.perfmon4j.SnapShotData;
 import org.perfmon4j.SystemNameAndGroupsAppender;
 import org.perfmon4j.util.HttpHelper;
 import org.perfmon4j.util.HttpHelper.Response;
@@ -45,7 +47,7 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	
 	private final Object writeQueueLockTokan = new Object();
 	
-	final List<String> writeQueue = new ArrayList<String>();
+	private final List<QueueElement> writeQueue = new ArrayList<QueueElement>();
 	
 	private static final Object dedicatedTimerThreadLockTocken = new Object();
 	private static Timer dedicatedTimerThread = null;
@@ -133,13 +135,13 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	}
 	
 	
-	/* package level for testing */ Map<String, String> buildRequestHeaders(int contentLength) throws IOException {
+	/* package level for testing */ Map<String, String> buildRequestHeaders(String logType, int contentLength) throws IOException {
 		Map<String, String> result = new HashMap<String, String>();
 
 		final String now = MiscHelper.formatTimeAsRFC1123(System.currentTimeMillis());
 		
 		result.put("Content-Type", CONTENT_TYPE);
-		result.put("Log-Type", "Perfmon4j");
+		result.put("Log-Type", logType);
 		result.put("time-generated-field", "timestamp");
 		result.put("x-ms-date", now);
 		
@@ -148,10 +150,7 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 			result.put("x-ms-AzureResourceId", resID);
 		}
 		String stringToSign = buildStringToSign(contentLength, now);
-//System.out.println("stringToSign: " + stringToSign);		
-		
 		String signature =  createSignature(stringToSign);
-//System.out.println("signature: " + signature);		
 
 		result.put("Authorization", "SharedKey " + customerID + ":" + signature);
 		
@@ -159,11 +158,16 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	}
 	
 	
+	static String trimPrefixOffCategory(String category) {
+		return category.replaceFirst("^(Interval|Snapshot)\\.", "");
+	}
+	
 	/* package level for testing */ String buildJSONElement(PerfMonObservableData data) {
 		StringBuilder json = new StringBuilder();
 		
+		
 		json.append("{");
-		json.append(addValue("category", data.getDataCategory(), false));
+		json.append(addValue("category", trimPrefixOffCategory(data.getDataCategory()), false));
 		json.append(addValue("systemName", getSystemName(), false));
 		
 		String[] groups = getGroupsAsArray();
@@ -186,10 +190,10 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		return numDataElements > 0 ? json.toString() : null;
 	}
 	
-	private void appendDataLine(String line) {
+	private void appendDataLine(QueueElement element) {
 		synchronized (writeQueueLockTokan) {
 			if (writeQueue.size() < maxWriteQueueSize) {
-				writeQueue.add(line);
+				writeQueue.add(element);
 			} else {
 				logger.logWarn("LogAnalyticsAppender execeeded maxWriteQueueSize.  Measurement is being dropped");
 			}
@@ -204,11 +208,11 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		}
 	}
 	
-	private Deque<String> getBatch() {
-		Deque<String> result = null;
+	private List<QueueElement> getBatch() {
+		List<QueueElement> result = null;
 		synchronized (writeQueueLockTokan) {
 			if (!writeQueue.isEmpty()) {
-				result = new LinkedList<String>();
+				result = new LinkedList<QueueElement>();
 				result.addAll(writeQueue);
 				writeQueue.clear();
 			}
@@ -219,9 +223,9 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	@Override
 	public void outputData(PerfMonData data) {
 		if (data instanceof PerfMonObservableData) {
-			String dataLine = buildJSONElement((PerfMonObservableData)data);
-			if (dataLine != null) {
-				appendDataLine(dataLine);
+			String json = buildJSONElement((PerfMonObservableData)data);
+			if (json != null) {
+				appendDataLine(new QueueElement(((PerfMonObservableData)data), json));
 			} else {
 				logger.logWarn("No observable data elements found.  Skipping output of data: " + 
 						((PerfMonObservableData)data).getDataCategory());
@@ -299,7 +303,74 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	public void setAzureResourceID(String azureResourceID) {
 		this.azureResourceID = azureResourceID;
 	}
+	
+	static class QueueElement {
+		private static final String INTERVAL_PREFIX = "P4J_Interval";
+		private static final String MISC_PREFIX = "P4J_Misc";
+		private static final String SNAPSHOT_PREFIX = "P4J_SnapShot";
+		
+		private final String key;
+		private final String json; 
+		
+		QueueElement(PerfMonObservableData data, String json) {
+			if (data instanceof SnapShotData) {
+				key = snapShotSimpleClassNameToPrefix(data.getClass().getSimpleName());
+			} else if (data instanceof IntervalData){
+				key = INTERVAL_PREFIX;
+			} else {
+				key = MISC_PREFIX;
+			}
+			this.json = json;
+		}
+		
+		/**
+		 * TEST_ONLY
+		 * @param key
+		 * @param json
+		 */
+		QueueElement(String key, String json) {
+			this.key = key;
+			this.json = json;
+		}
+		
+		static public Map<String, Deque<String>> sortIntoBatches(List<QueueElement> queue) {
+			Map<String, Deque<String>> result = new HashMap<String, Deque<String>>();
+			
+			for(QueueElement element : queue) {
+				String key = element.getKey();
+				Deque<String> batch = result.get(key);
+				if (batch == null) {
+					batch = new LinkedList<String>();
+					result.put(key, batch);
+				}
+				batch.add(element.getJson());
+			}
+			
+			return result;
+		}
+		
+		static String snapShotSimpleClassNameToPrefix(String simpleClassName) {
+			String suffix = simpleClassName
+				.replaceAll("\\d+$", "")
+				.replaceAll("(SnapShot)+$", ""); 
+			
+			if (suffix.isEmpty()) {
+				return SNAPSHOT_PREFIX;
+			} else {
+				return SNAPSHOT_PREFIX + "_" + suffix;
+			}
+		}
 
+		public String getKey() {
+			return key;
+		}
+
+		public String getJson() {
+			return json;
+		}
+	}
+	
+	
 	private class BatchWriter extends TimerTask {
 		BatchWriter() {
 			batchWritersPending.incrementAndGet();
@@ -309,43 +380,44 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		public void run() {
 			batchWritersPending.decrementAndGet();
 			
-			Deque<String> batch = getBatch();
-			while (batch != null && !batch.isEmpty()) {
-				int batchSize = 0;
-				StringBuilder postBody = null;
-				for (;batchSize < maxMeasurementsPerBatch && !batch.isEmpty(); batchSize++) {
-					String line = batch.remove();
-					if (postBody == null) {
-						postBody = new StringBuilder();
-						postBody.append("[");
-					} else {
-						postBody.append(",");
+		List<QueueElement> batches = getBatch();
+		for (Map.Entry<String, Deque<String>> entry : QueueElement.sortIntoBatches(batches).entrySet()) {
+				String logType = entry.getKey();
+				Deque<String> batch = entry.getValue();
+				while (batch != null && !batch.isEmpty()) {
+					int batchSize = 0;
+					StringBuilder postBody = null;
+					for (;batchSize < maxMeasurementsPerBatch && !batch.isEmpty(); batchSize++) {
+						String line = batch.remove();
+						if (postBody == null) {
+							postBody = new StringBuilder();
+							postBody.append("[");
+						} else {
+							postBody.append(",");
+						}
+						postBody.append(line);
 					}
-					postBody.append(line);
-				}
-				postBody.append("]");
-				HttpHelper helper = getHelper();
-				String postURL = buildPostURL();
-				try {
-					Map<String, String> headers = buildRequestHeaders(postBody.length());
-					Response response = helper.doPost(buildPostURL(), postBody.toString(), headers);
-//System.out.println("postBody: " + postBody.toString());					
-
-					
-					if (!response.isSuccess()) {
-						String message = "Http error writing to Azure using postURL: \"" + postURL + 
-							"\" Response: " + response.toString();
-						logger.logWarn(message);
-					} else if (logger.isDebugEnabled()) {
-						logger.logDebug("Measurements written to azure. BatchSize: " + batchSize);
-					}
-				} catch (IOException e) {
-					String message = "Exception writing to Azure using postURL: \"" + postURL + "\"";
-					if (logger.isDebugEnabled()) {
-						logger.logWarn(message, e);
-					} else {
-						message += " Exception(" + e.getClass().getName() + "): " + e.getMessage();
-						logger.logWarn(message);
+					postBody.append("]");
+					HttpHelper helper = getHelper();
+					String postURL = buildPostURL();
+					try {
+						Map<String, String> headers = buildRequestHeaders(logType, postBody.length());
+						Response response = helper.doPost(buildPostURL(), postBody.toString(), headers);
+						if (!response.isSuccess()) {
+							String message = "Http error writing to Azure using postURL: \"" + postURL + 
+								"\" Response: " + response.toString();
+							logger.logWarn(message);
+						} else if (logger.isDebugEnabled()) {
+							logger.logDebug("Measurements written to azure. BatchSize: " + batchSize);
+						}
+					} catch (IOException e) {
+						String message = "Exception writing to Azure using postURL: \"" + postURL + "\"";
+						if (logger.isDebugEnabled()) {
+							logger.logWarn(message, e);
+						} else {
+							message += " Exception(" + e.getClass().getName() + "): " + e.getMessage();
+							logger.logWarn(message);
+						}
 					}
 				}
 			}
