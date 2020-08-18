@@ -2,15 +2,26 @@ package org.perfmon4j.azure;
 
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonObservableData;
@@ -26,10 +37,11 @@ import org.perfmon4j.util.MiscHelper;
 public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	private static final Logger logger = LoggerFactory.initLogger(LogAnalyticsAppender.class);
 	private static final String API_VERSION = "2016-04-01";
+	private static final String CONTENT_TYPE = "application/json";
 	
 	private String customerID = null;
 	private String sharedKey = null;
-	private String resourceID = null;
+	private String azureResourceID = null;
 	private boolean numericOnly = false;
 	
 	private int batchSeconds = 5; // How long to delay before sending a batch of measurements out.
@@ -90,7 +102,63 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		
 		return result;
 	}
+
+	/* package level for testing */ String createSignature(String message) throws Exception {
+		final String signingAlg = "HmacSHA256";
+		
+		if (sharedKey == null) {
+			throw new Exception("Unable to sign message, sharedKey==null");
+		}
+		
+		try {
+			Mac mac = Mac.getInstance(signingAlg);
+			SecretKey key = new SecretKeySpec(sharedKey.getBytes(), signingAlg);
+			
+			mac.init(key);
+			byte[] bytes = mac.doFinal(message.getBytes("utf-8"));
+			return Base64.getEncoder().encodeToString(bytes);
+		} catch (Exception e) {
+			throw new Exception("Unable to create signature", e);
+		}
+	}
 	
+	
+	/* package level for testing */ String buildStringToSign(int contentLength, String rfc1123DateTime) {
+		StringBuilder result = new StringBuilder();
+		
+		result
+			.append("POST\n")
+			.append(contentLength)
+			.append("\n")
+			.append(CONTENT_TYPE)
+			.append("\n")
+			.append("x-ms-date:")
+			.append(rfc1123DateTime)
+			.append("\n/api/logs");
+		
+		return result.toString();
+	}
+	
+	
+	/* package level for testing */ Map<String, String> buildRequestHeaders(int contentLength) throws Exception {
+		Map<String, String> result = new HashMap<String, String>();
+
+		final String now = MiscHelper.formatTimeAsRFC1123(System.currentTimeMillis());
+		
+		result.put("Log-Type", "Perfmon4j");
+		result.put("time-generated-field", "timestamp");
+		result.put("x-ms-date", now);
+		
+		String resID = getAzureResourceID();
+		if (resID != null) {
+			result.put("x-ms-AzureResourceId", resID);
+		}
+		
+		String signature =  createSignature(buildStringToSign(contentLength, now));
+		result.put("Authorization", "SharedKey " + customerID + ":" + signature);
+		
+		return result;
+	}
 	
 	
 	/* package level for testing */ String buildJSONElement(PerfMonObservableData data) {
@@ -113,7 +181,7 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 			}
 		}
 		
-		json.append(addValueNoQuotes("timestamp", Long.toString(data.getTimestamp() / 1000), true));
+		json.append(addValue("timestamp", MiscHelper.formatTimeAsISO8601(data.getTimestamp()), true));
 		json.append("}");
 		
 		
@@ -224,6 +292,14 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 
 	public void setNumericOnly(boolean numericOnly) {
 		this.numericOnly = numericOnly;
+	}
+
+	public String getAzureResourceID() {
+		return azureResourceID;
+	}
+
+	public void setAzureResourceID(String azureResourceID) {
+		this.azureResourceID = azureResourceID;
 	}
 
 	private class BatchWriter extends TimerTask {
