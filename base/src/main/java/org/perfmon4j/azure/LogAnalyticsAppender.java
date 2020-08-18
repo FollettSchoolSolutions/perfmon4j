@@ -2,11 +2,6 @@ package org.perfmon4j.azure;
 
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.security.GeneralSecurityException;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Deque;
@@ -17,7 +12,6 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
@@ -89,7 +83,6 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		String key = datum.getDefaultDisplayName();
 		
 		if (datum.isNumeric()) {
-			Number value = datum.getValue();
 			Object complexValue = datum.getComplexObject();
 			if ((complexValue != null) && (complexValue instanceof Boolean)) {
 				result = addValueNoQuotes(key, (((Boolean)complexValue).booleanValue() ? "true" : "false"), isLastValue);
@@ -103,22 +96,22 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		return result;
 	}
 
-	/* package level for testing */ String createSignature(String message) throws Exception {
+	/* package level for testing */ String createSignature(String message) throws IOException {
 		final String signingAlg = "HmacSHA256";
 		
 		if (sharedKey == null) {
-			throw new Exception("Unable to sign message, sharedKey==null");
+			throw new IOException("Unable to sign message, sharedKey==null");
 		}
 		
 		try {
 			Mac mac = Mac.getInstance(signingAlg);
-			SecretKey key = new SecretKeySpec(sharedKey.getBytes(), signingAlg);
+			SecretKey key = new SecretKeySpec(Base64.getDecoder().decode(sharedKey), signingAlg);
 			
 			mac.init(key);
-			byte[] bytes = mac.doFinal(message.getBytes("utf-8"));
+			byte[] bytes = mac.doFinal(message.getBytes("UTF-8"));
 			return Base64.getEncoder().encodeToString(bytes);
 		} catch (Exception e) {
-			throw new Exception("Unable to create signature", e);
+			throw new IOException("Unable to create signature", e);
 		}
 	}
 	
@@ -140,11 +133,12 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	}
 	
 	
-	/* package level for testing */ Map<String, String> buildRequestHeaders(int contentLength) throws Exception {
+	/* package level for testing */ Map<String, String> buildRequestHeaders(int contentLength) throws IOException {
 		Map<String, String> result = new HashMap<String, String>();
 
 		final String now = MiscHelper.formatTimeAsRFC1123(System.currentTimeMillis());
 		
+		result.put("Content-Type", CONTENT_TYPE);
 		result.put("Log-Type", "Perfmon4j");
 		result.put("time-generated-field", "timestamp");
 		result.put("x-ms-date", now);
@@ -153,8 +147,12 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		if (resID != null) {
 			result.put("x-ms-AzureResourceId", resID);
 		}
+		String stringToSign = buildStringToSign(contentLength, now);
+//System.out.println("stringToSign: " + stringToSign);		
 		
-		String signature =  createSignature(buildStringToSign(contentLength, now));
+		String signature =  createSignature(stringToSign);
+//System.out.println("signature: " + signature);		
+
 		result.put("Authorization", "SharedKey " + customerID + ":" + signature);
 		
 		return result;
@@ -319,15 +317,21 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 					String line = batch.remove();
 					if (postBody == null) {
 						postBody = new StringBuilder();
+						postBody.append("[");
 					} else {
-						postBody.append("\n");
+						postBody.append(",");
 					}
 					postBody.append(line);
 				}
+				postBody.append("]");
 				HttpHelper helper = getHelper();
 				String postURL = buildPostURL();
 				try {
-					Response response = helper.doPost(buildPostURL(), postBody.toString());
+					Map<String, String> headers = buildRequestHeaders(postBody.length());
+					Response response = helper.doPost(buildPostURL(), postBody.toString(), headers);
+//System.out.println("postBody: " + postBody.toString());					
+
+					
 					if (!response.isSuccess()) {
 						String message = "Http error writing to Azure using postURL: \"" + postURL + 
 							"\" Response: " + response.toString();
