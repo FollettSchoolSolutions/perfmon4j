@@ -387,8 +387,19 @@ public class MiscHelperTest extends PerfMonTestCase {
 		final String ESCAPED = MiscHelper.escapeJSONString(TEST_STRING);
 		assertEquals("Escaped for JSON", "\\b\\f\\n\\r\\t\\\"\\\\\\f", ESCAPED);
 	}
-	
 
+	public void testConvertTimeToISO8601() throws Exception {
+		long now = 1597699387737L;
+		assertEquals("Time should be in UTC and include seconds", "2020-08-17T21:23:07Z",
+			MiscHelper.formatTimeAsISO8601(now));	
+	}
+
+	public void testConvertTimeToRFC1123() throws Exception {
+		long now = 1597699387737L;
+		assertEquals("Time should be in GMT and include seconds", "Mon, 17 Aug 2020 21:23:07 GMT",
+			MiscHelper.formatTimeAsRFC1123(now));	
+	}
+	
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

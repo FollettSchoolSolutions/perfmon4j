@@ -31,8 +31,11 @@ import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.SecureRandom;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -41,6 +44,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -712,6 +716,20 @@ public class MiscHelper {
 				.replace("\t", "\\t");
 		}
 		return value;
+	}
+	
+	public static String formatTimeAsISO8601(long timestamp) {
+		DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+		format.setTimeZone(TimeZone.getTimeZone("UTC"));
+		
+		return format.format(new Date(timestamp));
+	}
+
+	public static String formatTimeAsRFC1123(long timestamp) {
+		DateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'");
+		format.setTimeZone(TimeZone.getTimeZone("GMT"));
+		
+		return format.format(new Date(timestamp));
 	}
 
 } 
