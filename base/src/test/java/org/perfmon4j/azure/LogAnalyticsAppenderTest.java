@@ -3,17 +3,16 @@ package org.perfmon4j.azure;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import junit.framework.TestCase;
 
 import org.mockito.Mockito;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.PerfMonObservableDatum;
+
+import junit.framework.TestCase;
 
 public class LogAnalyticsAppenderTest extends TestCase {
 	private final String CUSTOMER_ID = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
