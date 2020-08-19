@@ -29,6 +29,7 @@ Changes
   (timeStart, timeStop, maxActiveThreadCountSet, maxDurationSet, minDurationSet,
   maxSQLDurationSet and minSQLDurationSet).
 
+- Upgraded javassist from version 3.24.1-GA to 3.27.0-GA
 
 ** 1.5.0 - 2020-06-12
 - DO NOT MOVE UP TO THIS VERSION UNLESS YOUR PROJECT IS JAVA 11 OR BETTER  
