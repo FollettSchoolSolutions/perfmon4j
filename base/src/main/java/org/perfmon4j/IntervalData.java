@@ -766,6 +766,12 @@ public class IntervalData implements PerfMonObservableData {
     	return new MonitorKeyWithFields(monitorKey,
     			fields);
     }
+    
+    private void addIfNotNull(Set<PerfMonObservableDatum<?>> result, PerfMonObservableDatum<?> datum) {
+    	if (datum != null) {
+    		result.add(datum);
+    	}
+    }
 
     public Set<PerfMonObservableDatum<?>> getObservations() {
 		Set<PerfMonObservableDatum<?>> result = new HashSet<PerfMonObservableDatum<?>>(); 
@@ -788,6 +794,16 @@ public class IntervalData implements PerfMonObservableData {
 		result.add(PerfMonObservableDatum.newDatum("sqlStdDeviation", getSQLStdDeviation()));
 		result.add(PerfMonObservableDatum.newDatum("maxActiveThreadCount", getMaxActiveThreadCount()));
 		result.add(PerfMonObservableDatum.newDatum("throughputPerSecond", getThroughputPerSecond()));
+		
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("maxActiveThreadCountSet", getTimeMaxActiveThreadCountSet()));
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("maxDurationSet", getTimeMaxDurationSet()));
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("minDurationSet", getTimeMinDurationSet()));
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("maxSQLDurationSet", getTimeMaxSQLDurationSet()));
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("minSQLDurationSet", getTimeMinSQLDurationSet()));
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("timeStart", getTimeStart()));
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("timeStop", getTimeStop()));
+		
+		
 		MedianCalculator mc = getMedianCalculator();
 		if (mc != null) {
 			Double v = mc.getMedian().getResult();

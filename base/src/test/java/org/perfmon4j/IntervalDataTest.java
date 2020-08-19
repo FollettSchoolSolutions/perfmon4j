@@ -24,14 +24,15 @@ package org.perfmon4j;
 import java.util.Map;
 import java.util.Set;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.mockito.Mockito;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.MedianCalculator;
+import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.ThresholdCalculator;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class IntervalDataTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -157,6 +158,53 @@ public class IntervalDataTest extends PerfMonTestCase {
        	 validateObservation(observations, "throughputPerSecond", "16.000");
      }
 
+     @SuppressWarnings("boxing")
+ 	public void testGetDateTimeObservations() throws Exception {
+        final long NOW = System.currentTimeMillis();
+      	 IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), NOW-1, null, null, NOW);
+      	 
+      	 data = Mockito.spy(data);
+      	 Mockito.when(data.getTimeMaxActiveThreadCountSet()).thenReturn(Long.valueOf(10000));
+      	 Mockito.when(data.getTimeMaxDurationSet()).thenReturn(Long.valueOf(20000));
+      	 Mockito.when(data.getTimeMinDurationSet()).thenReturn(Long.valueOf(30000));
+      	 Mockito.when(data.getTimeMaxSQLDurationSet()).thenReturn(Long.valueOf(40000));
+      	 Mockito.when(data.getTimeMinSQLDurationSet()).thenReturn(Long.valueOf(50000));
+      	 Mockito.when(data.getTimeStart()).thenReturn(Long.valueOf(60000));
+      	 Mockito.when(data.getTimeStop()).thenReturn(Long.valueOf(70000));
+      	
+      	 Set<PerfMonObservableDatum<?>> observations = data.getObservations();
+      	 assertNotNull(observations);
+      	 assertFalse(observations.isEmpty());
+
+      	 validateObservation(observations, "maxActiveThreadCountSet", MiscHelper.formatTimeAsISO8601(10000));
+      	 validateObservation(observations, "maxDurationSet", MiscHelper.formatTimeAsISO8601(20000));
+      	 validateObservation(observations, "minDurationSet", MiscHelper.formatTimeAsISO8601(30000));
+      	 validateObservation(observations, "maxSQLDurationSet", MiscHelper.formatTimeAsISO8601(40000));
+      	 validateObservation(observations, "minSQLDurationSet", MiscHelper.formatTimeAsISO8601(50000));
+      	 validateObservation(observations, "timeStart", MiscHelper.formatTimeAsISO8601(60000));
+      	 validateObservation(observations, "timeStop", MiscHelper.formatTimeAsISO8601(70000));
+    }
+     
+     @SuppressWarnings("boxing")
+ 	public void testGetDateTimeObservationsNotIncludedWhenNOT_SET() throws Exception {
+        final long NOW = System.currentTimeMillis();
+      	 IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), NOW-1, null, null, NOW);
+      	 
+      	 data = Mockito.spy(data);
+      	 Mockito.when(data.getTimeMaxActiveThreadCountSet()).thenReturn(Long.valueOf(PerfMon.NOT_SET));
+      	 Mockito.when(data.getTimeMaxDurationSet()).thenReturn(Long.valueOf(PerfMon.NOT_SET));
+      	 Mockito.when(data.getTimeMinDurationSet()).thenReturn(Long.valueOf(PerfMon.NOT_SET));
+      	 Mockito.when(data.getTimeMaxSQLDurationSet()).thenReturn(Long.valueOf(PerfMon.NOT_SET));
+      	 Mockito.when(data.getTimeMinSQLDurationSet()).thenReturn(Long.valueOf(PerfMon.NOT_SET));
+      	
+      	 Set<PerfMonObservableDatum<?>> observations = data.getObservations();
+      	 assertNull(PerfMonObservableDatum.findObservationByFieldName("maxActiveThreadCountSet", observations));
+      	 assertNull(PerfMonObservableDatum.findObservationByFieldName("maxDurationSet", observations));
+      	 assertNull(PerfMonObservableDatum.findObservationByFieldName("minDurationSet", observations));
+      	 assertNull(PerfMonObservableDatum.findObservationByFieldName("maxSQLDurationSet", observations));
+      	 assertNull(PerfMonObservableDatum.findObservationByFieldName("minSQLDurationSet", observations));
+    }
+     
  	public void testGetOptionalMedianObservations() throws Exception {
         final long NOW = System.currentTimeMillis();
       	 IntervalData data = new IntervalData(PerfMon.getMonitor("a.b.c"), NOW-1, null, null, NOW);

@@ -5,12 +5,13 @@ import java.util.Set;
 
 import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.instrument.snapshot.Ratio;
+import org.perfmon4j.util.MiscHelper;
 
 
 public class PerfMonObservableDatum<T> {
 	public static final Ratio NULL_RATIO = new Ratio(0, 0);
 	public static final Delta NULL_DELTA = new Delta(0, 0, 0);
-	public static final Number NULL_NUMBER = new Integer(-1);
+	public static final Number NULL_NUMBER = Integer.valueOf(-1);
 	
 	private final String fieldName;
 	private final String defaultDisplayName;
@@ -21,6 +22,7 @@ public class PerfMonObservableDatum<T> {
 	private final T complexObject;
 	private final String stringValue;
 	private final boolean isNumeric;
+	private final boolean isDateTime;
 	
 
 	static public PerfMonObservableDatum<Boolean> newDatum(String fieldName, boolean value) {
@@ -75,6 +77,15 @@ public class PerfMonObservableDatum<T> {
 		return new PerfMonObservableDatum<String>(fieldName, value);
 	}
 
+	static public PerfMonObservableDatum<String> newDateTimeDatumIfSet(String fieldName, long value) {
+		if (value != PerfMon.NOT_SET) {
+			return new PerfMonObservableDatum<String>(fieldName, MiscHelper.formatTimeAsISO8601(value), true);
+		} else {
+			return null;
+		}
+	}
+	
+	
 	static public <X extends Object> PerfMonObservableDatum<X> newDatum(String fieldName, X value) {
 		return new PerfMonObservableDatum<X>(fieldName, value);
 	}
@@ -96,6 +107,7 @@ public class PerfMonObservableDatum<T> {
 		this.value = Short.valueOf((short)(booleanValue.booleanValue() ? 1 : 0));
 		this.stringValue = buildStringValue(this.value);
 		this.isNumeric = true;
+		this.isDateTime = false;
 	}
 
 	private PerfMonObservableDatum(String fieldName, Number value) {
@@ -113,10 +125,16 @@ public class PerfMonObservableDatum<T> {
 		this.value = value;
 		this.stringValue = buildStringValue(value);
 		this.isNumeric = true;
+		this.isDateTime = false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private PerfMonObservableDatum(String fieldName, String value) {
+		this(fieldName, value, false);
 	}
 	
 	@SuppressWarnings("unchecked")
-	private PerfMonObservableDatum(String fieldName, String value) {
+	private PerfMonObservableDatum(String fieldName, String value, boolean isDateTime) {
 		super();
 		if (value == null) {
 			this.inputWasNull = true;
@@ -131,6 +149,7 @@ public class PerfMonObservableDatum<T> {
 		this.value = null;
 		this.complexObject = (T)value;
 		this.isNumeric = false;
+		this.isDateTime = isDateTime;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -154,6 +173,7 @@ public class PerfMonObservableDatum<T> {
 		this.complexObject = (T)value;
 		this.stringValue = buildStringValue(this.value);
 		this.isNumeric = true;
+		this.isDateTime = false;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -181,6 +201,7 @@ public class PerfMonObservableDatum<T> {
 		this.complexObject = (T)value;
 		this.stringValue = buildStringValue(this.value);
 		this.isNumeric = true;
+		this.isDateTime = false;
 	}
 	
 	
@@ -200,6 +221,7 @@ public class PerfMonObservableDatum<T> {
 		this.value = null;
 		this.complexObject = (T)value;
 		this.isNumeric = false;
+		this.isDateTime = false;
 	}
 
 	
@@ -258,6 +280,10 @@ public class PerfMonObservableDatum<T> {
 
 	public boolean isInputWasNull() {
 		return inputWasNull;
+	}
+
+	public boolean isDateTime() {
+		return isDateTime;
 	}
 
 	/**
