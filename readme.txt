@@ -17,6 +17,19 @@ McHenry, IL 60050
 
 Changes
 
+** Next Version
+- Added a new Appender (org.perfmon4j.azure.LogAnalyticsAppender). This appender will 
+  write perfmon4j observations to the Log Analytics workspace in Azure Monitor.
+- For information on the Microsoft Rest API used by the LogAnalyticsAppender 
+  see: https://docs.microsoft.com/en-us/azure/azure-monitor/platform/data-collector-api
+- For configuration information see: 
+  https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Azure-LogAnalytics-Appender
+
+- Now the observations returned by IntervalData.getObservations() include Date/Time fields
+  (timeStart, timeStop, maxActiveThreadCountSet, maxDurationSet, minDurationSet,
+  maxSQLDurationSet and minSQLDurationSet).
+
+
 ** 1.5.0 - 2020-06-12
 - DO NOT MOVE UP TO THIS VERSION UNLESS YOUR PROJECT IS JAVA 11 OR BETTER  
 Changed compiler version to java 11.
