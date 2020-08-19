@@ -32,14 +32,14 @@ import java.util.jar.Manifest;
 
 import javax.management.ObjectName;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTestCase;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 
 public class MiscHelperTest extends PerfMonTestCase {
@@ -390,7 +390,7 @@ public class MiscHelperTest extends PerfMonTestCase {
 
 	public void testConvertTimeToISO8601() throws Exception {
 		long now = 1597699387737L;
-		assertEquals("Time should be in UTC and include seconds", "2020-08-17T21:23:07Z",
+		assertEquals("Time should be in UTC and include seconds and milliseconds", "2020-08-17T21:23:07.737Z",
 			MiscHelper.formatTimeAsISO8601(now));	
 	}
 

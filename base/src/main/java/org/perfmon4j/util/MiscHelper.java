@@ -719,7 +719,7 @@ public class MiscHelper {
 	}
 	
 	public static String formatTimeAsISO8601(long timestamp) {
-		DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+		DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 		format.setTimeZone(TimeZone.getTimeZone("UTC"));
 		
 		return format.format(new Date(timestamp));

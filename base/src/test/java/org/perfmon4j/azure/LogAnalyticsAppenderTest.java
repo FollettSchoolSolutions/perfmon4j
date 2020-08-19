@@ -114,7 +114,7 @@ public class LogAnalyticsAppenderTest extends TestCase {
 	
 	public void testTimestampInISO8601Format() {
 		final String JSONValue = appender.buildJSONElement(mockData);
-		assertTrue("timestamp should be 1970-01-01T00:00:01Z", JSONValue.contains("\"timestamp\" : \"1970-01-01T00:00:01Z\""));
+		assertTrue("timestamp should be 1970-01-01T00:00:01.000Z", JSONValue.contains("\"timestamp\" : \"1970-01-01T00:00:01.000Z\""));
 	}
 	
 	public void testNumericValueInJSON() {
