@@ -660,7 +660,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	}
         	valveHookInserter = new ValveHookInserter(valveConfig);
             inst.addTransformer(valveHookInserter);
-        	logger.logInfo("Perfmon4j will attempt to install a Servlet Valve");
+        	logger.logInfo("Perfmon4j will attempt to install a Servlet Valve in Tomcat, JBoss or Wildfly Servers");
+        	logger.logInfo("In JBoss and Wildfly servers the Valve will NOT be installed until a Web Application is deployed");
         } else {
         	logger.logInfo("Perfmon4j will NOT attempt to install a Servlet Valve.  If this is a tomcat or jbossweb based application, " +
         			"add -eVALVE to javaAgent parameters to enable.");
