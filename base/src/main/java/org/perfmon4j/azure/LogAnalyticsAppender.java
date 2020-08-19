@@ -89,7 +89,7 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 			if ((complexValue != null) && (complexValue instanceof Boolean)) {
 				result = addValueNoQuotes(key, (((Boolean)complexValue).booleanValue() ? "true" : "false"), isLastValue);
 			} else { 
-				result = addValueNoQuotes(key, datum.toString(), isLastValue);;
+				result = addValueNoQuotes(key, datum.toString(), isLastValue);
 			}
 		} else {
 			result = addValue(key, datum.toString(), isLastValue);
