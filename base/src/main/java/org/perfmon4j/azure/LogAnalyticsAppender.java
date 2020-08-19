@@ -1,6 +1,5 @@
 package org.perfmon4j.azure;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -52,7 +51,7 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	private static final Object dedicatedTimerThreadLockTocken = new Object();
 	private static Timer dedicatedTimerThread = null;
 	
-	// This is a fail safe to prevent failure of writing to influxDb to allow measurements
+	// This is a fail safe to prevent failure of writing to Azure to allow measurements
 	// to continue to accumulate and run out of memory.
 	private final int maxWriteQueueSize = Integer.getInteger(LogAnalyticsAppender.class.getName() + ".maxQueueWriteSize" ,1000000).intValue();
 	
@@ -61,7 +60,8 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		this.setExcludeCWDHashFromSystemName(true);
 	}
 	
-	/* package level for testing */ String buildPostURL() {
+	/* package level for testing */ 
+	String buildPostURL() {
 		StringBuilder url = new StringBuilder();
 		
 		url.append("https://")
@@ -98,7 +98,8 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		return result;
 	}
 
-	/* package level for testing */ String createSignature(String message) throws IOException {
+	/* package level for testing */ 
+	String createSignature(String message) throws IOException {
 		final String signingAlg = "HmacSHA256";
 		
 		if (sharedKey == null) {
@@ -118,7 +119,8 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	}
 	
 	
-	/* package level for testing */ String buildStringToSign(int contentLength, String rfc1123DateTime) {
+	/* package level for testing */ 
+	String buildStringToSign(int contentLength, String rfc1123DateTime) {
 		StringBuilder result = new StringBuilder();
 		
 		result
@@ -135,7 +137,8 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	}
 	
 	
-	/* package level for testing */ Map<String, String> buildRequestHeaders(String logType, int contentLength) throws IOException {
+	/* package level for testing */ 
+	Map<String, String> buildRequestHeaders(String logType, int contentLength) throws IOException {
 		Map<String, String> result = new HashMap<String, String>();
 
 		final String now = MiscHelper.formatTimeAsRFC1123(System.currentTimeMillis());
@@ -162,9 +165,9 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		return category.replaceFirst("^(Interval|Snapshot)\\.", "");
 	}
 	
-	/* package level for testing */ String buildJSONElement(PerfMonObservableData data) {
+	/* package level for testing */ 
+	String buildJSONElement(PerfMonObservableData data) {
 		StringBuilder json = new StringBuilder();
-		
 		
 		json.append("{");
 		json.append(addValue("category", trimPrefixOffCategory(data.getDataCategory()), false));
@@ -176,7 +179,7 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		}
 		
 		int numDataElements = 0;
-		for(PerfMonObservableDatum<?> datum : ((PerfMonObservableData) data).getObservations()) {
+		for(PerfMonObservableDatum<?> datum : data.getObservations()) {
 			if (!datum.getInputValueWasNull() && (!numericOnly || datum.isNumeric())) {
 				numDataElements++;
 				json.append(addDatumValue(datum, false));
