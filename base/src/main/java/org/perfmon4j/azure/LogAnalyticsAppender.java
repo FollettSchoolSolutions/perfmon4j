@@ -383,8 +383,8 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		public void run() {
 			batchWritersPending.decrementAndGet();
 			
-		List<QueueElement> batches = getBatch();
-		for (Map.Entry<String, Deque<String>> entry : QueueElement.sortIntoBatches(batches).entrySet()) {
+			List<QueueElement> batches = getBatch();
+			for (Map.Entry<String, Deque<String>> entry : QueueElement.sortIntoBatches(batches).entrySet()) {
 				String logType = entry.getKey();
 				Deque<String> batch = entry.getValue();
 				while (batch != null && !batch.isEmpty()) {
@@ -403,18 +403,19 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 					postBody.append("]");
 					HttpHelper helper = getHelper();
 					String postURL = buildPostURL();
+					String debugOutput = "URL(" + postURL + ") logType(" + logType + ") batchSize(" + batchSize + ")";
 					try {
 						Map<String, String> headers = buildRequestHeaders(logType, postBody.length());
-						Response response = helper.doPost(buildPostURL(), postBody.toString(), headers);
+						Response response = helper.doPost(postURL, postBody.toString(), headers);
 						if (!response.isSuccess()) {
-							String message = "Http error writing to Azure using postURL: \"" + postURL + 
-								"\" Response: " + response.toString();
+							String message = "Error writing to Azure: " + debugOutput + 
+								" -  Response: " + response.toString();
 							logger.logWarn(message);
-						} else if (logger.isDebugEnabled()) {
-							logger.logDebug("Measurements written to azure. BatchSize: " + batchSize);
+						} else  {
+							logger.logDebug("Success writing to Azure: " + debugOutput);
 						}
 					} catch (IOException e) {
-						String message = "Exception writing to Azure using postURL: \"" + postURL + "\"";
+						String message = "Exception writing to Azure: " + debugOutput;
 						if (logger.isDebugEnabled()) {
 							logger.logWarn(message, e);
 						} else {
