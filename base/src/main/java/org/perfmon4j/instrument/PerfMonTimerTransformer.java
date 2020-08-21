@@ -288,6 +288,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     public byte[] transform(ClassLoader loader, String className, 
         Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
         byte[] classfileBuffer) {
+    	Logger verboseLogger = LoggerFactory.getVerboseInstrumentationLogger();
+    	
         byte[] result = null;
         long startMillis = -1;
         if (className != null) {
@@ -318,19 +320,19 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                
 	        		if (shouldConsiderTransforming) {
 	        			startMillis = MiscHelper.currentTimeWithMilliResolution();
-		                logger.logDebug("Loading class: " + className);
+	        			verboseLogger.logDebug("Loading class: " + className);
 	                	RuntimeTimerInjector.TimerInjectionReturn timers = runtimeTimerInjector.injectPerfMonTimers(classfileBuffer, classBeingRedefined != null, params, loader, protectionDomain);
 
 	                    int count = timers.getNumTimersAdded();
 	                    if (count > 0) {
 	                        if (classBeingRedefined != null) {
 	                        	InstrumentationMonitor.incBootstrapClassesInst();
-	                            logger.logInfo("Inserting timer into bootstrap class: " + className);
+	                            verboseLogger.logDebug("Inserting timer into bootstrap class: " + className);
 	                        }
 	                    	InstrumentationMonitor.incClassesInst();
 	                    	InstrumentationMonitor.incMethodsInst(count);
 	                        result = timers.getClassBytes();
-	                        logger.logDebug(count + " timers inserted into class: " + className);
+	                        verboseLogger.logDebug(count + " timers inserted into class: " + className);
 		                    }
 		        	} // if (shouldConsiderTransforming)
 	            } catch (Throwable ex) {
