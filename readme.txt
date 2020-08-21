@@ -18,8 +18,11 @@ McHenry, IL 60050
 Changes
 
 ** Next Version
+
 - Added a new Appender (org.perfmon4j.azure.LogAnalyticsAppender). This appender will 
-  write perfmon4j observations to the Log Analytics workspace in Azure Monitor.
+  write perfmon4j observations to the Log Analytics workspace in Azure Monitor. Run 
+  perfmon4j in debug mode (-dtrue on javaagent command line) for details
+  regarding successful request to Azure Log Analytics
 - For information on the Microsoft Rest API used by the LogAnalyticsAppender 
   see: https://docs.microsoft.com/en-us/azure/azure-monitor/platform/data-collector-api
 - For configuration information see: 
@@ -28,6 +31,11 @@ Changes
 - Now the observations returned by IntervalData.getObservations() include Date/Time fields
   (timeStart, timeStop, maxActiveThreadCountSet, maxDurationSet, minDurationSet,
   maxSQLDurationSet and minSQLDurationSet).
+  
+- Logging cleanups under Log4j and Java Logging.  Now -vtrue (verbose mode) will
+  also include the -dtrue (debug mode option).  But -dtrue no longer includes
+  verbose mode.  -dtrue is now good for watching the messages between appenders
+  and their remote repositories. 
 
 - Upgraded javassist from version 3.24.1-GA to 3.27.0-GA
 
@@ -92,7 +100,7 @@ for “no-schema” Appenders
 - Extracted shared functionality for system names and group out of the SQLAppender class 
 and into the base class SytemNamesAndGroupsAppender.
 
-- Significant enhancements for maping IntervalMonitors to Appenders.  In addition to the 
+- Significant enhancements for mapping IntervalMonitors to Appenders.  In addition to the 
 existing monitor patterns: ('.' or './') for parent only; (./*) for parent and children;
 (/*) for children only; (./**) for parents, children and all descendents; and (/**) for
 children and all descendents you can now specify a wild card pattern.
