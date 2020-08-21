@@ -587,7 +587,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	addPerfmon4jToJBoss7SystemPackageList();
         PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
 
-        LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled());
+        LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled() || t.params.isVerboseInstrumentationEnabled());
         LoggerFactory.setVerboseInstrumentationEnabled(t.params.isVerboseInstrumentationEnabled());
         // Reset logger so debug and verbose flags are respected...
         logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
