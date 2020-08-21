@@ -43,6 +43,8 @@ public class LoggerFactory {
     		verboseInstrumentationLogger = initLogger("org.perfmon4j.instrument.verbose");
     		if (verboseInstrumentationEnabled) {
     			verboseInstrumentationLogger.enableDebug();
+    		} else {
+    			verboseInstrumentationLogger.enableInfo();
     		}
     	}
         return verboseInstrumentationLogger;
