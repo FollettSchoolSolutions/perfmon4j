@@ -17,7 +17,7 @@ McHenry, IL 60050
 
 Changes
 
-** Next Version
+** 1.5.1 - 2020-08-21
 
 - Added a new Appender (org.perfmon4j.azure.LogAnalyticsAppender). This appender will 
   write perfmon4j observations to the Log Analytics workspace in Azure Monitor. Run 
