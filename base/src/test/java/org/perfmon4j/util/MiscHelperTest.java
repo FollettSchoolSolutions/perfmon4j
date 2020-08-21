@@ -32,14 +32,14 @@ import java.util.jar.Manifest;
 
 import javax.management.ObjectName;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTestCase;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 
 public class MiscHelperTest extends PerfMonTestCase {
@@ -372,7 +372,34 @@ public class MiscHelperTest extends PerfMonTestCase {
 		
 		assertMatches(false, "myobject:a=*,c=*", "myobject:a=b,c=d,d=f");
 	}
+	
+	
+	public void testEscapeJSONString() throws Exception {
+		assertEquals("Escaped for JSON", "\\b", MiscHelper.escapeJSONString("\b"));
+		assertEquals("Escaped for JSON", "\\f", MiscHelper.escapeJSONString("\f"));
+		assertEquals("Escaped for JSON", "\\n", MiscHelper.escapeJSONString("\n"));
+		assertEquals("Escaped for JSON", "\\r", MiscHelper.escapeJSONString("\r"));
+		assertEquals("Escaped for JSON", "\\t", MiscHelper.escapeJSONString("\t"));
+		assertEquals("Escaped for JSON", "\\\"", MiscHelper.escapeJSONString("\""));
+		assertEquals("Escaped for JSON", "\\\\", MiscHelper.escapeJSONString("\\"));
+		
+		final String TEST_STRING = "\b\f\n\r\t\"\\\f";
+		final String ESCAPED = MiscHelper.escapeJSONString(TEST_STRING);
+		assertEquals("Escaped for JSON", "\\b\\f\\n\\r\\t\\\"\\\\\\f", ESCAPED);
+	}
 
+	public void testConvertTimeToISO8601() throws Exception {
+		long now = 1597699387737L;
+		assertEquals("Time should be in UTC and include seconds and milliseconds", "2020-08-17T21:23:07.737Z",
+			MiscHelper.formatTimeAsISO8601(now));	
+	}
+
+	public void testConvertTimeToRFC1123() throws Exception {
+		long now = 1597699387737L;
+		assertEquals("Time should be in GMT and include seconds", "Mon, 17 Aug 2020 21:23:07 GMT",
+			MiscHelper.formatTimeAsRFC1123(now));	
+	}
+	
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

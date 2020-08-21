@@ -305,13 +305,14 @@ System.out.println(output);
     	validateOutput(output, VERBOSE_ANOTATION_MSG, true);
     	
 		// Messages should appear when debug is enabled "-dtrue"
+    	// Version 1.5.1 Made a change.  Now Verbose includes debug output, but debug does NOT include verbose.
 		output = LaunchRunnableInVM.loadClassAndPrintMethods(VerboseClassTest.class, DEBUG_PARAMS, props, perfmon4jJar);
-    	validateOutput(output, VERBOSE_CLASS_MSG, true);
-    	validateOutput(output, VERBOSE_METHOD_MSG, true);
-    	validateOutput(output, VERBOSE_SETTER_MSG, true);
-    	validateOutput(output, VERBOSE_GETTER_MSG, true);
-    	validateOutput(output, VERBOSE_ISSER_MSG, true);
-    	validateOutput(output, VERBOSE_ANOTATION_MSG, true);
+    	validateOutput(output, VERBOSE_CLASS_MSG, false);
+    	validateOutput(output, VERBOSE_METHOD_MSG, false);
+    	validateOutput(output, VERBOSE_SETTER_MSG, false);
+    	validateOutput(output, VERBOSE_GETTER_MSG, false);
+    	validateOutput(output, VERBOSE_ISSER_MSG, false);
+    	validateOutput(output, VERBOSE_ANOTATION_MSG, false);
 
 		// Messages should NOT appear unless debug OR verbose is enabled!
     	output = LaunchRunnableInVM.loadClassAndPrintMethods(VerboseClassTest.class, BASE_PARAMS, props, perfmon4jJar);

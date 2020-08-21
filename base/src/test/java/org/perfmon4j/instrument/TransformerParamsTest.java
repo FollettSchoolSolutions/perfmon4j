@@ -25,16 +25,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 
-import javassist.ClassPool;
-import javassist.CtClass;
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTestCase;
+
+import javassist.ClassPool;
+import javassist.CtClass;
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class TransformerParamsTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -396,7 +396,8 @@ public class TransformerParamsTest extends PerfMonTestCase {
             
             params = new TransformerParams("-dtrue");
             assertTrue("Parameter alone", params.isDebugEnabled());
-            assertTrue("Debug parameter also enables verbose", params.isVerboseInstrumentationEnabled());
+            // Made a change in version 1.5.1 - Debug NO longer includes verbose.
+            assertFalse("Debug parameter DOES NOT enable verbose", params.isVerboseInstrumentationEnabled());
             // When debug is enabled, verbose will also be enabled.
             
             params = new TransformerParams("-dfalse");
@@ -412,7 +413,7 @@ public class TransformerParamsTest extends PerfMonTestCase {
             try {
             	params = new TransformerParams();
             	assertTrue("System property can set debug on by default", params.isDebugEnabled());
-            	assertTrue("Debug system property also enables verbose", params.isVerboseInstrumentationEnabled());
+            	assertFalse("Debug system property does NOT also enable verbose", params.isVerboseInstrumentationEnabled());
             } finally {
             	System.getProperties().remove("PerfMon4j.debugEnabled");
             }

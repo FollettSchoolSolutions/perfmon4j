@@ -21,6 +21,7 @@
 
 package org.perfmon4j.util;
 
+import java.util.logging.LogManager;
 
 class JavaLoggingLogger implements Logger {
 	private static boolean javaLoggingFound = false;
@@ -40,6 +41,13 @@ class JavaLoggingLogger implements Logger {
 				if (!javaLoggingFound && 
 						numClassLoadersOnLastCheck != currentNumClassLoaders &&
 						!inCoreClassLoader) {
+					
+					java.util.logging.Logger perfmon4jLogger = LogManager.getLogManager().getLogger("org.perfmon4j");
+					java.util.logging.Logger perfmon4jWebLogger = LogManager.getLogManager().getLogger("web.org.perfmon4j");
+					
+					perfmon4jLogger.setUseParentHandlers(true);
+					perfmon4jWebLogger.setUseParentHandlers(true);
+					
 					logger = new JavaLoggingLogger(java.util.logging.Logger.getLogger(category), 
 							forceEnableInfo, forceEnableDebug);
 					javaLoggingFound = true;

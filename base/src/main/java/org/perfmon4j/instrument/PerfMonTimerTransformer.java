@@ -288,6 +288,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     public byte[] transform(ClassLoader loader, String className, 
         Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
         byte[] classfileBuffer) {
+    	Logger verboseLogger = LoggerFactory.getVerboseInstrumentationLogger();
+    	
         byte[] result = null;
         long startMillis = -1;
         if (className != null) {
@@ -318,19 +320,19 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                
 	        		if (shouldConsiderTransforming) {
 	        			startMillis = MiscHelper.currentTimeWithMilliResolution();
-		                logger.logDebug("Loading class: " + className);
+	        			verboseLogger.logDebug("Loading class: " + className);
 	                	RuntimeTimerInjector.TimerInjectionReturn timers = runtimeTimerInjector.injectPerfMonTimers(classfileBuffer, classBeingRedefined != null, params, loader, protectionDomain);
 
 	                    int count = timers.getNumTimersAdded();
 	                    if (count > 0) {
 	                        if (classBeingRedefined != null) {
 	                        	InstrumentationMonitor.incBootstrapClassesInst();
-	                            logger.logInfo("Inserting timer into bootstrap class: " + className);
+	                            verboseLogger.logDebug("Inserting timer into bootstrap class: " + className);
 	                        }
 	                    	InstrumentationMonitor.incClassesInst();
 	                    	InstrumentationMonitor.incMethodsInst(count);
 	                        result = timers.getClassBytes();
-	                        logger.logDebug(count + " timers inserted into class: " + className);
+	                        verboseLogger.logDebug(count + " timers inserted into class: " + className);
 		                    }
 		        	} // if (shouldConsiderTransforming)
 	            } catch (Throwable ex) {
@@ -587,7 +589,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	addPerfmon4jToJBoss7SystemPackageList();
         PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
 
-        LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled());
+        LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled() || t.params.isVerboseInstrumentationEnabled());
         LoggerFactory.setVerboseInstrumentationEnabled(t.params.isVerboseInstrumentationEnabled());
         // Reset logger so debug and verbose flags are respected...
         logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
@@ -660,7 +662,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	}
         	valveHookInserter = new ValveHookInserter(valveConfig);
             inst.addTransformer(valveHookInserter);
-        	logger.logInfo("Perfmon4j will attempt to install a Servlet Valve");
+        	logger.logInfo("Perfmon4j will attempt to install a Servlet Valve in Tomcat, JBoss or Wildfly Servers");
+        	logger.logInfo("In JBoss and Wildfly servers the Valve will NOT be installed until a Web Application is deployed");
         } else {
         	logger.logInfo("Perfmon4j will NOT attempt to install a Servlet Valve.  If this is a tomcat or jbossweb based application, " +
         			"add -eVALVE to javaAgent parameters to enable.");

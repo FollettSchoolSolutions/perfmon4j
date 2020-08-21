@@ -63,6 +63,11 @@ class LoggerWrapper implements Logger {
 	static {
 		String tmp = System.getProperty("PerfMon4j.preferredLogger");
 
+		
+		if (tmp == null && "org.jboss.logmanager.LogManager".equals( System.getProperty("java.util.logging.manager"))) {
+			tmp = PREFERRED_LOGGER_LOG4J;
+		}
+		
 		if (tmp == null) {
 			tmp = getApacheCommonsPreferredLogging();
 			if (tmp != null) {

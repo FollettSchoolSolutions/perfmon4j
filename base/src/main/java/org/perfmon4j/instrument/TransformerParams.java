@@ -462,7 +462,7 @@ public class TransformerParams {
 	}
 
 	public boolean isVerboseInstrumentationEnabled() {
-		return isDebugEnabled() || verboseEnabled;
+		return verboseEnabled;
 	}
 	
 	public boolean isExtremeInstrumentationEnabled() {

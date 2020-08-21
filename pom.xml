@@ -4,7 +4,7 @@
   
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>1.5.0</version>
+	<version>1.5.1</version>
 	<packaging>pom</packaging>
 
 	<name>org.perfmon4j:perfmon4j-project</name>
@@ -157,7 +157,7 @@
 	</build>
 
 	<properties>
-		<javassist.version>3.24.1-GA</javassist.version>
+		<javassist.version>3.27.0-GA</javassist.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<DERBY_VERSION>10.10.2.0</DERBY_VERSION>
 		<LOG4J_VERSION>1.2.14</LOG4J_VERSION>
