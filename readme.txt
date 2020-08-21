@@ -36,6 +36,7 @@ Changes
   also include the -dtrue (debug mode option).  But -dtrue no longer includes
   verbose mode.  -dtrue is now good for watching the messages between appenders
   and their remote repositories. 
+- Improved logging in the InfluxAppender.  
 
 - Upgraded javassist from version 3.24.1-GA to 3.27.0-GA
 

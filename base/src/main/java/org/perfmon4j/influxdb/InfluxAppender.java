@@ -346,17 +346,18 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 				}
 				HttpHelper helper = getHelper();
 				String postURL = buildPostURL();
+				String debugOutput = "URL(" + postURL + ") batchSize(" + batchSize + ")";
 				try {
-					Response response = helper.doPost(buildPostURL(), postBody.toString());
+					Response response = helper.doPost(postURL, postBody.toString());
 					if (!response.isSuccess()) {
-						String message = "Http error writing to InfluxDb using postURL: \"" + postURL + 
+						String message = "Http error writing to InfluxDb: \"" + debugOutput + 
 							"\" Response: " + response.toString();
 						logger.logWarn(message);
 					} else if (logger.isDebugEnabled()) {
-						logger.logDebug("Measurements written to influxDb. BatchSize: " + batchSize);
+						logger.logDebug("Measurements written to influxDb: " + debugOutput);
 					}
 				} catch (IOException e) {
-					String message = "Exception writing to InfluxDb using postURL: \"" + postURL + "\"";
+					String message = "Exception writing to InfluxDb: " + debugOutput;
 					if (logger.isDebugEnabled()) {
 						logger.logWarn(message, e);
 					} else {
