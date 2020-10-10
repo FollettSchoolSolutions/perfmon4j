@@ -18,9 +18,13 @@ McHenry, IL 60050
 Changes
 
 ** Next Version
+
 - Now the LogFilter will include the HTTP method in the log output for each web request.  
   To disable this new behavior you can set the system property 
   web.org.perfmon4j.servlet.PerfMonFilter.SKIP_HTTP_METHOD_ON_LOG_OUTPUT=true
+  
+- The LogFilter will now mask any parameter that includes password in the parameter
+  name regardless of case.
 
 ** 1.5.1 - 2020-08-21
 

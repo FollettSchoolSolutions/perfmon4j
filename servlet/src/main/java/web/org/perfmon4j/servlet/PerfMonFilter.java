@@ -272,7 +272,7 @@ public class PerfMonFilter implements Filter {
 			boolean firstParam = true;
 			while (names != null && names.hasMoreElements()) {
 				String paramName = names.nextElement();
-				final boolean isPassword = paramName.contains("password");
+				final boolean isPassword = paramName.toLowerCase().contains("password");
 				String params[] = request.getParameterValues(paramName);
 				for (int i = 0; i < params.length; i++) {
 					if (firstParam) {

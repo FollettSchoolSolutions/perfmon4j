@@ -304,14 +304,14 @@ public class PerfMonFilterTest extends TestCase {
 		Mockito.when(request.getServletPath()).thenReturn("/something.do");
 
 		String parameterNames[] = new String[] {
-				"mypassword"
+				"myPassword"
 		};
 		Mockito.when(request.getParameterNames()).thenReturn(Collections.enumeration(
 				Arrays.asList(parameterNames)));
-		Mockito.when(request.getParameterValues("mypassword")).thenReturn(new String[]{"secret"});
+		Mockito.when(request.getParameterValues("myPassword")).thenReturn(new String[]{"secret"});
 		
 		String result = PerfMonFilter.buildRequestDescription(request);
-		assertEquals("", "/default/something.do?mypassword=*******", result);
+		assertEquals("", "/default/something.do?myPassword=*******", result);
 	}
 	
 	
