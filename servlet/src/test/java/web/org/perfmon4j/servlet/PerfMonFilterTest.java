@@ -35,8 +35,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import junit.framework.TestCase;
-
 import org.mockito.Mockito;
 import org.perfmon4j.Appender;
 import org.perfmon4j.PerfMon;
@@ -45,6 +43,8 @@ import org.perfmon4j.PerfMonData;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceData;
+
+import junit.framework.TestCase;
 
 public class PerfMonFilterTest extends TestCase {
 
@@ -252,6 +252,7 @@ public class PerfMonFilterTest extends TestCase {
 		Mockito.when(request.getContextPath()).thenReturn("/default");
 		Mockito.when(request.getQueryString()).thenReturn(null);
 		Mockito.when(request.getServletPath()).thenReturn("/something.do");
+		Mockito.when(request.getMethod()).thenReturn("GET");
 
 		String parameterNames[] = new String[] {
 				"site", "user"
@@ -262,7 +263,7 @@ public class PerfMonFilterTest extends TestCase {
 		Mockito.when(request.getParameterValues("user")).thenReturn(new String[]{"300"});
 		
 		String result = PerfMonFilter.buildRequestDescription(request);
-		assertEquals("", "/default/something.do?site=100&site=200&user=300", result);
+		assertEquals("", "GET /default/something.do?site=100&site=200&user=300", result);
 	}
 	
 	public void testBuildRequestDescriptionEncodesParameters() {

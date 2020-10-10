@@ -44,8 +44,8 @@ import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.SQLTime;
 import org.perfmon4j.ThreadTraceConfig;
-import org.perfmon4j.UserAgentSnapShotMonitor;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
+import org.perfmon4j.UserAgentSnapShotMonitor;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -53,6 +53,10 @@ import org.perfmon4j.util.MiscHelper;
 
 public class PerfMonFilter implements Filter {
     private static final Logger logger = LoggerFactory.initLogger(PerfMonFilter.class);
+    
+    final static private boolean SKIP_HTTP_METHOD_ON_LOG_OUTPUT = Boolean.getBoolean(PerfMonFilter.class.getName() 
+    	+ ".SKIP_HTTP_METHOD_ON_LOG_OUTPUT"); 
+    
     
     final static public String BASE_FILTER_CATEGORY = "WebRequest";
     final static public String PROPERTY_OUTPUT_REQUEST_AND_DURATION = "OUTPUT_REQUEST_AND_DURATION";
@@ -245,6 +249,14 @@ public class PerfMonFilter implements Filter {
     static String buildRequestDescription(HttpServletRequest request) {
     	StringBuilder result = new StringBuilder();
     	if (request != null) {
+    		
+    		if (!SKIP_HTTP_METHOD_ON_LOG_OUTPUT) {
+	    		String method = request.getMethod();
+	    		if (method != null) {
+	    			result.append(method + " ");
+	    		}
+    		}
+    		
 			final String contextPath = request.getContextPath();
 			if (contextPath != null) {
 				result.append(contextPath);
