@@ -1,13 +1,5 @@
 package web.org.perfmon4j.extras.wildfly8;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.servlet.spec.HttpSessionImpl;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-
 import java.net.InetSocketAddress;
 import java.util.Deque;
 import java.util.Map;
@@ -26,6 +18,14 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.HttpSessionImpl;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
+
 class HandlerImpl implements HttpHandler {
     private static final Logger logger = LoggerFactory.initLogger(HandlerImpl.class);	
 	private final HttpHandler next;
@@ -40,6 +40,9 @@ class HandlerImpl implements HttpHandler {
     private final String[] pushCookiesOnNDC;
     private final String[] pushSessionAttributesOnNDC;
     private final boolean pushClientInfoOnNDC;    
+    
+    final static private boolean SKIP_HTTP_METHOD_ON_LOG_OUTPUT = Boolean.getBoolean("web.org.perfmon4j.servlet"
+    	+ ".PerfMonFilter.SKIP_HTTP_METHOD_ON_LOG_OUTPUT");     
 	
 	
 	private static final HttpString CONTENT_TYPE = new HttpString("Content-Type");
@@ -252,6 +255,13 @@ class HandlerImpl implements HttpHandler {
     static String buildRequestDescription(HttpServerExchange exchange) {
     	StringBuilder result = new StringBuilder();
     	if (exchange != null) {
+    		if (!SKIP_HTTP_METHOD_ON_LOG_OUTPUT) {
+	    		HttpString method = exchange.getRequestMethod();
+	    		if (method != null) {
+	    			result.append(method + " ");
+	    		}
+    		}
+    		
     		result.append(exchange.getRequestPath());
     		String queryString = exchange.getQueryString();
     		if (queryString != null && queryString.length() > 0) {
