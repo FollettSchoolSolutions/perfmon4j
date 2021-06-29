@@ -23,9 +23,6 @@ package org.perfmon4j.util;
 
 import java.lang.reflect.Method;
 import java.util.Enumeration;
-import java.util.Iterator;
-
-import org.perfmon4j.instrument.PerfMonTimerTransformer;
 
 class Log4JLogger implements Logger {
 	final private static Class<?>[] NO_PARAMS = new Class[] {};
@@ -87,10 +84,10 @@ class Log4JLogger implements Logger {
 			GlobalClassLoader loader = GlobalClassLoader.getClassLoader();
 			long totalClassLoaders = loader.getTotalClassLoaders();
 			final long lastCheck = numClassLoadersOnLastCheck;
-			numClassLoadersOnLastCheck = totalClassLoaders;
 			if (totalClassLoaders > lastCheck) {
 				final long now = System.currentTimeMillis();
 				if (now > nextCheckForClassLoadTime) {
+					numClassLoadersOnLastCheck = totalClassLoaders;
 					nextCheckForClassLoadTime = now
 							+ Logger.DYNAMIC_LOAD_RETRY_MILLIS;
 					try {
@@ -130,7 +127,7 @@ class Log4JLogger implements Logger {
 						setLevelMethod = tmpLoggerClazz.getMethod("setLevel",
 								new Class[] { levelClazz });
 						
-						if (MiscHelper.isRunningInJBossAppServer()) {
+						if (MiscHelper.isRunningInJBossAppServer() && !loader.isJBossLoggerModuleLoaded()) {
 							// Under JBoss we can't load the log4j root logger until
 							// the following class has been loaded....
 							Class.forName("org.jboss.logging.appender.FileAppender", true, loader);

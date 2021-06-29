@@ -17,7 +17,11 @@ McHenry, IL 60050
 
 Changes
 
-** Next Version
+** Next Version will be 1.5.2 - TBD
+
+- Fixed defect (https://github.com/FollettSchoolSolutions/perfmon4j/issues/25):  Under 
+  newer versions of Wildfly perfmon4j log output would be limited to STDOUT.  
+  Now log output correctly switches to log4j when the jboss logging class is available
 
 - Now the LogFilter will include the HTTP method in the log output for each web request.  
   To disable this new behavior you can set the system property 
