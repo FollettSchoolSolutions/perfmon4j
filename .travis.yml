@@ -15,7 +15,8 @@ before_install:
   -out .travis/secring.gpg -d
 after_success:
 - if [ $TRAVIS_BRANCH == 'master' ] || [ $TRAVIS_BRANCH == 'develop' ]; then
-  mvn deploy --settings ./settings.xml -DskipTests=true;
-  mvn assembly:assembly -DskipTests=true;
-  .bintray/publishToBintray.sh;
+# *** bintray has been deprecated, we are going to have to build another method for building the full deployment ***
+#  mvn deploy --settings ./settings.xml -DskipTests=true;
+#  mvn assembly:assembly -DskipTests=true;
+#  .bintray/publishToBintray.sh;
   fi
