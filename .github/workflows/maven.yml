@@ -22,4 +22,4 @@ jobs:
         java-version: '11'
         distribution: 'adopt'
     - name: Build with Maven
-      run: mvn -DM2_REPO=~/.m2 -B package --file pom.xml
+      run: mvn -DM2_REPO=~/.m2  -DskipTests -B package --file pom.xml
