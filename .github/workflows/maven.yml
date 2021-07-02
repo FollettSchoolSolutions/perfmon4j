@@ -30,4 +30,4 @@ jobs:
         java-version: '11'
         distribution: 'adopt'
     - name: Build with Maven
-      run: mvn -DskipTests -B package --file pom.xml
+      run: mvn -B package --file pom.xml
