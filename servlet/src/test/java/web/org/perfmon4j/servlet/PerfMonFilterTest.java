@@ -425,7 +425,7 @@ public class PerfMonFilterTest extends TestCase {
 		PerfMonFilter filter = new PerfMonFilter(false);
 		
 		FilterConfig config = Mockito.mock(FilterConfig.class);
-		Mockito.when(config.getInitParameter(PerfMonFilter.PROPERTY_SERVLET_PATH_TRANSFORMATION)).thenReturn("/context/*/rest/ => /rest/");
+		Mockito.when(config.getInitParameter(PerfMonFilter.PROPERTY_SERVLET_PATH_TRANSFORMATION_PATTERN)).thenReturn("/context/*/rest/ => /rest/");
 		filter.init(config);
 		
 		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);

@@ -66,7 +66,7 @@ public class PerfMonFilter implements Filter {
     final static public String PROPERTY_ABORT_TIMER_ON_IMAGE_RESPONSE = "ABORT_TIMER_ON_IMAGE_RESPONSE";
     final static public String PROPERTY_ABORT_TIMER_ON_URL_PATTERN = "ABORT_TIMER_ON_URL_PATTERN";
     final static public String PROPERTY_SKIP_TIMER_ON_URL_PATTERN = "SKIP_TIMER_ON_URL_PATTERN";
-    final static public String PROPERTY_SERVLET_PATH_TRANSFORMATION = "SERVLET_PATH_TRANSFORMATION";
+    final static public String PROPERTY_SERVLET_PATH_TRANSFORMATION_PATTERN = "SERVLET_PATH_TRANSFORMATION_PATTERN";
     
     // Default pattern /images/.*|.*\\.(css|gif|jpg|jpeg|tiff|wav|au)
     
@@ -106,7 +106,7 @@ public class PerfMonFilter implements Filter {
         abortTimerOnImageResponse = Boolean.parseBoolean(getInitParameter(filterConfig, PROPERTY_ABORT_TIMER_ON_IMAGE_RESPONSE, Boolean.FALSE.toString()));
         outputRequestAndDuration = Boolean.parseBoolean(getInitParameter(filterConfig, PROPERTY_OUTPUT_REQUEST_AND_DURATION, Boolean.toString(outputRequestAndDuration)));
         
-        String servletPathTransformerStr = getInitParameter(filterConfig, PROPERTY_SERVLET_PATH_TRANSFORMATION, null);
+        String servletPathTransformerStr = getInitParameter(filterConfig, PROPERTY_SERVLET_PATH_TRANSFORMATION_PATTERN, null);
         if (servletPathTransformerStr != null && !servletPathTransformerStr.isBlank()) {
         	logger.logInfo("Loading servletPathTransformer: " + servletPathTransformerStr);
         	servletPathTransformer = ServletPathTransformer.newTransformer(servletPathTransformerStr);
