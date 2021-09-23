@@ -420,4 +420,19 @@ public class PerfMonFilterTest extends TestCase {
 		assertNotNull("Should have created GREAT GREAT GRAND child monitor", 
 				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation.getstat.444"));
 	}
+	
+	public void testServletPathTransformation() throws Exception {
+		PerfMonFilter filter = new PerfMonFilter(false);
+		
+		FilterConfig config = Mockito.mock(FilterConfig.class);
+		Mockito.when(config.getInitParameter(PerfMonFilter.PROPERTY_SERVLET_PATH_TRANSFORMATION)).thenReturn("/context/*/rest/ => /rest/");
+		filter.init(config);
+		
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		Mockito.when(request.getServletPath()).thenReturn("/context/saas_001/rest/circulation/checkout");
+
+		String category = filter.buildMonitorCategory(request);
+		assertEquals("Should have applied the pattern to remove the /context/saas_001/ dynamic portion of the path",
+			"WebRequest.rest.circulation.checkout", filter.buildMonitorCategory(request));
+	}
 }
