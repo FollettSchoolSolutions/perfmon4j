@@ -1,11 +1,11 @@
 package org.perfmon4j;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class BootConfigurationTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -29,6 +29,7 @@ public class BootConfigurationTest extends PerfMonTestCase {
 	    private Boolean abortTimerOnImageResponse = null;
 	    private Boolean outputRequestAndDuration = null;
 	    private Boolean pushClientInfoOnNDC = null;
+	    private String servletPathTransformationPattern = null;
 	    
 		public void setBaseFilterCategory(String baseFilterCategory) {
 			this.baseFilterCategory = baseFilterCategory;
@@ -57,6 +58,12 @@ public class BootConfigurationTest extends PerfMonTestCase {
 		public void setPushClientInfoOnNDC(boolean pushClientInfoOnNDC) {
 			this.pushClientInfoOnNDC = Boolean.valueOf(pushClientInfoOnNDC);
 		}
+		public String getServletPathTransformationPattern() {
+			return servletPathTransformationPattern;
+		}
+		public void setServletPathTransformationPattern(String servletPathTransformationPattern) {
+			this.servletPathTransformationPattern = servletPathTransformationPattern;
+		}
 	}
 	
 	public void testCopyServletValveProperties() throws Exception {
@@ -66,7 +73,7 @@ public class BootConfigurationTest extends PerfMonTestCase {
 		valveConfig.setPushCookiesOnNDC("");
 		valveConfig.setPushSessionAttributesOnNDC("");
 		valveConfig.setSkipTimerOnURLPattern("");
-		
+		valveConfig.setServletPathTransformationPattern("/this/ => /that/");		
 		TestAllProperties props = new TestAllProperties();
 		valveConfig.copyProperties(props);
 		
@@ -79,6 +86,7 @@ public class BootConfigurationTest extends PerfMonTestCase {
 		assertNotNull(props.abortTimerOnImageResponse);
 		assertNotNull(props.outputRequestAndDuration);
 		assertNotNull(props.pushClientInfoOnNDC);
+		assertNotNull(props.servletPathTransformationPattern);
 	}
 	
 	public static class TestOneProperty {
