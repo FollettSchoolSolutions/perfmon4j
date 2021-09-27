@@ -44,11 +44,12 @@ import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.SQLTime;
 import org.perfmon4j.ThreadTraceConfig;
-import org.perfmon4j.UserAgentSnapShotMonitor;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
+import org.perfmon4j.UserAgentSnapShotMonitor;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.ServletPathTransformer;
 
 
 public class PerfMonFilter implements Filter {
@@ -61,6 +62,7 @@ public class PerfMonFilter implements Filter {
     final static public String PROPERTY_ABORT_TIMER_ON_IMAGE_RESPONSE = "ABORT_TIMER_ON_IMAGE_RESPONSE";
     final static public String PROPERTY_ABORT_TIMER_ON_URL_PATTERN = "ABORT_TIMER_ON_URL_PATTERN";
     final static public String PROPERTY_SKIP_TIMER_ON_URL_PATTERN = "SKIP_TIMER_ON_URL_PATTERN";
+    final static public String PROPERTY_SERVLET_PATH_TRANSFORMATION_PATTERN = "SERVLET_PATH_TRANSFORMATION_PATTERN";    
     
     // Default pattern /images/.*|.*\\.(css|gif|jpg|jpeg|tiff|wav|au)
     
@@ -70,6 +72,7 @@ public class PerfMonFilter implements Filter {
     protected Pattern abortTimerOnURLPattern = null;
     protected Pattern skipTimerOnURLPattern = null;
     protected boolean outputRequestAndDuration = false;
+    protected ServletPathTransformer servletPathTransformer = null;    
 
     // Indicates if this filter is installed via a specific context, via web.xml OR
     // across contexts via a Tomcat Valve.
@@ -98,7 +101,12 @@ public class PerfMonFilter implements Filter {
         abortTimerOnRedirect = Boolean.parseBoolean(getInitParameter(filterConfig, PROPERTY_ABORT_TIMER_ON_REDIRECT, Boolean.FALSE.toString()));
         abortTimerOnImageResponse = Boolean.parseBoolean(getInitParameter(filterConfig, PROPERTY_ABORT_TIMER_ON_IMAGE_RESPONSE, Boolean.FALSE.toString()));
         outputRequestAndDuration = Boolean.parseBoolean(getInitParameter(filterConfig, PROPERTY_OUTPUT_REQUEST_AND_DURATION, Boolean.toString(outputRequestAndDuration)));
-        
+
+        String servletPathTransformerStr = getInitParameter(filterConfig, PROPERTY_SERVLET_PATH_TRANSFORMATION_PATTERN, null);
+        if (servletPathTransformerStr != null && !servletPathTransformerStr.isBlank()) {
+        	logger.logInfo("Loading servletPathTransformer: " + servletPathTransformerStr);
+        	servletPathTransformer = ServletPathTransformer.newTransformer(servletPathTransformerStr);
+        }        
         
         // Since all WEBREQEST children are by default dynamically created, create the base category by default.
         PerfMon.getMonitor(baseFilterCategory, false);
@@ -285,27 +293,37 @@ public class PerfMonFilter implements Filter {
      * to change the default behavior of mapping a a servlet request
      * to a category
      */
+    /*----------------------------------------------------------------------------*/    
     protected String buildMonitorCategory(HttpServletRequest h) {
-        String result = baseFilterCategory;
+        String fullPath = "";
 
         String contextPath = h.getContextPath();
         if (contextPath != null && !"".equals(contextPath)) {
-        	result += contextPath.replaceAll("\\.", "_").replaceAll("/", "\\.");
+        	fullPath += contextPath;
         }
         
         String servletPath = h.getServletPath();
         if (servletPath != null) {
-            result += servletPath.replaceAll("\\.", "_").replaceAll("/", "\\.");
+        	fullPath += servletPath;
         } 
         
         String pathInfo = h.getPathInfo();
         if (pathInfo != null) {
-            result += pathInfo.replaceAll("\\.", "_").replaceAll("/", "\\.");
+        	fullPath += pathInfo;
         }
+
+        
+        if (servletPathTransformer != null) {
+        	fullPath = servletPathTransformer.transform(fullPath);
+        }
+        
+        String result = baseFilterCategory;
+    	result += fullPath.replaceAll("\\.", "_").replaceAll("/", "\\.");
+        
       
         return result;
     }
-
+    
 /*----------------------------------------------------------------------------*/    
     protected PerfMonTimer startTimerForRequest(HttpServletRequest request) {
         PerfMonTimer result = PerfMonTimer.getNullTimer();
