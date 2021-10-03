@@ -19,14 +19,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-      - uses: actions/checkout@v2
+      - name: Checkout source code
+        uses: actions/checkout@v2
 
-      - name: Setup Java
-      - uses: actions/setup-java@v2
+      - name: Setup Java 
+        uses: actions/setup-java@v2
         with:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Build and run test with Maven
-      - run: mvn -B package --file pom.xml
+      - name: Run build, test and package with Maven
+        run: mvn -B package --file pom.xml
