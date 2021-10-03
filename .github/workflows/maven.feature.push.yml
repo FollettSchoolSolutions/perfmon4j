@@ -16,21 +16,17 @@ on:
     branches: ['feature/**']
 
 jobs:
-  # Job 1 of 1 (Checkout and Test)
   build:
     runs-on: ubuntu-latest
     steps:
-      # Step 1 of 3
-      - name: Checkout
-      - uses: actions/checkout@v2
+      - name: Checking out the code (Step 1 of 3)
+        uses: actions/checkout@v2
 
-      # Step 2 of 3
-      - name: Setup Java
-      - uses: actions/setup-java@v2
+      - name: Setting up Java (Step 2 of 3)
+        uses: actions/setup-java@v2
         with:
           java-version: '11'
           distribution: 'adopt'
 
-      # Step 3 of 3
-      - name: Build and run test with Maven
-      - run: mvn -B test --file pom.xml
+      - name: Run maven tests (Step 3 of 3)
+        run: mvn -B test --file pom.xml
