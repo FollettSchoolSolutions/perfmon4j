@@ -1,0 +1,36 @@
+# This workflow will build a Java project with Maven
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+
+
+# 6/30/2021 - GitHub Actions Maven Version
+# Apache Maven 3.8.1 (05c21c65bdfed0f71a2f2ada8b84da59348c4c5d)
+# Maven home: /usr/share/apache-maven-3.8.1
+# Java version: 11.0.11, vendor: AdoptOpenJDK, runtime: /usr/lib/jvm/adoptopenjdk-11-hotspot-amd64# 
+# Default locale: en, platform encoding: UTF-8
+# OS name: "linux", version: "5.8.0-1036-azure", arch: "amd64", family: "unix"
+
+name: Test feature branches on a push.
+
+on:
+  push:
+    branches: ['feature/**']
+
+jobs:
+  # Job 1 of 1 (Checkout and Test)
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1 of 3
+      - name: Checkout
+      - uses: actions/checkout@v2
+
+      # Step 2 of 3
+      - name: Setup Java
+      - uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      # Step 3 of 3
+      - name: Build and run test with Maven
+      - run: mvn -B test --file pom.xml
