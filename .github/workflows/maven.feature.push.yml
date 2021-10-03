@@ -9,7 +9,7 @@
 # Default locale: en, platform encoding: UTF-8
 # OS name: "linux", version: "5.8.0-1036-azure", arch: "amd64", family: "unix"
 
-name: Test feature branches on a push.
+name: ${github.ref} tests on push
 
 on:
   push:
