@@ -13,7 +13,7 @@ name: Test feature branches on a push.
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ develop, master ]
 
 jobs:
   build:
@@ -27,6 +27,23 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
+          server-id: ossrh
+          server-username: OSSRH_USERNAME
+          server-password: OSSRH_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
 
-      - name: Run build, test and package with Maven
-        run: mvn -B package --file pom.xml
+      - name: Run Maven Build
+        run: mvn -B compile --file pom.xml
+
+      - name: Run Maven Test
+        run: mvn -B test --file pom.xml
+
+      - name: Publish to Maven Central
+        run: mvn -DskipTests deploy -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+          
+          
+

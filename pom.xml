@@ -92,10 +92,6 @@
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
 						<version>1.6</version>
-						<configuration>
-							<passphrase>${env.PGP_PASSPHRASE}</passphrase>
-							<homedir>${env.TRAVIS_BUILD_DIR}/.travis</homedir>
-						</configuration>
 						<executions>
 							<execution>
 								<id>sign-artifacts</id>
@@ -105,11 +101,18 @@
 								</goals>
 							</execution>
 						</executions>
+		                <configuration>
+		                    <!-- Prevent gpg from using pinentry programs -->
+		                    <gpgArguments>
+		                        <arg>--pinentry-mode</arg>
+		                        <arg>loopback</arg>
+		                    </gpgArguments>
+		                </configuration>						
 					</plugin>
 					<plugin>
 					 	<groupId>org.sonatype.plugins</groupId>
 					 	<artifactId>nexus-staging-maven-plugin</artifactId>
-					  	<version>1.6.3</version>
+					  	<version>1.6.8</version>
 					  	<extensions>true</extensions>
 					  	<configuration>
 							<serverId>ossrh</serverId>
@@ -117,7 +120,6 @@
 							<autoReleaseAfterClose>true</autoReleaseAfterClose>
 					  	</configuration>
 					</plugin>
-
 				</plugins>
 			</build>
 	  	</profile>
