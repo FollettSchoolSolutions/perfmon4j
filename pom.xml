@@ -37,10 +37,7 @@
 		<module>servlet</module>
 		<module>tomcat7</module>
 		<module>tomcat55</module>
-		<!--
-		Can no longer find a required dependency
 		<module>jbossweb7</module>
-		-->
 		<module>sunjava6</module>
 		<module>reportconsole</module>
 		<module>utils</module>
