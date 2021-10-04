@@ -19,14 +19,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checking out the code (Step 1 of 3)
+      - name: Checking out the code
         uses: actions/checkout@v2
 
-      - name: Setting up Java (Step 2 of 3)
+      - name: Setting up Java
         uses: actions/setup-java@v2
         with:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Run maven tests (Step 3 of 3)
+      - name: Run Maven Build
+        run: mvn -B compile --file pom.xml
+
+      - name: Run Maven Test
         run: mvn -B test --file pom.xml
