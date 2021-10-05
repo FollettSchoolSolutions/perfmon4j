@@ -21,12 +21,12 @@
 
 package org.perfmon4j;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 
 public class XMLBootParserTest extends PerfMonTestCase {
@@ -84,6 +84,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
             "			abortTimerOnURLPattern='abortPattern'" +
             "			skipTimerOnURLPattern='skipPattern'" +
             "			pushCookiesOnNDC='pushCookies'" +
+            "			servletPathTransformationPattern='/this/ => /that/'" +
             "		/>" +
             "	</boot>" +
             "</Perfmon4JConfig>";
@@ -103,6 +104,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
         assertEquals("abortPattern",valveConfig.getAbortTimerOnURLPattern());
         assertEquals("skipPattern",valveConfig.getSkipTimerOnURLPattern());
         assertEquals("pushCookies",valveConfig.getPushCookiesOnNDC());
+        assertEquals("/this/ => /that/", valveConfig.getServletPathTransformationPattern());
     }
 
     public void testParseServletValveBoolean() throws Exception {

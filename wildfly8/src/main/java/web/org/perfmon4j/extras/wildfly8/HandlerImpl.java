@@ -17,6 +17,7 @@ import org.perfmon4j.UserAgentSnapShotMonitor;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.ServletPathTransformer;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -39,7 +40,8 @@ class HandlerImpl implements HttpHandler {
     private final boolean pushURLOnNDC;
     private final String[] pushCookiesOnNDC;
     private final String[] pushSessionAttributesOnNDC;
-    private final boolean pushClientInfoOnNDC;    
+    private final boolean pushClientInfoOnNDC;
+    private final ServletPathTransformer servletPathTransformer;
     
     final static private boolean SKIP_HTTP_METHOD_ON_LOG_OUTPUT = Boolean.getBoolean("web.org.perfmon4j.servlet"
     	+ ".PerfMonFilter.SKIP_HTTP_METHOD_ON_LOG_OUTPUT");     
@@ -61,6 +63,13 @@ class HandlerImpl implements HttpHandler {
 		this.pushCookiesOnNDC = MiscHelper.tokenizeCSVString(parent.getPushCookiesOnNDC());
 		this.pushSessionAttributesOnNDC = MiscHelper.tokenizeCSVString(parent.getPushSessionAttributesOnNDC());
 		this.pushNDC = pushURLOnNDC || pushClientInfoOnNDC || (pushCookiesOnNDC != null) || (pushSessionAttributesOnNDC != null);
+		
+		String servletPathTransformerStr = parent.getServletPathTransformationPattern();
+		if (servletPathTransformerStr != null && !servletPathTransformerStr.isBlank()) {
+			this.servletPathTransformer = ServletPathTransformer.newTransformer(servletPathTransformerStr);
+		} else {
+			this.servletPathTransformer = null;
+		}
 		
 		PerfMon.getMonitor(this.baseFilterCategory, false);  // Always create the base category monitor, all child monitors are only created when a monitor is attached.
 	}
@@ -182,8 +191,12 @@ class HandlerImpl implements HttpHandler {
         		if (requestPath.endsWith("/")) {
         			requestPath = requestPath.substring(0, requestPath.length()-1);
         		}
-        		monitorCategory += requestPath.replaceAll("\\.", "_").replaceAll("/", "\\.");
+            	if (servletPathTransformer != null) {
+            		requestPath = servletPathTransformer.transform(requestPath);
+            	}
+        		monitorCategory +=  requestPath.replaceAll("\\.", "_").replaceAll("/", "\\.");
         	}
+        	
             result = PerfMonTimer.start(monitorCategory, true);
         }
         return result;

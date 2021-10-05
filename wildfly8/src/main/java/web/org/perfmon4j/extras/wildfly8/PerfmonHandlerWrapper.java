@@ -1,10 +1,10 @@
 package web.org.perfmon4j.extras.wildfly8;
 
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
 
 public class PerfmonHandlerWrapper implements HandlerWrapper {
 	private static final Logger logger = LoggerFactory.initLogger(PerfmonHandlerWrapper.class);
@@ -17,7 +17,8 @@ public class PerfmonHandlerWrapper implements HandlerWrapper {
     private boolean pushURLOnNDC = false;
     private String pushCookiesOnNDC = null;
     private String pushSessionAttributesOnNDC = null;
-    private boolean pushClientInfoOnNDC = false;	
+    private boolean pushClientInfoOnNDC = false;
+    private String servletPathTransformationPattern = null;
 	static boolean announced = false;
     
     
@@ -35,6 +36,7 @@ public class PerfmonHandlerWrapper implements HandlerWrapper {
 			logger.logInfo("pushCookiesOnNDC=" + pushCookiesOnNDC);
 			logger.logInfo("pushSessionAttributesOnNDC=" + pushSessionAttributesOnNDC);
 			logger.logInfo("pushClientInfoOnNDC=" + pushClientInfoOnNDC);
+			logger.logInfo("servletPathTransformationPattern=" + servletPathTransformationPattern);
 		}
 		return new HandlerImpl(this, handler);
 	}
@@ -117,5 +119,13 @@ public class PerfmonHandlerWrapper implements HandlerWrapper {
 
 	public void setPushURLOnNDC(boolean pushURLOnNDC) {
 		this.pushURLOnNDC = pushURLOnNDC;
+	}
+
+	public String getServletPathTransformationPattern() {
+		return servletPathTransformationPattern;
+	}
+
+	public void setServletPathTransformationPattern(String servletPathTransformationPattern) {
+		this.servletPathTransformationPattern = servletPathTransformationPattern;
 	}
 }
