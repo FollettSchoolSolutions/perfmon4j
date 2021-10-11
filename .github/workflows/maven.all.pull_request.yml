@@ -1,0 +1,23 @@
+name: Pull Request to any branch - Will do a build and run the test.
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out the code
+        uses: actions/checkout@v2
+
+      - name: Setting up Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Run Maven Build
+        run: mvn -B compile --file pom.xml
+
+      - name: Run Maven Test
+        run: mvn -B test --file pom.xml

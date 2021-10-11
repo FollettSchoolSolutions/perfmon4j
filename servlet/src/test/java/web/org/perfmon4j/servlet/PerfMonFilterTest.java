@@ -35,8 +35,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import junit.framework.TestCase;
-
 import org.mockito.Mockito;
 import org.perfmon4j.Appender;
 import org.perfmon4j.PerfMon;
@@ -45,6 +43,8 @@ import org.perfmon4j.PerfMonData;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceData;
+
+import junit.framework.TestCase;
 
 public class PerfMonFilterTest extends TestCase {
 
@@ -252,6 +252,7 @@ public class PerfMonFilterTest extends TestCase {
 		Mockito.when(request.getContextPath()).thenReturn("/default");
 		Mockito.when(request.getQueryString()).thenReturn(null);
 		Mockito.when(request.getServletPath()).thenReturn("/something.do");
+		Mockito.when(request.getMethod()).thenReturn("GET");
 
 		String parameterNames[] = new String[] {
 				"site", "user"
@@ -262,7 +263,7 @@ public class PerfMonFilterTest extends TestCase {
 		Mockito.when(request.getParameterValues("user")).thenReturn(new String[]{"300"});
 		
 		String result = PerfMonFilter.buildRequestDescription(request);
-		assertEquals("", "/default/something.do?site=100&site=200&user=300", result);
+		assertEquals("", "GET /default/something.do?site=100&site=200&user=300", result);
 	}
 	
 	public void testBuildRequestDescriptionEncodesParameters() {
@@ -303,14 +304,14 @@ public class PerfMonFilterTest extends TestCase {
 		Mockito.when(request.getServletPath()).thenReturn("/something.do");
 
 		String parameterNames[] = new String[] {
-				"mypassword"
+				"myPassword"
 		};
 		Mockito.when(request.getParameterNames()).thenReturn(Collections.enumeration(
 				Arrays.asList(parameterNames)));
-		Mockito.when(request.getParameterValues("mypassword")).thenReturn(new String[]{"secret"});
+		Mockito.when(request.getParameterValues("myPassword")).thenReturn(new String[]{"secret"});
 		
 		String result = PerfMonFilter.buildRequestDescription(request);
-		assertEquals("", "/default/something.do?mypassword=*******", result);
+		assertEquals("", "/default/something.do?myPassword=*******", result);
 	}
 	
 	
@@ -418,5 +419,20 @@ public class PerfMonFilterTest extends TestCase {
 				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation.getstat"));
 		assertNotNull("Should have created GREAT GREAT GRAND child monitor", 
 				PerfMon.getMonitorNoCreate_PERFMON_USE_ONLY("WebRequest.circulation.getstat.444"));
+	}
+	
+	public void testServletPathTransformation() throws Exception {
+		PerfMonFilter filter = new PerfMonFilter(false);
+		
+		FilterConfig config = Mockito.mock(FilterConfig.class);
+		Mockito.when(config.getInitParameter(PerfMonFilter.PROPERTY_SERVLET_PATH_TRANSFORMATION_PATTERN)).thenReturn("/context/*/rest/ => /rest/");
+		filter.init(config);
+		
+		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+		Mockito.when(request.getServletPath()).thenReturn("/context/saas_001/rest/circulation/checkout");
+
+		String category = filter.buildMonitorCategory(request);
+		assertEquals("Should have applied the pattern to remove the /context/saas_001/ dynamic portion of the path",
+			"WebRequest.rest.circulation.checkout", filter.buildMonitorCategory(request));
 	}
 }

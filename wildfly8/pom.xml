@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>1.5.1</version>
+		<version>1.5.2</version>
 	</parent>
   
 	<artifactId>perfmon4j-wildfly8</artifactId>
@@ -19,7 +19,7 @@
     	<!-- Need to get org.jboss.web.jbossweb directly from the jboss repository.  -->
       	<repository>
 			<id>JBoss repository</id>
-			<url>http://repository.jboss.org/nexus/content/groups/public/</url>
+			<url>https://repository.jboss.org/nexus/content/groups/public/</url>
       	</repository>
     </repositories>
     

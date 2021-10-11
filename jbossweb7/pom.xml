@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>1.5.1</version>
+		<version>1.5.2</version>
 	</parent>
   
 	<artifactId>perfmon4j-jbossweb7</artifactId>
@@ -14,14 +14,6 @@
 		<plugins>
 		</plugins>
 	</build>
-
-    <repositories>
-    	<!-- Need to get org.jboss.web.jbossweb directly from the jboss repository.  -->
-      	<repository>
-			<id>JBoss repository</id>
-			<url>http://repository.jboss.org/nexus/content/groups/public/</url>
-      	</repository>
-    </repositories>
     
 <dependencies>
 	<dependency>
@@ -42,7 +34,13 @@
 		<groupId>org.jboss.web</groupId>		
 		<version>7.0.13.Final</version>
 		<artifactId>jbossweb</artifactId>
-		<scope>provided</scope>
+		<!-- DCD - I could no longer retrieve this compile only dependency from: 
+			https://repository.jboss.org/nexus/content/groups/public/
+			 I copied the jar from my local maven
+			folder and uploaded it to the project to enable the build
+		-->
+		<scope>system</scope>
+		<systemPath>${project.basedir}/.legacy-dependencies/jbossweb-7.0.13.Final.jar</systemPath>
 	</dependency>
 </dependencies>
  

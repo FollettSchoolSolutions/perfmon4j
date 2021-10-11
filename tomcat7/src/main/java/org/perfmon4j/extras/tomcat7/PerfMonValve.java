@@ -64,6 +64,7 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
     private String pushCookiesOnNDC = null;
     private String pushSessionAttributesOnNDC = null;
     private boolean pushClientInfoOnNDC = false;
+    private String servletPathTransformationPattern = null; 
 
     protected void initInternal() throws LifecycleException {
     	super.initInternal();
@@ -75,6 +76,7 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_ABORT_TIMER_ON_IMAGE_RESPONSE, Boolean.toString(isAbortTimerOnImageResponse()));
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_ABORT_TIMER_ON_URL_PATTERN, getAbortTimerOnURLPattern());
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_SKIP_TIMER_ON_URL_PATTERN, getSkipTimerOnURLPattern());
+			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_SERVLET_PATH_TRANSFORMATION_PATTERN, getServletPathTransformationPattern()); 		
 			filterConfig.setInitParameter(PerfMonFilter.PROPERTY_OUTPUT_REQUEST_AND_DURATION, 
 					Boolean.toString(isOutputRequestAndDuration()));
 			
@@ -183,6 +185,14 @@ public class PerfMonValve extends ValveBase implements Lifecycle {
 		this.pushClientInfoOnNDC = pushClientInfoOnNDC;
 	}
 
+	public String getServletPathTransformationPattern() { 
+		return servletPathTransformationPattern; 
+	} 
+ 
+	public void setServletPathTransformationPattern(String servletPathTransformationPattern) { 
+		this.servletPathTransformationPattern = servletPathTransformationPattern; 
+	} 
+ 	
 	public void addLifecycleListener(LifecycleListener listener) {
 		listeners.add(listener);
 	}

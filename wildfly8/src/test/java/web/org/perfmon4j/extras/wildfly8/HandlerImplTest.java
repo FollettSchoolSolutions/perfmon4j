@@ -1,17 +1,7 @@
 package web.org.perfmon4j.extras.wildfly8;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.ServerConnection;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.servlet.spec.HttpSessionImpl;
-import io.undertow.util.HttpString;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-
-import junit.framework.TestCase;
 
 import org.mockito.Mockito;
 import org.perfmon4j.Appender;
@@ -23,6 +13,15 @@ import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
 import org.xnio.OptionMap;
 
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.HttpSessionImpl;
+import io.undertow.util.HttpString;
+import junit.framework.TestCase;
+
 public class HandlerImplTest extends TestCase {
 
 	public HandlerImplTest(String name) {
@@ -33,16 +32,19 @@ public class HandlerImplTest extends TestCase {
 	
 	protected void setUp() throws Exception {
 		super.setUp();
+		setUpSimpleAppender("WebRequest");
+	}
+	
+	private void setUpSimpleAppender(String monitorName) throws Exception {
 		config = new PerfMonConfiguration();
 		config.defineAppender("SIMPLE", SimpleAppender.class.getName(), "100 ms");
-		config.defineMonitor("WebRequest");
-		config.attachAppenderToMonitor("WebRequest", "SIMPLE", ".");
+		config.defineMonitor(monitorName);
+		config.attachAppenderToMonitor(monitorName, "SIMPLE", ".");
 		
 		SimpleAppender.reset();
 		PerfMon.configure(config);
 		Thread.sleep(100);
 	}
-	
 	
 	protected void tearDown() throws Exception {
 		PerfMon.configure();
@@ -163,6 +165,24 @@ public class HandlerImplTest extends TestCase {
 		assertEquals("Only the request that did not match pattern should have been flagged complete", 
 				1, SimpleAppender.completions);
 	}
+	
+	
+	public void testServletPathTransformationPattern() throws Exception {
+		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
+		wrapper.setServletPathTransformationPattern("/context/mycontext/ => /");
+		setUpSimpleAppender("WebRequest.rest");
+		
+		HttpHandler handler = buildMockHttpHandler();
+		
+		HandlerImpl impl = new HandlerImpl(wrapper, handler);
+		impl.handleRequest(buildMockExchange("/context/mycontext/rest"));
+		
+		SimpleAppender.flushOutput();
+		
+		assertEquals("Should have been captured in WebRequest.rest category", 
+				1, SimpleAppender.completions);
+	}
+	
 	
 	public void testSkipTimerOnURLPattern() throws Exception {
 		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
