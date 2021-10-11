@@ -39,7 +39,7 @@ jobs:
         run: mvn -B test --file pom.xml
 
       - name: Publish to Maven Central
-        run: mvn -B deploy --file pom.xml -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
+        run: mvn -B deploy --file pom.xml -P release -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
