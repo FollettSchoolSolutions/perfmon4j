@@ -17,6 +17,9 @@ McHenry, IL 60050
 
 Changes
 
+
+** 1.5.3 (Next Version) - TBD
+
 ** 1.5.2 -  2021-10-10
 
 - Added option to "transform" the WebRequest category used to monitor inbound http(s) requests. 
