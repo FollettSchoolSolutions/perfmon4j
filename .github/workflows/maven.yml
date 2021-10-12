@@ -1,0 +1,54 @@
+name: Feature branch test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DO_RELEASE: | 
+          ${{
+          (github.event_name == 'push') && 
+          (endsWith(github.ref, '/develop') || endsWith(github.ref, '/feature/PublishArtifactsToGitHub'))
+          }}
+    steps:
+      - name: Checking out the code
+        uses: actions/checkout@v2
+
+      - name: Setting up Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          server-id: ossrh
+          server-username: OSSRH_USERNAME
+          server-password: OSSRH_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          
+      - name: Run Maven Build
+        run: echo "Maven build placeholder"
+#        run: mvn -B compile --file pom.xml
+
+      - name: Run Maven Test
+        run: echo "Maven test placeholder"
+#        run: mvn -B test --file pom.xml
+
+      - name: Assemble release artifacts
+        if: ${{ env.DO_RELEASE }}
+        run: mvn -B assembly:assembly -DskipTests
+
+      - name: Publish assembly artifacts
+        if:  ${{ env.DO_RELEASE }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: "Assembled-binary-and-source-zip-files"
+          path: "./target/perfmon4j*.zip"
+          
+      - name: Publish to Maven Central
+        if: ${{ env.DO_RELEASE }}
+        run: echo "Placeholder for maven central deployment"
+#        run: mvn -B deploy --file pom.xml -P release -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
+#        env:
+#          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+#          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+#          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}          
