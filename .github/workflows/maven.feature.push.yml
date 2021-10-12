@@ -31,4 +31,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: perfmon4j-develop-bin.zip 
-          path: "${{ github.workspace }}/target/*-bin.zip"
+          path: "~/work/perfmon4j/perfmon4j/target/*-bin.zip"
