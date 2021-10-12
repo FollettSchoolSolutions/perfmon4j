@@ -39,7 +39,6 @@ jobs:
         run mvn -B assembly:assembly -DskipTests
 
       - name: Upload Artifact to GitHub
-        if: ${{ github.ref == 'ref/feature/PublishArtifactsToGitHub' }}
         uses: actions/upload-artifact@v2
         with:
           name: perfmon4j-develop-bin.zip 
