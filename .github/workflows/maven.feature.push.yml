@@ -28,8 +28,19 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Run Maven Build
-        run: mvn -B compile --file pom.xml
+#      - name: Run Maven Build
+#        run: mvn -B compile --file pom.xml
 
-      - name: Run Maven Test
-        run: mvn -B test --file pom.xml
+#      - name: Run Maven Test
+#        run: mvn -B test --file pom.xml
+
+      - name: Assemble Release Package
+        if: ${{ github.ref == 'ref/feature/PublishArtifactsToGitHub' }}
+        run mvn -B assembly:assembly -DskipTests
+
+      - name: Upload Artifact to GitHub
+        if: ${{ github.ref == 'ref/feature/PublishArtifactsToGitHub' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: perfmon4j-develop-bin.zip 
+          path: ${{ github.workspace }}/target/*-bin.zip
