@@ -24,7 +24,7 @@ jobs:
 #        run: mvn -B test --file pom.xml
 
       - name: Assemble Release Package
-        if: ${{ github.ref == 'ref/feature/PublishArtifactsToGitHub' }}
+#        if: ${{ github.ref == 'ref/feature/PublishArtifactsToGitHub' }}
         run: mvn -B assembly:assembly -DskipTests
 
       - name: Publish binary zip to GitHub artifacts
