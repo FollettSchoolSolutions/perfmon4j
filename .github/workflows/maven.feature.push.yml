@@ -24,12 +24,15 @@ jobs:
 #        run: mvn -B test --file pom.xml
 
       - name: Assemble Release Package
-        run: echo ${{github.ref}}
-#        if: ${{ github.ref == 'refs/feature/PublishArtifactsToGitHub' }}
-#        run: mvn -B assembly:assembly -DskipTests
+        if: | 
+          ${{ endsWith(github.ref, '/develop') 
+          || endsWith(github.ref, '/feature/PublishArtifactsToGitHub')}}
+        run: mvn -B assembly:assembly -DskipTests
 
-#      - name: Publish binary zip to GitHub artifacts
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: perfmon4j-develop-bin.zip 
-#          path: "./target/*bin.zip"
+      - name: Publish binary zip to GitHub artifacts
+        if: | 
+          ${{ endsWith(github.ref, '/develop') 
+          || endsWith(github.ref, '/feature/PublishArtifactsToGitHub')}}
+        uses: actions/upload-artifact@v2
+        with:
+          path: "./target/*bin.zip"
