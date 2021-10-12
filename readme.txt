@@ -1,4 +1,4 @@
-Copyright 2008-2019 Follett Software Company 
+Copyright 2008-2021 Follett School Solutions, LLC
  
 Perfmon4j(tm) is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License, version 3,
@@ -17,7 +17,23 @@ McHenry, IL 60050
 
 Changes
 
-** Next Version
+
+** 1.5.3 (Next Version) - TBD
+
+** 1.5.2 -  2021-10-10
+
+- Added option to "transform" the WebRequest category used to monitor inbound http(s) requests. 
+   As an example, suppose your application receives dynamic GET request with  
+   a pattern of :"/title/{titleID}/copy/{copyID}/status".  If you wanted to monitor the metrics 
+   associated with all calls to this "status" endpoint regardless of the specific
+   titleID or copyID you could configure a transformation.  The transformation
+   pattern would be "/title/*/copy/*/status => /title/copy/status".  With this
+   pattern applied (at the servlet filter or valve level) a call to "/title/213/copy/133/status"
+   would be associated with the monitor "WebRequest.title.copy.status"
+   
+- Fixed defect (https://github.com/FollettSchoolSolutions/perfmon4j/issues/25):  Under 
+  newer versions of Wildfly perfmon4j log output would be limited to STDOUT.  
+  Now log output correctly switches to log4j when the jboss logging class is available
 
 - Now the LogFilter will include the HTTP method in the log output for each web request.  
   To disable this new behavior you can set the system property 

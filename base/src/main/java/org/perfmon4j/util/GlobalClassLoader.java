@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -62,6 +63,7 @@ public class GlobalClassLoader extends ClassLoader {
     private long totalClassLoaders = 0; // This is a count of the total number of classloaders we have encountered
     private long loadRequestCount = 0; 	// Total number of classes we where asked to load.
     private long loadAttemptsCount = 0;		// The total number of attempts made to load classes (traversing our nested class loaders)
+    private AtomicBoolean jbossLoggerModuleLoaded = new AtomicBoolean(false);
     
     Map<ClassLoader, Object> loaders = new WeakHashMap<ClassLoader, Object>();
     
@@ -146,6 +148,18 @@ public class GlobalClassLoader extends ClassLoader {
             		inCoreClassLoader = className.startsWith("sun.misc.Launcher");
             	}
             	totalClassLoaders++;
+            	
+            	
+            	if (!jbossLoggerModuleLoaded.get()) {
+            		// Just in case we are loading in JBoss/Wildfly check
+            		// to see we if we loaded the logging system.
+            		// The org.perfmon4j.util.Log4jLogger uses the jbossLoggerModuleLoaded
+            		// flag to determine when to attempt to load Log4j 
+	            	if ("org.jboss.modules.ModuleClassLoader".equals(loader.getClass().getName()) && loader.toString().contains("org.jboss.logging")) {
+	            		jbossLoggerModuleLoaded.set(true);
+	            	}
+            	}
+            	
 //            	System.err.println("ClassLoader(" + totalClassLoaders + "): " 
 //            			+  loader.getClass().getName()
 //            			+ " toString: " + loader.toString()
@@ -159,6 +173,10 @@ public class GlobalClassLoader extends ClassLoader {
         }
     }
 
+    public boolean isJBossLoggerModuleLoaded() {
+    	return jbossLoggerModuleLoaded.get();
+    }
+    
     /**
      * Represents the total number of classloaders we have encountered...
      * Since the classLoaders are held this value my be greater than the

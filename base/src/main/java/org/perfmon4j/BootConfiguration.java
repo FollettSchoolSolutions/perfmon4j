@@ -46,6 +46,7 @@ public class BootConfiguration {
 	    private String pushCookiesOnNDC = null;
 	    private String pushSessionAttributesOnNDC = null;
 	    private boolean pushClientInfoOnNDC = false;
+	    private String servletPathTransformationPattern = null;
 	    
 		public String getBaseFilterCategory() {
 			return baseFilterCategory;
@@ -102,6 +103,12 @@ public class BootConfiguration {
 			this.pushClientInfoOnNDC = pushClientInfoOnNDC;
 		}
 		
+		public String getServletPathTransformationPattern() {
+			return servletPathTransformationPattern;
+		}
+		public void setServletPathTransformationPattern(String servletPathTransformationPattern) {
+			this.servletPathTransformationPattern = servletPathTransformationPattern;
+		}
 		
 		private void setValue(Object valve, String attributeName, Object value ) {
 			try {
@@ -121,6 +128,7 @@ public class BootConfiguration {
 			setValue(valve, "skipTimerOnURLPattern", getSkipTimerOnURLPattern());
 			setValue(valve, "pushCookiesOnNDC", getPushCookiesOnNDC());
 			setValue(valve, "pushSessionAttributesOnNDC", getPushSessionAttributesOnNDC());
+			setValue(valve, "servletPathTransformationPattern", getServletPathTransformationPattern());
 			
 			setValue(valve, "abortTimerOnRedirect", Boolean.valueOf(isAbortTimerOnRedirect()));
 			setValue(valve, "abortTimerOnImageResponse", Boolean.valueOf(isAbortTimerOnImageResponse()));

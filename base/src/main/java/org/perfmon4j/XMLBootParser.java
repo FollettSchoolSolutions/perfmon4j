@@ -156,7 +156,11 @@ public class XMLBootParser extends DefaultHandler {
                 	if (skip != null) {
                 		valveConfig.setSkipTimerOnURLPattern(skip);
                 	}
-                    
+                	String servletPattern = atts.getValue("servletPathTransformationPattern");
+                	if (servletPattern != null) {
+                		valveConfig.setServletPathTransformationPattern(servletPattern);
+                	}
+                			
                 	config.setServletValveConfig(valveConfig);
                 } else {
                     throw new SAXException("Unexpected element: " + name);

@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>1.5.2-SNAPSHOT</version>
+		<version>1.5.3-SNAPSHOT</version>
 	</parent>
   
 	<artifactId>perfmon4j</artifactId>
@@ -16,7 +16,7 @@
 				<!-- Embed the javassist.jar file into the perfmon4j.jar -->
     			<groupId>org.apache.maven.plugins</groupId>
     			<artifactId>maven-antrun-plugin</artifactId>
-    			<version>1.8</version>
+    			<version>3.0.0</version>
     			<executions>
         			<execution>
             			<phase>compile</phase>
@@ -24,9 +24,9 @@
                 			<goal>run</goal>
             			</goals>
             			<configuration>
-		                <tasks>
-		                    <copy file="${M2_REPO}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar" tofile="${basedir}/target/classes/lib/javassist.jar" />
-		                    </tasks>
+		                <target>
+		                    <copy file="${settings.localRepository}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar" tofile="${basedir}/target/classes/lib/javassist.jar" />
+		                    </target>
 		                </configuration>
             		</execution>
         		</executions>
@@ -89,15 +89,15 @@ using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate cl
 						<systemProperties>
 							<property>
 								<name>JAVASSIST_JAR</name>
-								<value>${M2_REPO}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</value>
+								<value>${settings.localRepository}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</value>
 							</property>
 							<property>
 								<name>DERBY_EMBEDDED_DRIVER</name>
-								<value>${M2_REPO}/org/apache/derby/derby/${DERBY_VERSION|/derby-${DERBY_VERSION|.jar</value>								
+								<value>${settings.localRepository}/org/apache/derby/derby/${DERBY_VERSION|/derby-${DERBY_VERSION|.jar</value>								
 							</property>
 							<property>
 								<name>LOG4J_JAR</name>
-								<value>${M2_REPO}/log4j/log4j/${LOG4J_VERSION}/log4j-${LOG4J_VERSION}.jar</value>
+								<value>${settings.localRepository}/log4j/log4j/${LOG4J_VERSION}/log4j-${LOG4J_VERSION}.jar</value>
 							</property>
 							<property>
 								<name>maven.runtime.classpath</name>

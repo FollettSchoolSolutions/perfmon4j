@@ -48,7 +48,7 @@
 	
 	<files>
 		<file>
-			<source>${M2_REPO}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</source>
+			<source>${settings.localRepository}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</source>
 			<destName>3rd-party/javassist/${javassist.version}/javassist.jar</destName>
 		</file>
 		<file>

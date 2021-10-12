@@ -4,7 +4,7 @@
   
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>1.5.2-SNAPSHOT</version>
+	<version>1.5.3-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>org.perfmon4j:perfmon4j-project</name>
@@ -47,12 +47,8 @@
 
 	<profiles>
 	 	<profile> 
+			<!-- to activate this profile add "-P release" to the maven command line -->
 			<id>release</id>
-			<activation>
-      			<property>
-        			<name>env.TRAVIS_BUILD_DIR</name>
-      			</property>
-    		</activation>
 			<build>
 				<plugins>
 					<plugin>
@@ -62,7 +58,7 @@
 						<configuration>
 							<doctitle>${project.name} ${project.version}</doctitle>
 							<windowtitle>${project.name} ${project.version}</windowtitle>        			
-        						<source>8</source>
+        						<source>11</source>
 						</configuration>
 						<executions>
 							<execution>
@@ -92,10 +88,6 @@
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
 						<version>1.6</version>
-						<configuration>
-							<passphrase>${env.PGP_PASSPHRASE}</passphrase>
-							<homedir>${env.TRAVIS_BUILD_DIR}/.travis</homedir>
-						</configuration>
 						<executions>
 							<execution>
 								<id>sign-artifacts</id>
@@ -105,11 +97,18 @@
 								</goals>
 							</execution>
 						</executions>
+		                <configuration>
+		                    <!-- Prevent gpg from using pinentry programs -->
+		                    <gpgArguments>
+		                        <arg>--pinentry-mode</arg>
+		                        <arg>loopback</arg>
+		                    </gpgArguments>
+		                </configuration>						
 					</plugin>
 					<plugin>
 					 	<groupId>org.sonatype.plugins</groupId>
 					 	<artifactId>nexus-staging-maven-plugin</artifactId>
-					  	<version>1.6.3</version>
+					  	<version>1.6.8</version>
 					  	<extensions>true</extensions>
 					  	<configuration>
 							<serverId>ossrh</serverId>
@@ -117,7 +116,6 @@
 							<autoReleaseAfterClose>true</autoReleaseAfterClose>
 					  	</configuration>
 					</plugin>
-
 				</plugins>
 			</build>
 	  	</profile>
