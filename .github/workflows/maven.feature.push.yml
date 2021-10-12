@@ -7,6 +7,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DEVELOP_OR_MASTER: | 
+          ${{ endsWith(github.ref, '/develop') 
+          || endsWith(github.ref, '/feature/PublishArtifactsToGitHub')}}
     steps:
       - name: Checking out the code
         uses: actions/checkout@v2
@@ -23,16 +27,13 @@ jobs:
 #      - name: Run Maven Test
 #        run: mvn -B test --file pom.xml
 
-      - name: Assemble Release Package
-        if: | 
-          ${{ endsWith(github.ref, '/develop') 
-          || endsWith(github.ref, '/feature/PublishArtifactsToGitHub')}}
+      - name: Assemble release artifacts
+        if: ${{ env.DEVELOP_OR_MASTER }}
         run: mvn -B assembly:assembly -DskipTests
 
-      - name: Publish binary zip to GitHub artifacts
-        if: | 
-          ${{ endsWith(github.ref, '/develop') 
-          || endsWith(github.ref, '/feature/PublishArtifactsToGitHub')}}
+      - name: Publish assembly artifacts
+        if:  ${{ env.DEVELOP_OR_MASTER }}
         uses: actions/upload-artifact@v2
         with:
-          path: "./target/*bin.zip"
+          name: "Assembled-binary-and-source-zip-files"
+          path: "./target/perfmon4j*.zip"
