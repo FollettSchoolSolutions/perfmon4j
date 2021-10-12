@@ -1,0 +1,64 @@
+# David Deuchert - 10/12/2021
+# This action will checkout and test perfmon4j on any branch commit or pull request.
+# On a push to develop or master it will also:
+#   1) Build legacy release artifacts (Binary Zip file and Source Zip File)
+#      - These artifacts are built with the Maven Assembly plugin
+#   2) Deploy maven release artifacts to the maven central repository
+# This action relies on 4 secrets configured in github for the perfmon4j project.
+#   1) OSSRH_USERNAME - The user account associated with https://issues.sonatype.org
+#   2) OSSRH_PASSWORD - The password associated with https://issues.sonatype.org account
+#   3) MAVEN_GPG_PRIVATE_KEY - The private key used to sign artifacts published to 
+#      Maven Central
+#   4) MAVEN_GPG_PASSPHRASE - The passphrase associated with the private signing key 
+name: Branch Push or Pull Request
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DO_RELEASE: | 
+          ${{
+          (github.event_name == 'push') && 
+          (endsWith(github.ref, '/develop') || endsWith(github.ref, '/master'))
+          }}
+
+    steps:
+      - name: Checking out the code
+        uses: actions/checkout@v2
+
+      - name: Setting up Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          server-id: ossrh
+          server-username: OSSRH_USERNAME
+          server-password: OSSRH_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          
+      - name: Run Maven Build
+        run: mvn -B compile --file pom.xml
+
+      - name: Run Maven Test
+        run: mvn -B test --file pom.xml
+
+      - name: Assemble release artifacts
+        if: ${{ fromJSON(env.DO_RELEASE) }}
+        run: mvn -B assembly:assembly -DskipTests
+
+      - name: Publish release artifacts
+        if:  ${{ fromJSON(env.DO_RELEASE) }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: "Assembled-binary-and-source-zip-files"
+          path: "./target/perfmon4j*.zip"
+          
+      - name: Publish to Maven Central
+        if: ${{ fromJSON(env.DO_RELEASE) }}
+        run: mvn -B deploy --file pom.xml -P release -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}          
