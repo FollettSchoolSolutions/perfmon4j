@@ -69,7 +69,7 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
           
       - name: Setting up Java for publish to Github packages
-         if: ${{ fromJSON(env.DO_RELEASE) }}
+        if: ${{ fromJSON(env.DO_RELEASE) }}
         uses: actions/setup-java@v2
         with:
           java-version: '11'
