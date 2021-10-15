@@ -4,12 +4,17 @@
 #   1) Build legacy release artifacts (Binary Zip file and Source Zip File)
 #      - These artifacts are built with the Maven Assembly plugin
 #   2) Deploy maven release artifacts to the maven central repository
-# This action relies on 4 secrets configured in github for the perfmon4j project.
+#   3) Deploy maven release artifacts to Github Packages 
+# This action relies on 6 secrets configured in github for the perfmon4j project.
 #   1) OSSRH_USERNAME - The user account associated with https://issues.sonatype.org
 #   2) OSSRH_PASSWORD - The password associated with https://issues.sonatype.org account
 #   3) MAVEN_GPG_PRIVATE_KEY - The private key used to sign artifacts published to 
 #      Maven Central
 #   4) MAVEN_GPG_PASSPHRASE - The passphrase associated with the private signing key 
+#   5) PACKAGES_GITHUB_USERNAME - The username associated with the github token.
+#   6) PACKAGES_GITHUB_TOKEN - The token associated with the PACKAGES_GITHUB_USERNAME.  
+#     This is an  API Key that is authorized to write to Github packages.  This token will expire every
+#     12 months
 name: Branch Push or Pull Request
 
 on: [push, pull_request]
@@ -57,8 +62,25 @@ jobs:
           
       - name: Publish to Maven Central
         if: ${{ fromJSON(env.DO_RELEASE) }}
-        run: mvn -B deploy --file pom.xml -P release -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
+        run: mvn -B deploy --file pom.xml -P release,mvnCentral -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}          
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+          
+      - name: Setting up Java for publish to Github packages
+         if: ${{ fromJSON(env.DO_RELEASE) }}
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          server-id: github
+          server-username: PACKAGES_GITHUB_USERNAME
+          server-password: PACKAGES_GITHUB_TOKEN
+          
+      - name: Publish to Github Packages
+        if: ${{ fromJSON(env.DO_RELEASE) }}
+        run: mvn -B deploy --file pom.xml -P release,github -DskipTests  -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
+        env:
+          PACKAGES_GITHUB_USERNAME: ${{ secrets.PACKAGES_GITHUB_USERNAME }}
+          PACKAGES_GITHUB_TOKEN: ${{ secrets.PACKAGES_GITHUB_TOKEN }}
