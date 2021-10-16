@@ -794,7 +794,9 @@ public class PerfMon {
                         if (logger.isDebugEnabled()) {
                             logger.logDebug("Scheduling task: " + task);
                         }
-                        priorityTimer.schedule(task, appender.getIntervalMillis());
+                        priorityTimer.schedule(task, 
+                        		roundInterval(MiscHelper.currentTimeWithMilliResolution(), 
+                        				appender.getIntervalMillis()));
                     } else {
                         logger.logError("Unable to add appender to monitor: " + this +
                                 " - Max appenders exceeded");
@@ -948,10 +950,11 @@ public class PerfMon {
         }
         
         public void failSafeRun() {
-        	long stopTime = MiscHelper.currentTimeWithMilliResolution();
-            priorityTimer.schedule(new PushAppenderDataTask(owner, this.appender, offset), appender.getIntervalMillis());
+        	long now = MiscHelper.currentTimeWithMilliResolution();
+            priorityTimer.schedule(new PushAppenderDataTask(owner, this.appender, offset), 
+            		roundInterval(now, appender.getIntervalMillis()));
             try {
-                perfMonData.setTimeStop(stopTime);
+                perfMonData.setTimeStop(now);
                 maxThroughputPerMinute = perfMonData.refreshMonitorsMaxThroughputPerMinute(maxThroughputPerMinute);
                 appender.appendData(perfMonData);
             } catch (Exception ex) {
@@ -966,6 +969,26 @@ public class PerfMon {
         }
     }
 
+    static long roundInterval(long nowInMillis, long appenderIntervalInMillis) {
+    	long delta = 0l;
+    	
+    	if ((appenderIntervalInMillis % 60000) == 0) {  // round to even minutes.
+	    	delta = nowInMillis % 60000;
+    	} else if ((appenderIntervalInMillis % 1000) == 0) {  // round to even seconds.
+	    	delta = nowInMillis % 1000;
+    	}
+    	
+    	if (delta != 0) {
+    		if (delta <  (appenderIntervalInMillis / 2)) {
+    			appenderIntervalInMillis -= delta;
+    		} else {
+    			appenderIntervalInMillis += delta;
+    		}
+    	}
+    	
+    	return appenderIntervalInMillis;
+    }
+    
     
     private void resetAppenders() {
     	if (mapper == null) {

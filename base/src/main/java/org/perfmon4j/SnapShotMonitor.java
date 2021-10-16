@@ -118,14 +118,17 @@ public abstract class SnapShotMonitor {
         private final AppenderID appenderID;
         private final long intervalMillis;
         private SnapShotData data = null;
+        private final boolean usePriorityTimer;
         
         MonitorTimerTask(SnapShotMonitor monitor, AppenderID appenderID, boolean usePriorityTimer) throws InvalidConfigException {
             this.monitorReference = new WeakReference(monitor);
             this.appenderID = appenderID;
+            this.usePriorityTimer = usePriorityTimer;
             intervalMillis = appenderID.getIntervalMillis();
             Timer timerToUse = usePriorityTimer ? PerfMon.getPriorityTimer() : PerfMon.getUtilityTimer();
-            timerToUse.schedule(this, intervalMillis, intervalMillis);
-            data = monitor.initSnapShot(MiscHelper.currentTimeWithMilliResolution());
+            long now = MiscHelper.currentTimeWithMilliResolution();
+            timerToUse.schedule(this, PerfMon.roundInterval(now, intervalMillis));
+            data = monitor.initSnapShot(now);
         }
         
         public void failSafeRun() {
@@ -151,7 +154,8 @@ public abstract class SnapShotMonitor {
                         }
                     }
                     try {
-                        data = monitor.initSnapShot(MiscHelper.currentTimeWithMilliResolution());
+                    	// Reschedule task
+                        new MonitorTimerTask(monitor, appenderID,  usePriorityTimer);
                     } catch (Exception ex) {
                         data = null;
                         logger.logError("Error in initSnapShot for monitor: " + monitor.getName(), ex);
@@ -165,7 +169,6 @@ public abstract class SnapShotMonitor {
                         monitor.map.remove(appenderID);
                     }
                 }
-                this.cancel();
             }
         }
     }

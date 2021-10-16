@@ -25,9 +25,6 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -35,6 +32,9 @@ import org.mockito.Mockito;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 
 
@@ -1626,6 +1626,31 @@ public class PerfMonTest extends PerfMonTestCase {
 
         mon = PerfMon.getMonitor(NOMATCH);
         assertEquals("should have an appender", 0, mon.getNumAppenders());
+    }
+    
+    
+    public void testRoundInterval() {
+    	// For intervals divisible by 1 minute we round to the nearest minute.
+    	assertEquals("Our starting is 30 seconds with 1 minute interval, should round up "
+    			+ "to 2 minutes", 
+    			90000, PerfMon.roundInterval(30000, 60000));
+    	
+    	// For intervals divisible by 1 minute we round to the nearest minute.
+    	assertEquals("Our starting is 29.999 seconds with 1 minute interval, should round down "
+    			+ "to 1 minute", 
+    			30001, PerfMon.roundInterval(29999, 60000));
+
+    	assertEquals("For intervals evenly divisible by one second we round to nearest second", 
+    			999, PerfMon.roundInterval(1, 1000));
+    	assertEquals("For intervals evenly divisible by one second we round to nearest second", 
+    			1999, PerfMon.roundInterval(1, 2000));
+    
+    	assertEquals("For intervals not evenly divisible by one second we don't do any rounding", 
+    			500, PerfMon.roundInterval(1, 500));
+    	assertEquals("For intervals not evenly divisible by one second we don't do any rounding", 
+    			1500, PerfMon.roundInterval(1, 1500));
+
+    
     }
 
     
