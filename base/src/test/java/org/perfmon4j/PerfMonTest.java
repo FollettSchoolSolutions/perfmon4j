@@ -452,7 +452,7 @@ public class PerfMonTest extends PerfMonTestCase {
 
 /*----------------------------------------------------------------------------*/    
     public void testIntervalAppender() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         
         final String MONITOR_NAME = "testIntervalResults";
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
@@ -592,7 +592,7 @@ public class PerfMonTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testAppenderIsAssignedToChildren() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String MONITOR_NAME = "testAppenderIsAssignedToChildren";
@@ -656,7 +656,7 @@ public class PerfMonTest extends PerfMonTestCase {
     public void testActiveTimersParentOnlyPattern() throws Exception {
     	TestConfigBuilder builder = new TestConfigBuilder();
     	
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_PARENT_ONLY = "./";
@@ -681,7 +681,7 @@ public class PerfMonTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersChildOnlyPattern() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_CHILDREN_ONLY = "/*";
@@ -708,7 +708,7 @@ public class PerfMonTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersOnParentAndChildrenPattern() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_PARENT_AND_CHILDREN = "./*";
@@ -741,7 +741,7 @@ public class PerfMonTest extends PerfMonTestCase {
     
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersNoParentAllDescendents() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_DESCENDENTS = "/**";
@@ -767,7 +767,7 @@ public class PerfMonTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersParentAndAllDescendents() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_ALL = "./**";
@@ -793,7 +793,7 @@ public class PerfMonTest extends PerfMonTestCase {
     
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersForAllDescendents() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_ALL_DESCENDENTS = "/**";
@@ -822,7 +822,7 @@ public class PerfMonTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testAppenderRespectsPattern() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_PARENT_ONLY = "./";
