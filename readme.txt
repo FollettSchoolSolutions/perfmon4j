@@ -18,7 +18,11 @@ McHenry, IL 60050
 Changes
 
 
-** 1.5.3 (Next Version) - TBD
+** 1.6.0 (Next Version) - TBD
+- With this version perfmon4j is switching to semantic versioning.
+
+- Now interval durations will synchronized.  Example: 1 minute interval
+  appender will all be round up to the top of the minute.   	
 
 ** 1.5.2 -  2021-10-10
 
