@@ -969,26 +969,31 @@ public class PerfMon {
         }
     }
 
+    /**
+     * This method has an arbitrary requirement that it will 
+     * not round any appenderInterval that not evenly divisible by 1 second.
+     * This requirement ensures that unit tests that use very small intervals
+     * are not broken. 
+     * 
+     * @param nowInMillis
+     * @param appenderIntervalInMillis
+     * @return
+     */
     static long roundInterval(long nowInMillis, long appenderIntervalInMillis) {
-    	long delta = 0l;
-    	
-    	if ((appenderIntervalInMillis % 60000) == 0) {  // round to even minutes.
-	    	delta = nowInMillis % 60000;
-    	} else if ((appenderIntervalInMillis % 1000) == 0) {  // round to even seconds.
-	    	delta = nowInMillis % 1000;
-    	}
-    	
-    	if (delta != 0) {
-    		if (delta <  (appenderIntervalInMillis / 2)) {
-    			appenderIntervalInMillis -= delta;
-    		} else {
-    			appenderIntervalInMillis += delta;
-    		}
+    	if (appenderIntervalInMillis > 0 && ((appenderIntervalInMillis % 1000) == 0)) {
+	    	long delta = ((nowInMillis/appenderIntervalInMillis)*appenderIntervalInMillis) - nowInMillis;
+	    	
+	    	if (delta != 0) {
+	    		long newInterval = appenderIntervalInMillis + delta; 
+				if (newInterval <=  (appenderIntervalInMillis / 2)) {
+					newInterval += appenderIntervalInMillis;
+				} 
+				appenderIntervalInMillis = newInterval;
+	    	}
     	}
     	
     	return appenderIntervalInMillis;
     }
-    
     
     private void resetAppenders() {
     	if (mapper == null) {

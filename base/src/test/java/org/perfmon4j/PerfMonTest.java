@@ -1642,15 +1642,15 @@ public class PerfMonTest extends PerfMonTestCase {
 
     	assertEquals("For intervals evenly divisible by one second we round to nearest second", 
     			999, PerfMon.roundInterval(1, 1000));
-    	assertEquals("For intervals evenly divisible by one second we round to nearest second", 
+    	
+    	assertEquals("For intervals evenly divisible by two second we round to nearest second", 
     			1999, PerfMon.roundInterval(1, 2000));
     
     	assertEquals("For intervals not evenly divisible by one second we don't do any rounding", 
     			500, PerfMon.roundInterval(1, 500));
+    	
     	assertEquals("For intervals not evenly divisible by one second we don't do any rounding", 
     			1500, PerfMon.roundInterval(1, 1500));
-
-    
     }
 
     
