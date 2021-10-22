@@ -3,6 +3,7 @@ package web.org.perfmon4j.extras.wildfly8;
 import java.net.InetSocketAddress;
 import java.util.Deque;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -28,7 +29,8 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 
 class HandlerImpl implements HttpHandler {
-    private static final Logger logger = LoggerFactory.initLogger(HandlerImpl.class);	
+	public static final String PERFMON4J_SKIP_LOG_FOR_REQUEST = "PERFMON4J_SKIP_LOG_FOR_REQUEST";
+	private static final Logger logger = LoggerFactory.initLogger(HandlerImpl.class);
 	private final HttpHandler next;
 	private final String baseFilterCategory;
 	private final boolean outputRequestAndDuration;
@@ -42,6 +44,12 @@ class HandlerImpl implements HttpHandler {
     private final String[] pushSessionAttributesOnNDC;
     private final boolean pushClientInfoOnNDC;
     private final ServletPathTransformer servletPathTransformer;
+	private ThreadLocal<AtomicInteger> recurseCount = new ThreadLocal<AtomicInteger>() {
+		@Override
+		protected AtomicInteger initialValue() {
+			return new AtomicInteger(0);
+		}
+	};
     
     final static private boolean SKIP_HTTP_METHOD_ON_LOG_OUTPUT = Boolean.getBoolean("web.org.perfmon4j.servlet"
     	+ ".PerfMonFilter.SKIP_HTTP_METHOD_ON_LOG_OUTPUT");     
@@ -66,28 +74,36 @@ class HandlerImpl implements HttpHandler {
 		
 		String servletPathTransformerStr = parent.getServletPathTransformationPattern();
 		if (servletPathTransformerStr != null && !servletPathTransformerStr.isBlank()) {
-			this.servletPathTransformer = ServletPathTransformer.newTransformer(servletPathTransformerStr);
+			this.servletPathTransformer = ServletPathTransformer.newTransformer(servletPathTransformerStr, baseFilterCategory);
 		} else {
-			this.servletPathTransformer = null;
+			this.servletPathTransformer = ServletPathTransformer.newTransformer("", baseFilterCategory);
 		}
 		
 		PerfMon.getMonitor(this.baseFilterCategory, false);  // Always create the base category monitor, all child monitors are only created when a monitor is attached.
 	}
 	
 	public void handleRequest(HttpServerExchange exchange) throws Exception {
-		boolean skip = false;
-		
-		if (skipTimerOnURLPattern != null) {
-			skip = skipTimerOnURLPattern.matcher(exchange.getRequestPath()).matches();
-		}
-		
-		if (skip) {
-			next.handleRequest(exchange);
-		} else {
-			doHandleRequest(exchange);
+
+		int recurse = recurseCount.get().incrementAndGet();
+		try {
+			 // This handler is recursively invoked when the application forwards
+			 // while processing a web request.  We only want to monitor the initial
+			 // incoming request.
+			boolean skip = true;
+			if (recurse == 1) {
+				skip = ((skipTimerOnURLPattern != null) 
+						&& skipTimerOnURLPattern.matcher(exchange.getRequestPath()).matches());
+			}
+			if (skip) {
+				next.handleRequest(exchange);
+			} else {
+				doHandleRequest(exchange);			
+			}
+		} finally {
+			recurseCount.get().decrementAndGet();
 		}
 	}
-	
+
 	private void doHandleRequest(HttpServerExchange exchange) throws Exception {
         Long localStartTime = null;
         Long localSQLStartTime = null;
@@ -120,7 +136,7 @@ class HandlerImpl implements HttpHandler {
         		ThreadTraceConfig.pushValidator(new CookieValidator(exchange));
         		pushedCookieValidator = true;
         	}			
-        	
+
 			try {
 				timer = startTimerForRequest(exchange);
 		        if (outputRequestAndDuration) {
@@ -152,15 +168,8 @@ class HandlerImpl implements HttpHandler {
 	            } else {
 	            	PerfMonTimer.stop(timer);
 	            	notifyUserAgentMonitor(exchange);
-		        	if (localStartTime != null) {
-		        		String sqlDurationStr = "";
-		        		if (localSQLStartTime != null) {
-		        			long sqlDuration = SQLTime.getSQLTime() - localSQLStartTime.longValue();
-		        			sqlDurationStr = "(SQL: " + sqlDuration + ")";
-		        		}
-		        		long duration = Math.max(MiscHelper.currentTimeWithMilliResolution() -
-		        			localStartTime.longValue(), 0);
-		        		logger.logInfo(duration + sqlDurationStr + " " + buildRequestDescription(exchange));
+		        	if ((localStartTime != null) && !skipLogOutput() ) {
+		        		outputToLog(exchange, localStartTime, localSQLStartTime);
 		        	}
 	            }
 			}
@@ -181,23 +190,37 @@ class HandlerImpl implements HttpHandler {
 		}
 	}
 	
+	private boolean skipLogOutput() {
+		RequestSkipLogTracker tracker = RequestSkipLogTracker.getTracker();
+		boolean result = tracker.isSkipLogOutput();
+		if (result) {
+			tracker.setSkipLogOutput(false);
+		}
+		return result;
+	}
+ 	
+	protected void outputToLog(HttpServerExchange exchange, Long localStartTime, Long localSQLStartTime) {
+		String sqlDurationStr = "";
+		if (localSQLStartTime != null) {
+			long sqlDuration = SQLTime.getSQLTime() - localSQLStartTime.longValue();
+			sqlDurationStr = "(SQL: " + sqlDuration + ")";
+		}
+		long duration = Math.max(MiscHelper.currentTimeWithMilliResolution() -
+			localStartTime.longValue(), 0);
+		logger.logInfo(duration + sqlDurationStr + " " + buildRequestDescription(exchange));
+	}
+	
     protected PerfMonTimer startTimerForRequest(HttpServerExchange exchange ) {
         PerfMonTimer result = PerfMonTimer.getNullTimer();
         if (PerfMon.isConfigured()) {
-        	String monitorCategory = baseFilterCategory;
-        	
         	String requestPath = exchange.getRequestPath();
         	if (requestPath != null) {
         		if (requestPath.endsWith("/")) {
         			requestPath = requestPath.substring(0, requestPath.length()-1);
         		}
-            	if (servletPathTransformer != null) {
-            		requestPath = servletPathTransformer.transform(requestPath);
-            	}
-        		monitorCategory +=  requestPath.replaceAll("\\.", "_").replaceAll("/", "\\.");
+        		String monitorCategory = servletPathTransformer.transformToCategory(requestPath);
+                result = PerfMonTimer.start(monitorCategory, true);
         	}
-        	
-            result = PerfMonTimer.start(monitorCategory, true);
         }
         return result;
     }	
@@ -270,8 +293,12 @@ class HandlerImpl implements HttpHandler {
     	if (exchange != null) {
     		if (!SKIP_HTTP_METHOD_ON_LOG_OUTPUT) {
 	    		HttpString method = exchange.getRequestMethod();
+	    		String methodString = null;
 	    		if (method != null) {
-	    			result.append(method + " ");
+	    			methodString = method.toString();
+	    		}
+	    		if (methodString != null && !methodString.isBlank()) {
+	    			result.append(methodString + " ");
 	    		}
     		}
     		

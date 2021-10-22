@@ -148,6 +148,10 @@ public class XMLBootParser extends DefaultHandler {
                 	if (push != null) {
                 		valveConfig.setPushCookiesOnNDC(push);
                 	}
+                	push = atts.getValue("pushURLOnNDC");
+                	if (push != null) {
+                		valveConfig.setPushURLOnNDC(Boolean.parseBoolean(push));
+                	}
                 	abort = atts.getValue("abortTimerOnURLPattern");
                 	if (abort != null) {
                 		valveConfig.setAbortTimerOnURLPattern(abort);

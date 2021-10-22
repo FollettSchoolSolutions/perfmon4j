@@ -382,17 +382,18 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             
             boolean installValve = engineClassName.equals(className)  || undertowDeployInfoClassName.equals(className);
             boolean wrapTomcatRegistry = tomcatRegistryClassName.equals(className);
+            boolean installRequestSkipLogTracker = "io/undertow/servlet/spec/HttpServletRequestImpl".equals(className);
             
-            if (installValve || wrapTomcatRegistry) {
-            	try {
-		            if (installValve) {
-		            	result = runtimeTimerInjector.installUndertowOrTomcatSetValveHook(classfileBuffer, loader);
-		            } else {
-		            	result = runtimeTimerInjector.wrapTomcatRegistry(classfileBuffer, loader);
-		            }
-	            } catch (Exception ex) {
-	            	logger.logError(installValve ? "Unable to insert addValveHook" : "Unable to wrap tomcat registry", ex);
+        	try {
+	            if (installValve) {
+	            	result = runtimeTimerInjector.installUndertowOrTomcatSetValveHook(classfileBuffer, loader);
+	            } else if (wrapTomcatRegistry){
+	            	result = runtimeTimerInjector.wrapTomcatRegistry(classfileBuffer, loader);
+	            } else if (installRequestSkipLogTracker) {
+	            	result = runtimeTimerInjector.installRequestSkipLogTracker(classfileBuffer, loader);
 	            }
+            } catch (Exception ex) {
+            	logger.logError(installValve ? "Unable to insert addValveHook" : "Unable to wrap tomcat registry", ex);
             }
 			return result;
 		}

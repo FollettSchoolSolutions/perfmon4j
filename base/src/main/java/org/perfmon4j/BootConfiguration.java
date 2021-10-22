@@ -46,6 +46,7 @@ public class BootConfiguration {
 	    private String pushCookiesOnNDC = null;
 	    private String pushSessionAttributesOnNDC = null;
 	    private boolean pushClientInfoOnNDC = false;
+	    private boolean pushURLOnNDC = false;
 	    private String servletPathTransformationPattern = null;
 	    
 		public String getBaseFilterCategory() {
@@ -103,6 +104,13 @@ public class BootConfiguration {
 			this.pushClientInfoOnNDC = pushClientInfoOnNDC;
 		}
 		
+		public boolean isPushURLOnNDC() {
+			return pushURLOnNDC;
+		}
+		public void setPushURLOnNDC(boolean pushURLOnNDC) {
+			this.pushURLOnNDC = pushURLOnNDC;
+		}
+		
 		public String getServletPathTransformationPattern() {
 			return servletPathTransformationPattern;
 		}
@@ -134,6 +142,7 @@ public class BootConfiguration {
 			setValue(valve, "abortTimerOnImageResponse", Boolean.valueOf(isAbortTimerOnImageResponse()));
 			setValue(valve, "outputRequestAndDuration", Boolean.valueOf(isOutputRequestAndDuration()));
 			setValue(valve, "pushClientInfoOnNDC", Boolean.valueOf(isPushClientInfoOnNDC()));
+			setValue(valve, "pushURLOnNDC", Boolean.valueOf(isPushURLOnNDC()));
 		}	    
 	}
 }

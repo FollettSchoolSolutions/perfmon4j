@@ -837,9 +837,38 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         if (insertBeforeWorked) {
             method.insertAfter(methodSuffix.toString(), true);
         }
-
         
         return offset;
+    }
+    
+    public byte[] installRequestSkipLogTracker(byte[] classfileBuffer, ClassLoader loader) throws Exception {
+        ClassPool classPool = null;
+        if (loader == null) {
+            classPool = new ClassPool(true);
+        } else {
+            classPool = new ClassPool(false);
+            classPool.appendClassPath(new LoaderClassPath(loader));
+        }
+        
+        ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+        CtClass clazz = classPool.makeClass(inStream);
+        if (clazz.isFrozen()) {
+            clazz.defrost();
+        }
+
+    	logger.logInfo("Perfmon4j found Undertow HttpServletRequestImpl Class: " + clazz.getName());
+
+    	CtMethod m = clazz.getDeclaredMethod("setAttribute");
+    	String insertBlock = 
+    			" web.org.perfmon4j.extras.wildfly8.RequestSkipLogTracker.getTracker().setAttribute($1, $2);\r\n";
+		m.insertBefore(insertBlock);
+
+    	m = clazz.getDeclaredMethod("removeAttribute");
+    	insertBlock = 
+    			" web.org.perfmon4j.extras.wildfly8.RequestSkipLogTracker.getTracker().removeAttribute($1);\r\n";
+		m.insertBefore(insertBlock);
+		
+    	return clazz.toBytecode();
     }
     
     public byte[] installUndertowOrTomcatSetValveHook(byte[] classfileBuffer, ClassLoader loader) throws Exception {

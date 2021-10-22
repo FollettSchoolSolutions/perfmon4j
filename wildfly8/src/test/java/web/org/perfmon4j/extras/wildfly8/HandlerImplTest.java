@@ -3,6 +3,8 @@ package web.org.perfmon4j.extras.wildfly8;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import javax.servlet.ServletRequest;
+
 import org.mockito.Mockito;
 import org.perfmon4j.Appender;
 import org.perfmon4j.IntervalData;
@@ -201,6 +203,7 @@ public class HandlerImplTest extends TestCase {
 		assertEquals("Only the request that did not match pattern should have been flagged complete", 
 				1, SimpleAppender.completions);
 	}
+
 	
 	public void testThreadTraceHttpRequestTrigger() throws Exception {
 		Trigger trigger = new ThreadTraceConfig.HTTPRequestTrigger("userName", "Dave");
@@ -222,18 +225,62 @@ public class HandlerImplTest extends TestCase {
 		
 		assertEquals("Should have gotten 1 thread trace", 1, SimpleAppender.threadTraces);
 	}
+
+	public void testSkipRequestLogOutput() throws Exception {
+		HttpHandler handler = buildMockHttpHandler();
+		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
+		wrapper.setOutputRequestAndDuration(true);
+		
+		HandlerImpl impl = Mockito.spy(new HandlerImpl(wrapper, handler));
+
+		HttpServerExchange exchange = buildMockExchange();
+		impl.handleRequest(exchange);
+		
+		Mockito.verify(impl, Mockito.times(1)).outputToLog(Mockito.any(), 
+			Mockito.any(), Mockito.any());
+
+		// If this named attribute exists on the request (containing any non-null value)
+		// we will not write the request to the output log.
+		// This allows some WAR application to perform their own logging.
+		RequestSkipLogTracker.getTracker().setAttribute("PERFMON4J_SKIP_LOG_FOR_REQUEST", "anything");
+		
+		impl = Mockito.spy(new HandlerImpl(wrapper, handler));
+		impl.handleRequest(exchange);
+		
+		Mockito.verify(impl, Mockito.times(0)).outputToLog(Mockito.any(), 
+			Mockito.any(), Mockito.any());
+	}
 	
-	private void addSessionAttribute(HttpServerExchange exchange, String name, String value) {
+	private ServletRequestContext getOrCreateServletContext(HttpServerExchange exchange) {
 		ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 		if (context == null) {
 			context = Mockito.mock(ServletRequestContext.class);
-		
-			HttpSessionImpl session = Mockito.mock(HttpSessionImpl.class);
-			Mockito.when(context.getSession()).thenReturn(session);
 			exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, context);
 		}
-		Mockito.when(context.getSession().getAttribute(name)).thenReturn(value);
+		return context;
 	}
+	
+	
+	private void addSessionAttribute(HttpServerExchange exchange, String name, String value) {
+		ServletRequestContext context = getOrCreateServletContext(exchange);
+		HttpSessionImpl session = context.getSession(); 
+		if (session == null) {
+			session = Mockito.mock(HttpSessionImpl.class);
+			Mockito.when(context.getSession()).thenReturn(session);
+		}
+		Mockito.when(session.getAttribute(name)).thenReturn(value);
+	}
+
+	private void addRequestAttribute(HttpServerExchange exchange, String name, String value) {
+		ServletRequestContext context = getOrCreateServletContext(exchange);
+		ServletRequest servletRequest  = context.getServletRequest();
+		if (servletRequest  == null) {
+			servletRequest = Mockito.mock(ServletRequest.class);
+			Mockito.when(context.getServletRequest()).thenReturn(servletRequest);
+		}
+		Mockito.when(servletRequest.getAttribute(name)).thenReturn(value);
+	}
+	
 	
 	public void testThreadTraceHttpSessionTrigger() throws Exception {
 		Trigger trigger = new ThreadTraceConfig.HTTPSessionTrigger("userName", "Dave");

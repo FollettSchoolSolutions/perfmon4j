@@ -81,6 +81,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
             "			outputRequestAndDuration='true'" +
             "			pushClientInfoOnNDC='true'" +
             "			pushSessionAttributesOnNDC='name'" +
+            "			pushURLOnNDC='true'" +
             "			abortTimerOnURLPattern='abortPattern'" +
             "			skipTimerOnURLPattern='skipPattern'" +
             "			pushCookiesOnNDC='pushCookies'" +
@@ -88,7 +89,6 @@ public class XMLBootParserTest extends PerfMonTestCase {
             "		/>" +
             "	</boot>" +
             "</Perfmon4JConfig>";
-
         BootConfiguration boot = XMLBootParser.parseXML(XML);
         
         BootConfiguration.ServletValveConfig valveConfig = boot.getServletValveConfig();
@@ -99,6 +99,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
         assertTrue(valveConfig.isAbortTimerOnImageResponse());
         assertTrue(valveConfig.isOutputRequestAndDuration());
         assertTrue(valveConfig.isPushClientInfoOnNDC());
+        assertTrue(valveConfig.isPushURLOnNDC());
         
         assertEquals("name",valveConfig.getPushSessionAttributesOnNDC());
         assertEquals("abortPattern",valveConfig.getAbortTimerOnURLPattern());

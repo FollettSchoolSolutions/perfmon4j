@@ -109,7 +109,9 @@ public class PerfMonFilter implements Filter {
         String servletPathTransformerStr = getInitParameter(filterConfig, PROPERTY_SERVLET_PATH_TRANSFORMATION_PATTERN, null);
         if (servletPathTransformerStr != null && !servletPathTransformerStr.isBlank()) {
         	logger.logInfo("Loading servletPathTransformer: " + servletPathTransformerStr);
-        	servletPathTransformer = ServletPathTransformer.newTransformer(servletPathTransformerStr);
+        	servletPathTransformer = ServletPathTransformer.newTransformer(servletPathTransformerStr, baseFilterCategory);
+        } else {
+        	servletPathTransformer = ServletPathTransformer.newTransformer("", baseFilterCategory);
         }
         
         // Since all WEBREQEST children are by default dynamically created, create the base category by default.
@@ -322,17 +324,8 @@ public class PerfMonFilter implements Filter {
         if (pathInfo != null) {
         	fullPath += pathInfo;
         }
-
         
-        if (servletPathTransformer != null) {
-        	fullPath = servletPathTransformer.transform(fullPath);
-        }
-        
-        String result = baseFilterCategory;
-    	result += fullPath.replaceAll("\\.", "_").replaceAll("/", "\\.");
-        
-      
-        return result;
+        return servletPathTransformer.transformToCategory(fullPath);
     }
 
 /*----------------------------------------------------------------------------*/    

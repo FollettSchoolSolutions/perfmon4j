@@ -8,17 +8,30 @@ OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU
 License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
 http://www.gnu.org/licenses/
 
-perfmon4j@fsc.follett.com
+ddeuchert@follett.com
 David Deuchert
-Follett Software Company
+Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
 
 Changes
 
-
 ** 1.6.0 (Next Version) - TBD
+- Fixed a minor defect that could prevent the Log4jLogger from 
+  being initialized.
+
+- Added 2 enhancements to the servlet path transformer. The first 
+  allows you to indicate a specific root category as a replacement
+  for a servlet path.  The second allows you to specify multiple patterns.
+
+- Provided an option for an application to inform the Perfmon4j Wildfly 
+  valve not to write a specific http request to the server log. This allows
+  an application to override the default log format for default requests.
+  Add an attribute named “PERFMON4J_SKIP_LOG_FOR_REQUEST” to the 
+  HttpServletRequest object (with any non-null value) to trigger this 
+  behavior.
+
 - With this version perfmon4j is switching to semantic versioning.
 
 - Now interval durations will synchronized.  Example: 1 minute interval

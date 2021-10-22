@@ -64,7 +64,7 @@ class Log4JLogger implements Logger {
 		try {
 			if (!log4jInitialized && (rootLogger != null)) {
 				Enumeration<?> allAppendersOnRoot = (Enumeration<?>)getAllAppenders.invoke(rootLogger, new Object[]{}); 
-				log4jInitialized = allAppendersOnRoot.hasMoreElements();
+				log4jInitialized = allAppendersOnRoot != null;
 			}
 		} catch (Exception ex) {
 			// Ignore exceptions...  Just assume it is not initialized.
