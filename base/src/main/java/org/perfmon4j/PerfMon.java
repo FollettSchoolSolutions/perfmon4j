@@ -192,6 +192,8 @@ public class PerfMon {
     private Set<PerfMon> childMonitors =  Collections.synchronizedSet(new HashSet<PerfMon>());
     private ThreadTraceConfig internalThreadTraceConfig = null;
     private final ExternalThreadTraceConfig.Queue externalThreadTraceQueue = new ExternalThreadTraceConfig.Queue();
+    private ReferenceCount activeHead = null;
+    private ReferenceCount activeTail = null;
     
     private static ThreadLocal<Map<Long, ReferenceCount>> activeMonitors = new ThreadLocal<Map<Long, ReferenceCount>>() {
          protected synchronized Map<Long, ReferenceCount> initialValue() {
@@ -421,6 +423,20 @@ public class PerfMon {
             startStopWriteLock.lock();
             try {
                 activeThreadCount++;
+                
+            	count.after = null;
+                if (activeHead == null) {
+                	// We know the "list" is empty;
+                	activeHead = activeTail = count;
+                	count.before = null;
+                } else {
+                	// We know at least one element is in the "list"
+                	// and we want to append to the end.
+                	activeTail.after = count;
+                	count.before = activeTail;
+                	activeTail = count;
+                }
+                
                 if (isActive()) {
                     totalHits++;
                     if (activeThreadCount >= maxActiveThreadCount) {
@@ -482,6 +498,22 @@ public class PerfMon {
             startStopWriteLock.lock();
             try {
                 long eventStartTime = count.getStartTime();
+                
+                if (count == activeHead && count == activeTail) {
+                	activeHead = activeTail = null;
+                } else if (count == activeHead) {
+                	// We know there is at least one element after us.
+                	activeHead = count.after;
+                	activeHead.before = null;
+                } else if (count == activeTail) {
+                	// We know there is at least one element before us.
+                	activeTail = count.before;
+                	activeTail.after = null;
+                } else {
+                	// We know we have at least one element before and after us.
+                	count.before.after = count.after;
+                	count.after.before = count.before;
+                }
                 activeThreadCount--;
                 
                 final boolean active = isActive() && (startTime.longValue() <= eventStartTime);
@@ -544,17 +576,27 @@ public class PerfMon {
                             minDuration = duration;
                             timeMinDurationSet = systemTime;
                         }
+                        String oldestThread = "";
+                        long oldestThreadDuration = 0L;
+                        
+                        if (activeHead != null) {
+                        	oldestThread = activeHead.getThreadName();
+                        	oldestThreadDuration = systemTime - activeHead.getStartTime();
+                        }
+                        
                         for (int i = 0; i < dataArray.length; i++) {
                             PushAppenderDataTask data = dataArray[i];
                             if (data != null) {
-                                data.perfMonData.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+                                data.perfMonData.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, 
+                                		oldestThread, oldestThreadDuration);
                             }
                         }
                     	if (externalElement) {
                             for (int i = 0; i < externalElementArray.length; i++) {
                                 IntervalData data = externalElementArray[i];
                                 if (data != null) {
-                                    data.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+                                    data.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, 
+                                    	oldestThread, oldestThreadDuration);
                                 }
                             }
                     	}
@@ -593,7 +635,7 @@ public class PerfMon {
         // No need to synchronize here since this is a thread local object...
         ReferenceCount count = map.get(monitorID);
         if (count == null) {
-            count = new ReferenceCount();
+            count = new ReferenceCount(Thread.currentThread().getName());
             map.put(monitorID, count);
         }
         return count;
@@ -638,11 +680,19 @@ public class PerfMon {
     
 /*----------------------------------------------------------------------------*/    
     private static class ReferenceCount {
+    	private final String threadName;
         private int refCount = 0;
         private long startTime;
         private long sqlStartMillis = 0;
         boolean hasInternalThreadTrace = false;
         boolean hasExternalThreadTrace = false;
+        
+        private ReferenceCount before = null;
+        private ReferenceCount after = null;
+        
+        ReferenceCount(String threadName) {
+        	this.threadName = threadName;
+        }
         
         /**
          * @return The updated (incremented value of refCount)
@@ -669,6 +719,11 @@ public class PerfMon {
        private long getSQLStartMillis() {
     	   return sqlStartMillis;
        }
+
+       public String getThreadName() {
+    	   return threadName;
+       }
+       
     }
 
 /*----------------------------------------------------------------------------*/    
