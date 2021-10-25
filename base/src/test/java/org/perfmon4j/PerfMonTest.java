@@ -1402,9 +1402,9 @@ public class PerfMonTest extends PerfMonTestCase {
                 super(owner, timeStart);
             }
             
-            void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared) {
+            void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, String oldestThread, long oldestDuration) {
                 BogusAppender.dataStopCount++;
-                super.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+                super.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, oldestThread, oldestDuration);
             }
         }
     }
