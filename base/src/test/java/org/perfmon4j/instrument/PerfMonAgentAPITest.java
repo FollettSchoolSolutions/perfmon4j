@@ -85,19 +85,19 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	public static class AgentAPIUsageTest implements Runnable {
 		public void run() {
 			if (api.org.perfmon4j.agent.PerfMon.isAttachedToAgent()) {
-				System.out.println("Agent API for PerfMon class has been instrumented");
+				System.err.println("Agent API for PerfMon class has been instrumented");
 			} else {
-				System.out.println("Agent API for PerfMon class has NOT been instrumented");
+				System.err.println("Agent API for PerfMon class has NOT been instrumented");
 			}
 			if (api.org.perfmon4j.agent.PerfMonTimer.isAttachedToAgent()) {
-				System.out.println("Agent API for PerfMonTimer class has been instrumented");
+				System.err.println("Agent API for PerfMonTimer class has been instrumented");
 			} else {
-				System.out.println("Agent API for PerfMonTimer class has NOT been instrumented");
+				System.err.println("Agent API for PerfMonTimer class has NOT been instrumented");
 			}
 			if (api.org.perfmon4j.agent.SQLTime.isAttachedToAgent()) {
-				System.out.println("Agent API for SQLTime class has been instrumented");
+				System.err.println("Agent API for SQLTime class has been instrumented");
 			} else {
-				System.out.println("Agent API for SQLTime class has NOT been instrumented");
+				System.err.println("Agent API for SQLTime class has NOT been instrumented");
 			}
 		}
 	}
