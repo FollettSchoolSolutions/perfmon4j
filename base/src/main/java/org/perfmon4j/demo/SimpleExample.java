@@ -43,7 +43,7 @@ public class SimpleExample {
         Logger.getRootLogger().setLevel(Level.INFO);
         Logger.getLogger("org.perfmon4j").setLevel(Level.DEBUG);
         Logger logger = Logger.getLogger(SimpleExample.class);
-        
+
         PerfMonConfiguration config = new PerfMonConfiguration();
         config.defineMonitor("SimpleExample");
         config.defineAppender("10 Second Monitor", TextAppender.class.getName(), "10 Seconds");
@@ -51,6 +51,7 @@ public class SimpleExample {
 //        config.defineSnapShotMonitor("JVM Memory", JVMMemory.class.getName());
 //        config.attachAppenderToSnapShotMonitor("JVM Memory", "10 Second Monitor");
         
+//    	System.setProperty("org.perfmon4j.MonitorThreadTracker.DisableThreadTracking", "true");
       config.defineSnapShotMonitor("MonitorThreadTracker", MonitorThreadTracker.class.getName());
       config.attachAppenderToSnapShotMonitor("MonitorThreadTracker", "10 Second Monitor");
 

@@ -16,7 +16,18 @@ import org.perfmon4j.instrument.SnapShotProvider;
 @SnapShotProvider(type = SnapShotProvider.Type.STATIC)
 public class MonitorThreadTracker {
 	public static final String REMOVED_THREAD = "REMOVED_THREAD";
+	public static final String DISABLE_KEY = MonitorThreadTracker.class.getName() + ".DisableThreadTracking";
 	
+	/**
+	 * This variable is declared at the instance level, but once a monitor is 
+	 * created it will not be disabled/enabled within the life of the JVM. 
+	 * This means if you want to disable thread tracking for your application you
+	 * must include
+	 * -Dorg.perfmon4j.MonitorThreadTracker.DisableThreadTracking=true" on
+	 * the java command line.
+	 */
+	public final boolean disableThreadTracker = Boolean.getBoolean(DISABLE_KEY);
+
 	private final Object trackerSemaphore = new Object() {}; 
 	
 	private final PerfMon monitor;
@@ -39,52 +50,60 @@ public class MonitorThreadTracker {
 	}
 	
 	final int addTracker(Tracker tracker) {
-		numTrackersAdded.incrementAndGet();
-		synchronized(trackerSemaphore) {
-            if (head == null) {
-            	// We know the "list" is empty;
-            	head = tail = tracker;
-            	tracker.setNext(null);
-            	tracker.setPrevious(null);
-            	length = 1;
-            } else {
-            	// We know at least one element is in the "list"
-            	// and we want to append to the end.
-            	tail.setNext(tracker);
-            	tracker.setPrevious(tail);
-            	tail = tracker;
-                length++;
-            }
-    		return length;
+		if (disableThreadTracker) {
+			return ++length;
+		} else {
+			numTrackersAdded.incrementAndGet();
+			synchronized(trackerSemaphore) {
+	            if (head == null) {
+	            	// We know the "list" is empty;
+	            	head = tail = tracker;
+	            	tracker.setNext(null);
+	            	tracker.setPrevious(null);
+	            	length = 1;
+	            } else {
+	            	// We know at least one element is in the "list"
+	            	// and we want to append to the end.
+	            	tail.setNext(tracker);
+	            	tracker.setPrevious(tail);
+	            	tail = tracker;
+	                length++;
+	            }
+	    		return length;
+			}
 		}
 	}
 	
 	final int removeTracker(Tracker tracker) {
-		numTrackersRemoved.incrementAndGet();
-		synchronized(trackerSemaphore) {
-            if (tracker == head && tracker == tail) {
-            	head = tail = null;
-            	length = 0;
-            } else if (tracker == head) {
-            	// We know there is, at least, one element after us.
-            	head = tracker.getNext();
-            	head.setPrevious(null);
-            	length--;
-            } else if (tracker == tail) {
-            	// We know there is at least one element before us.
-            	tail = tracker.getPrevious();
-            	tail.setNext(null);
-            	length--;
-            } else {
-            	// We know we have at least one element before and after us.
-            	Tracker beforeUs = tracker.getPrevious();
-            	Tracker afterUs = tracker.getNext();
-            	
-            	beforeUs.setNext(afterUs);
-            	afterUs.setPrevious(beforeUs);
-            	length--;
-            }
-            return length;
+		if (disableThreadTracker) {
+			return --length;
+		} else {
+			numTrackersRemoved.incrementAndGet();
+			synchronized(trackerSemaphore) {
+	            if (tracker == head && tracker == tail) {
+	            	head = tail = null;
+	            	length = 0;
+	            } else if (tracker == head) {
+	            	// We know there is, at least, one element after us.
+	            	head = tracker.getNext();
+	            	head.setPrevious(null);
+	            	length--;
+	            } else if (tracker == tail) {
+	            	// We know there is at least one element before us.
+	            	tail = tracker.getPrevious();
+	            	tail.setNext(null);
+	            	length--;
+	            } else {
+	            	// We know we have at least one element before and after us.
+	            	Tracker beforeUs = tracker.getPrevious();
+	            	Tracker afterUs = tracker.getNext();
+	            	
+	            	beforeUs.setNext(afterUs);
+	            	afterUs.setPrevious(beforeUs);
+	            	length--;
+	            }
+	            return length;
+			}
 		}
 	}
 	
@@ -109,27 +128,35 @@ public class MonitorThreadTracker {
 	}
 	
 	public final TrackerValue getLongestRunning() {
-		numCallsToGetLongestRunning.incrementAndGet();
-		synchronized(trackerSemaphore) {
-			if (length > 0) {
-				return new TrackerValue(head);
-			} else {
-				return null;
+		if (disableThreadTracker) {
+			return null;
+		} else {
+			numCallsToGetLongestRunning.incrementAndGet();
+			synchronized(trackerSemaphore) {
+				if (length > 0) {
+					return new TrackerValue(head);
+				} else {
+					return null;
+				}
 			}
 		}
 	}
 	
 	public final TrackerValue[] getAllRunning() {
-		numCallsToGetAllRunning.incrementAndGet();
-		synchronized(trackerSemaphore) {
-			TrackerValue[] result = new TrackerValue[length];
-			int offset = 0;
-			Tracker current = head;
-			while (current != null) {
-				result[offset++] = new TrackerValue(current);
-				current = current.getNext();
+		if (disableThreadTracker) {
+			return new TrackerValue[0];
+		} else {
+			numCallsToGetAllRunning.incrementAndGet();
+			synchronized(trackerSemaphore) {
+				TrackerValue[] result = new TrackerValue[length];
+				int offset = 0;
+				Tracker current = head;
+				while (current != null) {
+					result[offset++] = new TrackerValue(current);
+					current = current.getNext();
+				}
+				return result;
 			}
-			return result;
 		}
 	}
 

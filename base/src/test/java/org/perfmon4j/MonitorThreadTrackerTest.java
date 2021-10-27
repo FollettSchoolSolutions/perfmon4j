@@ -121,6 +121,51 @@ public class MonitorThreadTrackerTest extends PerfMonTestCase {
     	assertEquals("Followed by element three", "three", trackerList.getAllRunning()[1].getThreadName());
     }
 
+    /**
+     * Normally you must include -Dorg.perfmon4j.MonitorThreadTracker.DisableThreadTracking=true"
+     * on your java command line if you want to disable tracking.  However since we are creating
+     * a new MonitorThreadTracker instance after the system property is set, we can get
+     * around that limitation for testing.
+     */
+    public void testDisableThreadTrackers() {
+    	System.setProperty("org.perfmon4j.MonitorThreadTracker.DisableThreadTracking", "true");
+    	try {
+        	Tracker one = newTracker("one");
+        	Tracker two = newTracker("two");
+        	
+    		MonitorThreadTracker trackerList = new MonitorThreadTracker(Mockito.mock(PerfMon.class));
+
+    		assertEquals("trackerList must maintain the number of active threads (length) even when disabled",
+    			0, trackerList.getLength());
+    		
+    		// Add Trackers 
+    		assertEquals("trackerList must maintain the number of active threads (length) even when disabled",
+        		1, trackerList.addTracker(one));
+    		assertEquals("trackerList must maintain the number of active threads (length) even when disabled",
+            	2, trackerList.addTracker(two));
+    		
+    		
+    		// When disabled we will not return active threads
+    		assertNull("Not tracking so we don't know what the longest running thread is", trackerList.getLongestRunning());
+    		assertEquals("Not tracking so thread list will be empty", 0, trackerList.getAllRunning().length);
+    		
+
+    		assertEquals("trackerList must maintain the number of active threads (length) even when disabled",
+        			2, trackerList.getLength());
+    		
+    		// Remove trackers
+    		assertEquals("trackerList must maintain the number of active threads (length) even when disabled",
+            		1, trackerList.removeTracker(two));
+    		assertEquals("trackerList must maintain the number of active threads (length) even when disabled",
+            		0, trackerList.removeTracker(one));
+    	} finally {
+    		System.clearProperty("org.perfmon4j.MonitorThreadTracker.DisableThreadTracking");
+    	}
+    	
+    	
+    }
+    
+    
     /*----------------------------------------------------------------------------*/
     public void testGetLongestRunning() throws Exception {
     	Tracker one = newTracker("one");
