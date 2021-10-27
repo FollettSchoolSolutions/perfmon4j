@@ -17,16 +17,15 @@ import org.perfmon4j.instrument.SnapShotProvider;
 public class MonitorThreadTracker {
 	public static final String REMOVED_THREAD = "REMOVED_THREAD";
 	public static final String DISABLE_KEY = MonitorThreadTracker.class.getName() + ".DisableThreadTracking";
+	public static final boolean GLOBAL_DISABLE_THREAD_TRACKER = Boolean.getBoolean(DISABLE_KEY);
 	
 	/**
-	 * This variable is declared at the instance level, but once a monitor is 
-	 * created it will not be disabled/enabled within the life of the JVM. 
-	 * This means if you want to disable thread tracking for your application you
+	 * To disable thread tracking for your application you
 	 * must include
 	 * -Dorg.perfmon4j.MonitorThreadTracker.DisableThreadTracking=true" on
 	 * the java command line.
 	 */
-	public final boolean disableThreadTracker = Boolean.getBoolean(DISABLE_KEY);
+	private final boolean disableThreadTracker;
 
 	private final Object trackerSemaphore = new Object() {}; 
 	
@@ -41,6 +40,18 @@ public class MonitorThreadTracker {
 	
 	MonitorThreadTracker(PerfMon monitor) {
 		this.monitor = monitor;
+		this.disableThreadTracker = GLOBAL_DISABLE_THREAD_TRACKER;
+	}
+	
+	/**
+	 * This constructor is ONLY declared for usage in Unit Tests.
+	 * 
+	 * @param monitor
+	 * @param disableThreadTracker
+	 */
+	MonitorThreadTracker(PerfMon monitor, boolean disableThreadTracker) {
+		this.monitor = monitor;
+		this.disableThreadTracker = disableThreadTracker;
 	}
 	
 	final int getLength() {
