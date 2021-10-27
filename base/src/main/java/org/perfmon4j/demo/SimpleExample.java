@@ -20,9 +20,12 @@
 */
 package org.perfmon4j.demo;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.MonitorThreadTracker;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTimer;
@@ -44,10 +47,13 @@ public class SimpleExample {
         PerfMonConfiguration config = new PerfMonConfiguration();
         config.defineMonitor("SimpleExample");
         config.defineAppender("10 Second Monitor", TextAppender.class.getName(), "10 Seconds");
-        config.attachAppenderToMonitor("SimpleExample", "10 Second Monitor", "/**");
-        config.defineSnapShotMonitor("JVM Memory", JVMMemory.class.getName());
-        config.attachAppenderToSnapShotMonitor("JVM Memory", "10 Second Monitor");
+        config.attachAppenderToMonitor("SimpleExample", "10 Second Monitor", "/*");
+//        config.defineSnapShotMonitor("JVM Memory", JVMMemory.class.getName());
+//        config.attachAppenderToSnapShotMonitor("JVM Memory", "10 Second Monitor");
         
+      config.defineSnapShotMonitor("MonitorThreadTracker", MonitorThreadTracker.class.getName());
+      config.attachAppenderToSnapShotMonitor("MonitorThreadTracker", "10 Second Monitor");
+
         
         PerfMon.configure(config);
        
@@ -66,10 +72,15 @@ public class SimpleExample {
         }
     }
     
+   
+    
     private static class RunnerImpl implements Runnable {
+    	private static final AtomicLong counter = new AtomicLong(0);
         private void sleep() {
             try {
-                Thread.sleep((long)(Math.random() * 10000));
+            	// Make every 100th thread take longer
+            	long outlierThreadMultipler = (counter.incrementAndGet() % 100 == 0) ? 10L : 1L;
+                Thread.sleep((long)(Math.random() * 10000 * outlierThreadMultipler) );
             } catch (InterruptedException ie) { 
                 // Nothing todo
             }
