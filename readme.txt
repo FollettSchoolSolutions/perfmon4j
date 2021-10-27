@@ -18,6 +18,20 @@ McHenry, IL 60050
 Changes
 
 ** 1.6.0 (Next Version) - TBD
+- Now Perfmon4j Interval Monitors can track the duration of threads that 
+  have not yet completed.  This is a low overhead, in terms of both
+  performance and memory.  This initial implementation is exposed through
+  two additional attributes on each interval monitor.  The first is named
+  “OldestActiveThread”, this is the name of the longest running thread that
+  has yet to finish. The second is “OldestActiveThreadDuration” this is the
+  number of milliseconds that the Oldest Active Thread has been active within
+  the monitor.
+
+  If you suspect this implementation is creating a performance or memory drain
+  on your application you can disable it by including 
+  “-Dorg.perfmon4j.MonitorThreadTracker.DisableThreadTracking=true"
+  when launching your application.
+
 - Fixed a minor defect that could prevent the Log4jLogger from 
   being initialized.
 
