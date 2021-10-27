@@ -1,5 +1,11 @@
 package org.perfmon4j;
 
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.perfmon4j.instrument.SnapShotCounter;
+import org.perfmon4j.instrument.SnapShotCounter.Display;
+import org.perfmon4j.instrument.SnapShotProvider;
+
 /**
  * This class is used to track instances of all active
  * threads within each PerfMon monitor.
@@ -7,6 +13,7 @@ package org.perfmon4j;
  * @author ddeucher
  *
  */
+@SnapShotProvider(type = SnapShotProvider.Type.STATIC)
 public class MonitorThreadTracker {
 	public static final String REMOVED_THREAD = "REMOVED_THREAD";
 	
@@ -16,12 +23,23 @@ public class MonitorThreadTracker {
 	private Tracker head = null;
 	private Tracker tail = null;
 	private int length = 0;
+	private static final AtomicLong numTrackersAdded = new AtomicLong(0);
+	private static final AtomicLong numTrackersRemoved = new AtomicLong(0);
+	private static final AtomicLong numCallsToGetLongestRunning = new AtomicLong(0);
+	private static final AtomicLong numCallsToGetAllRunning = new AtomicLong(0);
 	
 	MonitorThreadTracker(PerfMon monitor) {
 		this.monitor = monitor;
 	}
 	
-	final void addTracker(Tracker tracker) {
+	final int getLength() {
+		synchronized(trackerSemaphore) {
+			return length;
+		}
+	}
+	
+	final int addTracker(Tracker tracker) {
+		numTrackersAdded.incrementAndGet();
 		synchronized(trackerSemaphore) {
             if (head == null) {
             	// We know the "list" is empty;
@@ -37,10 +55,12 @@ public class MonitorThreadTracker {
             	tail = tracker;
                 length++;
             }
+    		return length;
 		}
 	}
 	
-	final void removeTracker(Tracker tracker) {
+	final int removeTracker(Tracker tracker) {
+		numTrackersRemoved.incrementAndGet();
 		synchronized(trackerSemaphore) {
             if (tracker == head && tracker == tail) {
             	head = tail = null;
@@ -63,11 +83,33 @@ public class MonitorThreadTracker {
             	beforeUs.setNext(afterUs);
             	afterUs.setPrevious(beforeUs);
             	length--;
-            }			
+            }
+            return length;
 		}
 	}
 	
+	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_MIN)
+	public static long getNumTrackersAdded() {
+		return numTrackersAdded.get();
+	}
+	
+	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_MIN)
+	public static long getNumTrackersRemoved() {
+		return numTrackersRemoved.get();
+	}
+
+	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_SECOND)
+	public static long getNumCallsToGetLongestRunning() {
+		return numCallsToGetLongestRunning.get();
+	}
+
+	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_SECOND)
+	public static long getNumCallsToGetAllRunning() {
+		return numCallsToGetAllRunning.get();
+	}
+	
 	public final TrackerValue getLongestRunning() {
+		numCallsToGetLongestRunning.incrementAndGet();
 		synchronized(trackerSemaphore) {
 			if (length > 0) {
 				return new TrackerValue(head);
@@ -78,6 +120,7 @@ public class MonitorThreadTracker {
 	}
 	
 	public final TrackerValue[] getAllRunning() {
+		numCallsToGetAllRunning.incrementAndGet();
 		synchronized(trackerSemaphore) {
 			TrackerValue[] result = new TrackerValue[length];
 			int offset = 0;
@@ -94,7 +137,7 @@ public class MonitorThreadTracker {
 		return monitor;
 	}
 
-	public static interface Tracker {
+	static interface Tracker {
 		public Thread getThread();  
 		
 		public void setPrevious(Tracker previous);
