@@ -41,7 +41,6 @@ public class MonitorThreadTrackerTest extends PerfMonTestCase {
 /*----------------------------------------------------------------------------*/
     public void setUp() throws Exception {
     	super.setUp();
-    	
     	trackerList = new MonitorThreadTracker(Mockito.mock(PerfMon.class));
     }
     
@@ -121,6 +120,33 @@ public class MonitorThreadTrackerTest extends PerfMonTestCase {
     	assertEquals("Followed by element three", "three", trackerList.getAllRunning()[1].getThreadName());
     }
 
+    /**
+     * Perfmon4j has long had an issue where if a monitor was enabled, after threads were already
+     * in flight, the number of active threads could go negative.  
+     * This should not happen anymore when Monitor Thread tracking is enabled.
+     * @throws Exception
+     */
+    public void testUnbalancedRemove() throws Exception {
+
+    	// For this test we will assume that thread one, was started 
+    	// before the monitor was enabled.
+    	Tracker before = newTracker("addedBEFOREMonitorWasActive");
+    	
+    	
+    	Tracker after = newTracker("addedAFTERMonitorWasActive");
+    	trackerList.addTracker(after);
+    	
+    	assertEquals("We have two threads, but we are only tracking one", 1, trackerList.getAllRunning().length);
+   	
+    	// Now remove the thread that started before we started tracking
+    	assertEquals("We weren't tracking this thread, so it should not impact number running", 1
+    		, trackerList.removeTracker(before));
+    	
+    	assertEquals("Remove the thread that we just added after monitor was active", 0
+        		, trackerList.removeTracker(after));
+    }
+    
+    
     /**
      * Normally you must include -Dorg.perfmon4j.MonitorThreadTracker.DisableThreadTracking=true"
      * on your java command line if you want to disable tracking.  However since we are creating

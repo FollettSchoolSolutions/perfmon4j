@@ -66,6 +66,7 @@ public class MonitorThreadTracker {
 	            	// and we want to append to the end.
 	            	tail.setNext(tracker);
 	            	tracker.setPrevious(tail);
+	            	tracker.setNext(null);
 	            	tail = tracker;
 	                length++;
 	            }
@@ -97,11 +98,21 @@ public class MonitorThreadTracker {
 	            	// We know we have at least one element before and after us.
 	            	Tracker beforeUs = tracker.getPrevious();
 	            	Tracker afterUs = tracker.getNext();
-	            	
-	            	beforeUs.setNext(afterUs);
-	            	afterUs.setPrevious(beforeUs);
-	            	length--;
+
+	            	// Make sure that this tracker was captured,
+	            	// It's associated thread might have been
+	            	// started before we were monitoring. 
+	            	// This should only happen if a PerfMon monitor is 
+	            	// enabled after system has started.
+	            	if (beforeUs != null && afterUs != null) {
+		            	beforeUs.setNext(afterUs);
+		            	afterUs.setPrevious(beforeUs);
+		            	length--;
+	            	}
 	            }
+	            tracker.setNext(null);
+	            tracker.setPrevious(null);
+	            
 	            return length;
 			}
 		}
