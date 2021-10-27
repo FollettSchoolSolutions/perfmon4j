@@ -815,6 +815,10 @@ public class IntervalData implements PerfMonObservableData {
 		result.add(PerfMonObservableDatum.newDatum("maxActiveThreadCount", getMaxActiveThreadCount()));
 		result.add(PerfMonObservableDatum.newDatum("throughputPerSecond", getThroughputPerSecond()));
 		
+		result.add(PerfMonObservableDatum.newDatum("oldestActiveThread", getOldestActiveThread()));
+		result.add(PerfMonObservableDatum.newDatum("oldestActiveThreadDuration", getOldestActiveThreadDuration()));
+		
+		
 		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("maxActiveThreadCountSet", getTimeMaxActiveThreadCountSet()));
 		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("maxDurationSet", getTimeMaxDurationSet()));
 		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("minDurationSet", getTimeMinDurationSet()));

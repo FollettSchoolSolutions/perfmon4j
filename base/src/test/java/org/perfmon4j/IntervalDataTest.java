@@ -135,6 +135,8 @@ public class IntervalDataTest extends PerfMonTestCase {
        	 Mockito.when(data.getSQLStdDeviation()).thenReturn(Double.valueOf(14));
        	 Mockito.when(data.getMaxActiveThreadCount()).thenReturn(Integer.valueOf(15));
        	 Mockito.when(data.getThroughputPerSecond()).thenReturn(Double.valueOf(16));
+       	 Mockito.when(data.getOldestActiveThread()).thenReturn("MyThread");
+       	 Mockito.when(data.getOldestActiveThreadDuration()).thenReturn(Long.valueOf(17));
        	 
        	 Set<PerfMonObservableDatum<?>> observations = data.getObservations();
        	 assertNotNull(observations);
@@ -156,6 +158,8 @@ public class IntervalDataTest extends PerfMonTestCase {
        	 validateObservation(observations, "sqlStdDeviation", "14.000");
        	 validateObservation(observations, "maxActiveThreadCount", "15");
        	 validateObservation(observations, "throughputPerSecond", "16.000");
+       	 validateObservation(observations, "oldestActiveThread", "MyThread");
+       	 validateObservation(observations, "oldestActiveThreadDuration", "17");
      }
 
      @SuppressWarnings("boxing")
