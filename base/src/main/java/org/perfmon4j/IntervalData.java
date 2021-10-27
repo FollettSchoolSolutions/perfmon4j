@@ -73,9 +73,6 @@ public class IntervalData implements PerfMonObservableData {
     private long totalSQLDuration = 0;
     private long sumOfSQLSquares = 0;
     
-    private String oldestThread = "";
-    private long oldestThreadDuration = 0L;
-    
     private long lifetimeMaxSQLDuration = 0;
     private long timeLifetimeMaxSQLDurationSet = PerfMon.NOT_SET;
 
@@ -102,6 +99,17 @@ public class IntervalData implements PerfMonObservableData {
     
     private MaxThroughput lifetimeMaxThroughputPerMinute = null;
     private boolean haveLifetimeStats = false;
+    
+    private String oldestActiveThread = "N/A";
+    private long oldestActiveThreadDuration = 0L;
+
+    public String getOldestActiveThread() {
+    	return oldestActiveThread;
+    }
+    
+    public long getOldestActiveThreadDuration() {
+    	return oldestActiveThreadDuration;
+    }
     
     
     private long getLifetimeMaxDuration() {
@@ -332,20 +340,13 @@ public class IntervalData implements PerfMonObservableData {
     }
     
     void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared) {
-    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, false, null, 0L);
-    }
-
-    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, String oldestThread, long oldestDuration) {
-    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, false, oldestThread, oldestDuration);
-    }
-    
-    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, boolean forceSQLTime) {
-    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, forceSQLTime, null, 0L);
+    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, false);
     }
     
 /*----------------------------------------------------------------------------*/    
-    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, boolean forceSQLTime, String oldestThread, long oldestDuration) {
+    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, boolean forceSQLTime) {
         totalCompletions++;
+        
         if (forceSQLTime || SQLTime.isEnabled()) {
             if (sqlDuration >= maxSQLDuration) {
                 maxSQLDuration = sqlDuration;
@@ -392,14 +393,16 @@ public class IntervalData implements PerfMonObservableData {
             lifetimeTotalDuration += duration;
             lifetimeSumOfSquares += durationSquared;
         }
-        
-        this.oldestThread = oldestThread;
-        this.oldestThreadDuration = oldestDuration;
     }
     
 /*----------------------------------------------------------------------------*/    
     public void setTimeStop(long timeStop) {
         this.timeStop = timeStop;
+        MonitorThreadTracker.TrackerValue oldest = owner.getActiveThreadList().getLongestRunning();
+        if (oldest != null) {
+        	oldestActiveThread = oldest.getThreadName();
+        	oldestActiveThreadDuration = Math.max(0, timeStop - oldest.getStartTime());
+        }
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -583,8 +586,8 @@ public class IntervalData implements PerfMonObservableData {
             formatTimeDataSet(timeMaxDurationSet),
             new Long(getTotalHits()), 
             new Long(getTotalCompletions()),
-            oldestThread,
-            Long.valueOf(oldestThreadDuration),
+            oldestActiveThread,
+            Long.valueOf(oldestActiveThreadDuration),
             sqlDurationInfo
         );
         if (haveLifetimeStats) {
