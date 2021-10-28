@@ -1,13 +1,30 @@
 package org.perfmon4j;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotCounter.Display;
 import org.perfmon4j.instrument.SnapShotProvider;
 
 @SnapShotProvider(type = SnapShotProvider.Type.STATIC)
-public class ExceptionTracker {
+public class ExceptionTracker  {
+	public static final String BRIDGE_CLASS_NAME = "generated.perfmon4j.ExceptionBridge";
+	
+	public static void registerWithBridge() throws Exception {
+		Class<?> clazz = ExceptionTracker.class.getClassLoader().loadClass(BRIDGE_CLASS_NAME);
+		Method method = clazz.getDeclaredMethod("registerConsumer" , new Class[] {Consumer.class});
+		method.invoke(null, new Object[] {new BridgeConsumer()});
+	}
+	
+	public static final class BridgeConsumer implements Consumer {
+		@Override
+		public void accept(Object exception) {
+			ExceptionTracker.notifyInExceptionConstructor(exception);
+		}
+	}
+	
 	private static final AtomicLong exceptionCount = new AtomicLong(0);
 	private static final AtomicLong sqlExceptionCount = new AtomicLong(0);
 	
@@ -41,7 +58,8 @@ public class ExceptionTracker {
 	 * constructor.
 	 * @param exception
 	 */
-	public static void notifyInExceptionConstructor(Exception exception) {
+	public static void notifyInExceptionConstructor(Object exception) {
+		System.out.println("*** FINALLY MADE IT INTO NOTIFY **");
 		threadBasedCounter.get().increment(exception);
 	}
 	
@@ -77,4 +95,5 @@ public class ExceptionTracker {
 			return sqlExceptionCount.get();
 		}
 	}
+
 }

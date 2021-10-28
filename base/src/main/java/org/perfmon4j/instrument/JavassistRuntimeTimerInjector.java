@@ -33,6 +33,7 @@ import java.util.Set;
 
 import javax.management.ObjectName;
 
+import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.hystrix.CommandStatsProvider;
 import org.perfmon4j.hystrix.ThreadPoolStatsProvider;
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
@@ -150,6 +151,136 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	CtMethod gcMethod = clazz.getDeclaredMethod("gc");
     	gcMethod.insertBefore("if (1==1) {return;}\r\n");
     	
+    	return clazz.toBytecode();
+    }
+
+    /*
+    private void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+        System.out.println("********** loader=" + loader);
+        ClassPool classPool = new ClassPool(false);
+        classPool.appendClassPath(new LoaderClassPath(loader));
+        
+        CtClass bridgeClass = classPool.makeClass(ExceptionTracker.BRIDGE_CLASS_NAME);
+        bridgeClass.addField(CtField.make("private static Runnable callback = null;", bridgeClass));
+        
+     
+        
+       final String dedupField =
+    	 "private static final java.lang.ThreadLocal dedupNestedConstructors = new java.lang.ThreadLocal() {\r\n" +
+    	 "\tprotected Object initialValue() {\r\n" +
+    	 "\t\treturn new java.lang.ref.WeakReference(null);\r\n" +
+    	 "\t}\r\n" +
+    	 "};";      
+     System.out.println(dedupField);
+
+     
+     
+//        final String dedupField =
+//    		  "private static final ThreadLocal dedupNestedConstructors;\r\n";
+//        bridgeClass.addField(CtField.make(dedupField, bridgeClass));	
+        
+        
+//        final String staticInitializerBody = 
+//           	 "{" +
+//           	 "\t" + ExceptionTracker.BRIDGE_CLASS_NAME + ".dedupNestedConstructors = new ThreadLocal() {\r\n" +
+//           	 "\tprotected Object initialValue() {\r\n" +
+//           	 "\t\treturn new java.lang.ref.WeakReference(null);\r\n" +
+//           	 "\t}\r\n" +
+//           	 "}";      
+//System.out.println(staticInitializerBody);
+//        
+//        
+//        CtConstructor staticInitializer = new CtConstructor(new CtClass[] {}, bridgeClass);
+//        staticInitializer.setModifiers(Modifier.STATIC);
+//        staticInitializer.setBody(staticInitializerBody);
+//        bridgeClass.addConstructor(staticInitializer);
+        
+//        String incrementMethodSrc = 
+//        		"public static void incrementExceptionCreate(Object exception) {System.out.println(\"InCreate\");}\r\n";
+        String incrementMethodSrc = 
+        		"public static void incrementExceptionCreate(Object exception) {org.perfmon4j.ExceptionTracker.notifyInExceptionConstructor(exception);}\r\n";
+        bridgeClass.addMethod(CtMethod.make(incrementMethodSrc, bridgeClass));
+        bridgeClass.toClass(loader, protectionDomain);
+        
+        bridgeClass.detach();
+       
+        Class<?> realBridgeClass = loader.loadClass(ExceptionTracker.BRIDGE_CLASS_NAME);
+         
+        System.out.println("********** Exception.class.getClassLoader=" + Exception.class.getClassLoader());
+        System.out.println("********** realBridgeClass=" + realBridgeClass);
+    
+        Object realBridgeInstance = realBridgeClass.newInstance(); 
+        
+        System.out.println("********** realBridgeInstance=" + realBridgeInstance);
+        System.out.println("********** realBridgeInstance.getClass().getClassLoader()" + realBridgeInstance.getClass().getClassLoader());
+    }
+*/    
+
+    private void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+        ClassPool classPool = new ClassPool(false);
+        classPool.appendClassPath(new LoaderClassPath(loader));
+        
+        CtClass bridgeClass = classPool.makeClass(ExceptionTracker.BRIDGE_CLASS_NAME);
+        bridgeClass.addField(CtField.make("private static java.util.function.Consumer consumer = null;", bridgeClass));
+     
+        String incrementMethodSrc = 
+        		"public static void notifyExceptionCreate(Object exception) {if (consumer != null) {consumer.accept(exception);}}\r\n";
+        bridgeClass.addMethod(CtMethod.make(incrementMethodSrc, bridgeClass));
+        
+        String registerMethodSrc = 
+        		"	public static void registerConsumer(java.util.function.Consumer newConsumer) {\r\n"
+        		+ "		consumer = newConsumer;\r\n"
+        		+ "	}\r\n";
+        bridgeClass.addMethod(CtMethod.make(registerMethodSrc, bridgeClass));
+        
+        bridgeClass.toClass(loader, protectionDomain);
+        bridgeClass.detach();
+       
+        Class<?> realBridgeClass = loader.loadClass(ExceptionTracker.BRIDGE_CLASS_NAME);
+         
+        System.out.println("********** Exception.class.getClassLoader=" + Exception.class.getClassLoader());
+        System.out.println("********** realBridgeClass=" + realBridgeClass);
+    
+        Object realBridgeInstance = realBridgeClass.newInstance(); 
+        
+        System.out.println("********** realBridgeInstance=" + realBridgeInstance);
+        System.out.println("********** realBridgeInstance.getClass().getClassLoader()" + realBridgeInstance.getClass().getClassLoader());
+    }
+    
+    
+    public byte[] instrumentExceptionClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader().getParent();
+        } 
+        
+        createExceptionTrackerBridgeClass(loader, protectionDomain);
+        
+        Class<?> realBridgeClass = loader.loadClass(ExceptionTracker.BRIDGE_CLASS_NAME);
+        
+        System.out.println("********** IN INSTRUMENT realBridgeClass=" + realBridgeClass.newInstance());
+        
+        
+        ClassPool classPool = new ClassPool(false);
+        classPool.appendClassPath(new LoaderClassPath(loader));
+        
+        ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+        CtClass clazz = classPool.makeClass(inStream);
+        if (clazz.isFrozen()) {
+            clazz.defrost();
+        }    	
+       
+        
+        final String methodBody =
+        	"\r\n{\r\n" +
+        	"\tClass clazzBridge = ClassLoader.getSystemClassLoader().loadClass(\"" + ExceptionTracker.BRIDGE_CLASS_NAME + "\");\r\n" +
+        	"\tjava.lang.reflect.Method m = clazzBridge.getDeclaredMethod(\"notifyExceptionCreate\", new Class[] {Object.class});\r\n" +
+        	"\tm.invoke(null, new Object[] {this});\r\n" +
+    		"}\r\n";
+        
+        for (CtConstructor constructor : clazz.getDeclaredConstructors()) {
+        	constructor.insertAfter(methodBody);
+        }
+        
     	return clazz.toBytecode();
     }
     

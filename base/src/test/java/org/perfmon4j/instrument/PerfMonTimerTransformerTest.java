@@ -677,6 +677,32 @@ System.out.println(output);
     			output.contains("Adding extreme monitor: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DoSomethingElseTest.doSomethingWithVarArgs"));
     }
     
+    public static class ExceptionTrackerTest implements Runnable {
+
+		@Override
+		public void run() {
+			
+			try {
+				Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass("generated.perfmon4j.ExceptionBridge");
+				System.out.println("Loaded class: " + clazz);
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+			
+			
+//			System.out.println("Before count: " + ExceptionTracker.getExceptionCount());
+			Exception ex = new Exception();
+//			System.out.println("After count: " + ExceptionTracker.getExceptionCount());
+			System.out.println("Hello world");
+		}
+	}    
+
+    public void testExceptionTrackerInstallation() throws Exception {
+    	String output = LaunchRunnableInVM.run(ExceptionTrackerTest.class, "-vtrue,-eXorg.perfmon4j", null, perfmon4jJar);
+System.out.println(output);    	
+    }
+    
+    
 	public final static class ValveClass {
 	}
 	

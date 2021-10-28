@@ -32,6 +32,7 @@ import java.io.OutputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -47,6 +48,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.perfmon4j.BootConfiguration;
+import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
 import org.perfmon4j.XMLBootParser;
@@ -482,6 +484,25 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         }
     }
 
+    private static class ExceptionTrackerInstaller implements ClassFileTransformer {
+        public byte[] transform(ClassLoader loader, String className, 
+                Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
+                byte[] classfileBuffer) {
+            byte[] result = null;
+            
+            if ("java/lang/Exception".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.instrumentExceptionClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Perfmon4j added ExceptionTracker");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to insert ExceptionTracker", ex);
+	            }
+            }
+			
+			return result;
+		}
+    }
+
     private static class SystemGCDisabler implements ClassFileTransformer {
         public byte[] transform(ClassLoader loader, String className, 
                 Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
@@ -560,7 +581,27 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			return result;
 		}
     }
-    
+
+    private static void redefineClass(Instrumentation inst, Class<?> clazz) throws IOException, ClassNotFoundException, UnmodifiableClassException {
+        ClassLoader loader = clazz.getClassLoader();
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader();
+        }
+        String resourceName =  clazz.getName().replace('.', '/') + ".class";
+        InputStream stream = loader.getResourceAsStream(resourceName);
+        if (stream == null) {
+            logger.logError("Unable to load bytes for resourcename: " + resourceName 
+                + " from loader: " + loader.toString());
+        } else {
+            ByteArrayOutputStream o = new ByteArrayOutputStream();
+            int c = 0;
+            while ((c = stream.read()) != -1) {
+                o.write(c);
+            }
+            ClassDefinition def = new ClassDefinition(clazz, o.toByteArray()); 
+            inst.redefineClasses(new ClassDefinition[]{def});
+        }
+    }
     
     private static void addPerfmon4jToJBoss7SystemPackageList() {
     	// For the JBoss 7 package list, we must set include org.perfmon4j in the
@@ -586,8 +627,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	}
     }
     	
-    private static void doPremain(String packageName,  Instrumentation inst)  {    	
+    private static void doPremain(String packageName,  Instrumentation inst)  {
     	addPerfmon4jToJBoss7SystemPackageList();
+    	
+    
+    	
         PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
 
         LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled() || t.params.isVerboseInstrumentationEnabled());
@@ -692,25 +736,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	}
         	if (disabler != null) {
         		try {
-	        		Class<?> clazz = System.class;       		
-	                ClassLoader loader = clazz.getClassLoader();
-	                if (loader == null) {
-	                    loader = ClassLoader.getSystemClassLoader();
-	                }
-	                String resourceName =  clazz.getName().replace('.', '/') + ".class";
-	                InputStream stream = loader.getResourceAsStream(resourceName);
-	                if (stream == null) {
-	                    logger.logError("Unable to load bytes for resourcename: " + resourceName 
-	                        + " from loader: " + loader.toString());
-	                } else {
-	                    ByteArrayOutputStream o = new ByteArrayOutputStream();
-	                    int c = 0;
-	                    while ((c = stream.read()) != -1) {
-	                        o.write(c);
-	                    }
-	                    ClassDefinition def = new ClassDefinition(clazz, o.toByteArray()); 
-	                    inst.redefineClasses(new ClassDefinition[]{def});
-	                }
+        			redefineClass(inst, System.class);
         		} catch (Exception ex) {
         			logger.logError("Perfmon4j failed disabling System.gc()", ex);
         		}
@@ -789,6 +815,20 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         
         if (disabler != null) {
         	inst.removeTransformer(disabler);
+        }
+
+        if (inst.isRedefineClassesSupported()) {
+        	ExceptionTrackerInstaller installer = new ExceptionTrackerInstaller();
+        	try {
+        		inst.addTransformer(installer);
+        		redefineClass(inst, Exception.class);
+                ExceptionTracker.registerWithBridge();
+        		logger.logInfo("Perfmon4j installed Excption tracker");
+        	} catch (Exception ex) {
+        		logger.logError("Perfmon4j was unable to install Exception tracker");
+        	} finally {
+        		inst.removeTransformer(installer);
+        	}
         }
         
         String xmlFileToConfig = t.params.getXmlFileToConfig();
