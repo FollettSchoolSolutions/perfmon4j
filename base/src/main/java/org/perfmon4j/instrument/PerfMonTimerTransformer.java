@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.lang.management.ManagementFactory;
@@ -487,15 +488,17 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     private static class ExceptionTrackerInstaller implements ClassFileTransformer {
         public byte[] transform(ClassLoader loader, String className, 
                 Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
-                byte[] classfileBuffer) {
+                byte[] classfileBuffer) throws IllegalClassFormatException {
             byte[] result = null;
             
             if ("java/lang/Exception".equals(className)) {
 	            try {
 		            result = runtimeTimerInjector.instrumentExceptionClass(classfileBuffer, loader, protectionDomain);
-		            logger.logInfo("Perfmon4j added ExceptionTracker");
 	            } catch (Exception ex) {
-	            	logger.logError("Unable to insert ExceptionTracker", ex);
+//	            	logger.logError("Perfmon4j was unable to add ExceptionTracker", ex);
+	            	IllegalClassFormatException iex = new IllegalClassFormatException("Perfmon4j was unable to add ExceptionTracker");
+	            	iex.initCause(ex);
+	            	throw iex;
 	            }
             }
 			
@@ -817,18 +820,24 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	inst.removeTransformer(disabler);
         }
 
-        if (inst.isRedefineClassesSupported()) {
-        	ExceptionTrackerInstaller installer = new ExceptionTrackerInstaller();
-        	try {
-        		inst.addTransformer(installer);
-        		redefineClass(inst, Exception.class);
-                ExceptionTracker.registerWithBridge();
-        		logger.logInfo("Perfmon4j installed Excption tracker");
-        	} catch (Exception ex) {
-        		logger.logError("Perfmon4j was unable to install Exception tracker");
-        	} finally {
-        		inst.removeTransformer(installer);
-        	}
+        if (t.params.isExceptionTrackerEnabled()) {
+	        if (inst.isRedefineClassesSupported()) {
+	        	ExceptionTrackerInstaller installer = new ExceptionTrackerInstaller();
+	        	try {
+	        		inst.addTransformer(installer);
+	        		redefineClass(inst, Exception.class);
+	                ExceptionTracker.registerWithBridge();
+	        		logger.logInfo("Perfmon4j installed ExceptionTracker");
+	        	} catch (Exception ex) {
+	        		logger.logError("Perfmon4j was unable to install ExceptionTracker", ex);
+	        	} finally {
+	        		inst.removeTransformer(installer);
+	        	}
+	        } else {
+	        	logger.logError("Perfmon4j is unable to load ExceptionTracker. RedefineClasses is not supported");
+	        }
+        } else {
+           	logger.logInfo("Perfmon4j ExceptionTracker will not be installed. Add -eExceptionTracker to javaAgent parameters to enable.");
         }
         
         String xmlFileToConfig = t.params.getXmlFileToConfig();
