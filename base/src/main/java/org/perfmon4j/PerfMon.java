@@ -174,6 +174,9 @@ public class PerfMon {
     private long sumOfSQLSquares = 0;
     /** SQL/JDBC profiling END **/
     
+    private long totalExceptions = 0;
+    private long totalSQLExceptions = 0;
+    
     private long maxDuration = 0;
     private long timeMaxDurationSet = NOT_SET;
     
@@ -496,10 +499,13 @@ public class PerfMon {
                 	(active || externalElement) && 
                 	!abort;
                 final boolean sqlTimeEnabled = monitorEvent && SQLTime.isEnabled();
+                final boolean exceptionCountEnabled = monitorEvent && ExceptionTracker.isEnabled();
                 	
                 if (monitorEvent) {
                 	long sqlDuration = 0;
                 	long sqlDurationSquared = 0;
+                	long exceptionCount = 0;
+                	long sqlExceptionCount = 0;;
                     long duration = systemTime - eventStartTime;
                     if (duration < 0) {
                     	/**
@@ -537,7 +543,10 @@ public class PerfMon {
                             }                    	
                         	/** We have SQL logging enabled... Monitor the SQLDurations. **/
                         }
-                    	
+                    	if (exceptionCountEnabled) {
+                    		exceptionCount = ExceptionTracker.getExceptionCountForThread() - count.getStartExceptionCount();
+                    		sqlExceptionCount = ExceptionTracker.getSQLExceptionCountForThread() - count.getStartSQLExceptionCount();
+                    	}
                     	totalCompletions++;
                         
                         totalDuration += duration;
@@ -553,14 +562,14 @@ public class PerfMon {
                         for (int i = 0; i < dataArray.length; i++) {
                             PushAppenderDataTask data = dataArray[i];
                             if (data != null) {
-                                data.perfMonData.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+                                data.perfMonData.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, exceptionCount, sqlExceptionCount);
                             }
                         }
                     	if (externalElement) {
                             for (int i = 0; i < externalElementArray.length; i++) {
                                 IntervalData data = externalElementArray[i];
                                 if (data != null) {
-                                    data.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared);
+                                    data.stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, exceptionCount, sqlExceptionCount);
                                 }
                             }
                     	}
@@ -656,6 +665,8 @@ public class PerfMon {
         private int refCount = 0;
         private long startTime;
         private long sqlStartMillis = 0;
+        private long startExceptionCount = 0;
+        private long startSQLExceptionCount = 0;
         boolean hasInternalThreadTrace = false;
         boolean hasExternalThreadTrace = false;
 		private ReferenceCount previous = null;
@@ -672,6 +683,8 @@ public class PerfMon {
             if (refCount == 0) {
                 this.startTime = startTime;
                 this.sqlStartMillis = SQLTime.getSQLTime(); // Will always be 0 of SQLtime is NOT enabled.
+                this.startExceptionCount = ExceptionTracker.getExceptionCountForThread();
+                this.startSQLExceptionCount = ExceptionTracker.getSQLExceptionCountForThread();
             }
             return ++refCount;
         }
@@ -721,7 +734,14 @@ public class PerfMon {
 		public long getStartTime() {
 			return startTime;
 		}
-       
+
+		public long getStartExceptionCount() {
+			return startExceptionCount;
+		}
+
+		public long getStartSQLExceptionCount() {
+			return startSQLExceptionCount;
+		}
     }
 
 /*----------------------------------------------------------------------------*/    
@@ -1329,6 +1349,8 @@ public class PerfMon {
 	            sumOfSquares = 0;
 	            maxActiveThreadCount = 0;
 	            maxThroughputPerMinute = null;
+	            totalExceptions = 0;
+	            totalSQLExceptions = 0;
 	        } finally {
 	        	startStopWriteLock.unlock();
 	        }
