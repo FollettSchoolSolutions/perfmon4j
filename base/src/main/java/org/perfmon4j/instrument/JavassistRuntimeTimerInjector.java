@@ -154,68 +154,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	return clazz.toBytecode();
     }
 
-    /*
-    private void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
-        System.out.println("********** loader=" + loader);
-        ClassPool classPool = new ClassPool(false);
-        classPool.appendClassPath(new LoaderClassPath(loader));
-        
-        CtClass bridgeClass = classPool.makeClass(ExceptionTracker.BRIDGE_CLASS_NAME);
-        bridgeClass.addField(CtField.make("private static Runnable callback = null;", bridgeClass));
-        
-     
-        
-       final String dedupField =
-    	 "private static final java.lang.ThreadLocal dedupNestedConstructors = new java.lang.ThreadLocal() {\r\n" +
-    	 "\tprotected Object initialValue() {\r\n" +
-    	 "\t\treturn new java.lang.ref.WeakReference(null);\r\n" +
-    	 "\t}\r\n" +
-    	 "};";      
-     System.out.println(dedupField);
-
-     
-     
-//        final String dedupField =
-//    		  "private static final ThreadLocal dedupNestedConstructors;\r\n";
-//        bridgeClass.addField(CtField.make(dedupField, bridgeClass));	
-        
-        
-//        final String staticInitializerBody = 
-//           	 "{" +
-//           	 "\t" + ExceptionTracker.BRIDGE_CLASS_NAME + ".dedupNestedConstructors = new ThreadLocal() {\r\n" +
-//           	 "\tprotected Object initialValue() {\r\n" +
-//           	 "\t\treturn new java.lang.ref.WeakReference(null);\r\n" +
-//           	 "\t}\r\n" +
-//           	 "}";      
-//System.out.println(staticInitializerBody);
-//        
-//        
-//        CtConstructor staticInitializer = new CtConstructor(new CtClass[] {}, bridgeClass);
-//        staticInitializer.setModifiers(Modifier.STATIC);
-//        staticInitializer.setBody(staticInitializerBody);
-//        bridgeClass.addConstructor(staticInitializer);
-        
-//        String incrementMethodSrc = 
-//        		"public static void incrementExceptionCreate(Object exception) {System.out.println(\"InCreate\");}\r\n";
-        String incrementMethodSrc = 
-        		"public static void incrementExceptionCreate(Object exception) {org.perfmon4j.ExceptionTracker.notifyInExceptionConstructor(exception);}\r\n";
-        bridgeClass.addMethod(CtMethod.make(incrementMethodSrc, bridgeClass));
-        bridgeClass.toClass(loader, protectionDomain);
-        
-        bridgeClass.detach();
-       
-        Class<?> realBridgeClass = loader.loadClass(ExceptionTracker.BRIDGE_CLASS_NAME);
-         
-        System.out.println("********** Exception.class.getClassLoader=" + Exception.class.getClassLoader());
-        System.out.println("********** realBridgeClass=" + realBridgeClass);
-    
-        Object realBridgeInstance = realBridgeClass.newInstance(); 
-        
-        System.out.println("********** realBridgeInstance=" + realBridgeInstance);
-        System.out.println("********** realBridgeInstance.getClass().getClassLoader()" + realBridgeInstance.getClass().getClassLoader());
-    }
-*/    
-
     private void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
         ClassPool classPool = new ClassPool(false);
         classPool.appendClassPath(new LoaderClassPath(loader));
@@ -235,16 +173,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         
         bridgeClass.toClass(loader, protectionDomain);
         bridgeClass.detach();
-       
-        Class<?> realBridgeClass = loader.loadClass(ExceptionTracker.BRIDGE_CLASS_NAME);
-         
-        System.out.println("********** Exception.class.getClassLoader=" + Exception.class.getClassLoader());
-        System.out.println("********** realBridgeClass=" + realBridgeClass);
-    
-        Object realBridgeInstance = realBridgeClass.newInstance(); 
-        
-        System.out.println("********** realBridgeInstance=" + realBridgeInstance);
-        System.out.println("********** realBridgeInstance.getClass().getClassLoader()" + realBridgeInstance.getClass().getClassLoader());
     }
     
     
@@ -255,11 +183,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         
         createExceptionTrackerBridgeClass(loader, protectionDomain);
         
-        Class<?> realBridgeClass = loader.loadClass(ExceptionTracker.BRIDGE_CLASS_NAME);
-        
-        System.out.println("********** IN INSTRUMENT realBridgeClass=" + realBridgeClass.newInstance());
-        
-        
         ClassPool classPool = new ClassPool(false);
         classPool.appendClassPath(new LoaderClassPath(loader));
         
@@ -268,7 +191,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         if (clazz.isFrozen()) {
             clazz.defrost();
         }    	
-       
         
         final String methodBody =
         	"\r\n{\r\n" +

@@ -37,6 +37,7 @@ import java.util.regex.Pattern;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.Appender;
+import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
@@ -690,10 +691,10 @@ System.out.println(output);
 			}
 			
 			
-//			System.out.println("Before count: " + ExceptionTracker.getExceptionCount());
+			System.out.println("Before count: " + ExceptionTracker.getExceptionCount());
 			Exception ex = new Exception();
-//			System.out.println("After count: " + ExceptionTracker.getExceptionCount());
-			System.out.println("Hello world");
+			ex = new Exception("Message", new Throwable());
+			System.out.println("After count: " + ExceptionTracker.getExceptionCount());
 		}
 	}    
 

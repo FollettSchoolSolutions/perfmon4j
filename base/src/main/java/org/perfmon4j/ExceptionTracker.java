@@ -59,7 +59,6 @@ public class ExceptionTracker  {
 	 * @param exception
 	 */
 	public static void notifyInExceptionConstructor(Object exception) {
-		System.out.println("*** FINALLY MADE IT INTO NOTIFY **");
 		threadBasedCounter.get().increment(exception);
 	}
 	
