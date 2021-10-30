@@ -154,34 +154,60 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	return clazz.toBytecode();
     }
 
+    private boolean exceptionTrackerBridgeCreated = false;
+    
     private void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
         ClassPool classPool = new ClassPool(false);
         classPool.appendClassPath(new LoaderClassPath(loader));
         
         CtClass bridgeClass = classPool.makeClass(ExceptionTracker.BRIDGE_CLASS_NAME);
-        bridgeClass.addField(CtField.make("private static java.util.function.Consumer consumer = null;", bridgeClass));
+        bridgeClass.addField(CtField.make("private static java.util.function.Consumer exceptionConsumer = null;", bridgeClass));
+        bridgeClass.addField(CtField.make("private static java.util.function.Consumer errorConsumer = null;", bridgeClass));
      
         String incrementMethodSrc = 
-        		"public static void notifyExceptionCreate(Object exception) {if (consumer != null) {consumer.accept(exception);}}\r\n";
+        		"public static void notifyExceptionCreate(Object exception) {if (exceptionConsumer != null) {exceptionConsumer.accept(exception);}}\r\n";
+        bridgeClass.addMethod(CtMethod.make(incrementMethodSrc, bridgeClass));
+
+        incrementMethodSrc = 
+        		"public static void notifyErrorCreate(Object error) {if (errorConsumer != null) {errorConsumer.accept(error);}}\r\n";
         bridgeClass.addMethod(CtMethod.make(incrementMethodSrc, bridgeClass));
         
+        
         String registerMethodSrc = 
-        		"	public static void registerConsumer(java.util.function.Consumer newConsumer) {\r\n"
-        		+ "		consumer = newConsumer;\r\n"
+        		"	public static void registerExceptionConsumer(java.util.function.Consumer newConsumer) {\r\n"
+        		+ "		exceptionConsumer = newConsumer;\r\n"
+        		+ "	}\r\n";
+        bridgeClass.addMethod(CtMethod.make(registerMethodSrc, bridgeClass));
+
+        registerMethodSrc = 
+        		"	public static void registerErrorConsumer(java.util.function.Consumer newConsumer) {\r\n"
+        		+ "		errorConsumer = newConsumer;\r\n"
         		+ "	}\r\n";
         bridgeClass.addMethod(CtMethod.make(registerMethodSrc, bridgeClass));
         
+        
         bridgeClass.toClass(loader, protectionDomain);
         bridgeClass.detach();
+        
+        exceptionTrackerBridgeCreated = true;
     }
     
-    
     public byte[] instrumentExceptionClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+    	return instrumentExceptionOrErrorClass(classfileBuffer, loader, protectionDomain, "notifyExceptionCreate");
+    }
+
+    public byte[] instrumentErrorClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+    	return instrumentExceptionOrErrorClass(classfileBuffer, loader, protectionDomain, "notifyErrorCreate");
+    }
+    
+    private byte[] instrumentExceptionOrErrorClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain, String notifyMethodName) throws Exception {
         if (loader == null) {
             loader = ClassLoader.getSystemClassLoader().getParent();
         } 
-        
-        createExceptionTrackerBridgeClass(loader, protectionDomain);
+    
+        if (!exceptionTrackerBridgeCreated) {
+        	createExceptionTrackerBridgeClass(loader, protectionDomain);
+        }
         
         ClassPool classPool = new ClassPool(false);
         classPool.appendClassPath(new LoaderClassPath(loader));
@@ -195,10 +221,9 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         final String methodBody =
         	"\r\n{\r\n" +
         	"\tClass clazzBridge = ClassLoader.getSystemClassLoader().loadClass(\"" + ExceptionTracker.BRIDGE_CLASS_NAME + "\");\r\n" +
-        	"\tjava.lang.reflect.Method m = clazzBridge.getDeclaredMethod(\"notifyExceptionCreate\", new Class[] {Object.class});\r\n" +
+        	"\tjava.lang.reflect.Method m = clazzBridge.getDeclaredMethod(\"" + notifyMethodName + "\", new Class[] {Object.class});\r\n" +
         	"\tm.invoke(null, new Object[] {this});\r\n" +
     		"}\r\n";
-        
         for (CtConstructor constructor : clazz.getDeclaredConstructors()) {
         	constructor.insertAfter(methodBody);
         }

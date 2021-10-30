@@ -691,15 +691,20 @@ System.out.println(output);
 			}
 			
 			
-			System.out.println("Before count: " + ExceptionTracker.getExceptionCount());
+			System.out.println("Before Exception count: " + ExceptionTracker.getExceptionCount());
+			System.out.println("Before Error count: " + ExceptionTracker.getErrorCount());
 			Exception ex = new Exception();
 			ex = new Exception("Message", new Throwable());
-			System.out.println("After count: " + ExceptionTracker.getExceptionCount());
+			
+			Error er = new Error();
+			
+			System.out.println("After Exception count: " + ExceptionTracker.getExceptionCount());
+			System.out.println("After Error count: " + ExceptionTracker.getErrorCount());
 		}
 	}    
 
     public void testExceptionTrackerInstallation() throws Exception {
-    	String output = LaunchRunnableInVM.run(ExceptionTrackerTest.class, "-vtrue,-eXorg.perfmon4j", null, perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(ExceptionTrackerTest.class, "-vtrue,-eorg.perfmon4j,-eExceptionTracker", null, perfmon4jJar);
 System.out.println(output);    	
     }
     

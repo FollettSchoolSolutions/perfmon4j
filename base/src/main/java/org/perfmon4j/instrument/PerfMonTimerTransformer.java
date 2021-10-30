@@ -491,12 +491,18 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
                 byte[] classfileBuffer) throws IllegalClassFormatException {
             byte[] result = null;
             
-            if ("java/lang/Exception".equals(className)) {
+            boolean isException = "java/lang/Exception".equals(className);
+            boolean isError = "java/lang/Error".equals(className);
+            
+            if (isException || isError) {
 	            try {
-		            result = runtimeTimerInjector.instrumentExceptionClass(classfileBuffer, loader, protectionDomain);
+	            	if (isException) {
+	            		result = runtimeTimerInjector.instrumentExceptionClass(classfileBuffer, loader, protectionDomain);
+	            	} else {
+	            		result = runtimeTimerInjector.instrumentErrorClass(classfileBuffer, loader, protectionDomain);
+	            	}
 	            } catch (Exception ex) {
-//	            	logger.logError("Perfmon4j was unable to add ExceptionTracker", ex);
-	            	IllegalClassFormatException iex = new IllegalClassFormatException("Perfmon4j was unable to add ExceptionTracker");
+	            	IllegalClassFormatException iex = new IllegalClassFormatException("Perfmon4j was unable to add ExceptionTracker to Class: " + className);
 	            	iex.initCause(ex);
 	            	throw iex;
 	            }
@@ -826,8 +832,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	        	try {
 	        		inst.addTransformer(installer);
 	        		redefineClass(inst, Exception.class);
-	                ExceptionTracker.registerWithBridge();
-	        		logger.logInfo("Perfmon4j installed ExceptionTracker");
+	        		redefineClass(inst, Error.class);
+	                if (ExceptionTracker.registerWithBridge()) {
+	                	logger.logInfo("Perfmon4j installed ExceptionTracker");
+	                } else {
+	                	logger.logError("Perfmon4j was unable to register ExceptionTracker with Bridge class. "
+                			+ "Exception tracker is not available");
+	                }
 	        	} catch (Exception ex) {
 	        		logger.logError("Perfmon4j was unable to install ExceptionTracker", ex);
 	        	} finally {
