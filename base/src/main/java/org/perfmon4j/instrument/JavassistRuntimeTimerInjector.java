@@ -163,6 +163,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         CtClass bridgeClass = classPool.makeClass(ExceptionTracker.BRIDGE_CLASS_NAME);
         bridgeClass.addField(CtField.make("private static java.util.function.Consumer exceptionConsumer = null;", bridgeClass));
         bridgeClass.addField(CtField.make("private static java.util.function.Consumer errorConsumer = null;", bridgeClass));
+        bridgeClass.addField(CtField.make("private static java.util.function.Consumer runtimeExceptionConsumer = null;", bridgeClass));
      
         String incrementMethodSrc = 
         		"public static void notifyExceptionCreate(Object exception) {if (exceptionConsumer != null) {exceptionConsumer.accept(exception);}}\r\n";
@@ -171,7 +172,10 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         incrementMethodSrc = 
         		"public static void notifyErrorCreate(Object error) {if (errorConsumer != null) {errorConsumer.accept(error);}}\r\n";
         bridgeClass.addMethod(CtMethod.make(incrementMethodSrc, bridgeClass));
-        
+
+        incrementMethodSrc = 
+        		"public static void notifyRuntimeExceptionCreate(Object exception) {if (runtimeExceptionConsumer != null) {runtimeExceptionConsumer.accept(exception);}}\r\n";
+        bridgeClass.addMethod(CtMethod.make(incrementMethodSrc, bridgeClass));
         
         String registerMethodSrc = 
         		"	public static void registerExceptionConsumer(java.util.function.Consumer newConsumer) {\r\n"
@@ -184,6 +188,13 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "		errorConsumer = newConsumer;\r\n"
         		+ "	}\r\n";
         bridgeClass.addMethod(CtMethod.make(registerMethodSrc, bridgeClass));
+        
+        registerMethodSrc = 
+        		"	public static void registerRuntimeExceptionConsumer(java.util.function.Consumer newConsumer) {\r\n"
+        		+ "		runtimeExceptionConsumer = newConsumer;\r\n"
+        		+ "	}\r\n";
+        bridgeClass.addMethod(CtMethod.make(registerMethodSrc, bridgeClass));
+        
         
         
         bridgeClass.toClass(loader, protectionDomain);
@@ -199,6 +210,10 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     public byte[] instrumentErrorClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
     	return instrumentExceptionOrErrorClass(classfileBuffer, loader, protectionDomain, "notifyErrorCreate");
     }
+
+    public byte[] instrumentRuntimeExceptionClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+    	return instrumentExceptionOrErrorClass(classfileBuffer, loader, protectionDomain, "notifyRuntimeExceptionCreate");
+    }
     
     private byte[] instrumentExceptionOrErrorClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain, String notifyMethodName) throws Exception {
         if (loader == null) {
@@ -206,7 +221,9 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         } 
     
         if (!exceptionTrackerBridgeCreated) {
+System.out.println("Creating Exception Tracker Class");        	
         	createExceptionTrackerBridgeClass(loader, protectionDomain);
+System.out.println("Created Exception Tracker Class");        	
         }
         
         ClassPool classPool = new ClassPool(false);
@@ -224,6 +241,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         	"\tjava.lang.reflect.Method m = clazzBridge.getDeclaredMethod(\"" + notifyMethodName + "\", new Class[] {Object.class});\r\n" +
         	"\tm.invoke(null, new Object[] {this});\r\n" +
     		"}\r\n";
+System.out.println(methodBody);        
         for (CtConstructor constructor : clazz.getDeclaredConstructors()) {
         	constructor.insertAfter(methodBody);
         }

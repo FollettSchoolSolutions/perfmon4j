@@ -692,13 +692,17 @@ System.out.println(output);
 			
 			
 			System.out.println("Before Exception count: " + ExceptionTracker.getExceptionCount());
+			System.out.println("Before RuntimeException count: " + ExceptionTracker.getRuntimeExceptionCount());
 			System.out.println("Before Error count: " + ExceptionTracker.getErrorCount());
 			Exception ex = new Exception();
 			ex = new Exception("Message", new Throwable());
 			
 			Error er = new Error();
 			
+			RuntimeException rex = new RuntimeException();
+			
 			System.out.println("After Exception count: " + ExceptionTracker.getExceptionCount());
+			System.out.println("After RuntimeException count: " + ExceptionTracker.getRuntimeExceptionCount());
 			System.out.println("After Error count: " + ExceptionTracker.getErrorCount());
 		}
 	}    

@@ -493,13 +493,16 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             
             boolean isException = "java/lang/Exception".equals(className);
             boolean isError = "java/lang/Error".equals(className);
+            boolean isRuntimeException = "java/lang/RuntimeException".equals(className);
             
-            if (isException || isError) {
+            if (isException || isError || isRuntimeException) {
 	            try {
 	            	if (isException) {
 	            		result = runtimeTimerInjector.instrumentExceptionClass(classfileBuffer, loader, protectionDomain);
-	            	} else {
+	            	} else if (isError) {
 	            		result = runtimeTimerInjector.instrumentErrorClass(classfileBuffer, loader, protectionDomain);
+	            	} else {
+	            		result = runtimeTimerInjector.instrumentRuntimeExceptionClass(classfileBuffer, loader, protectionDomain);
 	            	}
 	            } catch (Exception ex) {
 	            	IllegalClassFormatException iex = new IllegalClassFormatException("Perfmon4j was unable to add ExceptionTracker to Class: " + className);
@@ -833,6 +836,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	        		inst.addTransformer(installer);
 	        		redefineClass(inst, Exception.class);
 	        		redefineClass(inst, Error.class);
+	        		redefineClass(inst, RuntimeException.class);
 	                if (ExceptionTracker.registerWithBridge()) {
 	                	logger.logInfo("Perfmon4j installed ExceptionTracker");
 	                } else {

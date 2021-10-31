@@ -41,8 +41,13 @@ public class ExceptionTracker  {
 			Class<?> clazz = loader.loadClass(BRIDGE_CLASS_NAME);
 			Method method = clazz.getDeclaredMethod("registerExceptionConsumer" , new Class[] {Consumer.class});
 			method.invoke(null, new Object[] {new BridgeExceptionConsumer()});
+			
 			method = clazz.getDeclaredMethod("registerErrorConsumer" , new Class[] {Consumer.class});
 			method.invoke(null, new Object[] {new BridgeErrorConsumer()});
+			
+			method = clazz.getDeclaredMethod("registerRuntimeExceptionConsumer" , new Class[] {Consumer.class});
+			method.invoke(null, new Object[] {new BridgeRuntimeExceptionConsumer()});
+			
 			enabled = true;
 		} else {
 			logger.logError("Unable to find classloader to load ExceptionTracker Bridge Class");
@@ -64,11 +69,20 @@ public class ExceptionTracker  {
 		}
 	}
 	
+	public static final class BridgeRuntimeExceptionConsumer implements Consumer {
+		@Override
+		public void accept(Object exception) {
+			ExceptionTracker.notifyInRuntimeExceptionConstructor(exception);
+		}
+	}
+
 	
 	private static final AtomicLong exceptionCount = new AtomicLong(0);
 	private static final AtomicLong sqlExceptionCount = new AtomicLong(0);
 	private static final AtomicLong errorCount = new AtomicLong(0);
 	private static final AtomicLong sqlErrorCount = new AtomicLong(0);
+	private static final AtomicLong runtimeExceptionCount = new AtomicLong(0);
+	private static final AtomicLong sqlRuntimeExceptionCount = new AtomicLong(0);
 	
 	private static final ThreadLocal<ExceptionPerThreadCounter> threadBasedCounter = new ThreadLocal<ExceptionTracker.ExceptionPerThreadCounter>() {
 		@Override
@@ -81,7 +95,6 @@ public class ExceptionTracker  {
 	public static String getEnabled() {
 		return enabled ? "enabled" : "disabled";
 	}
-	
 	
 	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_MIN)
 	public static long getExceptionCount() {
@@ -96,6 +109,16 @@ public class ExceptionTracker  {
 	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_MIN)
 	public static long getErrorCount() {
 		return enabled ? errorCount.get() : 0L;
+	}
+
+	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_MIN)
+	public static long getRuntimeExceptionCount() {
+		return enabled ? runtimeExceptionCount.get() : 0L;
+	}
+
+	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_MIN)
+	public static long getSQLRuntimeExceptionCount() {
+		return enabled ? sqlRuntimeExceptionCount.get() : 0L;
 	}
 
 	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_MIN)
@@ -117,6 +140,14 @@ public class ExceptionTracker  {
 
 	public static long getSQLErrorCountForThread() {
 		return enabled ? threadBasedCounter.get().getSQLErrorCount() : 0L;
+	}
+
+	public static long getRuntimeExceptionCountForThread() {
+		return enabled ? threadBasedCounter.get().getRuntimeExceptionCount() : 0L;
+	}
+
+	public static long getSQLRuntimeExceptionCountForThread() {
+		return enabled ? threadBasedCounter.get().getSQLRuntimeExceptionCount() : 0L;
 	}
 	
 	/**
@@ -140,7 +171,17 @@ public class ExceptionTracker  {
 			threadBasedCounter.get().incrementError(error);
 		}
 	}
-	
+
+	/**
+	 * This should ONLY be called from the instrumented java.lang.Error
+	 * constructor.
+	 * @param exception
+	 */
+	public static void notifyInRuntimeExceptionConstructor(Object exception) {
+		if (enabled) {
+			threadBasedCounter.get().incrementRuntimeException(exception);
+		}
+	}
 	
 	/**
 	 * This class prevents counting a single Exception
@@ -154,8 +195,11 @@ public class ExceptionTracker  {
 		private final AtomicLong sqlExceptionCount = new AtomicLong(0);
 		private final AtomicLong errorCount = new AtomicLong(0);
 		private final AtomicLong sqlErrorCount = new AtomicLong(0);
+		private final AtomicLong runtimeExceptionCount = new AtomicLong(0);
+		private final AtomicLong sqlRuntimeExceptionCount = new AtomicLong(0);
 		
 		private Object current = null;
+		private Object currentRuntimeException = null;
 
 		private void incrementException(Object newCurrent) {
 			if (newCurrent != this.current) {
@@ -180,6 +224,18 @@ public class ExceptionTracker  {
 				this.current = newCurrent;
 			} 
 		}
+
+		private void incrementRuntimeException(Object newCurrent) {
+			if (newCurrent != this.currentRuntimeException) {
+				runtimeExceptionCount.incrementAndGet();  // Increment count on this thread.
+				ExceptionTracker.runtimeExceptionCount.incrementAndGet(); // Increment global count.
+				if (SQLTime.isThreadInSQL()) {
+					sqlRuntimeExceptionCount.incrementAndGet();
+					ExceptionTracker.sqlRuntimeExceptionCount.incrementAndGet();
+				}
+				this.currentRuntimeException = newCurrent;
+			} 
+		}
 		
 		private long getExceptionCount() {
 			return exceptionCount.get();
@@ -196,6 +252,13 @@ public class ExceptionTracker  {
 		private long getSQLErrorCount() {
 			return sqlErrorCount.get();
 		}
-		
+
+		public long getRuntimeExceptionCount() {
+			return runtimeExceptionCount.get();
+		}
+
+		public long getSQLRuntimeExceptionCount() {
+			return sqlRuntimeExceptionCount.get();
+		}
 	}
 }
