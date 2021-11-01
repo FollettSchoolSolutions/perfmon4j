@@ -40,6 +40,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.MonitorThreadTracker.Tracker;
+import org.perfmon4j.impl.exceptiontracker.Counter;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
@@ -544,8 +545,10 @@ public class PerfMon {
                         	/** We have SQL logging enabled... Monitor the SQLDurations. **/
                         }
                     	if (exceptionCountEnabled) {
-                    		exceptionCount = ExceptionTracker.getExceptionCountForThread() - count.getStartExceptionCount();
-                    		sqlExceptionCount = ExceptionTracker.getSQLExceptionCountForThread() - count.getStartSQLExceptionCount();
+                            Counter counter = ExceptionTracker.getCounter("java.lang.Exception");
+
+                    		exceptionCount = counter.getCount() - count.getStartExceptionCount();
+                    		sqlExceptionCount = counter.getSQLCount() - count.getStartSQLExceptionCount();
                     	}
                     	totalCompletions++;
                         
@@ -683,8 +686,9 @@ public class PerfMon {
             if (refCount == 0) {
                 this.startTime = startTime;
                 this.sqlStartMillis = SQLTime.getSQLTime(); // Will always be 0 of SQLtime is NOT enabled.
-                this.startExceptionCount = ExceptionTracker.getExceptionCountForThread();
-                this.startSQLExceptionCount = ExceptionTracker.getSQLExceptionCountForThread();
+                Counter counter = ExceptionTracker.getCounter("java.lang.Exception");
+                this.startExceptionCount = counter.getCount();
+                this.startSQLExceptionCount = counter.getSQLCount();
             }
             return ++refCount;
         }

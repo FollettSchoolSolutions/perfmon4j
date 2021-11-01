@@ -497,13 +497,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             
             if (isException || isError || isRuntimeException) {
 	            try {
-	            	if (isException) {
-	            		result = runtimeTimerInjector.instrumentExceptionClass(classfileBuffer, loader, protectionDomain);
-	            	} else if (isError) {
-	            		result = runtimeTimerInjector.instrumentErrorClass(classfileBuffer, loader, protectionDomain);
-	            	} else {
-	            		result = runtimeTimerInjector.instrumentRuntimeExceptionClass(classfileBuffer, loader, protectionDomain);
-	            	}
+            		result = runtimeTimerInjector.instrumentExceptionOrErrorClass(className, classfileBuffer, loader, protectionDomain);
 	            } catch (Exception ex) {
 	            	IllegalClassFormatException iex = new IllegalClassFormatException("Perfmon4j was unable to add ExceptionTracker to Class: " + className);
 	            	iex.initCause(ex);
@@ -845,8 +839,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	                }
 	        	} catch (Exception ex) {
 	        		logger.logError("Perfmon4j was unable to install ExceptionTracker", ex);
-	        	} finally {
-	        		inst.removeTransformer(installer);
 	        	}
 	        } else {
 	        	logger.logError("Perfmon4j is unable to load ExceptionTracker. RedefineClasses is not supported");

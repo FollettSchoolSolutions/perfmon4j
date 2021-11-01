@@ -690,26 +690,31 @@ System.out.println(output);
 				e.printStackTrace();
 			}
 			
+			System.out.println("Before Exception count: " + ExceptionTracker.getCount("java.lang.Exception"));
+			System.out.println("Before RuntimeException count: " + ExceptionTracker.getCount("java.lang.RuntimeException"));
+			System.out.println("Before Error count: " + ExceptionTracker.getCount("java.lang.Error"));
 			
-			System.out.println("Before Exception count: " + ExceptionTracker.getExceptionCount());
-			System.out.println("Before RuntimeException count: " + ExceptionTracker.getRuntimeExceptionCount());
-			System.out.println("Before Error count: " + ExceptionTracker.getErrorCount());
-			Exception ex = new Exception();
-			ex = new Exception("Message", new Throwable());
+			new Exception();
+			new Exception("Message", new Throwable());
 			
-			Error er = new Error();
-			
-			RuntimeException rex = new RuntimeException();
-			
-			System.out.println("After Exception count: " + ExceptionTracker.getExceptionCount());
-			System.out.println("After RuntimeException count: " + ExceptionTracker.getRuntimeExceptionCount());
-			System.out.println("After Error count: " + ExceptionTracker.getErrorCount());
+			new RuntimeException();
+
+			new Error();
+			new Error("This is error 1");
+
+			System.out.println("After Exception count: " + ExceptionTracker.getCount("java.lang.Exception"));
+			System.out.println("After RuntimeException count: " + ExceptionTracker.getCount("java.lang.RuntimeException"));
+			System.out.println("After Error count: " + ExceptionTracker.getCount("java.lang.Error"));
 		}
 	}    
 
     public void testExceptionTrackerInstallation() throws Exception {
-    	String output = LaunchRunnableInVM.run(ExceptionTrackerTest.class, "-vtrue,-eorg.perfmon4j,-eExceptionTracker", null, perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(ExceptionTrackerTest.class, "-vtrue,-eExceptionTracker", null, perfmon4jJar);
 System.out.println(output);    	
+
+		assertTrue("Excpected 3 total Exceptions", output.contains("After Exception count: 3"));
+		assertTrue("Excpected 1 RuntimeException", output.contains("After RuntimeException count: 1"));
+		assertTrue("Excpected 2 Errors", output.contains("After Error count: 2"));
     }
     
     

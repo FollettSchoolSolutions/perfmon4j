@@ -12,10 +12,8 @@ public abstract class RuntimeTimerInjector {
     public abstract byte[] disableSystemGC(byte[] classfileBuffer, ClassLoader loader) throws Exception;
     public abstract byte[] installHystrixCommandMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] installHystrixThreadPoolMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
-    public abstract byte[] instrumentExceptionClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
-    public abstract byte[] instrumentRuntimeExceptionClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
-    public abstract byte[] instrumentErrorClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
-    
+	public abstract byte[] instrumentExceptionOrErrorClass(String className, byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	
 	public abstract byte[] attachAgentToPerfMonAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] attachAgentToPerfMonTimerAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] attachAgentToSQLTimeAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
