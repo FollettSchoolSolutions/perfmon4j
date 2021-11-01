@@ -8,6 +8,7 @@ import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.PerfMonObservableDatum;
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
+import org.perfmon4j.util.MiscHelper;
 
 public class ExceptionTrackerData extends SnapShotData implements PerfMonObservableData {
 	private final Map<String, MeasurementElement> start;
@@ -29,16 +30,25 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 	
 	@Override
 	public String toAppenderString() {
-		String result = "";
+		String dataSetResult = "";
 		if (dataSet != null) {
 			for (DeltaElement element : dataSet) {
-				result += element.getFieldName() + "=" + element.getCount().getDeltaPerMinute() + "\r\n";
+				dataSetResult += String.format(" %s",
+					MiscHelper.formatTextDataLine(40, element.getFieldName(), 
+					(float)element.getCount().getDeltaPerMinute(), " per minute", 2));
 			}
-		} else {
-			result = "SNAPSHOT NOT CREATED";
-		}
-			
-		return result;
+		} 
+		
+		return String.format(
+            "\r\n********************************************************************************\r\n" +
+            "%s\r\n" +
+            "%s -> %s\r\n" + 
+            "%s" +
+            "********************************************************************************",
+            this.getName(),
+            MiscHelper.formatTimeAsString(startTimeMillis),
+            MiscHelper.formatTimeAsString(endTimeMillis),
+            dataSetResult);
 	}
 
 	@Override
