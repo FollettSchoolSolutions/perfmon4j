@@ -21,12 +21,17 @@
 
 package org.perfmon4j;
 
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
 
 
 public class BootConfiguration {
 	private ServletValveConfig servletValveConfig = null;
+	private ExceptionTrackerConfig exceptionTrackerConfig = null;
 	
 	public ServletValveConfig getServletValveConfig() {
 		return servletValveConfig;
@@ -34,6 +39,14 @@ public class BootConfiguration {
 
 	public void setServletValveConfig(ServletValveConfig servletValveConfig) {
 		this.servletValveConfig = servletValveConfig;
+	}
+	
+	public ExceptionTrackerConfig getExceptionTrackerConfig() {
+		return exceptionTrackerConfig;
+	}
+
+	public void setExceptionTrackerConfig(ExceptionTrackerConfig exceptionTrackerConfig) {
+		this.exceptionTrackerConfig = exceptionTrackerConfig;
 	}
 
 	public static final class ServletValveConfig {
@@ -145,4 +158,57 @@ public class BootConfiguration {
 			setValue(valve, "pushURLOnNDC", Boolean.valueOf(isPushURLOnNDC()));
 		}	    
 	}
+	
+	public static final class ExceptionTrackerConfig {
+		private final Set<ExceptionElement> elements = new HashSet<BootConfiguration.ExceptionElement>();
+
+		public void addElement(ExceptionElement element) {
+			elements.add(element);
+		}
+		
+		public ExceptionElement[] getElements() {
+			return elements.toArray(new ExceptionElement[] {});
+		}
+	}
+	
+	public static final class ExceptionElement {
+		private final String className;
+		private final String displayName;
+
+		public ExceptionElement(String className) {
+			this(className, className);
+			
+		}
+		
+		public ExceptionElement(String className, String displayName) {
+			this.className = className;
+			this.displayName = displayName;
+		}
+		
+		public String getDisplayName() {
+			return displayName;
+		}
+
+		public String getClassName() {
+			return className;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(className);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ExceptionElement other = (ExceptionElement) obj;
+			return Objects.equals(className, other.className);
+		}
+	}
+
 }

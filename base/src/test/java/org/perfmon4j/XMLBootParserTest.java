@@ -188,6 +188,81 @@ public class XMLBootParserTest extends PerfMonTestCase {
         assertNull("Servlet valve config should be null by default", boot.getServletValveConfig());
     }
     
+    public void testParseEmptyExceptionTrackerConfig() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker/>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        assertNotNull("Should have an Exception Tracker Configuration", etConfig);
+        assertEquals("Not very useful since no exceptions have been defined", 0, etConfig.getElements().length);
+    }
+    
+    public void testParseExceptionWithClassName() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker>" +
+            "			<exception className='java.lang.Exception'/>" +
+            "		</exceptionTracker>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        assertNotNull("Should have an Exception Tracker Configuration", etConfig);
+        assertEquals("Should have one exception", 1, etConfig.getElements().length);
+        
+        BootConfiguration.ExceptionElement element = etConfig.getElements()[0];
+        
+        assertEquals("expected className", "java.lang.Exception", element.getClassName());
+        assertEquals("displayName defaults to className if not defined", 
+        		"java.lang.Exception", element.getDisplayName());
+    }
+
+    public void testParseExceptionWithClassAndDisplayName() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker>" +
+            "			<exception className='java.lang.Error' displayName='Java Error' />" +
+            "		</exceptionTracker>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        assertNotNull("Should have an Exception Tracker Configuration", etConfig);
+        assertEquals("Should have one exception", 1, etConfig.getElements().length);
+        
+        BootConfiguration.ExceptionElement element = etConfig.getElements()[0];
+        
+        assertEquals("expected className", "java.lang.Error", element.getClassName());
+        assertEquals("expected displayName", "Java Error", element.getDisplayName());
+    }
+    
+    public void testParseMultipleExceptionElements() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker>" +
+            "			<exception className='java.lang.Error' displayName='Java Error' />" +
+            "			<exception className='java.lang.Exception' />" +
+            "			<exception className='java.lang.RuntimeException' />" +
+            "		</exceptionTracker>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        assertNotNull("Should have an Exception Tracker Configuration", etConfig);
+        assertEquals("Expected number of elements", 3, etConfig.getElements().length);
+    }
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
