@@ -1,5 +1,6 @@
 package org.perfmon4j.impl.exceptiontracker;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,8 +59,19 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 
 	@Override
 	public Set<PerfMonObservableDatum<?>> getObservations() {
-		// TODO Auto-generated method stub
-		return null;
+		Set<PerfMonObservableDatum<?>> result = new HashSet<PerfMonObservableDatum<?>>();
+		
+		
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("timeStart", startTimeMillis));
+		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("timeStop", endTimeMillis));
+		if (dataSet != null) {
+			for (DeltaElement element : dataSet) {
+				addIfNotNull(result, PerfMonObservableDatum.newDatum(element.getFieldName(), element.getCount()));
+				addIfNotNull(result, PerfMonObservableDatum.newDatum(element.getFieldName() + " SQL", element.getCount()));
+			}
+		} 
+
+		return result;
 	}
 
 	@Override
@@ -71,7 +83,14 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 	public long getDurationMillis() {
 		return endTimeMillis == PerfMon.NOT_SET ? PerfMon.NOT_SET : (endTimeMillis - startTimeMillis);
 	}
-
+	
+	
+    private void addIfNotNull(Set<PerfMonObservableDatum<?>> result, PerfMonObservableDatum<?> datum) {
+    	if (datum != null) {
+    		result.add(datum);
+    	}
+    }
+	
 	@Override
 	public String getDataCategory() {
 		return "ExceptionTracker";
