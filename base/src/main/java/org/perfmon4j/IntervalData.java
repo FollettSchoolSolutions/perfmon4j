@@ -73,9 +73,6 @@ public class IntervalData implements PerfMonObservableData {
     private long totalSQLDuration = 0;
     private long sumOfSQLSquares = 0;
     
-    private long totalExceptions = 0;
-    private long totalSQLExceptions = 0;
-    
     private long lifetimeMaxSQLDuration = 0;
     private long timeLifetimeMaxSQLDurationSet = PerfMon.NOT_SET;
 
@@ -322,15 +319,6 @@ public class IntervalData implements PerfMonObservableData {
         return totalSQLDuration;
     }
     
-/*----------------------------------------------------------------------------*/    
-    public long getTotalExceptions() {
-    	return totalExceptions;
-    }
-
-/*----------------------------------------------------------------------------*/    
-    public long getSQLTotalExceptions() {
-    	return totalSQLExceptions;
-    }
     
 /*----------------------------------------------------------------------------*/    
     public int getTotalHits() {
@@ -352,19 +340,11 @@ public class IntervalData implements PerfMonObservableData {
     }
     
     void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared) {
-    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, 0L, 0L);
+    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, false);
     }
     
-    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, long exceptionCount, long sqlExceptionCount) {
-    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, exceptionCount, sqlExceptionCount, false);
-    }
-
-    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, boolean forceSQLTime) {
-    	stop(duration, durationSquared, systemTime, sqlDuration, sqlDurationSquared, 0L, 0L, forceSQLTime);
-    }
-
 /*----------------------------------------------------------------------------*/    
-    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, long exceptionCount, long sqlExceptionCount, boolean forceSQLTime) {
+    void stop(long duration, long durationSquared, long systemTime, long sqlDuration, long sqlDurationSquared, boolean forceSQLTime) {
         totalCompletions++;
         
         if (forceSQLTime || SQLTime.isEnabled()) {
@@ -379,9 +359,6 @@ public class IntervalData implements PerfMonObservableData {
             totalSQLDuration += sqlDuration;
             sumOfSQLSquares += sqlDurationSquared;
         }
-        
-        this.totalExceptions += exceptionCount;
-        this.totalSQLExceptions += totalSQLExceptions;
         
         if (duration >= maxDuration) {
             maxDuration = duration;
@@ -513,24 +490,7 @@ public class IntervalData implements PerfMonObservableData {
         }
         return result;
     }
-
-/*----------------------------------------------------------------------------*/    
-    public long getExceptionsPerCompletion() {
-        long result = 0;
-        if (totalCompletions > 0) {
-            result = totalExceptions / totalCompletions;
-        }
-        return result;
-    }
-
-    /*----------------------------------------------------------------------------*/    
-    public long getSQLExceptionsPerCompletion() {
-        long result = 0;
-        if (totalCompletions > 0) {
-            result = totalSQLExceptions / totalCompletions;
-        }
-        return result;
-    }
+    
     
     private static String formatTimeDataSet(long time) {
         String result = "";
@@ -577,17 +537,6 @@ public class IntervalData implements PerfMonObservableData {
         if (owner != null) {
             name = owner.getName();
         }
-        String exceptionInfo = "";
-        if (ExceptionTracker.isEnabled()) {
-        	exceptionInfo = String.format(
-	                " Avg. Exceptions.... %.2f\r\n" +
-	                " Avg. SQL Exceptions %.2f\r\n",
-	                Double.valueOf(getExceptionsPerCompletion()),
-	                Double.valueOf(getSQLExceptionsPerCompletion())
-	            );
-        }
-        
-        
         String sqlDurationInfo = "";
         if (includeSQLTime && !isSQLMonitor()) {
         	sqlDurationInfo = String.format(
@@ -595,11 +544,11 @@ public class IntervalData implements PerfMonObservableData {
 	                " (SQL)Std. Dev...... %.2f\r\n" +
 	                " (SQL)Max Duration.. %d %s\r\n" +
 	                " (SQL)Min Duration.. %d %s\r\n",
-	                Double.valueOf(getAverageSQLDuration()),
-	                Double.valueOf(getSQLStdDeviation()),
-	                Long.valueOf(getMaxSQLDuration()), 
+	                new Double(getAverageSQLDuration()),
+	                new Double(getSQLStdDeviation()),
+	                new Long(getMaxSQLDuration()), 
 	                formatTimeDataSet(timeMaxSQLDurationSet),
-	                Long.valueOf(getMinSQLDuration()),
+	                new Long(getMinSQLDuration()),
 	                formatTimeDataSet(timeMinSQLDurationSet)
 	            );
         }
@@ -620,7 +569,6 @@ public class IntervalData implements PerfMonObservableData {
             " Total Completions.. %d\r\n" +
             " Oldest Thread...... %s\r\n" +
             " Oldest Duration.... %d\r\n" +
-            "%s" +
             "%s",
             name,
             MiscHelper.formatTimeAsString(getTimeStart()),
@@ -640,7 +588,6 @@ public class IntervalData implements PerfMonObservableData {
             Long.valueOf(getTotalCompletions()),
             oldestActiveThread,
             Long.valueOf(oldestActiveThreadDuration),
-            exceptionInfo,
             sqlDurationInfo
         );
         if (haveLifetimeStats) {
