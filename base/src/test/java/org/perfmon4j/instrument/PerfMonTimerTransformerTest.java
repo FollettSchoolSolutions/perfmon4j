@@ -45,6 +45,7 @@ import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.ThreadTraceConfig;
+import org.perfmon4j.instrument.LaunchRunnableInVM.Params;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -679,6 +680,17 @@ System.out.println(output);
     }
     
     public static class ExceptionTrackerTest implements Runnable {
+    	private static class MyException extends Exception {
+    		final String str;
+    		
+    		MyException() {
+    			this("");
+    		}
+    		MyException(String str) {
+    			this.str = str;
+    		}
+    	}
+    	
 
 		@Override
 		public void run() {
@@ -690,35 +702,38 @@ System.out.println(output);
 				e.printStackTrace();
 			}
 			
-			System.out.println("Before Exception count: " + ExceptionTracker.getCount("java.lang.Exception"));
 			System.out.println("Before RuntimeException count: " + ExceptionTracker.getCount("java.lang.RuntimeException"));
-			System.out.println("Before Error count: " + ExceptionTracker.getCount("java.lang.Error"));
-			
-			new Exception();
-			new Exception("Message", new Throwable());
+			System.out.println("Before MyException class: " 
+					+ ExceptionTracker.getCount("org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException"));
 			
 			new RuntimeException();
+			
+			new MyException(); // Make sure exceptions aren't double counted when a class has nested constructors;
+			new MyException("anything");
 
-			new Error();
-			new Error("This is error 1");
-
-			System.out.println("After Exception count: " + ExceptionTracker.getCount("java.lang.Exception"));
 			System.out.println("After RuntimeException count: " + ExceptionTracker.getCount("java.lang.RuntimeException"));
-			System.out.println("After Error count: " + ExceptionTracker.getCount("java.lang.Error"));
+			System.out.println("After MyException class: " 
+					+ ExceptionTracker.getCount("org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException"));
+
 		}
 	}    
 
     public void testExceptionTrackerInstallation() throws Exception {
-    	String output = LaunchRunnableInVM.run(ExceptionTrackerTest.class, "-vtrue,-eExceptionTracker", null, perfmon4jJar);
-// ** TODO: Add more to this test DCD 11/1/21
-    	
-    	
-    	//System.out.println(output);    	
+    	final String configFile = 
+    		"<Perfmon4JConfig enabled='true'>\r\n" +
+    		"\t<boot>\r\n" +
+    		"\t\t<exceptionTracker>\r\n" +
+            "\t\t\t<exception className='java.lang.RuntimeException'/>\r\n" + 
+            "\t\t\t<exception className='org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException'/>\r\n" + 
+    		"\t\t</exceptionTracker>\r\n" +
+            "\t</boot>\r\n" +
+    		"</Perfmon4JConfig>";
 
+    	String output = LaunchRunnableInVM.run(new Params(ExceptionTrackerTest.class, perfmon4jJar)
+    		.setPerfmonConfigXML(configFile));
     	
-//		assertTrue("Expected 3 total Exceptions", output.contains("After Exception count: 3"));
 		assertTrue("Expected 1 RuntimeException", output.contains("After RuntimeException count: 1"));
-		assertTrue("Expected 2 Errors", output.contains("After Error count: 2"));
+		assertTrue("Expected 2 MyException", output.contains("After MyException class: 2"));
     }
     
     

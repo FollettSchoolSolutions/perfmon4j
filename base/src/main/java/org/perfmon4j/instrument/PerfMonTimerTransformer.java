@@ -490,10 +490,12 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 
     private static class ExceptionTrackerInstaller implements ClassFileTransformer {
     	private final ExceptionTrackerConfig config;
+    	private final boolean verboseEnabled;
     	private final Set<String> exceptionClasses = new HashSet<String>();
     	
-    	ExceptionTrackerInstaller(ExceptionTrackerConfig config) {
+    	ExceptionTrackerInstaller(ExceptionTrackerConfig config, boolean verboseEnabled) {
     		this.config = config;
+    		this.verboseEnabled = verboseEnabled;
     		for (ExceptionElement element : config.getElements()) {
     			exceptionClasses.add(element.getClassName().replaceAll("\\.", "/"));
     		}
@@ -507,6 +509,9 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             if (exceptionClasses.contains(className)) {
 	            try {
             		result = runtimeTimerInjector.instrumentExceptionOrErrorClass(className, classfileBuffer, loader, protectionDomain);
+            		if (verboseEnabled) {
+            			logger.logInfo("Added class to exceptionTracker: " + className);
+            		}
 	            } catch (Exception ex) {
 	            	logger.logWarn("Perfmon4j was unable to add ExceptionTracker to Class: " + className, ex);
 	            }
@@ -844,7 +849,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	boolean trackerInitialized = false;
         	BootConfiguration.ExceptionTrackerConfig config = bootConfiguration.getExceptionTrackerConfig();
         	try {
-	        	ExceptionTrackerInstaller installer = new ExceptionTrackerInstaller(config);
+	        	ExceptionTrackerInstaller installer = new ExceptionTrackerInstaller(config, t.params.isVerboseInstrumentationEnabled());
 	        	inst.addTransformer(installer);
         		runtimeTimerInjector.createExceptionTrackerBridgeClass(Object.class.getClassLoader(), Object.class.getProtectionDomain());
         		trackerInitialized = ExceptionTracker.registerWithBridge(config);
