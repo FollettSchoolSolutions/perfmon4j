@@ -154,9 +154,10 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	return clazz.toBytecode();
     }
 
-    private boolean exceptionTrackerBridgeCreated = false;
-
-    private void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+    public void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader().getParent();
+        } 
         ClassPool classPool = new ClassPool(false);
         classPool.appendClassPath(new LoaderClassPath(loader));
         
@@ -176,8 +177,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 
         bridgeClass.toClass(loader, protectionDomain);
         bridgeClass.detach();
-        
-        exceptionTrackerBridgeCreated = true;
     }
     
     public byte[] instrumentExceptionOrErrorClass(String className, byte[] classfileBuffer, ClassLoader loader, 
@@ -186,10 +185,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
             loader = ClassLoader.getSystemClassLoader().getParent();
         } 
     
-        if (!exceptionTrackerBridgeCreated) {
-        	createExceptionTrackerBridgeClass(loader, protectionDomain);
-        }
-        
         ClassPool classPool = new ClassPool(false);
         classPool.appendClassPath(new LoaderClassPath(loader));
         

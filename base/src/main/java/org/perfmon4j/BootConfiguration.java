@@ -21,6 +21,7 @@
 
 package org.perfmon4j;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -32,6 +33,18 @@ import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
 public class BootConfiguration {
 	private ServletValveConfig servletValveConfig = null;
 	private ExceptionTrackerConfig exceptionTrackerConfig = null;
+	
+	public static BootConfiguration getDefault() {
+		return new BootConfiguration();
+	}
+
+	public boolean isServletValveEnabled() {
+		return servletValveConfig != null;
+	}
+	
+	public boolean isExceptionTrackerEnabled() {
+		return exceptionTrackerConfig != null && exceptionTrackerConfig.elements.size() > 0;
+	}
 	
 	public ServletValveConfig getServletValveConfig() {
 		return servletValveConfig;
@@ -166,8 +179,8 @@ public class BootConfiguration {
 			elements.add(element);
 		}
 		
-		public ExceptionElement[] getElements() {
-			return elements.toArray(new ExceptionElement[] {});
+		public Set<ExceptionElement> getElements() {
+			return Collections.unmodifiableSet(elements);
 		}
 	}
 	

@@ -13,6 +13,7 @@ public abstract class RuntimeTimerInjector {
     public abstract byte[] installHystrixCommandMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] installHystrixThreadPoolMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] instrumentExceptionOrErrorClass(String className, byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	public abstract void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	
 	public abstract byte[] attachAgentToPerfMonAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] attachAgentToPerfMonTimerAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;

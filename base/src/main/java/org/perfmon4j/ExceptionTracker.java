@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import org.perfmon4j.BootConfiguration.ExceptionElement;
 import org.perfmon4j.impl.exceptiontracker.Counter;
 import org.perfmon4j.impl.exceptiontracker.ExceptionPerThreadTracker;
 import org.perfmon4j.impl.exceptiontracker.ExceptionTrackerData;
@@ -17,6 +18,7 @@ public class ExceptionTracker extends SnapShotMonitor {
 	private static final Logger logger = LoggerFactory.initLogger(ExceptionTracker.class);
 	public static final String BRIDGE_CLASS_NAME = "generated.perfmon4j.ExceptionBridge";
 	private static boolean enabled = false;
+	private static BootConfiguration.ExceptionTrackerConfig config = null;
 	
 	public ExceptionTracker(String name) {
 		super(name);
@@ -29,13 +31,12 @@ public class ExceptionTracker extends SnapShotMonitor {
 	private static Map<String, MeasurementElement> generateDataMap() {
 		Map<String, MeasurementElement> result = new HashMap<String, MeasurementElement>();
 		
-		result.put("java.lang.Exception", new MeasurementElement("Exception Count", 
-			ExceptionPerThreadTracker.getGlobalCount("java.lang.Exception")));
-		result.put("java.lang.RuntimeException", new MeasurementElement("RuntimeEx Count", 
-			ExceptionPerThreadTracker.getGlobalCount("java.lang.RuntimeException")));
-		result.put("java.lang.Error", new MeasurementElement("Error Count", 
-			ExceptionPerThreadTracker.getGlobalCount("java.lang.Error")));
-		
+		if (config != null) {
+			for (ExceptionElement element : config.getElements()) {
+				result.put(element.getClassName(), new MeasurementElement(element.getDisplayName(), 
+						ExceptionPerThreadTracker.getGlobalCount(element.getClassName())));
+			}
+		}
 		return result;
 	}
 	
@@ -63,7 +64,7 @@ public class ExceptionTracker extends SnapShotMonitor {
 	 *   
 	 * @throws Exception
 	 */
-	public static boolean registerWithBridge() throws Exception {
+	public static boolean registerWithBridge(BootConfiguration.ExceptionTrackerConfig config) throws Exception {
 		ClassLoader loader = ExceptionTracker.class.getClassLoader();
 		if (loader == null) {
 			logger.logDebug("ExceptionTracker.class.getClassLoader() returned null, trying systemClassLoader");
@@ -74,9 +75,11 @@ public class ExceptionTracker extends SnapShotMonitor {
 			Method method = clazz.getDeclaredMethod("registerExceptionConsumer" , new Class[] {Consumer.class});
 			method.invoke(null, new Object[] {new BridgeExceptionConsumer()});
 			enabled = true;
+			ExceptionTracker.config = config;
 		} else {
 			logger.logError("Unable to find classloader to load ExceptionTracker Bridge Class");
 		}
+	
 		return enabled;
 	}
 	

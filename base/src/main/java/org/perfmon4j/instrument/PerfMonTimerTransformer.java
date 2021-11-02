@@ -31,7 +31,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.lang.management.ManagementFactory;
@@ -43,12 +42,16 @@ import java.net.URLClassLoader;
 import java.rmi.RemoteException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.perfmon4j.BootConfiguration;
+import org.perfmon4j.BootConfiguration.ExceptionElement;
+import org.perfmon4j.BootConfiguration.ExceptionTrackerConfig;
 import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
@@ -486,22 +489,26 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     }
 
     private static class ExceptionTrackerInstaller implements ClassFileTransformer {
+    	private final ExceptionTrackerConfig config;
+    	private final Set<String> exceptionClasses = new HashSet<String>();
+    	
+    	ExceptionTrackerInstaller(ExceptionTrackerConfig config) {
+    		this.config = config;
+    		for (ExceptionElement element : config.getElements()) {
+    			exceptionClasses.add(element.getClassName().replaceAll("\\.", "/"));
+    		}
+    	}
+    	
         public byte[] transform(ClassLoader loader, String className, 
                 Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
-                byte[] classfileBuffer) throws IllegalClassFormatException {
+                byte[] classfileBuffer) {
             byte[] result = null;
             
-            boolean isException = "java/lang/Exception".equals(className);
-            boolean isError = "java/lang/Error".equals(className);
-            boolean isRuntimeException = "java/lang/RuntimeException".equals(className);
-            
-            if (isException || isError || isRuntimeException) {
+            if (exceptionClasses.contains(className)) {
 	            try {
             		result = runtimeTimerInjector.instrumentExceptionOrErrorClass(className, classfileBuffer, loader, protectionDomain);
 	            } catch (Exception ex) {
-	            	IllegalClassFormatException iex = new IllegalClassFormatException("Perfmon4j was unable to add ExceptionTracker to Class: " + className);
-	            	iex.initCause(ex);
-	            	throw iex;
+	            	logger.logWarn("Perfmon4j was unable to add ExceptionTracker to Class: " + className, ex);
 	            }
             }
 			
@@ -695,22 +702,24 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     		}
         }
 
-        if (t.params.isInstallServletValve()) {
-        	BootConfiguration.ServletValveConfig valveConfig = null;
-        	String configFile = t.params.getXmlFileToConfig();
-        	if (configFile != null) {
-        		FileReader reader = null;
-        		try {
-        			reader = new FileReader(configFile);
-					valveConfig = XMLBootParser.parseXML(reader).getServletValveConfig();
-				} catch (FileNotFoundException e) {
-					logger.logError("Perfmon4j unable to load boot configuration", e);
-				} finally {
-					if (reader != null) {
-						try {reader.close();} catch (Exception ex) {}
-					}
+        BootConfiguration bootConfiguration = BootConfiguration.getDefault();
+    	String configFile = t.params.getXmlFileToConfig();
+    	if (configFile != null) {
+    		FileReader reader = null;
+    		try {
+    			reader = new FileReader(configFile);
+    			bootConfiguration = XMLBootParser.parseXML(reader);
+			} catch (FileNotFoundException e) {
+				logger.logError("Perfmon4j unable to load boot configuration -- using default", e);
+			} finally {
+				if (reader != null) {
+					try {reader.close();} catch (Exception ex) {}
 				}
-        	}
+			}
+    	}
+        
+        if (t.params.isInstallServletValve()) {
+        	BootConfiguration.ServletValveConfig valveConfig = bootConfiguration.getServletValveConfig();
         	valveHookInserter = new ValveHookInserter(valveConfig);
             inst.addTransformer(valveHookInserter);
         	logger.logInfo("Perfmon4j will attempt to install a Servlet Valve in Tomcat, JBoss or Wildfly Servers");
@@ -822,30 +831,45 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         if (disabler != null) {
         	inst.removeTransformer(disabler);
         }
-
-        if (t.params.isExceptionTrackerEnabled()) {
-	        if (inst.isRedefineClassesSupported()) {
-	        	ExceptionTrackerInstaller installer = new ExceptionTrackerInstaller();
-	        	try {
-	        		inst.addTransformer(installer);
-	        		redefineClass(inst, Exception.class);
-	        		redefineClass(inst, Error.class);
-	        		redefineClass(inst, RuntimeException.class);
-	                if (ExceptionTracker.registerWithBridge()) {
-	                	logger.logInfo("Perfmon4j installed ExceptionTracker");
-	                } else {
-	                	logger.logError("Perfmon4j was unable to register ExceptionTracker with Bridge class. "
-                			+ "Exception tracker is not available");
-	                }
-	        	} catch (Exception ex) {
-	        		logger.logError("Perfmon4j was unable to install ExceptionTracker", ex);
-	        	}
-	        } else {
-	        	logger.logError("Perfmon4j is unable to load ExceptionTracker. RedefineClasses is not supported");
-	        }
-        } else {
-           	logger.logInfo("Perfmon4j ExceptionTracker will not be installed. Add -eExceptionTracker to javaAgent parameters to enable.");
+        
+        if (!bootConfiguration.isExceptionTrackerEnabled() && t.params.isExceptionTrackerEnabled()) {
+        	ExceptionTrackerConfig  config = new ExceptionTrackerConfig();
+        	config.addElement(new ExceptionElement("java.lang.Exception", "Java Exception"));
+        	config.addElement(new ExceptionElement("java.lang.RuntimeException", "Java Runtime Exception"));
+        	config.addElement(new ExceptionElement("java.lang.Error", "Java Error"));
+        	bootConfiguration.setExceptionTrackerConfig(config);
         }
+
+        if (bootConfiguration.isExceptionTrackerEnabled()) {
+        	boolean trackerInitialized = false;
+        	BootConfiguration.ExceptionTrackerConfig config = bootConfiguration.getExceptionTrackerConfig();
+        	try {
+	        	ExceptionTrackerInstaller installer = new ExceptionTrackerInstaller(config);
+	        	inst.addTransformer(installer);
+        		runtimeTimerInjector.createExceptionTrackerBridgeClass(Object.class.getClassLoader(), Object.class.getProtectionDomain());
+        		trackerInitialized = ExceptionTracker.registerWithBridge(config);
+        	} catch (Exception ex) {
+        		logger.logError("Perfmon4j unable to initialize Exception Tracker", ex);
+        	}
+	        if (trackerInitialized && inst.isRedefineClassesSupported()) {
+	        	// Check to see if any exception classes have already been loaded,
+	        	// and instrument any we find.
+	           	Set<String> classNames = new HashSet<String>();
+	        	for (ExceptionElement element : config.getElements()) {
+	        		classNames.add(element.getClassName());
+	        	}
+        		for (Class<?> clazz : inst.getAllLoadedClasses()) {
+        			if (classNames.contains(clazz.getName())) {
+        				try {
+	        				redefineClass(inst, clazz);
+	        				logger.logDebug("Redefined loaded class for Exception Tracker: " + clazz.getName());
+        				} catch (Exception ex) {
+	        				logger.logError("Perfmon4j unable to redefined loaded class for Exception Tracker: " + clazz.getName());
+        				}
+        			}
+        		}
+	        } 
+        } 
         
         String xmlFileToConfig = t.params.getXmlFileToConfig();
         if (xmlFileToConfig != null) {

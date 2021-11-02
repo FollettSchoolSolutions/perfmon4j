@@ -199,7 +199,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
         
         BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
         assertNotNull("Should have an Exception Tracker Configuration", etConfig);
-        assertEquals("Not very useful since no exceptions have been defined", 0, etConfig.getElements().length);
+        assertEquals("Not very useful since no exceptions have been defined", 0, etConfig.getElements().size());
     }
     
     public void testParseExceptionWithClassName() throws Exception {
@@ -215,9 +215,9 @@ public class XMLBootParserTest extends PerfMonTestCase {
         
         BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
         assertNotNull("Should have an Exception Tracker Configuration", etConfig);
-        assertEquals("Should have one exception", 1, etConfig.getElements().length);
+        assertEquals("Should have one exception", 1, etConfig.getElements().size());
         
-        BootConfiguration.ExceptionElement element = etConfig.getElements()[0];
+        BootConfiguration.ExceptionElement element = etConfig.getElements().iterator().next();
         
         assertEquals("expected className", "java.lang.Exception", element.getClassName());
         assertEquals("displayName defaults to className if not defined", 
@@ -237,9 +237,9 @@ public class XMLBootParserTest extends PerfMonTestCase {
         
         BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
         assertNotNull("Should have an Exception Tracker Configuration", etConfig);
-        assertEquals("Should have one exception", 1, etConfig.getElements().length);
+        assertEquals("Should have one exception", 1, etConfig.getElements().size());
         
-        BootConfiguration.ExceptionElement element = etConfig.getElements()[0];
+        BootConfiguration.ExceptionElement element = etConfig.getElements().iterator().next();
         
         assertEquals("expected className", "java.lang.Error", element.getClassName());
         assertEquals("expected displayName", "Java Error", element.getDisplayName());
@@ -260,7 +260,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
         
         BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
         assertNotNull("Should have an Exception Tracker Configuration", etConfig);
-        assertEquals("Expected number of elements", 3, etConfig.getElements().length);
+        assertEquals("Expected number of elements", 3, etConfig.getElements().size());
     }
     
 /*----------------------------------------------------------------------------*/    
