@@ -837,14 +837,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	inst.removeTransformer(disabler);
         }
         
-        if (!bootConfiguration.isExceptionTrackerEnabled() && t.params.isExceptionTrackerEnabled()) {
-        	ExceptionTrackerConfig  config = new ExceptionTrackerConfig();
-        	config.addElement(new ExceptionElement("java.lang.Exception", "Java Exception"));
-        	config.addElement(new ExceptionElement("java.lang.RuntimeException", "Java Runtime Exception"));
-        	config.addElement(new ExceptionElement("java.lang.Error", "Java Error"));
-        	bootConfiguration.setExceptionTrackerConfig(config);
-        }
-
         if (bootConfiguration.isExceptionTrackerEnabled()) {
         	boolean trackerInitialized = false;
         	BootConfiguration.ExceptionTrackerConfig config = bootConfiguration.getExceptionTrackerConfig();

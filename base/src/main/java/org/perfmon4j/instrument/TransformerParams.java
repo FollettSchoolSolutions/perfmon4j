@@ -1,5 +1,5 @@
 /*
- *	Copyright 2008-2013 Follett Software Company 
+ *	Copyright 2021 Follett School Solutions, LLC 
  *
  *	This file is part of PerfMon4j(tm).
  *
@@ -11,12 +11,11 @@
  * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
  * 	http://www.gnu.org/licenses/
  * 	
- * 	perfmon4j@fsc.follett.com
+ * 	ddeucher@follett.com
  * 	David Deuchert
- * 	Follett Software Company
- * 	1391 Corporate Drive
+ * 	Follett School Solutions, LLC
+ * 	1340 Ridgeview Dr
  * 	McHenry, IL 60050
- * 
 */
 
 package org.perfmon4j.instrument;
@@ -90,7 +89,6 @@ public class TransformerParams {
 	private int remoteManagementPort = REMOTE_PORT_DISABLED;
 	private boolean installServletValve = false;
 	private boolean hystrixInstrumentationEnabled = false;
-	private boolean exceptionTrackerEnabled = false;
 	
 	public static final int REMOTE_PORT_DISABLED = -1;
 	public static final int REMOTE_PORT_AUTO = 0;
@@ -155,8 +153,6 @@ public class TransformerParams {
                     	installServletValve = true;
                     } else if ("HYSTRIX".equalsIgnoreCase(nextParam.parameter)) {
                     	hystrixInstrumentationEnabled = true;
-                    } else if ("ExceptionTracker".equalsIgnoreCase(nextParam.parameter)) {
-                    	exceptionTrackerEnabled = true;
                     } else if ("SQL".equals(nextParam.parameter)) {
                     	extremeSQLMonitorEnabled = true;
                 		extremeSQLPackages.add("org.postgresql");
@@ -525,9 +521,5 @@ public class TransformerParams {
 
 	public boolean isHystrixInstrumentationEnabled() {
 		return hystrixInstrumentationEnabled;
-	}
-
-	public boolean isExceptionTrackerEnabled() {
-		return exceptionTrackerEnabled;
 	}
 }
