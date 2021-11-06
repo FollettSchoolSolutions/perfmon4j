@@ -728,24 +728,6 @@ public class TransformerParamsTest extends PerfMonTestCase {
         	params = new TransformerParams("-eSQL");
         	assertTrue(params.isPossibleJDBCDriver("com.microsoft.sqlserver.jdbc.Driver"));
         }
-
-        public void testEnableExcptionTracker() {
-        	TransformerParams params = new TransformerParams();
-        	
-        	assertFalse("ExceptionTracker is disabled by default", params.isExceptionTrackerEnabled());
-        
-        	params = new TransformerParams("e=ExceptionTracker");
-        	assertTrue("e=ExceptionTracker", params.isExceptionTrackerEnabled());
-        	
-        	params = new TransformerParams("e=ExCePtionTracKer");
-        	assertTrue("e=ExceptionTracker should be case insensitive", params.isExceptionTrackerEnabled());
-        	
-        	params = new TransformerParams("-eExceptionTracker");
-        	assertTrue("-eExceptionTracker", params.isExceptionTrackerEnabled());
-        	
-        	params = new TransformerParams("-eExCePtionTracKer");
-        	assertTrue("-eExceptionTracker should be case insensitive", params.isExceptionTrackerEnabled());
-        }
         
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
