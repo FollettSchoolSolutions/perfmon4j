@@ -187,15 +187,20 @@ public class BootConfiguration {
 	public static final class ExceptionElement {
 		private final String className;
 		private final String displayName;
+		private final boolean includeSQL;
 
 		public ExceptionElement(String className) {
-			this(className, className);
+			this(className, className, false);
 			
 		}
-		
 		public ExceptionElement(String className, String displayName) {
+			this(className, displayName, false);
+		}
+		
+		public ExceptionElement(String className, String displayName, boolean includeSQL) {
 			this.className = className;
 			this.displayName = displayName;
+			this.includeSQL = includeSQL;
 		}
 		
 		public String getDisplayName() {
@@ -204,6 +209,10 @@ public class BootConfiguration {
 
 		public String getClassName() {
 			return className;
+		}
+		
+		public boolean isIncludeSQL() {
+			return includeSQL;
 		}
 
 		@Override

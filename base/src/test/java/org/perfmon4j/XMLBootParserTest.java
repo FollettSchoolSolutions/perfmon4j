@@ -222,6 +222,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
         assertEquals("expected className", "java.lang.Exception", element.getClassName());
         assertEquals("displayName defaults to className if not defined", 
         		"java.lang.Exception", element.getDisplayName());
+        assertFalse("Should default includeSQL to false", element.isIncludeSQL());
     }
 
     public void testParseExceptionWithClassAndDisplayName() throws Exception {
@@ -243,7 +244,26 @@ public class XMLBootParserTest extends PerfMonTestCase {
         
         assertEquals("expected className", "java.lang.Error", element.getClassName());
         assertEquals("expected displayName", "Java Error", element.getDisplayName());
+        assertFalse("Should default includeSQL to false", element.isIncludeSQL());
     }
+
+    
+    public void testParseExceptionWithIncludeSQL() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker>" +
+            "			<exception className='java.lang.Error' includeSQL='true' />" +
+            "		</exceptionTracker>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        BootConfiguration.ExceptionElement element = etConfig.getElements().iterator().next();
+        assertTrue("Should set includeSQL to true", element.isIncludeSQL());
+    }
+    
     
     public void testParseMultipleExceptionElements() throws Exception {
         final String XML =

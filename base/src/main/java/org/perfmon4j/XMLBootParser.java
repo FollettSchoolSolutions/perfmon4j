@@ -130,7 +130,8 @@ public class XMLBootParser extends DefaultHandler {
                 	}
                 	
                 	config.getExceptionTrackerConfig().addElement(
-                			new BootConfiguration.ExceptionElement(className, displayName));
+                			new BootConfiguration.ExceptionElement(className, displayName, 
+                				Boolean.valueOf(atts.getValue("includeSQL")).booleanValue()));
                 } else {
                     throw new SAXException("Unexpected element: " + name);
                 }
