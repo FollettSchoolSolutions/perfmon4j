@@ -84,13 +84,25 @@ public class ExceptionTracker extends SnapShotMonitor {
 	 * @throws Exception
 	 */
 	public static boolean registerWithBridge(BootConfiguration.ExceptionTrackerConfig config) throws Exception {
+		return registerWithBridge(config, BRIDGE_CLASS_NAME);
+	}
+	
+	/**
+	 * Package level for testing.  Should only be called from UnitTests.
+	 * @param config
+	 * @param bridgeClassName
+	 * @return
+	 * @throws Exception
+	 */
+	
+	static boolean registerWithBridge(BootConfiguration.ExceptionTrackerConfig config, String bridgeClassName) throws Exception {
 		ClassLoader loader = ExceptionTracker.class.getClassLoader();
 		if (loader == null) {
 			logger.logDebug("ExceptionTracker.class.getClassLoader() returned null, trying systemClassLoader");
 			loader = ClassLoader.getSystemClassLoader();
 		}
 		if (loader != null) {
-			Class<?> clazz = loader.loadClass(BRIDGE_CLASS_NAME);
+			Class<?> clazz = loader.loadClass(bridgeClassName);
 			Method method = clazz.getDeclaredMethod("registerExceptionConsumer" , new Class[] {Consumer.class});
 			method.invoke(null, new Object[] {new BridgeExceptionConsumer()});
 			enabled = true;

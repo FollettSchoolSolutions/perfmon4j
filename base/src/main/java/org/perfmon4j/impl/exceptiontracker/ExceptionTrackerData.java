@@ -40,6 +40,15 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 		this.start = start;
 		this.startTimeMillis = startTimeMillis;
 	}
+
+	// Package level for Testing - This constructor is only designed for Unit Tests
+	ExceptionTrackerData(String name, long startTimeMillis, long endTimeMillis, Set<DeltaElement> dataSet) {
+		this.setName(name);
+		this.start = null;
+		this.startTimeMillis = startTimeMillis;
+		this.endTimeMillis = endTimeMillis;
+		this.dataSet = dataSet;
+	}
 	
 	public ExceptionTrackerData stop(Map<String, MeasurementElement> end, long endTimeMillis) {
 		this.endTimeMillis = endTimeMillis;
@@ -47,6 +56,7 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 		
 		return this;
 	}
+	
 	
 	@Override
 	public String toAppenderString() {
@@ -80,13 +90,12 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 	public Set<PerfMonObservableDatum<?>> getObservations() {
 		Set<PerfMonObservableDatum<?>> result = new HashSet<PerfMonObservableDatum<?>>();
 		
-		
 		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("timeStart", startTimeMillis));
 		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("timeStop", endTimeMillis));
 		if (dataSet != null) {
 			for (DeltaElement element : dataSet) {
 				addIfNotNull(result, PerfMonObservableDatum.newDatum(element.getFieldName(), element.getCount()));
-				addIfNotNull(result, PerfMonObservableDatum.newDatum(element.getFieldName() + " SQL", element.getCount()));
+				addIfNotNull(result, PerfMonObservableDatum.newDatum(element.getFieldName() + " SQL", element.getSqlCount()));
 			}
 		} 
 

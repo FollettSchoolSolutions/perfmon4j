@@ -179,6 +179,15 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         bridgeClass.detach();
     }
     
+    private boolean isClassDescendedFrom(CtClass clazz, String className) throws NotFoundException {
+    	while ((clazz = clazz.getSuperclass()) != null) {
+    		if (clazz.getName().equals(className)) {
+    			return true;
+    		}
+    	}
+    	return false;
+    }
+    
     public byte[] instrumentExceptionOrErrorClass(String className, byte[] classfileBuffer, ClassLoader loader, 
     		ProtectionDomain protectionDomain) throws Exception {
         if (loader == null) {
@@ -193,20 +202,25 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         if (clazz.isFrozen()) {
             clazz.defrost();
         }    	
-        
-        final String methodBody =
-        	"\r\n{\r\n" +
-        	"\tClass clazzBridge = ClassLoader.getSystemClassLoader().loadClass(\"" + ExceptionTracker.BRIDGE_CLASS_NAME + "\");\r\n" +
-        	"\tjava.lang.reflect.Method m = clazzBridge.getDeclaredMethod(\"notifyExceptionCreate\", new Class[] {String.class, Object.class});\r\n" +
-        	"\tm.invoke(null, new Object[] {\"" + className.replaceAll("/", ".") + "\", this});\r\n" +
-    		"}\r\n";
+       
+        if (!isClassDescendedFrom(clazz, "java.lang.Throwable")) {
+        	logger.logWarn("Class " + className  + " is NOT derived from java.lang.Throwable and cannot be added to the Perfmon4j ExceptionTracker");
+        	return null;
+        } else {
+	        final String methodBody =
+	        	"\r\n{\r\n" +
+	        	"\tClass clazzBridge = ClassLoader.getSystemClassLoader().loadClass(\"" + ExceptionTracker.BRIDGE_CLASS_NAME + "\");\r\n" +
+	        	"\tjava.lang.reflect.Method m = clazzBridge.getDeclaredMethod(\"notifyExceptionCreate\", new Class[] {String.class, Object.class});\r\n" +
+	        	"\tm.invoke(null, new Object[] {\"" + className.replaceAll("/", ".") + "\", this});\r\n" +
+	    		"}\r\n";
 //System.out.println(methodBody);        
-        
-        for (CtConstructor constructor : clazz.getDeclaredConstructors()) {
-        	constructor.insertAfter(methodBody);
-        }
-        
-    	return clazz.toBytecode();
+	        
+	        for (CtConstructor constructor : clazz.getDeclaredConstructors()) {
+	        	constructor.insertAfter(methodBody);
+	        }
+	        
+	    	return clazz.toBytecode();
+        } 
     }
     
     private boolean classHaveSkipIndicator(CtClass clazz) {

@@ -20,13 +20,89 @@
 
 package org.perfmon4j;
 
-import junit.framework.Assert;
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
+
 import junit.framework.TestCase;
 
 public class ExceptionTrackerTest extends TestCase {
-	
-	public void testPlaceHolder() {
-		Assert.fail("Add tests");
+	private BootConfiguration.ExceptionTrackerConfig config = null;
+
+	public void setUp() throws Exception {
+		super.setUp();
+		
+		TestBridgeClass.consumer = null;
+		config = new BootConfiguration.ExceptionTrackerConfig();
+		
+		config.addElement(null);
 	}
 	
+	public void testRegister() throws Exception {
+		ExceptionTracker.registerWithBridge(config, TestBridgeClass.class.getName());
+		
+		assertNotNull("Should have registered with our testBridge", TestBridgeClass.consumer);
+		assertTrue("Should be enabled", ExceptionTracker.isEnabled());
+	}
+	
+	public void testIncrementDoesNotDoubleIncrement() throws Exception {
+		// This simulates a constructor chaining scenario, where one constructor
+		// calls another constructor in the same class.
+		
+		BootConfiguration.ExceptionElement element = new BootConfiguration.ExceptionElement("java.lang.Exception", "exception");
+		config.addElement(element);
+		ExceptionTracker.registerWithBridge(config, TestBridgeClass.class.getName());
+	
+		Exception exception = new Exception();
+		
+		// This should be treated as a nested constructor, 2 counts from the same exception object
+		TestBridgeClass.consumer.accept(newEntry(exception));
+		TestBridgeClass.consumer.accept(newEntry(exception));
+		
+		assertEquals("Should not double count for the same object", 1, ExceptionTracker.getCount(Exception.class.getName()));
+		
+		// Now call with a different exception object, this should increment the count.
+		TestBridgeClass.consumer.accept(newEntry(new Exception()));
+		assertEquals("Different object", 2, ExceptionTracker.getCount(Exception.class.getName()));
+	}
+	
+	public void testMultiThreadIncrement() throws Exception {
+		// This simulates a exceptions count accumulation from multiple threads.
+		BootConfiguration.ExceptionElement element = new BootConfiguration.ExceptionElement("java.lang.Exception", "exception");
+		config.addElement(element);
+		ExceptionTracker.registerWithBridge(config, TestBridgeClass.class.getName());
+	
+		TestBridgeClass.consumer.accept(newEntry(new NullPointerException()));
+		
+		CountDownLatch latch = new CountDownLatch(1);
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				TestBridgeClass.consumer.accept(newEntry(new NullPointerException()));
+				latch.countDown();
+			}
+		}).start();
+		
+		// Wait for thread to run
+		latch.await();
+		
+		assertEquals("Expected count accross all threads", 2, 
+			ExceptionTracker.getCount(NullPointerException.class.getName()));
+		assertEquals("Expected count on just this thread", 1, 
+			ExceptionTracker.getCountForCurrentThread(NullPointerException.class.getName()));
+	}
+	
+	private Map.Entry<String, Object> newEntry(Throwable throwable) {
+		return new AbstractMap.SimpleEntry<String, Object>(throwable.getClass().getName(), throwable);		
+	}
+	
+	private static final class TestBridgeClass {
+		public static Consumer<Map.Entry<?, ?>> consumer = null;
+		
+		@SuppressWarnings({ "unused", "unchecked" })
+		public static void registerExceptionConsumer(Consumer<?> newConsumer) {
+			consumer = (Consumer<Map.Entry<?, ?>>)newConsumer;
+		}
+	}
 }

@@ -27,6 +27,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.Statement;
@@ -703,18 +704,19 @@ System.out.println(output);
 			}
 			
 			System.out.println("Before RuntimeException count: " + ExceptionTracker.getCount("java.lang.RuntimeException"));
-			System.out.println("Before MyException class: " 
+			System.out.println("Before MyException count: " 
 					+ ExceptionTracker.getCount("org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException"));
 			
 			new RuntimeException();
-			
 			new MyException(); // Make sure exceptions aren't double counted when a class has nested constructors;
 			new MyException("anything");
-
+			new BigDecimal(0); // Not a throwable/should not be instrumented or counted by Exception Tracker.
+			
 			System.out.println("After RuntimeException count: " + ExceptionTracker.getCount("java.lang.RuntimeException"));
-			System.out.println("After MyException class: " 
+			System.out.println("After MyException count: " 
 					+ ExceptionTracker.getCount("org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException"));
-
+			System.out.println("After BigDecimal count: "  
+					+ ExceptionTracker.getCount("java.math.BigDecimal"));
 		}
 	}    
 
@@ -725,15 +727,21 @@ System.out.println(output);
     		"\t\t<exceptionTracker>\r\n" +
             "\t\t\t<exception className='java.lang.RuntimeException'/>\r\n" + 
             "\t\t\t<exception className='org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException'/>\r\n" + 
+            "\t\t\t<exception className='java.math.BigDecimal'/>\r\n" + // Will be ignored, must be a class that is inherited from Throwable. 
     		"\t\t</exceptionTracker>\r\n" +
             "\t</boot>\r\n" +
     		"</Perfmon4JConfig>";
 
     	String output = LaunchRunnableInVM.run(new Params(ExceptionTrackerTest.class, perfmon4jJar)
     		.setPerfmonConfigXML(configFile));
+//System.out.println(output);
     	
 		assertTrue("Expected 1 RuntimeException", output.contains("After RuntimeException count: 1"));
-		assertTrue("Expected 2 MyException", output.contains("After MyException class: 2"));
+		assertTrue("Expected 2 MyException", output.contains("After MyException count: 2"));
+		assertTrue("Expected 0 java.math.BigDecimal - non-Throwable classes not instrumented", 
+			output.contains("After BigDecimal count: 0"));
+		assertTrue("Should show warning that java.math.BigDecimal is not a throwable", 
+			output.contains("Class java/math/BigDecimal is NOT derived from java.lang.Throwable and cannot be added to the Perfmon4j ExceptionTracker"));
     }
     
     

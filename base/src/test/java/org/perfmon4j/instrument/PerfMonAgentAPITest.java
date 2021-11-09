@@ -62,9 +62,21 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 			classesFolder = new File("./base/target/classes");
 		}
 		
-		assertTrue("Could not find classes folder in: "  + classesFolder.getCanonicalPath(), classesFolder.exists());
+		File testClassesFolder = new File("./target/test-classes");
+		if (!testClassesFolder.exists()) {
+			testClassesFolder = new File("./base/target/test-classes");
+		}
+
+		File apiClassesFolder = new File("../agent-api/target/classes");
+		if (!apiClassesFolder.exists()) {
+			apiClassesFolder = new File("./agent-api/target/classes");
+		}
 		
-        MiscHelper.createJarFile(perfmon4jJar.getAbsolutePath(), props, new File[]{classesFolder});
+		assertTrue("Could not find classes folder in: "  + classesFolder.getCanonicalPath(), classesFolder.exists());
+		assertTrue("Could not find test classes folder in: "  + testClassesFolder.getCanonicalPath(), testClassesFolder.exists());
+		assertTrue("Could not find agent-api classes folder in: "  + apiClassesFolder.getCanonicalPath(), apiClassesFolder.exists());
+		
+        MiscHelper.createJarFile(perfmon4jJar.getAbsolutePath(), props, new File[]{classesFolder, testClassesFolder, apiClassesFolder});
     }
     
 /*----------------------------------------------------------------------------*/
@@ -103,8 +115,9 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	}
 
     public void testObjectsAreAttached() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPIUsageTest.class, "-dFALSE", "", perfmon4jJar);
-//System.out.println(output);   	
+    	String output = LaunchRunnableInVM.run(
+    		new LaunchRunnableInVM.Params(AgentAPIUsageTest.class, perfmon4jJar));
+//System.out.println("org.perfmon4j.instrument.PerfMonAgentAPITest#testObjectsAreAttached\r\n" +output);   	
     	
     	assertTrue("PerfMon API class was not attached to agent", output.contains("Agent API for PerfMon class has been instrumented"));
     	assertTrue("PerfMonTimer API class was not attached to agent", output.contains("Agent API for PerfMonTimer class has been instrumented"));
@@ -144,7 +157,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	}
 	
     public void testAttachedPerfMonAPI() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPIPerfMonInstTest.class, "", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(AgentAPIPerfMonInstTest.class, perfmon4jJar));
 //System.out.println(output);    	
     	String failures = extractFailures(output);
     	
@@ -198,7 +212,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	
 	
     public void testAttachedPerfMonTimerAPI() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPIPerfMonTimerInstTest.class, "", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(AgentAPIPerfMonTimerInstTest.class, perfmon4jJar));
 //System.out.println(output);    	
     	String failures = extractFailures(output);
     	
@@ -237,7 +252,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	
 	
     public void testAttachedSQLTimeAPI() throws Exception {
-    	String output = LaunchRunnableInVM.run(AgentAPISQLTimeInstTest.class, "", "", perfmon4jJar);
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(AgentAPISQLTimeInstTest.class, perfmon4jJar));
 //System.out.println(output);    	
     	String failures = extractFailures(output);
     	
@@ -280,8 +296,10 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     
 	
     public void testAttachedDeclarePerfmonTimerAPI() throws Exception { 
-    	String output = LaunchRunnableInVM.run(AgentDeclarePerfMonTimerInstTest.class, "-a" + AgentDeclarePerfMonTimerInstTest.class.getName(), "", perfmon4jJar); 
-//System.out.println(output);    	 
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(AgentDeclarePerfMonTimerInstTest.class, perfmon4jJar)
+        		.setJavaAgentParams( "-a" + AgentDeclarePerfMonTimerInstTest.class.getName()));
+//System.out.println("org.perfmon4j.instrument.PerfMonAgentAPITest#testAttachedDeclarePerfmonTimerAPI\r\n" + output);    	 
     	String failures = extractFailures(output); 
     	 
     	if (!failures.isEmpty()) { 
@@ -349,8 +367,10 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	
 	
     public void testAPISnapShotAnnotations() throws Exception {
-    	String output = LaunchRunnableInVM.run(SnapShotMonitorWithAPIAnnotationTest.class, "", "", perfmon4jJar);
-//System.out.println(output);    	
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(SnapShotMonitorWithAPIAnnotationTest.class, perfmon4jJar));
+    	
+//System.out.println("org.perfmon4j.instrument.PerfMonAgentAPITest#testAPISnapShotAnnotations\r\n" + output);    	
     	
     	assertTrue("Should have the counter value in text output", output.contains("counter.................. 1/per duration"));
     	assertTrue("Should have the gauge value in text output", output.contains("gauge.................... 1"));
@@ -402,8 +422,9 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	
 	
     public void testAPISnapShotRatiosAnnotations() throws Exception {
-    	String output = LaunchRunnableInVM.run(SnapShotMonitorWithAPIRatiosTest.class, "", "", perfmon4jJar);
-//System.out.println(output);    	
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(SnapShotMonitorWithAPIRatiosTest.class, perfmon4jJar));
+//System.out.println("org.perfmon4j.instrument.PerfMonAgentAPITest#testAPISnapShotRatiosAnnotations\r\n" + output);    	
     	
     	assertTrue("Should have the cacheHitRate value in text output", output.contains("cacheHitRate............. 25.000%"));
     }
