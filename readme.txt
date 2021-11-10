@@ -18,6 +18,12 @@ McHenry, IL 60050
 Changes
 
 ** 1.6.0 (Next Version) - TBD
+- Added exception tracking.  This can be used to track the number of 
+  times specified instance of Exceptions are created.
+    
+  See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/ExceptionTracker 
+  for usage information 
+
 - Now Perfmon4j Interval Monitors can track the duration of threads that 
   have not yet completed.  This is a low overhead, in terms of both
   performance and memory.  This initial implementation is exposed through

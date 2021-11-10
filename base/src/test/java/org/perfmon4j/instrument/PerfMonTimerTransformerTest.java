@@ -745,6 +745,63 @@ System.out.println(output);
     }
     
     
+    public static class ExceptionTrackerOutputTest implements Runnable {
+    
+    	private void sleep(int millis) {
+			try {
+				Thread.sleep(millis);
+			} catch (InterruptedException e) {
+				// Ignored
+			}
+    	}
+    	
+		@Override
+		public void run() {
+			sleep(700);  // Give perfmon4j time to load it's configuration file.
+			
+			new NullPointerException();
+			
+			sleep(300);  // Give time for appender to finish
+			Appender.flushAllAppenders();
+		}
+	}    
+
+    
+    public void testExceptionTrackerOutput() throws Exception {
+    	final String configFile = 
+    	"<Perfmon4JConfig enabled='true'>\r\n" +
+    	"\t<boot>\r\n"+
+    	"\t\t<exceptionTracker>\r\n" +
+    	"\t\t\t<exception displayName='NullPointerEx' className='java.lang.NullPointerException'/>\r\n" +
+    	"\t\t</exceptionTracker>\r\n" +	
+    	"\t</boot>\r\n" +
+    	"\t<appender name='text-appender' className='org.perfmon4j.TextAppender' interval='100 millis'/>\r\n" +
+        "\t<snapShotMonitor name='ExceptionTracker' className='org.perfmon4j.ExceptionTracker' usePriorityTimer='true'>\r\n" +
+        "\t\t<appender name='text-appender'/>\r\n" +
+        "\t</snapShotMonitor>\r\n" +
+        "</Perfmon4JConfig>";    
+//System.out.println(configFile);
+    	
+    	String output = LaunchRunnableInVM.run(new Params(ExceptionTrackerOutputTest.class, perfmon4jJar)
+    		.setPerfmonConfigXML(configFile));
+//System.out.println(output);
+
+    	int perMinute = 0;
+    	Pattern pattern = Pattern.compile("NullPointerEx\\.*\\s*(\\d{3}\\.00) per minute");
+    	Matcher m = pattern.matcher(output);
+    	if (m.find()) {
+    		perMinute = (int)Math.round(Double.valueOf(m.group(1)).doubleValue());
+    	}
+    	
+		/*
+		 * Why 600 per minute?  We had 1 NullPointerException in the 100 millisecond measurement.
+		 * period. There are 600 measurement periods(100 milliseconds in duration) in a minute.
+		 * 1 exception in 100 millis extrapolates to 600 exceptions in 1 minute.
+		 */
+		assertEquals("Should include a NullPointerEx count of ~600 request per minute", 600, perMinute);
+    }
+    
+    
 	public final static class ValveClass {
 	}
 	
