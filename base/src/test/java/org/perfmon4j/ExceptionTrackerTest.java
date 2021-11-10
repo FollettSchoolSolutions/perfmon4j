@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
+import org.perfmon4j.impl.exceptiontracker.MeasurementElement;
+
 import junit.framework.TestCase;
 
 public class ExceptionTrackerTest extends TestCase {
@@ -35,8 +37,6 @@ public class ExceptionTrackerTest extends TestCase {
 		
 		TestBridgeClass.consumer = null;
 		config = new BootConfiguration.ExceptionTrackerConfig();
-		
-		config.addElement(null);
 	}
 	
 	public void testRegister() throws Exception {
@@ -91,6 +91,45 @@ public class ExceptionTrackerTest extends TestCase {
 			ExceptionTracker.getCount(NullPointerException.class.getName()));
 		assertEquals("Expected count on just this thread", 1, 
 			ExceptionTracker.getCountForCurrentThread(NullPointerException.class.getName()));
+	}
+	
+	public void testGenerateDataMap_NoConfig() throws Exception {
+		ExceptionTracker.registerWithBridge(null, TestBridgeClass.class.getName());
+		
+		Map<String, MeasurementElement> dataMap = ExceptionTracker.generateDataMap();
+		assertEquals("No data expected in the dataMap", 0, dataMap.size()); 
+	}
+
+	public void testGenerateDataMap_NoElements() throws Exception {
+		ExceptionTracker.registerWithBridge(config, TestBridgeClass.class.getName());
+		
+		Map<String, MeasurementElement> dataMap = ExceptionTracker.generateDataMap();
+		assertEquals("No data expected in the dataMap", 0, dataMap.size()); 
+	}
+	
+	public void testGenerateDataMap_NoSQL() throws Exception {
+		final String EXCEPTION_CLASS_NAME = "testGenerateDataMap_NoSQL";
+		BootConfiguration.ExceptionElement element = new BootConfiguration.ExceptionElement(EXCEPTION_CLASS_NAME, "exception");
+		config.addElement(element);
+		ExceptionTracker.registerWithBridge(config, TestBridgeClass.class.getName());
+		
+		Map<String, MeasurementElement> dataMap = ExceptionTracker.generateDataMap();
+		assertEquals("Expected an exception count", 1, dataMap.size());
+		MeasurementElement measurement = dataMap.get(EXCEPTION_CLASS_NAME);
+		assertNotNull("Should have an Exception element", measurement);
+		assertEquals("Expected measurement name", "exception", measurement.getFieldName());
+		assertFalse("Should indicate not to display SQL count", measurement.isIncludeSQLCountInOutput());
+	}
+
+	public void testGenerateDataMap_WithSQL() throws Exception {
+		final String EXCEPTION_CLASS_NAME = "testGenerateDataMap_WithSQL";
+		BootConfiguration.ExceptionElement element = new BootConfiguration.ExceptionElement(EXCEPTION_CLASS_NAME, "exception", true);
+		config.addElement(element);
+		ExceptionTracker.registerWithBridge(config, TestBridgeClass.class.getName());
+		
+		Map<String, MeasurementElement> dataMap = ExceptionTracker.generateDataMap();
+		MeasurementElement measurement = dataMap.get(EXCEPTION_CLASS_NAME);
+		assertTrue("Should indicate SQL count should be displayed ", measurement.isIncludeSQLCountInOutput());
 	}
 	
 	private Map.Entry<String, Object> newEntry(Throwable throwable) {

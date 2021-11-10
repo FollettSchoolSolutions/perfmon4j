@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.perfmon4j.PerfMon;
 import org.perfmon4j.instrument.snapshot.Delta;
 
 public class DeltaElement extends Element {
@@ -35,10 +34,8 @@ public class DeltaElement extends Element {
 		super(start.getFieldName());
 		count = new Delta(start.getCount(), end.getCount(), duration);
 		
-		long startSQLCount = start.getSqlCount();
-		long endSQLCount = end.getSqlCount();
-		if (startSQLCount != PerfMon.NOT_SET && endSQLCount != PerfMon.NOT_SET) {
-			sqlCount = new Delta(startSQLCount, endSQLCount, duration);
+		if (start.isIncludeSQLCountInOutput() && end.isIncludeSQLCountInOutput()) {
+			sqlCount = new Delta(start.getSqlCount(), end.getSqlCount(), duration);
 		} else {
 			sqlCount = null;
 		}

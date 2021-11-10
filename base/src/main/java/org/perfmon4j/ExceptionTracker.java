@@ -47,13 +47,17 @@ public class ExceptionTracker extends SnapShotMonitor {
 		super(name, usePriorityTimer);
 	}
 	
-	private static Map<String, MeasurementElement> generateDataMap() {
+	/**
+	 * Package level for Unit Testing.
+	 * @return
+	 */
+	static Map<String, MeasurementElement> generateDataMap() {
 		Map<String, MeasurementElement> result = new HashMap<String, MeasurementElement>();
 		
 		if (config != null) {
 			for (ExceptionElement element : config.getElements()) {
 				result.put(element.getClassName(), new MeasurementElement(element.getDisplayName(), 
-						ExceptionPerThreadTracker.getGlobalCount(element.getClassName())));
+						ExceptionPerThreadTracker.getGlobalCount(element.getClassName()), element.isIncludeSQL()));
 			}
 		}
 		return result;

@@ -9,15 +9,22 @@ public class MeasurementElement extends Element {
 	public MeasurementElement(String fieldName, long count) {
 		this(fieldName, count, PerfMon.NOT_SET);
 	}
-	
 	public MeasurementElement(String fieldName, Counter counter) {
-		this(fieldName, counter.getCount(), counter.getSQLCount());
+		this(fieldName, counter, false);
+	}
+	
+	public MeasurementElement(String fieldName, Counter counter, boolean includeSQLCountInOutput) {
+		this(fieldName, counter.getCount(), includeSQLCountInOutput  ? counter.getSQLCount() : PerfMon.NOT_SET);
 	}
 
 	public MeasurementElement(String fieldName, long count, long sqlCount) {
 		super(fieldName);
 		this.count = count;
 		this.sqlCount = sqlCount;
+	}
+	
+	public boolean isIncludeSQLCountInOutput() {
+		return sqlCount != PerfMon.NOT_SET;
 	}
 	
 	public long getCount() {

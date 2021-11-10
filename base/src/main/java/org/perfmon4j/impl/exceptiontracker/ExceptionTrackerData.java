@@ -27,6 +27,7 @@ import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.PerfMonObservableDatum;
 import org.perfmon4j.SnapShotData;
+import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.util.MiscHelper;
 
@@ -63,9 +64,17 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 		String dataSetResult = "";
 		if (dataSet != null) {
 			for (DeltaElement element : dataSet) {
+				Delta count = element.getCount();
+				Delta sqlCount = element.getSqlCount();
+				
 				dataSetResult += String.format(" %s",
 					MiscHelper.formatTextDataLine(40, element.getFieldName(), 
-					(float)element.getCount().getDeltaPerMinute(), " per minute", 2));
+					(float)count.getDeltaPerMinute(), " per minute", 2));
+				if (sqlCount != null) {
+					dataSetResult += String.format(" %s",
+							MiscHelper.formatTextDataLine(40, element.getFieldName() + "(SQL)", 
+							(float)sqlCount.getDeltaPerMinute(), " per minute", 2));
+				}
 			}
 		} 
 		
@@ -90,12 +99,17 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 	public Set<PerfMonObservableDatum<?>> getObservations() {
 		Set<PerfMonObservableDatum<?>> result = new HashSet<PerfMonObservableDatum<?>>();
 		
-		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("timeStart", startTimeMillis));
-		addIfNotNull(result, PerfMonObservableDatum.newDateTimeDatumIfSet("timeStop", endTimeMillis));
+		result.add(PerfMonObservableDatum.newDateTimeDatumIfSet("timeStart", startTimeMillis));
+		result.add(PerfMonObservableDatum.newDateTimeDatumIfSet("timeStop", endTimeMillis));
 		if (dataSet != null) {
 			for (DeltaElement element : dataSet) {
-				addIfNotNull(result, PerfMonObservableDatum.newDatum(element.getFieldName(), element.getCount()));
-				addIfNotNull(result, PerfMonObservableDatum.newDatum(element.getFieldName() + " SQL", element.getSqlCount()));
+				Delta count = element.getCount();
+				Delta sqlCount = element.getSqlCount();
+				
+				result.add(PerfMonObservableDatum.newDatum(element.getFieldName(), count));
+				if (sqlCount != null) {
+					result.add(PerfMonObservableDatum.newDatum(element.getFieldName() + "(SQL)", sqlCount));
+				}
 			}
 		} 
 
@@ -111,13 +125,6 @@ public class ExceptionTrackerData extends SnapShotData implements PerfMonObserva
 	public long getDurationMillis() {
 		return endTimeMillis == PerfMon.NOT_SET ? PerfMon.NOT_SET : (endTimeMillis - startTimeMillis);
 	}
-	
-	
-    private void addIfNotNull(Set<PerfMonObservableDatum<?>> result, PerfMonObservableDatum<?> datum) {
-    	if (datum != null) {
-    		result.add(datum);
-    	}
-    }
 	
 	@Override
 	public String getDataCategory() {

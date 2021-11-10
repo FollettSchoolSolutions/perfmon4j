@@ -25,7 +25,7 @@ public class TestHelper extends org.perfmon4j.TestHelper {
 	}
 	
 	public static final MeasurementElement getMockMeasurementElement(String fieldName, long count, long sqlCount) {
-		return new MeasurementElement(fieldName, getMockCounter(count, sqlCount));
+		return new MeasurementElement(fieldName, getMockCounter(count, sqlCount), true);
 	}
 	
 	@SuppressWarnings("boxing")

@@ -58,6 +58,7 @@ public class ExceptionTrackerDataTest extends TestCase {
 				+ "WebRequest\r\n"
 				+ "00:00:00:000 -> 00:01:00:000\r\n"
 				+ " measurement............................. 60.00 per minute\r\n"
+				+ " measurement(SQL)........................ 10.00 per minute\r\n"
 				+ "********************************************************************************";
 		assertEquals("Current implementation does NOT include SQL counts", EXPECTED, data.toAppenderString());
 	}
@@ -73,6 +74,25 @@ public class ExceptionTrackerDataTest extends TestCase {
 		
 		return result;
 	}
+
+	public void testGetObservations_NoSQL() {
+		Set<DeltaElement> deltas = new HashSet<DeltaElement>();
+		deltas.add(TestHelper.getMockDeltaElement(FIELD_NAME, 60.0));
+		
+		ExceptionTrackerData data = new ExceptionTrackerData("WebRequest", START_TIME, END_TIME, deltas);
+		
+		Set<PerfMonObservableDatum<?>> observations = data.getObservations();
+		assertNotNull(observations);
+		assertEquals("Expected number of observations (includes startTime and stopTime)", 3, observations.size());
+	
+		Map<String, PerfMonObservableDatum<?>> datumMap = toMap(observations);
+		PerfMonObservableDatum<Delta> count = (PerfMonObservableDatum<Delta>)datumMap.get(FIELD_NAME);
+		PerfMonObservableDatum<Delta> sqlCount = (PerfMonObservableDatum<Delta>)datumMap.get(FIELD_NAME + "(SQL)");
+	
+		assertEquals("Expected count", 60, Math.round(count.getComplexObject().getDeltaPerMinute()));
+		assertNull("Not expected to return SQLCount",sqlCount);
+	}
+	
 	
 	@SuppressWarnings("unchecked")
 	public void testGetObservations() {
@@ -87,7 +107,7 @@ public class ExceptionTrackerDataTest extends TestCase {
 	
 		Map<String, PerfMonObservableDatum<?>> datumMap = toMap(observations);
 		PerfMonObservableDatum<Delta> count = (PerfMonObservableDatum<Delta>)datumMap.get(FIELD_NAME);
-		PerfMonObservableDatum<Delta> sqlCount = (PerfMonObservableDatum<Delta>)datumMap.get(FIELD_NAME + " SQL");
+		PerfMonObservableDatum<Delta> sqlCount = (PerfMonObservableDatum<Delta>)datumMap.get(FIELD_NAME + "(SQL)");
 	
 		assertEquals("Expected count", 60, Math.round(count.getComplexObject().getDeltaPerMinute()));
 		assertEquals("Expected sqlCount", 10, Math.round(sqlCount.getComplexObject().getDeltaPerMinute()));
