@@ -797,8 +797,12 @@ System.out.println(output);
 		 * Why 600 per minute?  We had 1 NullPointerException in the 100 millisecond measurement.
 		 * period. There are 600 measurement periods(100 milliseconds in duration) in a minute.
 		 * 1 exception in 100 millis extrapolates to 600 exceptions in 1 minute.
+		 * 
+		 * Also given the variability in terms of running this test on various machines allow
+		 * a large range of values to pass. 
 		 */
-		assertEquals("Should include a NullPointerEx count of ~600 request per minute", 600, perMinute);
+		assertTrue("Should include a NullPointerEx count of around 600 request per minute but was: " + perMinute, 
+			((perMinute > 590) && (perMinute < 610)));
     }
     
     
