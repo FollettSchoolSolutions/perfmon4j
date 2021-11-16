@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
+import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -122,9 +123,10 @@ class XMLConfigurationParser extends DefaultHandler {
     private final int STATE_IN_THREAD_TRACE_TRIGGERS          	= 8;
     private final int STATE_DONE                                = 9;
     private final int STATE_IN_BOOT /* Ignored */				= 10;
+    private final int STATE_IN_MONITOR_ATTRIBUTE               	= 11;
     
     private int currentState = STATE_UNDEFINED;
-    private String currentMonitorName = null;
+    private MonitorConfig currentMonitorConfig = null;
     private SnapShotMonitorVO currentSnapShotMonitor = null;
 
     // Current Appender information
@@ -180,8 +182,7 @@ class XMLConfigurationParser extends DefaultHandler {
 
                     validateArg(MONITOR_NAME, "name", nameAttr);
                     
-                    config.defineMonitor(nameAttr);
-                    currentMonitorName = nameAttr;
+                    currentMonitorConfig = config.defineMonitor(nameAttr);
                     currentState = STATE_IN_MONITOR;
                 } else if (ALIAS_NAME.equalsIgnoreCase(name)) {
                     logger.logDebug("Alias names are no longer supported in perfmon4j");
@@ -233,10 +234,15 @@ class XMLConfigurationParser extends DefaultHandler {
                         patternAttr = PerfMon.APPENDER_PATTERN_PARENT_ONLY;
                     }
                     try {
-                        config.attachAppenderToMonitor(currentMonitorName, nameAttr, patternAttr);
+                        config.attachAppenderToMonitor(currentMonitorConfig.getMonitorName(), nameAttr, patternAttr);
                     } catch (InvalidConfigException ex) {
                         throw new SAXException("Invalid configuration", ex);
                     }
+                } else if (ATTRIBUTE_NAME.equalsIgnoreCase(name)) {
+                    currentAttributeName = atts.getValue("name");
+                    currentAttributeData = null;
+                    validateArg(MONITOR_NAME + "." + ATTRIBUTE_NAME, "name", currentAttributeName);
+                    currentState = STATE_IN_MONITOR_ATTRIBUTE;
                 } else {
                     throw new SAXException("Unexpected element: " + name);
                 }
@@ -393,6 +399,12 @@ class XMLConfigurationParser extends DefaultHandler {
             }
             currentState = STATE_IN_ROOT;
         }
+
+        if (ATTRIBUTE_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_MONITOR_ATTRIBUTE) {
+        	String attributeData = currentAttributeData != null ? currentAttributeData : "";
+        	currentMonitorConfig.setProperty(currentAttributeName, attributeData);
+            currentState = STATE_IN_MONITOR;
+        }
         
         if (ATTRIBUTE_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_APPENDER_ATTRIBUTE) {
             if (currentAppenderAttributes == null) {
@@ -419,7 +431,7 @@ class XMLConfigurationParser extends DefaultHandler {
     }
     
     public void characters (char ch[], int start, int length) throws SAXException {
-        if (currentState == STATE_IN_APPENDER_ATTRIBUTE || currentState == STATE_IN_SNAP_SHOT_ATTRIBUTE) {
+        if (currentState == STATE_IN_APPENDER_ATTRIBUTE || currentState == STATE_IN_MONITOR_ATTRIBUTE || currentState == STATE_IN_SNAP_SHOT_ATTRIBUTE) {
             if (currentAttributeData == null) {
                 currentAttributeData = "";
             }

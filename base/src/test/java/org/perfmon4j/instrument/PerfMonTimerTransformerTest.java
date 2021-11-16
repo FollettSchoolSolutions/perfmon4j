@@ -45,6 +45,7 @@ import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.instrument.LaunchRunnableInVM.Params;
 import org.perfmon4j.util.GlobalClassLoader;
@@ -766,8 +767,12 @@ System.out.println(output);
 		}
 	}    
 
-    
-    public void testExceptionTrackerOutput() throws Exception {
+
+    /**
+     * This functions as an acceptance test of the Exception tracker.
+     * @throws Exception
+     */
+    public void testExceptionTrackerOutput_AT() throws Exception {
     	final String configFile = 
     	"<Perfmon4JConfig enabled='true'>\r\n" +
     	"\t<boot>\r\n"+
@@ -805,6 +810,51 @@ System.out.println(output);
 			((perMinute > 590) && (perMinute < 610)));
     }
     
+    public static class ThresholdCalculatorOnMonitorTest implements Runnable {
+        
+    	private void sleep(int millis) {
+			try {
+				Thread.sleep(millis);
+			} catch (InterruptedException e) {
+				// Ignored
+			}
+    	}
+    	
+		@Override
+		public void run() {
+			sleep(700);  // Give perfmon4j time to load it's configuration file.
+		
+			PerfMonTimer timer = PerfMonTimer.start("mon");
+			PerfMonTimer.stop(timer);
+			
+			sleep(300);  // Give perfmon4j time to load it's configuration file.
+			Appender.flushAllAppenders();
+		}
+	}    
+
+    /**
+     * This functions as an acceptance test of ThresholdCalculator defined on a monitor.
+     * @throws Exception
+     */
+    public void testMonitorThresholdOverridesAppenders_AT() throws Exception {
+        final String XML = 
+                "<Perfmon4JConfig>" + 
+                "	<appender name='100ms' className='" + TextAppender.class.getName() + "' interval='100 ms'>" +		
+                "       <attribute name='thresholdCalculator'>50 ms</attribute>" + 
+                "	</appender>" +		
+                "   <monitor name='mon'>" + 
+                "       <attribute name='thresholdCalculator'>10 ms</attribute>" + 
+                "       <appender name='100ms'/>" + 
+                "   </monitor>" + 
+                "</Perfmon4JConfig>"; 
+//System.out.println(XML);
+    	String output = LaunchRunnableInVM.run(new Params(ThresholdCalculatorOnMonitorTest.class, perfmon4jJar)
+    		.setPerfmonConfigXML(XML));
+//System.out.println(output);
+    	assertTrue("Should have the > 10 ms threshold defined by the monitor", output.contains("> 10 ms..."));
+    	assertFalse("Should NOT have the > 50 ms threshold defined by the appender", output.contains("> 50 ms..."));
+    }
+
     
 	public final static class ValveClass {
 	}

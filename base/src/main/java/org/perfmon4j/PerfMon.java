@@ -40,7 +40,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.MonitorThreadTracker.Tracker;
-import org.perfmon4j.impl.exceptiontracker.Counter;
+import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
@@ -49,6 +49,7 @@ import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.ThresholdCalculator;
 
 
 public class PerfMon {
@@ -207,6 +208,8 @@ public class PerfMon {
     private final Lock startStopWriteLock;
     private final Lock startStopReadLock;
     
+    private ThresholdCalculator thresholdCalculator = null;
+    
 /*----------------------------------------------------------------------------*/    
     private PerfMon(PerfMon parent, String name) {
 //    	ReadWriteLock startStopLock = new ReentrantReadWriteLock();
@@ -221,6 +224,7 @@ public class PerfMon {
         this.parent = parent;
         if (parent != null) {
             parent.childMonitors.add(this);
+            this.thresholdCalculator = parent.getThresholdCalculator();
         }
 
 //        DO NOT LOG HERE!  You can create an infinite loop when debug is enabled!
@@ -1184,17 +1188,23 @@ public class PerfMon {
         
         RegisteredDatabaseConnections.config(config);
         
-        String monitors[] = config.getMonitorArray();
-
+        MonitorConfig monitorConfigs[] = config.getMonitorConfigArray();
+        Map<String, ThresholdCalculator> thresholdMap = new HashMap<String, ThresholdCalculator>(); 
         
         AppenderToMonitorMapper.Builder builder = new AppenderToMonitorMapper.Builder();
-        for (String monitor : monitors) {
+        for (MonitorConfig monitorConfig : monitorConfigs) {
         	// Explicitly create each monitor that was explicitly defined in the 
         	// configuration.
-        	PerfMon.getMonitor(monitor); 
+        	PerfMon.getMonitor(monitorConfig.getMonitorName()); 
+
+        	// Look to see if a ThresholdCalculator is defined for the Monitor
+        	String thresholdValues = monitorConfig.getProperty("thresholdCalculator");
+        	if (thresholdValues != null) {
+        		thresholdMap.put(monitorConfig.getMonitorName(), new ThresholdCalculator(thresholdValues));
+        	}
         	
-            for (PerfMonConfiguration.AppenderAndPattern appender : config.getAppendersForMonitor(monitor, config)) {
-            	builder.add(monitor, appender.getAppenderPattern(), appender.getAppenderID());
+            for (PerfMonConfiguration.AppenderAndPattern appender : config.getAppendersForMonitor(monitorConfig.getMonitorName(), config)) {
+            	builder.add(monitorConfig.getMonitorName(), appender.getAppenderPattern(), appender.getAppenderID());
             }
         }
         mapper = builder.build();
@@ -1204,15 +1214,22 @@ public class PerfMon {
         // process.  Prior to the enhanced appender pattern implementation,
         // each monitor defined in the perfmonconfig.xml file was created
         // automatically.
-        for (String monitor : monitors) {
+        for (MonitorConfig monitorConfig : monitorConfigs) {
         	// Explicitly create each monitor that was explicitly defined in the 
         	// configuration.
-        	PerfMon.getMonitor(monitor); 
+        	PerfMon.getMonitor(monitorConfig.getMonitorName()); 
         }
         
         
         // Walk through all the monitors
         for (PerfMon mon : getMonitors()) {
+        	// Update the ThresholdCalculators -- only if they are different;
+        	ThresholdCalculator calc = null;
+        	String[] monitorHirearchy = PerfMon.parseMonitorHirearchy(mon.getName());
+        	for (int i = monitorHirearchy.length - 1; (i >= 0) && (calc == null); i--) {
+        		calc = thresholdMap.get(monitorHirearchy[i]);
+        	}
+        	mon.setThresholdCalculator(calc);
         	mon.resetAppenders();
         }
         
@@ -1432,7 +1449,15 @@ public class PerfMon {
 		forceDynamicPathWeakMap.remove(externalMonitorInstance);
     }
 
-    public String toHTMLString() {
+    public ThresholdCalculator getThresholdCalculator() {
+		return thresholdCalculator;
+	}
+
+	void setThresholdCalculator(ThresholdCalculator thresholdCalculator) {
+		this.thresholdCalculator = thresholdCalculator;
+	}
+
+	public String toHTMLString() {
         String result = "<STRONG>" + "PerfMon(" + monitorID + "-" + 
              name + ")</STRONG><CR>\r\n";
         result += "active=" + isActive() + "<CR>\r\n";
