@@ -1120,12 +1120,12 @@ public class PerfMonTest extends PerfMonTestCase {
     public void testConfigureThresholdCalculatorOnMonitor() throws Exception {
         PerfMon.deInit();
         
-        // Define a single monitor on DESCENDENT_2.
         PerfMonConfiguration config = new PerfMonConfiguration();
         config.defineMonitor("abc").setProperty("thresholdCalculator", "1 second, 2 seconds, 5 seconds");
         config.defineMonitor("efg");
         config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
         config.attachAppenderToMonitor("abc", "APP1");
+        config.attachAppenderToMonitor("efg", "APP1");
 
         PerfMon.configure(config);
         
@@ -1136,7 +1136,6 @@ public class PerfMonTest extends PerfMonTestCase {
     public void testThresholdCalculatorCascadesToChildren() throws Exception {
         PerfMon.deInit();
         
-        // Define a single monitor on DESCENDENT_2.
         PerfMonConfiguration config = new PerfMonConfiguration();
         config.defineMonitor("abc").setProperty("thresholdCalculator", "1 second, 2 seconds, 5 seconds");
         config.defineMonitor("abc.efg");
@@ -1166,7 +1165,6 @@ public class PerfMonTest extends PerfMonTestCase {
     public void testThresholdCalculatorCascadesToDynamicChildren() throws Exception {
         PerfMon.deInit();
         
-        // Define a single monitor on DESCENDENT_2.
         PerfMonConfiguration config = new PerfMonConfiguration();
         config.defineMonitor("abc").setProperty("thresholdCalculator", "1 second, 2 seconds, 5 seconds");
         config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
@@ -1182,7 +1180,6 @@ public class PerfMonTest extends PerfMonTestCase {
     public void testThresholdCalculatorCascadesToDynamicGrandchildren() throws Exception {
         PerfMon.deInit();
         
-        // Define a single monitor on DESCENDENT_2.
         PerfMonConfiguration config = new PerfMonConfiguration();
         config.defineMonitor("abc").setProperty("thresholdCalculator", "1 second, 2 seconds, 5 seconds");
         config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
@@ -1193,12 +1190,21 @@ public class PerfMonTest extends PerfMonTestCase {
         // Create a new child monitor on the fly.
         PerfMon grandchildMonitor = PerfMon.getMonitor("abc.qrs.mno");
         assertNotNull("Dynamically created grandchild should also have a threshold monitor", grandchildMonitor.getThresholdCalculator());
+        
+        // Check to see that it is removed from grandchild
+        config = new PerfMonConfiguration();
+        config.defineMonitor("abc"); // Removed threshold from monitor abc
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNull("Dynamically created grandchild should also have a active thread monitor removed", grandchildMonitor.getThresholdCalculator());
     }
 
     public void testThresholdCalculatorIsRemovedIfMissing() throws Exception {
         PerfMon.deInit();
         
-        // Define a single monitor on DESCENDENT_2.
         PerfMonConfiguration config = new PerfMonConfiguration();
         config.defineMonitor("abc"); // Removed threshold from monitor abc
         config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
@@ -1211,7 +1217,90 @@ public class PerfMonTest extends PerfMonTestCase {
         assertNull("Grandchild abc.efg.hjk NOT should also have a threshold monitor", PerfMon.getMonitor("abc.efg.hjk").getThresholdCalculator());
     }
     
+    public void testActiveThreadMonitorOnMonitor() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineMonitor("efg");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+        config.attachAppenderToMonitor("efg", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNotNull("abc should have an active thread monitor", PerfMon.getMonitor("abc").getActiveThreadMonitor());
+        assertNull("efg should NOT have a threshold monitor", PerfMon.getMonitor("efg").getActiveThreadMonitor());
+    }
+
+    public void testActiveThreadMonitorCascadesToChildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineMonitor("abc.efg");
+        config.defineMonitor("abc.efg.hjk");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNotNull("abc should have a threshold monitor", PerfMon.getMonitor("abc").getActiveThreadMonitor());
+        assertNotNull("Child abc.efg should also have a threshold monitor", PerfMon.getMonitor("abc.efg").getActiveThreadMonitor());
+        assertNotNull("Grandchild abc.efg.hjk should also have a threshold monitor", PerfMon.getMonitor("abc.efg.hjk").getActiveThreadMonitor());
+        
+        // Now let's make sure an updated configuration will remove the threshold monitors added above.
+        config = new PerfMonConfiguration();
+        config.defineMonitor("abc"); // Removed threshold monitor from parent.
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
     
+        PerfMon.configure(config);
+        
+        assertNull("abc should NOT have a threshold monitor", PerfMon.getMonitor("abc").getActiveThreadMonitor());
+        assertNull("Child abc.efg should also NOT have a threshold monitor", PerfMon.getMonitor("abc.efg").getActiveThreadMonitor());
+        assertNull("Grandchild abc.efg.hjk should also NOT have a threshold monitor", PerfMon.getMonitor("abc.efg.hjk").getActiveThreadMonitor());
+    }
+
+    public void testActiveThreadMonitorCascadesToDynamicChildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        // Create a new child monitor on the fly.
+        PerfMon childMonitor = PerfMon.getMonitor("abc.trs");
+        assertNotNull("Dynamically created child should also have a threshold monitor", childMonitor.getActiveThreadMonitor());
+    }
+
+    public void testActiveThreadMonitorCascadesToDynamicGrandchildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        // Create a new child monitor on the fly.
+        PerfMon grandchildMonitor = PerfMon.getMonitor("abc.qrs.mno");
+        assertNotNull("Dynamically created grandchild should also have a threshold monitor", grandchildMonitor.getActiveThreadMonitor());
+        
+        // Now reconfigure without the active thread monitor and ensure it is removed from grand child
+        config = new PerfMonConfiguration(); 
+        config.defineMonitor("abc"); // Removed .setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+        
+        PerfMon.configure(config);
+        assertNull("Dynamically created grandchild should also have a threshold monitor removed", grandchildMonitor.getActiveThreadMonitor());
+    }
+
     public void testConfigureWillSkipClassNotFoundSnapShotMonitor() throws Exception {
         PerfMon.deInit();
         

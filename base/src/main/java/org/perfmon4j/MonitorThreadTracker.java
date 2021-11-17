@@ -1,10 +1,13 @@
 package org.perfmon4j;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotCounter.Display;
 import org.perfmon4j.instrument.SnapShotProvider;
+import org.perfmon4j.util.MiscHelper;
 
 /**
  * This class is used to track instances of all active
@@ -180,6 +183,37 @@ public class MonitorThreadTracker {
 				return result;
 			}
 		}
+	}
+	
+	public final PerfMonObservableDatum<?>[] getDataOverThresholds(long[] thresholds) {
+		return buildDatumForTrackerList(getAllRunning(), thresholds);
+	}
+	
+	static PerfMonObservableDatum<?>[] buildDatumForTrackerList(TrackerValue[] activeThreads, long[] thresholds) {
+		return buildDatumForTrackerList(activeThreads, thresholds, System.currentTimeMillis());
+	}
+	
+	static PerfMonObservableDatum<?>[] buildDatumForTrackerList(TrackerValue[] activeThreads, long[] thresholds, long now) {
+		List<PerfMonObservableDatum<?>> result = new ArrayList<PerfMonObservableDatum<?>>();
+		
+		for (long threshold : thresholds) {
+			int countOver = 0;
+			String threadNames = "";
+			for (TrackerValue value : activeThreads) {
+				if ((now - value.getStartTime()) > threshold) {
+					if (countOver++ > 0) {
+						threadNames += ",";
+					}
+					threadNames += value.getThreadName();
+				}
+			}
+			result.add(PerfMonObservableDatum.newDatum("numActive > " + MiscHelper.getMillisDisplayable(threshold), 
+				countOver));
+			result.add(PerfMonObservableDatum.newDatum("active > " +  MiscHelper.getMillisDisplayable(threshold), 
+				threadNames.isBlank() ? "N/A" : threadNames));
+		}
+		
+		return result.toArray(new PerfMonObservableDatum<?>[]{});
 	}
 
 	public PerfMon getMonitor() {
