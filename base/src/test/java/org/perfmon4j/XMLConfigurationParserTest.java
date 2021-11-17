@@ -265,6 +265,26 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         MonitorConfig monitorConfig = config.getMonitorConfigArray()[0];
         assertEquals("Expected threshold calculator", monitorConfig.getProperty("thresholdCalculator"), "2 seconds, 5 seconds, 10 seconds");
     }
+
+    public void testParseActiveThreadMonitorOnMonitor() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig>" +
+            "   <appender name='5 minute' " +
+            "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+            "       interval='5 min'>" +
+            "   </appender>" +
+            "   <monitor name='mon'>" +
+            "       <attribute name='activeThreadMonitor'>1 minute, 30 minutes, 1 hour</attribute>" +
+            "       <appender name='5 minute'/>" +
+            "   </monitor>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertEquals("Should have one monitor defined", 1, config.getMonitorConfigArray().length);
+        
+        MonitorConfig monitorConfig = config.getMonitorConfigArray()[0];
+        assertEquals("Expected activeThreadMonitor", monitorConfig.getProperty("activeThreadMonitor"), "1 minute, 30 minutes, 1 hour");
+    }
     
     public void testParseThreadTraceConfigWithDefaultOptions() throws Exception {
         final String XML =
