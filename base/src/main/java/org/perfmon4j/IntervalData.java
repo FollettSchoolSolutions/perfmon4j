@@ -28,6 +28,7 @@ import java.util.Set;
 import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.util.ActiveThreadMonitor;
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.BeanHelper.UnableToGetAttributeException;
 import org.perfmon4j.util.Logger;
@@ -47,6 +48,7 @@ public class IntervalData implements PerfMonObservableData {
     private long timeStop = PerfMon.NOT_SET;
     private final MedianCalculator medianCalculator;
     private final ThresholdCalculator thresholdCalculator;
+    private ActiveThreadMonitor activeThreadMonitor = null;
     private int totalHits = 0;
     
     private int maxActiveThreadCount = 0;
@@ -102,6 +104,7 @@ public class IntervalData implements PerfMonObservableData {
     
     private String oldestActiveThread = "N/A";
     private long oldestActiveThreadDuration = 0L;
+    private PerfMonObservableDatum<?> activeThreadData[] = null;
 
     public String getOldestActiveThread() {
     	return oldestActiveThread;
@@ -403,6 +406,9 @@ public class IntervalData implements PerfMonObservableData {
         	oldestActiveThread = oldest.getThreadName();
         	oldestActiveThreadDuration = Math.max(0, timeStop - oldest.getStartTime());
         }
+    	if (activeThreadMonitor != null) {
+    		activeThreadData = owner.getActiveThreadList().getDataOverThresholds(activeThreadMonitor.getActiveThresholdMillis());
+    	}
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -491,8 +497,15 @@ public class IntervalData implements PerfMonObservableData {
         return result;
     }
     
-    
-    private static String formatTimeDataSet(long time) {
+    public ActiveThreadMonitor getActiveThreadMonitor() {
+		return activeThreadMonitor;
+	}
+
+	void setActiveThreadMonitor(ActiveThreadMonitor activeThreadMonitor) {
+		this.activeThreadMonitor = activeThreadMonitor;
+	}
+
+	private static String formatTimeDataSet(long time) {
         String result = "";
         
         if (time != PerfMon.NOT_SET) {
@@ -506,7 +519,7 @@ public class IntervalData implements PerfMonObservableData {
         String result = "";
         
         if (medianCalculator != null) {
-            result = " Median Duration.... " + medianCalculator.getMedianAsString() + "\r\n";
+            result = " Median Duration.......... " + medianCalculator.getMedianAsString() + "\r\n";
         }
         
         return result;
@@ -519,7 +532,7 @@ public class IntervalData implements PerfMonObservableData {
             long trArray[] = thresholdCalculator.getThresholdMillis();
             for (int i = 0; i < trArray.length; i++) {
                 ThresholdResult t = thresholdCalculator.getResult(trArray[i]);
-                result += String.format(" %19.19s %s\r\n",
+                result += String.format(" %25.25s %s\r\n",
                     t.getDescription() + "........................",
                     t.getPercentOverThresholdAsString());
             }
@@ -527,6 +540,20 @@ public class IntervalData implements PerfMonObservableData {
         
         return result;
     }
+    
+    private String buildActiveThreadMonitorString() {
+        String result = "";
+        
+        if (activeThreadData != null) {
+        	for (PerfMonObservableDatum<?> datum : activeThreadData) {
+	            result += String.format(" %25.25s %s\r\n",
+	                datum.getDefaultDisplayName() + "........................",
+	                datum.toString());
+        	}
+        }
+        
+        return result;
+    }    
 
     public String toAppenderString() {
     	return toAppenderString(SQLTime.isEnabled());
@@ -540,10 +567,10 @@ public class IntervalData implements PerfMonObservableData {
         String sqlDurationInfo = "";
         if (includeSQLTime && !isSQLMonitor()) {
         	sqlDurationInfo = String.format(
-	                " (SQL)Avg. Duration. %.2f\r\n" +
-	                " (SQL)Std. Dev...... %.2f\r\n" +
-	                " (SQL)Max Duration.. %d %s\r\n" +
-	                " (SQL)Min Duration.. %d %s\r\n",
+	                " (SQL)Avg. Duration....... %.2f\r\n" +
+	                " (SQL)Std. Dev............ %.2f\r\n" +
+	                " (SQL)Max Duration........ %d %s\r\n" +
+	                " (SQL)Min Duration........ %d %s\r\n",
 	                new Double(getAverageSQLDuration()),
 	                new Double(getSQLStdDeviation()),
 	                new Long(getMaxSQLDuration()), 
@@ -557,18 +584,19 @@ public class IntervalData implements PerfMonObservableData {
             "\r\n********************************************************************************\r\n" +
             "%s\r\n" +
             "%s -> %s\r\n" +   
-            " Max Active Threads. %d %s\r\n" + 
-            " Throughput......... %.2f per minute\r\n" +
-            " Average Duration... %.2f\r\n" +
+            " Max Active Threads....... %d %s\r\n" + 
+            " Throughput............... %.2f per minute\r\n" +
+            " Average Duration......... %.2f\r\n" +
             "%s" +
             "%s" +
-            " Standard Deviation. %.2f\r\n" +
-            " Max Duration....... %d %s\r\n" +
-            " Min Duration....... %d %s\r\n" +
-            " Total Hits......... %d\r\n" +
-            " Total Completions.. %d\r\n" +
-            " Oldest Thread...... %s\r\n" +
-            " Oldest Duration.... %d\r\n" +
+            " Standard Deviation....... %.2f\r\n" +
+            " Max Duration............. %d %s\r\n" +
+            " Min Duration............. %d %s\r\n" +
+            " Total Hits............... %d\r\n" +
+            " Total Completions........ %d\r\n" +
+            " Oldest Thread............ %s\r\n" +
+            " Oldest Duration.......... %d\r\n" +
+            "%s" +
             "%s",
             name,
             MiscHelper.formatTimeAsString(getTimeStart()),
@@ -588,16 +616,17 @@ public class IntervalData implements PerfMonObservableData {
             Long.valueOf(getTotalCompletions()),
             oldestActiveThread,
             Long.valueOf(oldestActiveThreadDuration),
+            buildActiveThreadMonitorString(),
             sqlDurationInfo
         );
         if (haveLifetimeStats) {
         	sqlDurationInfo = "";
             if (includeSQLTime && !isSQLMonitor()) {
             	sqlDurationInfo = String.format(
-    	                " (SQL)Avg. Duration. %.2f\r\n" +
-    	                " (SQL)Std. Dev...... %.2f\r\n" +
-    	                " (SQL)Max Duration.. %d %s\r\n" +
-    	                " (SQL)Min Duration.. %d %s\r\n",
+    	                " (SQL)Avg. Duration....... %.2f\r\n" +
+    	                " (SQL)Std. Dev............ %.2f\r\n" +
+    	                " (SQL)Max Duration........ %d %s\r\n" +
+    	                " (SQL)Min Duration........ %d %s\r\n",
     	                Double.valueOf(getLifetimeAverageSQLDuration()),
     	                Double.valueOf(getLifetimeSQLStdDeviation()),
     	                Long.valueOf(getLifetimeMaxSQLDuration()), 
@@ -608,12 +637,12 @@ public class IntervalData implements PerfMonObservableData {
             }
         	result += String.format(
                 "Lifetime (%s):\r\n" +   
-                " Max Active Threads. %d %s\r\n" + 
-                " Max Throughput..... %s\r\n" +
-                " Average Duration... %.2f\r\n" +
-                " Standard Deviation. %.2f\r\n" +
-                " Max Duration....... %d %s\r\n" +
-                " Min Duration....... %d %s\r\n" +
+                " Max Active Threads....... %d %s\r\n" + 
+                " Max Throughput........... %s\r\n" +
+                " Average Duration......... %.2f\r\n" +
+                " Standard Deviation....... %.2f\r\n" +
+                " Max Duration............. %d %s\r\n" +
+                " Min Duration............. %d %s\r\n" +
                 "%s",
                 MiscHelper.formatDateTimeAsString(lifetimeStartTime),
                 Integer.valueOf(getLifetimeMaxThreadCount()),
@@ -843,6 +872,12 @@ public class IntervalData implements PerfMonObservableData {
 				result.add(PerfMonObservableDatum.newDatum(label, tc.getResult(millis).getPercentOverThreshold()));
 			}
 		}
+		if (activeThreadData != null) {
+			for (PerfMonObservableDatum<?> datum : activeThreadData) {
+				addIfNotNull(result, datum);
+			}
+		}
+		
 		return result;
 	}
 

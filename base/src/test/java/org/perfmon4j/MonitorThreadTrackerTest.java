@@ -1,7 +1,11 @@
 package org.perfmon4j;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.mockito.Mockito;
 import org.perfmon4j.MonitorThreadTracker.Tracker;
+import org.perfmon4j.MonitorThreadTracker.TrackerValue;
 
 /*
  *	Copyright 2021 Follett School Solutions, LLC 
@@ -48,6 +52,16 @@ public class MonitorThreadTrackerTest extends PerfMonTestCase {
     private MonitorThreadTracker.Tracker newTracker(String threadName) {
     	return new DummyTracker(new Thread(threadName));
     }
+
+    private TrackerValue newTrackerValue(String threadName, long startTime) {
+    	TrackerValue result = Mockito.mock(TrackerValue.class);
+    	
+    	Mockito.when(result.getThreadName()).thenReturn(threadName);
+    	Mockito.when(result.getStartTime()).thenReturn(Long.valueOf(startTime));
+    	
+    	return result;
+    }
+   
     
 /*----------------------------------------------------------------------------*/
     public void testAddAndRemoveOne() throws Exception {
@@ -187,6 +201,51 @@ public class MonitorThreadTrackerTest extends PerfMonTestCase {
     	
     	trackerList.addTracker(one);
     	assertEquals("Should return the head element, that will be the oldest", "one", trackerList.getLongestRunning().getThreadName());
+    }
+    
+    private static final long ONE_SECOND = 1000L;
+    private static final long ONE_MINUTE = ONE_SECOND * 60;
+    private static final long ONE_HOUR = ONE_MINUTE * 60;
+    
+    @SuppressWarnings("unchecked")
+	public void testBuildDatumForEmptyTrackerList() throws Exception {
+    	long[] thresholds = new long[] {ONE_MINUTE};
+    	List<TrackerValue> values = new ArrayList<TrackerValue>();
+    	
+    	PerfMonObservableDatum<?>[] data = MonitorThreadTracker.buildDatumForTrackerList(values.toArray(new TrackerValue[]{}), thresholds);
+    	assertNotNull(data);
+    	assertEquals(2, data.length);
+    	
+    	PerfMonObservableDatum<?> count = data[0];
+    	PerfMonObservableDatum<?> threadNames = data[1];
+    	
+    	assertEquals("count name", "numActive > 1 minute", count.getDefaultDisplayName());
+    	assertEquals("count value", "0", count.toString());
+
+    	assertEquals("threadNames name", "active > 1 minute", threadNames.getDefaultDisplayName());
+    	assertEquals("threadNames value", "N/A", threadNames.toString());
+    }
+
+    @SuppressWarnings("unchecked")
+	public void testBuildDatumForOneThreadOverThreshold() throws Exception {
+    	long[] thresholds = new long[] {ONE_MINUTE};
+    	List<TrackerValue> values = new ArrayList<TrackerValue>();
+    	
+    	values.add(newTrackerValue("OVER", 1L));
+    	values.add(newTrackerValue("UNDER", 2L));
+    	
+    	PerfMonObservableDatum<?>[] data = MonitorThreadTracker.buildDatumForTrackerList(values.toArray(new TrackerValue[]{}), thresholds, ONE_MINUTE + 2);
+    	assertNotNull(data);
+    	assertEquals(2, data.length);
+    	
+    	PerfMonObservableDatum<?> count = data[0];
+    	PerfMonObservableDatum<?> threadNames = data[1];
+    	
+    	assertEquals("count name", "numActive > 1 minute", count.getDefaultDisplayName());
+    	assertEquals("count value", "1", count.toString());
+
+    	assertEquals("threadNames name", "active > 1 minute", threadNames.getDefaultDisplayName());
+    	assertEquals("threadNames value", "OVER", threadNames.toString());
     }
     
     private static class DummyTracker implements MonitorThreadTracker.Tracker {
