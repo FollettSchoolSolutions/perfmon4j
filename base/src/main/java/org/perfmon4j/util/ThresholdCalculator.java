@@ -50,7 +50,7 @@ public class ThresholdCalculator {
     }
     
     
-    private static long[] convertStringToMillis(String values) {
+    static long[] convertStringToMillis(String values) {
         Vector<Long> list = new Vector();
         StringTokenizer tokenizer = new StringTokenizer(values, ",");
         while (tokenizer.hasMoreTokens()) {

@@ -43,6 +43,7 @@ import org.perfmon4j.MonitorThreadTracker.Tracker;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.util.ActiveThreadMonitor;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.FailSafeTimerTask;
 import org.perfmon4j.util.GlobalClassLoader;
@@ -209,6 +210,7 @@ public class PerfMon {
     private final Lock startStopReadLock;
     
     private ThresholdCalculator thresholdCalculator = null;
+    private ActiveThreadMonitor activeThreadMonitor = null;
     
 /*----------------------------------------------------------------------------*/    
     private PerfMon(PerfMon parent, String name) {
@@ -1455,6 +1457,14 @@ public class PerfMon {
 
 	void setThresholdCalculator(ThresholdCalculator thresholdCalculator) {
 		this.thresholdCalculator = thresholdCalculator;
+	}
+	
+	public ActiveThreadMonitor getActiveThreadMonitor() {
+		return activeThreadMonitor;
+	}
+
+	void setActiveThreadMonitor(ActiveThreadMonitor activeThreadMonitor) {
+		this.activeThreadMonitor = activeThreadMonitor;
 	}
 
 	public String toHTMLString() {
