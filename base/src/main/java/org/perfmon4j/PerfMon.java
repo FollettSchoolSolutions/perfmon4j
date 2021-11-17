@@ -227,6 +227,7 @@ public class PerfMon {
         if (parent != null) {
             parent.childMonitors.add(this);
             this.thresholdCalculator = parent.getThresholdCalculator();
+            this.activeThreadMonitor = parent.getActiveThreadMonitor();
         }
 
 //        DO NOT LOG HERE!  You can create an infinite loop when debug is enabled!
@@ -1192,6 +1193,7 @@ public class PerfMon {
         
         MonitorConfig monitorConfigs[] = config.getMonitorConfigArray();
         Map<String, ThresholdCalculator> thresholdMap = new HashMap<String, ThresholdCalculator>(); 
+        Map<String, ActiveThreadMonitor> activeThreadMonMap = new HashMap<String, ActiveThreadMonitor>(); 
         
         AppenderToMonitorMapper.Builder builder = new AppenderToMonitorMapper.Builder();
         for (MonitorConfig monitorConfig : monitorConfigs) {
@@ -1203,6 +1205,12 @@ public class PerfMon {
         	String thresholdValues = monitorConfig.getProperty("thresholdCalculator");
         	if (thresholdValues != null) {
         		thresholdMap.put(monitorConfig.getMonitorName(), new ThresholdCalculator(thresholdValues));
+        	}
+
+        	// Look to see if a ActiveThreadMonitor is defined for the Monitor
+        	String activeThreadValues = monitorConfig.getProperty("activeThreadMonitor");
+        	if (activeThreadValues != null) {
+        		activeThreadMonMap.put(monitorConfig.getMonitorName(), new ActiveThreadMonitor(activeThreadValues));
         	}
         	
             for (PerfMonConfiguration.AppenderAndPattern appender : config.getAppendersForMonitor(monitorConfig.getMonitorName(), config)) {
@@ -1225,13 +1233,21 @@ public class PerfMon {
         
         // Walk through all the monitors
         for (PerfMon mon : getMonitors()) {
-        	// Update the ThresholdCalculators -- only if they are different;
-        	ThresholdCalculator calc = null;
         	String[] monitorHirearchy = PerfMon.parseMonitorHirearchy(mon.getName());
+        	// Update the ThresholdCalculators;
+        	ThresholdCalculator calc = null;
         	for (int i = monitorHirearchy.length - 1; (i >= 0) && (calc == null); i--) {
         		calc = thresholdMap.get(monitorHirearchy[i]);
         	}
         	mon.setThresholdCalculator(calc);
+        	
+        	// Update the ActiveThreadMonitors
+        	ActiveThreadMonitor activeThreadMon = null;
+        	for (int i = monitorHirearchy.length - 1; (i >= 0) && (activeThreadMon == null); i--) {
+        		activeThreadMon = activeThreadMonMap.get(monitorHirearchy[i]);
+        	}
+        	mon.setActiveThreadMonitor(activeThreadMon);
+        	
         	mon.resetAppenders();
         }
         
