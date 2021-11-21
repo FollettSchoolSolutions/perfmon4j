@@ -855,6 +855,27 @@ System.out.println(output);
     	assertFalse("Should NOT have the > 50 ms threshold defined by the appender", output.contains("> 50 ms..."));
     }
 
+    /**
+     * This functions as an acceptance test of ActiveThreadMonitor defined on a monitor.
+     * @throws Exception
+     */
+    public void testMonitorActiveThreadMonitor_AT() throws Exception {
+        final String XML = 
+                "<Perfmon4JConfig>" + 
+                "	<appender name='100ms' className='" + TextAppender.class.getName() + "' interval='100 ms'/>" +	
+                "   <monitor name='mon'>" + 
+                "       <attribute name='activeThreadMonitor'>10 ms, 30 minutes, 1 hour</attribute>" + 
+                "       <appender name='100ms'/>" + 
+                "   </monitor>" + 
+                "</Perfmon4JConfig>"; 
+//System.out.println(XML);
+    	String output = LaunchRunnableInVM.run(new Params(ThresholdCalculatorOnMonitorTest.class, perfmon4jJar)
+    		.setPerfmonConfigXML(XML));
+//System.out.println(output);
+    	assertTrue("Should have the > 10 ms threshold defined by the monitor", output.contains("active > 10 ms..."));
+    	assertTrue("Should have the > 30 minute threshold defined by the appender", output.contains("active > 30 minutes..."));
+    	assertTrue("Should NOT have the > 1 hour threshold defined by the appender", output.contains("active > 60 minutes..."));
+    }
     
 	public final static class ValveClass {
 	}
