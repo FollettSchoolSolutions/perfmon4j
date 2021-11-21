@@ -20,9 +20,8 @@ Changes
 ** 1.6.0 (Next Version) - TBD
 - Added exception tracking.  This can be used to track the number of 
   times specified instance of Exceptions are created.
-    
   See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/ExceptionTracker 
-  for usage information 
+  for usage information. 
 
 - Now Perfmon4j Interval Monitors can track the duration of threads that 
   have not yet completed.  This is a low overhead, in terms of both
@@ -32,9 +31,14 @@ Changes
   has yet to finish. The second is “OldestActiveThreadDuration” this is the
   number of milliseconds that the Oldest Active Thread has been active within
   the monitor.
+  
+  See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/ActiveThreadMonitor
+  for usage information.
 
-  If you suspect this implementation is creating a performance or memory drain
-  on your application you can disable it by including 
+  The implementation for tracking active threads is very efficient
+  and introduces little overhead. However, if you want to test your 
+  application to determine if this overhead is acceptable you can define
+  the system property:  
   “-Dorg.perfmon4j.MonitorThreadTracker.DisableThreadTracking=true"
   when launching your application.
 
@@ -81,7 +85,7 @@ Changes
 
 ** 1.5.1 - 2020-08-21
 
-- Added a new Appender (org.perfmon4j.azure.LogAnalyticsAppender). This appender will 
+- Added a new Appender (org.perfmon4j.azure.). This appender will 
   write perfmon4j observations to the Log Analytics workspace in Azure Monitor. Run 
   perfmon4j in debug mode (-dtrue on javaagent command line) for details
   regarding successful request to Azure Log Analytics
