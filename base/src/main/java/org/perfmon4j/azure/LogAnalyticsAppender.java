@@ -411,7 +411,7 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 							String message = "Error writing to Azure: " + debugOutput + 
 								" -  Response: " + response.toString();
 							logger.logWarn(message);
-						} else  {
+						} else if (logger.isDebugEnabled()) {
 							logger.logDebug("Success writing to Azure: " + debugOutput);
 						}
 					} catch (IOException e) {
