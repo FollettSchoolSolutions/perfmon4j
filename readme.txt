@@ -1,3 +1,5 @@
+
+
 Copyright 2008-2021 Follett School Solutions, LLC
  
 Perfmon4j(tm) is free software: you can redistribute it and/or modify
@@ -17,7 +19,8 @@ McHenry, IL 60050
 
 Changes
 
-** 1.6.0 (Next Version) - TBD
+** 1.6.0-rc.1 - 2021-11-24
+
 - Added exception tracking.  This can be used to track the number of 
   times specified instance of Exceptions are created.
   See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/ExceptionTracker 
