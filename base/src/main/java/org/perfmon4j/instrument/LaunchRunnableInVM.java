@@ -28,6 +28,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -67,13 +69,62 @@ public class LaunchRunnableInVM {
 			}
 		}
 	}
+	
+	public static class Params {
+		private final Class<?> classToLoad;
+		private final File perfmon4j;
+		private String javaAgentParams = null;
+		private Properties systemProperties = null;
+		private boolean loadJavaAgent = true;
+		private String programArguments = null;
+		private String perfmonConfigXML = null;
+		
+		Params(Class<?> classToLoad, File perfmon4j) {
+			this.classToLoad = classToLoad;
+			this.perfmon4j = perfmon4j;
+		}
+
+		public Params setJavaAgentParams(String javaAgentParams) {
+			this.javaAgentParams = javaAgentParams;
+			return this;
+		}
+
+		public Params setSystemProperties(Properties systemProperties) {
+			this.systemProperties = systemProperties;
+			return this;
+		}
+
+		/**
+		 * Defaults to true
+		 * @param loadJavaAgent
+		 */
+		public Params setLoadJavaAgent(boolean loadJavaAgent) {
+			this.loadJavaAgent = loadJavaAgent;
+			return this;
+		}
+
+		public Params setProgramArguments(String programArguments) {
+			this.programArguments = programArguments;
+			return this;
+		}
+
+		public Params setPerfmonConfigXML(String perfmonConfigXML) {
+			this.perfmonConfigXML = perfmonConfigXML;
+			return this;
+		}
+	}
 
 	public static String loadClassAndPrintMethods(Class<?> clazzToLoad, String jvmParams, File perfmonJar) throws Exception {
-		return run(LoadClassAndPrintMethods.class, jvmParams, clazzToLoad.getName(), perfmonJar);
+		return run(new Params(LoadClassAndPrintMethods.class, perfmonJar)
+			.setProgramArguments(clazzToLoad.getName())
+			.setJavaAgentParams(jvmParams));
 	}
 	
 	public static String loadClassAndPrintMethods(Class<?> clazzToLoad, String jvmParams, Properties systemProperties, File perfmonJar) throws Exception {
-		return run(LoadClassAndPrintMethods.class, jvmParams, clazzToLoad.getName(), systemProperties, perfmonJar);
+		return run(new Params(LoadClassAndPrintMethods.class, perfmonJar)
+				.setProgramArguments(clazzToLoad.getName())
+				.setSystemProperties(systemProperties)
+				.setJavaAgentParams(jvmParams));
 	}
 	
 	private static String quoteIfNeeded(String src) {
@@ -89,7 +140,10 @@ public class LaunchRunnableInVM {
 	}
 	
 	public static String run(Class<?> clazz, String javaAgentParams, String args, File perfmonJar) throws Exception {
-		return run(clazz, javaAgentParams, args, null, perfmonJar);
+		return run(new Params(clazz, perfmonJar)
+			.setJavaAgentParams(javaAgentParams)
+			.setProgramArguments(args));
+		
 	}
 
 	public static String fixupLinuxHomeFolder(String path) {
@@ -103,15 +157,23 @@ public class LaunchRunnableInVM {
 	}
 
 	public static String runWithoutPerfmon4jJavaAgent(Class<?> clazz, File perfmonJar) throws Exception {
-		return runWithoutPerfmon4jJavaAgent(clazz, "", null, perfmonJar);
+		return run(new Params(clazz, perfmonJar)
+				.setLoadJavaAgent(false));
 	}
 	
 	public static String runWithoutPerfmon4jJavaAgent(Class<?> clazz, String args, Properties systemProperties, File perfmonJar) throws Exception {
-		return run(clazz, null, args, systemProperties, perfmonJar, false);
+		return run(new Params(clazz, perfmonJar)
+				.setProgramArguments(args)
+				.setSystemProperties(systemProperties)
+				.setLoadJavaAgent(false));
 	}
 	
 	public static String run(Class<?> clazz, String javaAgentParams, String args, Properties systemProperties, File perfmonJar) throws Exception {
-		return run(clazz, javaAgentParams, args, systemProperties, perfmonJar, true);
+		return run(new Params(clazz, perfmonJar)
+				.setJavaAgentParams(javaAgentParams)
+				.setProgramArguments(args)
+				.setSystemProperties(systemProperties) 
+				.setLoadJavaAgent(true));
 	}
 	
 	
@@ -121,11 +183,11 @@ public class LaunchRunnableInVM {
 	}
 	
 	
-	private static String run(Class<?> clazz, String javaAgentParams, String args, Properties systemProperties, File perfmonJar, boolean loadJavaAgent) throws Exception {
+	public static String run(Params params) throws Exception {
 		StringBuffer output = new StringBuffer();
     	
     	final String javaCmd = System.getProperty("java.home") + "/bin/java";
-    	final String runnableName = clazz.getName();
+    	final String runnableName = params.classToLoad.getName();
 
     	final String PATH_SEPERATOR = System.getProperty("path.separator");
     	String cmdString = quoteIfNeeded(javaCmd);
@@ -155,19 +217,27 @@ public class LaunchRunnableInVM {
     			javassistFile = new File(part) ;
 			} 
     	}
+    	if (params.perfmonConfigXML != null) {
+    		if (params.javaAgentParams != null) {
+    			params.javaAgentParams = "-f${PERFMON_CONFIG_XML}," + params.javaAgentParams;
+    		} else {
+    			params.javaAgentParams = "-f${PERFMON_CONFIG_XML}"; 
+    		}
+    	}
     	
-		if (loadJavaAgent) {
+    	
+		if (params.loadJavaAgent) {
 			// For some strange reason it works better to have the classPath before the agent.
 			cmdString += " -classpath " + myClassPath;
 			
-			cmdString +=  " -javaagent:" + quoteIfNeeded(perfmonJar.getCanonicalPath());
-	    	if (javaAgentParams != null) {
-	    		cmdString += "=" + javaAgentParams;
+			cmdString +=  " -javaagent:" + quoteIfNeeded(params.perfmon4j.getCanonicalPath());
+	    	if (params.javaAgentParams != null) {
+	    		cmdString += "=" + params.javaAgentParams;
 	    	}
 	    	if (getMajorJavaVersion() < 11) {
 	    		// Java 11 or better does not support and, at least in this case, does not require
 	    		// endoresedDirs.
-		    	String endorsedDirs = " -Djava.endorsed.dirs=" + quoteIfNeeded(perfmonJar.getParentFile().getCanonicalPath());
+		    	String endorsedDirs = " -Djava.endorsed.dirs=" + quoteIfNeeded(params.perfmon4j.getParentFile().getCanonicalPath());
 		    	if (javassistFile != null) {
 		    		endorsedDirs += PATH_SEPERATOR + quoteIfNeeded(javassistFile.getParentFile().getCanonicalPath());
 		    	}
@@ -175,13 +245,13 @@ public class LaunchRunnableInVM {
 	    	}
 		} else {
 			// Just load the perfmon4j.jar onto the classpath.
-			myClassPath += quoteIfNeeded(perfmonJar.getCanonicalPath()) + PATH_SEPERATOR;
+			myClassPath += quoteIfNeeded(params.perfmon4j.getCanonicalPath()) + PATH_SEPERATOR;
 			cmdString += " -classpath " + myClassPath;
 		}
 
     	
-		if (systemProperties != null) {
-			Iterator<Map.Entry<Object,Object>> itr = systemProperties.entrySet().iterator();
+		if (params.systemProperties != null) {
+			Iterator<Map.Entry<Object,Object>> itr = params.systemProperties.entrySet().iterator();
 			while (itr.hasNext()) {
 				Map.Entry<Object, Object> v = itr.next();
 				cmdString += " -D" + v.getKey() + "=" + v.getValue();
@@ -190,19 +260,30 @@ public class LaunchRunnableInVM {
 		
     	cmdString +=  " " + LaunchRunnableInVM.class.getName();
     	cmdString +=  " " + runnableName;
-    	if (args != null) {
-    		cmdString += " " + args;
+    	if (params.programArguments != null) {
+    		cmdString += " " + params.programArguments;
     	}
-		System.out.println(cmdString);    	
-    	
-		Process p = Runtime.getRuntime().exec(cmdString);
-		new StreamReaderThread(p.getErrorStream(), "STDERR", output).start();
-		new StreamReaderThread(p.getInputStream(), "STDOUT", output).start();
-
-		int result = p.waitFor();
-    	return output.toString() + "[RESULT] " + result;
-	}
+		
+		File configXMLFile = params.perfmonConfigXML != null ? File.createTempFile("perfmonConfig", ".xml") : null;
+		try {
+			if (configXMLFile != null) {
+				Files.writeString(configXMLFile.toPath(), params.perfmonConfigXML, StandardOpenOption.CREATE);
+				cmdString = cmdString.replace("${PERFMON_CONFIG_XML}", configXMLFile.getCanonicalPath());
+			}
+			System.out.println(cmdString);    	
+			
+			Process p = Runtime.getRuntime().exec(cmdString);
+			new StreamReaderThread(p.getErrorStream(), "STDERR", output).start();
+			new StreamReaderThread(p.getInputStream(), "STDOUT", output).start();
 	
+			int result = p.waitFor();
+	    	return output.toString() + "[RESULT] " + result;
+		} finally {
+			if (configXMLFile != null) {
+				configXMLFile.delete();
+			}
+		}
+	}
 	
 	public static void main(String[] args) {
 		try {

@@ -33,6 +33,7 @@ import java.util.Set;
 
 import javax.management.ObjectName;
 
+import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.hystrix.CommandStatsProvider;
 import org.perfmon4j.hystrix.ThreadPoolStatsProvider;
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
@@ -151,6 +152,75 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	gcMethod.insertBefore("if (1==1) {return;}\r\n");
     	
     	return clazz.toBytecode();
+    }
+
+    public void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader().getParent();
+        } 
+        ClassPool classPool = new ClassPool(false);
+        classPool.appendClassPath(new LoaderClassPath(loader));
+        
+        CtClass bridgeClass = classPool.makeClass(ExceptionTracker.BRIDGE_CLASS_NAME);
+        bridgeClass.addField(CtField.make("private static java.util.function.Consumer exceptionConsumer = null;", bridgeClass));
+
+        String incrementMethodSrc = 
+        		"public static void notifyExceptionCreate(String className, Object exception) "
+        		+ "{if (exceptionConsumer != null) {exceptionConsumer.accept(new java.util.AbstractMap.SimpleEntry(className, exception));}}\r\n";
+        bridgeClass.addMethod(CtMethod.make(incrementMethodSrc, bridgeClass));
+        
+        String registerMethodSrc = 
+        		"	public static void registerExceptionConsumer(java.util.function.Consumer newConsumer) {\r\n"
+        		+ "		exceptionConsumer = newConsumer;\r\n"
+        		+ "	}\r\n";
+        bridgeClass.addMethod(CtMethod.make(registerMethodSrc, bridgeClass));
+
+        bridgeClass.toClass(loader, protectionDomain);
+        bridgeClass.detach();
+    }
+    
+    private boolean isClassDescendedFrom(CtClass clazz, String className) throws NotFoundException {
+    	while ((clazz = clazz.getSuperclass()) != null) {
+    		if (clazz.getName().equals(className)) {
+    			return true;
+    		}
+    	}
+    	return false;
+    }
+    
+    public byte[] instrumentExceptionOrErrorClass(String className, byte[] classfileBuffer, ClassLoader loader, 
+    		ProtectionDomain protectionDomain) throws Exception {
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader().getParent();
+        } 
+    
+        ClassPool classPool = new ClassPool(false);
+        classPool.appendClassPath(new LoaderClassPath(loader));
+        
+        ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+        CtClass clazz = classPool.makeClass(inStream);
+        if (clazz.isFrozen()) {
+            clazz.defrost();
+        }    	
+       
+        if (!isClassDescendedFrom(clazz, "java.lang.Throwable")) {
+        	logger.logWarn("Class " + className  + " is NOT derived from java.lang.Throwable and cannot be added to the Perfmon4j ExceptionTracker");
+        	return null;
+        } else {
+	        final String methodBody =
+	        	"\r\n{\r\n" +
+	        	"\tClass clazzBridge = ClassLoader.getSystemClassLoader().loadClass(\"" + ExceptionTracker.BRIDGE_CLASS_NAME + "\");\r\n" +
+	        	"\tjava.lang.reflect.Method m = clazzBridge.getDeclaredMethod(\"notifyExceptionCreate\", new Class[] {String.class, Object.class});\r\n" +
+	        	"\tm.invoke(null, new Object[] {\"" + className.replaceAll("/", ".") + "\", this});\r\n" +
+	    		"}\r\n";
+//System.out.println(methodBody);        
+	        
+	        for (CtConstructor constructor : clazz.getDeclaredConstructors()) {
+	        	constructor.insertAfter(methodBody);
+	        }
+	        
+	    	return clazz.toBytecode();
+        } 
     }
     
     private boolean classHaveSkipIndicator(CtClass clazz) {
@@ -837,9 +907,38 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         if (insertBeforeWorked) {
             method.insertAfter(methodSuffix.toString(), true);
         }
-
         
         return offset;
+    }
+    
+    public byte[] installRequestSkipLogTracker(byte[] classfileBuffer, ClassLoader loader) throws Exception {
+        ClassPool classPool = null;
+        if (loader == null) {
+            classPool = new ClassPool(true);
+        } else {
+            classPool = new ClassPool(false);
+            classPool.appendClassPath(new LoaderClassPath(loader));
+        }
+        
+        ByteArrayInputStream inStream = new ByteArrayInputStream(classfileBuffer);
+        CtClass clazz = classPool.makeClass(inStream);
+        if (clazz.isFrozen()) {
+            clazz.defrost();
+        }
+
+    	logger.logInfo("Perfmon4j found Undertow HttpServletRequestImpl Class: " + clazz.getName());
+
+    	CtMethod m = clazz.getDeclaredMethod("setAttribute");
+    	String insertBlock = 
+    			" web.org.perfmon4j.extras.wildfly8.RequestSkipLogTracker.getTracker().setAttribute($1, $2);\r\n";
+		m.insertBefore(insertBlock);
+
+    	m = clazz.getDeclaredMethod("removeAttribute");
+    	insertBlock = 
+    			" web.org.perfmon4j.extras.wildfly8.RequestSkipLogTracker.getTracker().removeAttribute($1);\r\n";
+		m.insertBefore(insertBlock);
+		
+    	return clazz.toBytecode();
     }
     
     public byte[] installUndertowOrTomcatSetValveHook(byte[] classfileBuffer, ClassLoader loader) throws Exception {

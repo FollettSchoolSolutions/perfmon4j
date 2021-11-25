@@ -23,13 +23,14 @@ package org.perfmon4j;
 
 import java.util.Properties;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
+import org.perfmon4j.util.ThresholdCalculator;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class AppenderTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -92,7 +93,45 @@ public class AppenderTest extends PerfMonTestCase {
         assertTrue("AppenderID with same className, interval and attributes should be equal", a1.equals(a2));
         assertTrue("Hash codes with same class name and interval but different attributes should not match", a1.hashCode() != b.hashCode());
     }
+    
+/*----------------------------------------------------------------------------*/
+    /**
+     * If a threshold calculator defined by the monitor, if it exists is preferred.
+     * If not we use the threshold calculator defined by the appender
+     * If neither is defined null should be returned.
+     * 
+     * IMPORTANT - When a threshold calculator is returned it must always
+     * be a clone of the existing calculator. 
+     *  
+     * @throws Exception
+     */
+    public void testGetPreferredThresholdCalculator() throws Exception {
+    	ThresholdCalculator preferred, definedByMonitor, definedByAppender;
+    	preferred = definedByMonitor = definedByAppender = null;
 
+    	// Neither Appender or Monitor have calculator
+    	preferred = Appender.getPreferredThresholdCalculator(definedByMonitor, definedByAppender);
+    	assertNull("No calculator defined by Monitor or Appender", preferred);
+    	
+    	// Appender has calculator but not Monitor.
+    	definedByAppender = new ThresholdCalculator("1 second");
+    	preferred = Appender.getPreferredThresholdCalculator(definedByMonitor, definedByAppender);
+    	assertFalse("Should be a clone of Appender calculator", definedByAppender == preferred);
+    	assertEquals("Should have same definition as Appender's calculator", 1000L, preferred.getThresholdMillis()[0]);
+    			
+    	// Both Monitor and Appender have calculators
+    	definedByMonitor = new ThresholdCalculator("2 seconds");
+    	preferred = Appender.getPreferredThresholdCalculator(definedByMonitor, definedByAppender);
+    	assertFalse("Should be a clone of Monitor's calculator", definedByMonitor == preferred);
+    	assertEquals("Should have same definition as Monitor's calculator", 2000L, preferred.getThresholdMillis()[0]);
+    			
+    	// Monitor has calculator, but not Appender
+    	definedByAppender = null;
+    	preferred = Appender.getPreferredThresholdCalculator(definedByMonitor, definedByAppender);
+    	assertFalse("Should be a clone of Monitor's calculator", definedByMonitor == preferred);
+    	assertEquals("Should have same definition as Monitor's calculator", 2000L, preferred.getThresholdMillis()[0]);
+    }
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

@@ -400,6 +400,12 @@ public class MiscHelperTest extends PerfMonTestCase {
 			MiscHelper.formatTimeAsRFC1123(now));	
 	}
 	
+	public void testIsNull() {
+		assertEquals("Expect the value", "value", MiscHelper.isNull("value", "otherValue"));
+		assertEquals("Expect the otherValue", "otherValue", MiscHelper.isNull(null, "otherValue"));
+		assertNull("Both parameters are null then null will be returned", MiscHelper.isNull(null, null));
+	}
+	
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

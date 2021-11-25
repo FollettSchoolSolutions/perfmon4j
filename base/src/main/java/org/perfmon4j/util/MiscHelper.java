@@ -732,4 +732,18 @@ public class MiscHelper {
 		return format.format(new Date(timestamp));
 	}
 
+	/**
+	 * This is like the Microsoft  SQL Server function
+	 * if the value parameter is NOT null it's returned
+	 * If it is null the returnIfValueIsNull parameter is 
+	 * returned
+	 * 
+	 * @param <T>
+	 * @param value
+	 * @param returnIfValueIsNull
+	 * @return
+	 */
+	public static <T> T isNull(T value, T returnIfValueIsNull) {
+		return value != null ? value : returnIfValueIsNull;
+	}
 } 

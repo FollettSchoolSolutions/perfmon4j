@@ -21,6 +21,7 @@
 
 package org.perfmon4j;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,14 +39,18 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.perfmon4j.Appender.AppenderID;
+import org.perfmon4j.MonitorThreadTracker.Tracker;
+import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.util.ActiveThreadMonitor;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.FailSafeTimerTask;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.ThresholdCalculator;
 
 
 public class PerfMon {
@@ -158,7 +163,6 @@ public class PerfMon {
     private final Long monitorID;
     private Long startTime = null;
     private int totalHits = 0;
-    private int activeThreadCount = 0;
     private int totalCompletions = 0;
     
     /** Optional data...  May be null if SQL profiling is NOT enabled **/
@@ -192,6 +196,9 @@ public class PerfMon {
     private Set<PerfMon> childMonitors =  Collections.synchronizedSet(new HashSet<PerfMon>());
     private ThreadTraceConfig internalThreadTraceConfig = null;
     private final ExternalThreadTraceConfig.Queue externalThreadTraceQueue = new ExternalThreadTraceConfig.Queue();
+    private final MonitorThreadTracker activeThreadList = new MonitorThreadTracker(this);
+//    private ReferenceCount activeHead = null;
+//    private ReferenceCount activeTail = null;
     
     private static ThreadLocal<Map<Long, ReferenceCount>> activeMonitors = new ThreadLocal<Map<Long, ReferenceCount>>() {
          protected synchronized Map<Long, ReferenceCount> initialValue() {
@@ -201,6 +208,9 @@ public class PerfMon {
 
     private final Lock startStopWriteLock;
     private final Lock startStopReadLock;
+    
+    private ThresholdCalculator thresholdCalculator = null;
+    private ActiveThreadMonitor activeThreadMonitor = null;
     
 /*----------------------------------------------------------------------------*/    
     private PerfMon(PerfMon parent, String name) {
@@ -216,6 +226,8 @@ public class PerfMon {
         this.parent = parent;
         if (parent != null) {
             parent.childMonitors.add(this);
+            this.thresholdCalculator = parent.getThresholdCalculator();
+            this.activeThreadMonitor = parent.getActiveThreadMonitor();
         }
 
 //        DO NOT LOG HERE!  You can create an infinite loop when debug is enabled!
@@ -420,7 +432,8 @@ public class PerfMon {
             
             startStopWriteLock.lock();
             try {
-                activeThreadCount++;
+                int activeThreadCount = activeThreadList.addTracker(count);
+                
                 if (isActive()) {
                     totalHits++;
                     if (activeThreadCount >= maxActiveThreadCount) {
@@ -482,7 +495,8 @@ public class PerfMon {
             startStopWriteLock.lock();
             try {
                 long eventStartTime = count.getStartTime();
-                activeThreadCount--;
+                
+                activeThreadList.removeTracker(count);
                 
                 final boolean active = isActive() && (startTime.longValue() <= eventStartTime);
                 final boolean externalElement = hasExternalElement();
@@ -573,7 +587,7 @@ public class PerfMon {
 
 /*----------------------------------------------------------------------------*/    
     public int getActiveThreadCount() {
-        return activeThreadCount;
+        return activeThreadList.getLength();
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -593,7 +607,7 @@ public class PerfMon {
         // No need to synchronize here since this is a thread local object...
         ReferenceCount count = map.get(monitorID);
         if (count == null) {
-            count = new ReferenceCount();
+            count = new ReferenceCount(Thread.currentThread());
             map.put(monitorID, count);
         }
         return count;
@@ -636,13 +650,28 @@ public class PerfMon {
         return parent == null;
     }
     
+    
 /*----------------------------------------------------------------------------*/    
-    private static class ReferenceCount {
+    MonitorThreadTracker getActiveThreadList() {
+		return activeThreadList;
+	}
+    
+/*----------------------------------------------------------------------------*/    
+    private static class ReferenceCount implements MonitorThreadTracker.Tracker {
+    	/** Store as a weak reference in case owningThread is aborted and Garbage Collected **/
+    	private final WeakReference<Thread> owningThread;
+    	
         private int refCount = 0;
         private long startTime;
         private long sqlStartMillis = 0;
         boolean hasInternalThreadTrace = false;
         boolean hasExternalThreadTrace = false;
+		private ReferenceCount previous = null;
+		private ReferenceCount next = null;
+        
+        ReferenceCount(Thread owningThread) {
+        	this.owningThread = new WeakReference<Thread>(owningThread);
+        }
         
         /**
          * @return The updated (incremented value of refCount)
@@ -662,13 +691,45 @@ public class PerfMon {
             return --refCount;
         }
         
-       private long getStartTime() {
-           return startTime;
-       }
-       
        private long getSQLStartMillis() {
     	   return sqlStartMillis;
        }
+
+       @Override
+		/**
+		 * The owningThread is stored as a weakReference to allow
+		 * garbage collection of the thread if needed.  Caller must
+		 * be prepared for this method to return null.
+		 */
+		public Thread getThread() {
+			return owningThread.get();
+		}
+		
+		@Override
+		public void setPrevious(Tracker previous) {
+			this.previous = (ReferenceCount)previous;
+		}
+		
+		@Override
+		public Tracker getPrevious() {
+			return previous;
+		}
+		
+		@Override
+		public void setNext(Tracker next) {
+			this.next = (ReferenceCount)next;
+		}
+		
+		@Override
+		public Tracker getNext() {
+			return next;
+		}
+		
+		@Override
+		public long getStartTime() {
+			return startTime;
+		}
+       
     }
 
 /*----------------------------------------------------------------------------*/    
@@ -721,7 +782,8 @@ public class PerfMon {
         return maxActiveThreadCount;
     }
     
-/*----------------------------------------------------------------------------*/    
+    
+	/*----------------------------------------------------------------------------*/    
     int getNumAppenders() {
         return appenderList.size();
     }
@@ -794,7 +856,9 @@ public class PerfMon {
                         if (logger.isDebugEnabled()) {
                             logger.logDebug("Scheduling task: " + task);
                         }
-                        priorityTimer.schedule(task, appender.getIntervalMillis());
+                        priorityTimer.schedule(task, 
+                        		roundInterval(MiscHelper.currentTimeWithMilliResolution(), 
+                        				appender.getIntervalMillis()));
                     } else {
                         logger.logError("Unable to add appender to monitor: " + this +
                                 " - Max appenders exceeded");
@@ -948,10 +1012,11 @@ public class PerfMon {
         }
         
         public void failSafeRun() {
-        	long stopTime = MiscHelper.currentTimeWithMilliResolution();
-            priorityTimer.schedule(new PushAppenderDataTask(owner, this.appender, offset), appender.getIntervalMillis());
+        	long now = MiscHelper.currentTimeWithMilliResolution();
+            priorityTimer.schedule(new PushAppenderDataTask(owner, this.appender, offset), 
+            		roundInterval(now, appender.getIntervalMillis()));
             try {
-                perfMonData.setTimeStop(stopTime);
+                perfMonData.setTimeStop(now);
                 maxThroughputPerMinute = perfMonData.refreshMonitorsMaxThroughputPerMinute(maxThroughputPerMinute);
                 appender.appendData(perfMonData);
             } catch (Exception ex) {
@@ -966,6 +1031,31 @@ public class PerfMon {
         }
     }
 
+    /**
+     * This method has an arbitrary requirement that it will 
+     * not round any appenderInterval that not evenly divisible by 1 second.
+     * This requirement ensures that unit tests that use very small intervals
+     * are not broken. 
+     * 
+     * @param nowInMillis
+     * @param appenderIntervalInMillis
+     * @return
+     */
+    static long roundInterval(long nowInMillis, long appenderIntervalInMillis) {
+    	if (appenderIntervalInMillis > 0 && ((appenderIntervalInMillis % 1000) == 0)) {
+	    	long delta = ((nowInMillis/appenderIntervalInMillis)*appenderIntervalInMillis) - nowInMillis;
+	    	
+	    	if (delta != 0) {
+	    		long newInterval = appenderIntervalInMillis + delta; 
+				if (newInterval <=  (appenderIntervalInMillis / 2)) {
+					newInterval += appenderIntervalInMillis;
+				} 
+				appenderIntervalInMillis = newInterval;
+	    	}
+    	}
+    	
+    	return appenderIntervalInMillis;
+    }
     
     private void resetAppenders() {
     	if (mapper == null) {
@@ -1101,17 +1191,30 @@ public class PerfMon {
         
         RegisteredDatabaseConnections.config(config);
         
-        String monitors[] = config.getMonitorArray();
-
+        MonitorConfig monitorConfigs[] = config.getMonitorConfigArray();
+        Map<String, ThresholdCalculator> thresholdMap = new HashMap<String, ThresholdCalculator>(); 
+        Map<String, ActiveThreadMonitor> activeThreadMonMap = new HashMap<String, ActiveThreadMonitor>(); 
         
         AppenderToMonitorMapper.Builder builder = new AppenderToMonitorMapper.Builder();
-        for (String monitor : monitors) {
+        for (MonitorConfig monitorConfig : monitorConfigs) {
         	// Explicitly create each monitor that was explicitly defined in the 
         	// configuration.
-        	PerfMon.getMonitor(monitor); 
+        	PerfMon.getMonitor(monitorConfig.getMonitorName()); 
+
+        	// Look to see if a ThresholdCalculator is defined for the Monitor
+        	String thresholdValues = monitorConfig.getProperty("thresholdCalculator");
+        	if (thresholdValues != null) {
+        		thresholdMap.put(monitorConfig.getMonitorName(), new ThresholdCalculator(thresholdValues));
+        	}
+
+        	// Look to see if a ActiveThreadMonitor is defined for the Monitor
+        	String activeThreadValues = monitorConfig.getProperty("activeThreadMonitor");
+        	if (activeThreadValues != null) {
+        		activeThreadMonMap.put(monitorConfig.getMonitorName(), new ActiveThreadMonitor(activeThreadValues));
+        	}
         	
-            for (PerfMonConfiguration.AppenderAndPattern appender : config.getAppendersForMonitor(monitor, config)) {
-            	builder.add(monitor, appender.getAppenderPattern(), appender.getAppenderID());
+            for (PerfMonConfiguration.AppenderAndPattern appender : config.getAppendersForMonitor(monitorConfig.getMonitorName(), config)) {
+            	builder.add(monitorConfig.getMonitorName(), appender.getAppenderPattern(), appender.getAppenderID());
             }
         }
         mapper = builder.build();
@@ -1121,15 +1224,30 @@ public class PerfMon {
         // process.  Prior to the enhanced appender pattern implementation,
         // each monitor defined in the perfmonconfig.xml file was created
         // automatically.
-        for (String monitor : monitors) {
+        for (MonitorConfig monitorConfig : monitorConfigs) {
         	// Explicitly create each monitor that was explicitly defined in the 
         	// configuration.
-        	PerfMon.getMonitor(monitor); 
+        	PerfMon.getMonitor(monitorConfig.getMonitorName()); 
         }
         
         
         // Walk through all the monitors
         for (PerfMon mon : getMonitors()) {
+        	String[] monitorHirearchy = PerfMon.parseMonitorHirearchy(mon.getName());
+        	// Update the ThresholdCalculators;
+        	ThresholdCalculator calc = null;
+        	for (int i = monitorHirearchy.length - 1; (i >= 0) && (calc == null); i--) {
+        		calc = thresholdMap.get(monitorHirearchy[i]);
+        	}
+        	mon.setThresholdCalculator(calc);
+        	
+        	// Update the ActiveThreadMonitors
+        	ActiveThreadMonitor activeThreadMon = null;
+        	for (int i = monitorHirearchy.length - 1; (i >= 0) && (activeThreadMon == null); i--) {
+        		activeThreadMon = activeThreadMonMap.get(monitorHirearchy[i]);
+        	}
+        	mon.setActiveThreadMonitor(activeThreadMon);
+        	
         	mon.resetAppenders();
         }
         
@@ -1349,7 +1467,23 @@ public class PerfMon {
 		forceDynamicPathWeakMap.remove(externalMonitorInstance);
     }
 
-    public String toHTMLString() {
+    public ThresholdCalculator getThresholdCalculator() {
+		return thresholdCalculator;
+	}
+
+	void setThresholdCalculator(ThresholdCalculator thresholdCalculator) {
+		this.thresholdCalculator = thresholdCalculator;
+	}
+	
+	public ActiveThreadMonitor getActiveThreadMonitor() {
+		return activeThreadMonitor;
+	}
+
+	void setActiveThreadMonitor(ActiveThreadMonitor activeThreadMonitor) {
+		this.activeThreadMonitor = activeThreadMonitor;
+	}
+
+	public String toHTMLString() {
         String result = "<STRONG>" + "PerfMon(" + monitorID + "-" + 
              name + ")</STRONG><CR>\r\n";
         result += "active=" + isActive() + "<CR>\r\n";
@@ -1357,7 +1491,7 @@ public class PerfMon {
             result += "&nbsp;&nbsp;startTime=" + MiscHelper.formatDateTimeAsString(startTime) + "<CR>\r\n";
             result += "&nbsp;&nbsp;totalHits=" + totalHits + "<CR>\r\n";
             result += "&nbsp;&nbsp;totalCompletions=" + totalCompletions + "<CR>\r\n";
-            result += "&nbsp;&nbsp;activeThreadCount=" + activeThreadCount + "<CR>\r\n";
+            result += "&nbsp;&nbsp;activeThreadCount=" + getActiveThreadCount() + "<CR>\r\n";
             result += "&nbsp;&nbsp;maxDuration=" + maxDuration + " " + MiscHelper.formatDateTimeAsString(timeMaxDurationSet, false, true) + "<CR>\r\n";
             result += "&nbsp;&nbsp;minDuration=" + minDuration + " " + MiscHelper.formatDateTimeAsString(timeMinDurationSet, false, true) + "<CR>\r\n";
             result += "&nbsp;&nbsp;maxActiveThreadcount=" + maxActiveThreadCount + " " + MiscHelper.formatDateTimeAsString(timeMaxActiveThreadCountSet, false, true) + "<CR>\r\n";

@@ -26,16 +26,17 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
+import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class XMLConfigurationParserTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -222,7 +223,6 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals(1000, medianCalculator.getFactor());
     }
     
-
     public void testParseWithThresholdCalculatorAttribute() throws Exception {
         final String XML =
             "<Perfmon4JConfig>" +
@@ -244,6 +244,46 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertNotNull(thresholdCalculator);
         
         assertEquals(3,thresholdCalculator.getThresholdMillis().length);
+    }
+    
+    public void testParseWithThresholdOnMonitor() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig>" +
+            "   <appender name='5 minute' " +
+            "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+            "       interval='5 min'>" +
+            "   </appender>" +
+            "   <monitor name='mon'>" +
+            "       <attribute name='thresholdCalculator'>2 seconds, 5 seconds, 10 seconds</attribute>" +
+            "       <appender name='5 minute'/>" +
+            "   </monitor>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertEquals("Should have one monitor defined", 1, config.getMonitorConfigArray().length);
+        
+        MonitorConfig monitorConfig = config.getMonitorConfigArray()[0];
+        assertEquals("Expected threshold calculator", monitorConfig.getProperty("thresholdCalculator"), "2 seconds, 5 seconds, 10 seconds");
+    }
+
+    public void testParseActiveThreadMonitorOnMonitor() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig>" +
+            "   <appender name='5 minute' " +
+            "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+            "       interval='5 min'>" +
+            "   </appender>" +
+            "   <monitor name='mon'>" +
+            "       <attribute name='activeThreadMonitor'>1 minute, 30 minutes, 1 hour</attribute>" +
+            "       <appender name='5 minute'/>" +
+            "   </monitor>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertEquals("Should have one monitor defined", 1, config.getMonitorConfigArray().length);
+        
+        MonitorConfig monitorConfig = config.getMonitorConfigArray()[0];
+        assertEquals("Expected activeThreadMonitor", monitorConfig.getProperty("activeThreadMonitor"), "1 minute, 30 minutes, 1 hour");
     }
     
     public void testParseThreadTraceConfigWithDefaultOptions() throws Exception {

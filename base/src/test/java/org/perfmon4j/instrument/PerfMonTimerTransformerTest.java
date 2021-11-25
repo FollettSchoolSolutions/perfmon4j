@@ -27,6 +27,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.Statement;
@@ -37,13 +38,16 @@ import java.util.regex.Pattern;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.Appender;
+import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
+import org.perfmon4j.instrument.LaunchRunnableInVM.Params;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -675,6 +679,202 @@ System.out.println(output);
 //		RuntimeTimerInjector.injectPerfMonTimers(clazz, false);
     	assertTrue("Should have instrumented var args method",
     			output.contains("Adding extreme monitor: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DoSomethingElseTest.doSomethingWithVarArgs"));
+    }
+    
+    public static class ExceptionTrackerTest implements Runnable {
+    	private static class MyException extends Exception {
+    		final String str;
+    		
+    		MyException() {
+    			this("");
+    		}
+    		MyException(String str) {
+    			this.str = str;
+    		}
+    	}
+    	
+
+		@Override
+		public void run() {
+			
+			try {
+				Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass("generated.perfmon4j.ExceptionBridge");
+				System.out.println("Loaded class: " + clazz);
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+			
+			System.out.println("Before RuntimeException count: " + ExceptionTracker.getCount("java.lang.RuntimeException"));
+			System.out.println("Before MyException count: " 
+					+ ExceptionTracker.getCount("org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException"));
+			
+			new RuntimeException();
+			new MyException(); // Make sure exceptions aren't double counted when a class has nested constructors;
+			new MyException("anything");
+			new BigDecimal(0); // Not a throwable/should not be instrumented or counted by Exception Tracker.
+			
+			System.out.println("After RuntimeException count: " + ExceptionTracker.getCount("java.lang.RuntimeException"));
+			System.out.println("After MyException count: " 
+					+ ExceptionTracker.getCount("org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException"));
+			System.out.println("After BigDecimal count: "  
+					+ ExceptionTracker.getCount("java.math.BigDecimal"));
+		}
+	}    
+
+    public void testExceptionTrackerInstallation() throws Exception {
+    	final String configFile = 
+    		"<Perfmon4JConfig enabled='true'>\r\n" +
+    		"\t<boot>\r\n" +
+    		"\t\t<exceptionTracker>\r\n" +
+            "\t\t\t<exception className='java.lang.RuntimeException'/>\r\n" + 
+            "\t\t\t<exception className='org.perfmon4j.instrument.PerfMonTimerTransformerTest$ExceptionTrackerTest$MyException'/>\r\n" + 
+            "\t\t\t<exception className='java.math.BigDecimal'/>\r\n" + // Will be ignored, must be a class that is inherited from Throwable. 
+    		"\t\t</exceptionTracker>\r\n" +
+            "\t</boot>\r\n" +
+    		"</Perfmon4JConfig>";
+
+    	String output = LaunchRunnableInVM.run(new Params(ExceptionTrackerTest.class, perfmon4jJar)
+    		.setPerfmonConfigXML(configFile));
+//System.out.println(output);
+    	
+		assertTrue("Expected 1 RuntimeException", output.contains("After RuntimeException count: 1"));
+		assertTrue("Expected 2 MyException", output.contains("After MyException count: 2"));
+		assertTrue("Expected 0 java.math.BigDecimal - non-Throwable classes not instrumented", 
+			output.contains("After BigDecimal count: 0"));
+		assertTrue("Should show warning that java.math.BigDecimal is not a throwable", 
+			output.contains("Class java/math/BigDecimal is NOT derived from java.lang.Throwable and cannot be added to the Perfmon4j ExceptionTracker"));
+    }
+    
+    
+    public static class ExceptionTrackerOutputTest implements Runnable {
+    
+    	private void sleep(int millis) {
+			try {
+				Thread.sleep(millis);
+			} catch (InterruptedException e) {
+				// Ignored
+			}
+    	}
+    	
+		@Override
+		public void run() {
+			sleep(700);  // Give perfmon4j time to load it's configuration file.
+			
+			new NullPointerException();
+			
+			sleep(300);  // Give time for appender to finish
+			Appender.flushAllAppenders();
+		}
+	}    
+
+
+    /**
+     * This functions as an acceptance test of the Exception tracker.
+     * @throws Exception
+     */
+    public void testExceptionTrackerOutput_AT() throws Exception {
+    	final String configFile = 
+    	"<Perfmon4JConfig enabled='true'>\r\n" +
+    	"\t<boot>\r\n"+
+    	"\t\t<exceptionTracker>\r\n" +
+    	"\t\t\t<exception displayName='NullPointerEx' className='java.lang.NullPointerException'/>\r\n" +
+    	"\t\t</exceptionTracker>\r\n" +	
+    	"\t</boot>\r\n" +
+    	"\t<appender name='text-appender' className='org.perfmon4j.TextAppender' interval='100 millis'/>\r\n" +
+        "\t<snapShotMonitor name='ExceptionTracker' className='org.perfmon4j.ExceptionTracker' usePriorityTimer='true'>\r\n" +
+        "\t\t<appender name='text-appender'/>\r\n" +
+        "\t</snapShotMonitor>\r\n" +
+        "</Perfmon4JConfig>";    
+//System.out.println(configFile);
+    	
+    	String output = LaunchRunnableInVM.run(new Params(ExceptionTrackerOutputTest.class, perfmon4jJar)
+    		.setPerfmonConfigXML(configFile));
+//System.out.println(output);
+
+    	int perMinute = 0;
+    	Pattern pattern = Pattern.compile("NullPointerEx\\.*\\s*(\\d{3}\\.00) per minute");
+    	Matcher m = pattern.matcher(output);
+    	if (m.find()) {
+    		perMinute = (int)Math.round(Double.valueOf(m.group(1)).doubleValue());
+    	}
+    	
+		/*
+		 * Why 600 per minute?  We had 1 NullPointerException in the 100 millisecond measurement.
+		 * period. There are 600 measurement periods(100 milliseconds in duration) in a minute.
+		 * 1 exception in 100 millis extrapolates to 600 exceptions in 1 minute.
+		 * 
+		 * Also given the variability in terms of running this test on various machines allow
+		 * a large range of values to pass. 
+		 */
+		assertTrue("Should include a NullPointerEx count of around 600 request per minute but was: " + perMinute, 
+			((perMinute > 500) && (perMinute < 700)));
+    }
+    
+    public static class ThresholdCalculatorOnMonitorTest implements Runnable {
+        
+    	private void sleep(int millis) {
+			try {
+				Thread.sleep(millis);
+			} catch (InterruptedException e) {
+				// Ignored
+			}
+    	}
+    	
+		@Override
+		public void run() {
+			sleep(700);  // Give perfmon4j time to load it's configuration file.
+		
+			PerfMonTimer timer = PerfMonTimer.start("mon");
+			PerfMonTimer.stop(timer);
+			
+			sleep(300);  // Give perfmon4j time to load it's configuration file.
+			Appender.flushAllAppenders();
+		}
+	}    
+
+    /**
+     * This functions as an acceptance test of ThresholdCalculator defined on a monitor.
+     * @throws Exception
+     */
+    public void testMonitorThresholdOverridesAppenders_AT() throws Exception {
+        final String XML = 
+                "<Perfmon4JConfig>" + 
+                "	<appender name='100ms' className='" + TextAppender.class.getName() + "' interval='100 ms'>" +		
+                "       <attribute name='thresholdCalculator'>50 ms</attribute>" + 
+                "	</appender>" +		
+                "   <monitor name='mon'>" + 
+                "       <attribute name='thresholdCalculator'>10 ms</attribute>" + 
+                "       <appender name='100ms'/>" + 
+                "   </monitor>" + 
+                "</Perfmon4JConfig>"; 
+//System.out.println(XML);
+    	String output = LaunchRunnableInVM.run(new Params(ThresholdCalculatorOnMonitorTest.class, perfmon4jJar)
+    		.setPerfmonConfigXML(XML));
+//System.out.println(output);
+    	assertTrue("Should have the > 10 ms threshold defined by the monitor", output.contains("> 10 ms..."));
+    	assertFalse("Should NOT have the > 50 ms threshold defined by the appender", output.contains("> 50 ms..."));
+    }
+
+    /**
+     * This functions as an acceptance test of ActiveThreadMonitor defined on a monitor.
+     * @throws Exception
+     */
+    public void testMonitorActiveThreadMonitor_AT() throws Exception {
+        final String XML = 
+                "<Perfmon4JConfig>" + 
+                "	<appender name='100ms' className='" + TextAppender.class.getName() + "' interval='100 ms'/>" +	
+                "   <monitor name='mon'>" + 
+                "       <attribute name='activeThreadMonitor'>10 ms, 30 minutes, 1 hour</attribute>" + 
+                "       <appender name='100ms'/>" + 
+                "   </monitor>" + 
+                "</Perfmon4JConfig>"; 
+//System.out.println(XML);
+    	String output = LaunchRunnableInVM.run(new Params(ThresholdCalculatorOnMonitorTest.class, perfmon4jJar)
+    		.setPerfmonConfigXML(XML));
+//System.out.println(output);
+    	assertTrue("Should have the > 10 ms threshold defined by the monitor", output.contains("active > 10 ms..."));
+    	assertTrue("Should have the > 30 minute threshold defined by the appender", output.contains("active > 30 minutes..."));
+    	assertTrue("Should NOT have the > 1 hour threshold defined by the appender", output.contains("active > 60 minutes..."));
     }
     
 	public final static class ValveClass {

@@ -48,7 +48,7 @@
 	
 	<files>
 		<file>
-			<source>${M2_REPO}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</source>
+			<source>${settings.localRepository}/org/javassist/javassist/${javassist.version}/javassist-${javassist.version}.jar</source>
 			<destName>3rd-party/javassist/${javassist.version}/javassist.jar</destName>
 		</file>
 		<file>
@@ -89,7 +89,7 @@
 		</file>
 		<file>
 			<source>${basedir}/wildfly8/target/perfmon4j-wildfly8-${project.version}.jar</source>
-			<destName>perfmon4j-widlfly8.jar</destName>
+			<destName>perfmon4j-wildfly8.jar</destName>
 		</file>		
 		<file>
 			<source>${basedir}/webapp/target/perfmon4j.war</source>

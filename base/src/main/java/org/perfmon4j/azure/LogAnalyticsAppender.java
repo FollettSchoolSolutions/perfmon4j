@@ -8,8 +8,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.crypto.Mac;
@@ -49,7 +51,8 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	private final List<QueueElement> writeQueue = new ArrayList<QueueElement>();
 	
 	private static final Object dedicatedTimerThreadLockTocken = new Object();
-	private static Timer dedicatedTimerThread = null;
+	private static ScheduledExecutorService dedicatedExecutor = null;
+
 	
 	// This is a fail safe to prevent failure of writing to Azure to allow measurements
 	// to continue to accumulate and run out of memory.
@@ -203,11 +206,11 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		}
 		if (batchWritersPending.intValue() <= 0) {
 			synchronized (dedicatedTimerThreadLockTocken) {
-				if (dedicatedTimerThread == null) {
-					dedicatedTimerThread = new Timer("PerfMon4J.LogAnalyticsAppenderHttpWriteThread", true);
+				if (dedicatedExecutor == null  || dedicatedExecutor.isShutdown()) {
+					dedicatedExecutor = new ScheduledThreadPoolExecutor(1);
 				}
 			}
-			dedicatedTimerThread.schedule(new BatchWriter(), getBatchSeconds() * 1000);
+			dedicatedExecutor.schedule(new BatchWriter(), getBatchSeconds(), TimeUnit.SECONDS);
 		}
 	}
 	
@@ -411,7 +414,7 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 							String message = "Error writing to Azure: " + debugOutput + 
 								" -  Response: " + response.toString();
 							logger.logWarn(message);
-						} else  {
+						} else if (logger.isDebugEnabled()) {
 							logger.logDebug("Success writing to Azure: " + debugOutput);
 						}
 					} catch (IOException e) {

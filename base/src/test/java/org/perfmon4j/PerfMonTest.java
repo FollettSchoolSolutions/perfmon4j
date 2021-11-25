@@ -25,9 +25,6 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -35,6 +32,9 @@ import org.mockito.Mockito;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotProvider;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 
 
@@ -452,7 +452,7 @@ public class PerfMonTest extends PerfMonTestCase {
 
 /*----------------------------------------------------------------------------*/    
     public void testIntervalAppender() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         
         final String MONITOR_NAME = "testIntervalResults";
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
@@ -592,7 +592,7 @@ public class PerfMonTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testAppenderIsAssignedToChildren() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String MONITOR_NAME = "testAppenderIsAssignedToChildren";
@@ -656,7 +656,7 @@ public class PerfMonTest extends PerfMonTestCase {
     public void testActiveTimersParentOnlyPattern() throws Exception {
     	TestConfigBuilder builder = new TestConfigBuilder();
     	
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_PARENT_ONLY = "./";
@@ -681,7 +681,7 @@ public class PerfMonTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersChildOnlyPattern() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_CHILDREN_ONLY = "/*";
@@ -708,7 +708,7 @@ public class PerfMonTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersOnParentAndChildrenPattern() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_PARENT_AND_CHILDREN = "./*";
@@ -741,7 +741,7 @@ public class PerfMonTest extends PerfMonTestCase {
     
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersNoParentAllDescendents() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_DESCENDENTS = "/**";
@@ -767,7 +767,7 @@ public class PerfMonTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersParentAndAllDescendents() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_ALL = "./**";
@@ -793,7 +793,7 @@ public class PerfMonTest extends PerfMonTestCase {
     
     /*----------------------------------------------------------------------------*/    
     public void testActiveTimersForAllDescendents() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_ALL_DESCENDENTS = "/**";
@@ -822,7 +822,7 @@ public class PerfMonTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testAppenderRespectsPattern() throws Exception {
-        final long INTERVAL_MILLIS = 1000;
+        final long INTERVAL_MILLIS = 999;
         Appender.AppenderID appenderID = TestAppender.getAppenderID(INTERVAL_MILLIS);
         
         final String PATTERN_PARENT_ONLY = "./";
@@ -1117,7 +1117,190 @@ public class PerfMonTest extends PerfMonTestCase {
         assertEquals("Should indicate class could not be found", "Appender: ClassNameDoesNotExist", config.getClassNotFoundInfo().iterator().next());
     }
 
+    public void testConfigureThresholdCalculatorOnMonitor() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("thresholdCalculator", "1 second, 2 seconds, 5 seconds");
+        config.defineMonitor("efg");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+        config.attachAppenderToMonitor("efg", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNotNull("abc should have a threshold monitor", PerfMon.getMonitor("abc").getThresholdCalculator());
+        assertNull("efg should NOT have a threshold monitor", PerfMon.getMonitor("efg").getThresholdCalculator());
+    }
+
+    public void testThresholdCalculatorCascadesToChildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("thresholdCalculator", "1 second, 2 seconds, 5 seconds");
+        config.defineMonitor("abc.efg");
+        config.defineMonitor("abc.efg.hjk");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNotNull("abc should have a threshold monitor", PerfMon.getMonitor("abc").getThresholdCalculator());
+        assertNotNull("Child abc.efg should also have a threshold monitor", PerfMon.getMonitor("abc.efg").getThresholdCalculator());
+        assertNotNull("Grandchild abc.efg.hjk should also have a threshold monitor", PerfMon.getMonitor("abc.efg.hjk").getThresholdCalculator());
+        
+        // Now let's make sure an updated configuration will remove the threshold monitors added above.
+        config = new PerfMonConfiguration();
+        config.defineMonitor("abc"); // Removed threshold monitor from parent.
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
     
+        PerfMon.configure(config);
+        
+        assertNull("abc should NOT have a threshold monitor", PerfMon.getMonitor("abc").getThresholdCalculator());
+        assertNull("Child abc.efg should also NOT have a threshold monitor", PerfMon.getMonitor("abc.efg").getThresholdCalculator());
+        assertNull("Grandchild abc.efg.hjk should also NOT have a threshold monitor", PerfMon.getMonitor("abc.efg.hjk").getThresholdCalculator());
+    }
+
+    public void testThresholdCalculatorCascadesToDynamicChildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("thresholdCalculator", "1 second, 2 seconds, 5 seconds");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        // Create a new child monitor on the fly.
+        PerfMon childMonitor = PerfMon.getMonitor("abc.trs");
+        assertNotNull("Dynamically created child should also have a threshold monitor", childMonitor.getThresholdCalculator());
+    }
+
+    public void testThresholdCalculatorCascadesToDynamicGrandchildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("thresholdCalculator", "1 second, 2 seconds, 5 seconds");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        // Create a new child monitor on the fly.
+        PerfMon grandchildMonitor = PerfMon.getMonitor("abc.qrs.mno");
+        assertNotNull("Dynamically created grandchild should also have a threshold monitor", grandchildMonitor.getThresholdCalculator());
+        
+        // Check to see that it is removed from grandchild
+        config = new PerfMonConfiguration();
+        config.defineMonitor("abc"); // Removed threshold from monitor abc
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNull("Dynamically created grandchild should also have a active thread monitor removed", grandchildMonitor.getThresholdCalculator());
+    }
+
+    public void testThresholdCalculatorIsRemovedIfMissing() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc"); // Removed threshold from monitor abc
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNull("abc should NOT have a threshold monitor", PerfMon.getMonitor("abc").getThresholdCalculator());
+        assertNull("Child abc.efg should NOT also have a threshold monitor", PerfMon.getMonitor("abc.efg").getThresholdCalculator());
+        assertNull("Grandchild abc.efg.hjk NOT should also have a threshold monitor", PerfMon.getMonitor("abc.efg.hjk").getThresholdCalculator());
+    }
+    
+    public void testActiveThreadMonitorOnMonitor() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineMonitor("efg");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+        config.attachAppenderToMonitor("efg", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNotNull("abc should have an active thread monitor", PerfMon.getMonitor("abc").getActiveThreadMonitor());
+        assertNull("efg should NOT have a threshold monitor", PerfMon.getMonitor("efg").getActiveThreadMonitor());
+    }
+
+    public void testActiveThreadMonitorCascadesToChildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineMonitor("abc.efg");
+        config.defineMonitor("abc.efg.hjk");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        assertNotNull("abc should have a threshold monitor", PerfMon.getMonitor("abc").getActiveThreadMonitor());
+        assertNotNull("Child abc.efg should also have a threshold monitor", PerfMon.getMonitor("abc.efg").getActiveThreadMonitor());
+        assertNotNull("Grandchild abc.efg.hjk should also have a threshold monitor", PerfMon.getMonitor("abc.efg.hjk").getActiveThreadMonitor());
+        
+        // Now let's make sure an updated configuration will remove the threshold monitors added above.
+        config = new PerfMonConfiguration();
+        config.defineMonitor("abc"); // Removed threshold monitor from parent.
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+    
+        PerfMon.configure(config);
+        
+        assertNull("abc should NOT have a threshold monitor", PerfMon.getMonitor("abc").getActiveThreadMonitor());
+        assertNull("Child abc.efg should also NOT have a threshold monitor", PerfMon.getMonitor("abc.efg").getActiveThreadMonitor());
+        assertNull("Grandchild abc.efg.hjk should also NOT have a threshold monitor", PerfMon.getMonitor("abc.efg.hjk").getActiveThreadMonitor());
+    }
+
+    public void testActiveThreadMonitorCascadesToDynamicChildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        // Create a new child monitor on the fly.
+        PerfMon childMonitor = PerfMon.getMonitor("abc.trs");
+        assertNotNull("Dynamically created child should also have a threshold monitor", childMonitor.getActiveThreadMonitor());
+    }
+
+    public void testActiveThreadMonitorCascadesToDynamicGrandchildren() throws Exception {
+        PerfMon.deInit();
+        
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor("abc").setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+
+        PerfMon.configure(config);
+        
+        // Create a new child monitor on the fly.
+        PerfMon grandchildMonitor = PerfMon.getMonitor("abc.qrs.mno");
+        assertNotNull("Dynamically created grandchild should also have a threshold monitor", grandchildMonitor.getActiveThreadMonitor());
+        
+        // Now reconfigure without the active thread monitor and ensure it is removed from grand child
+        config = new PerfMonConfiguration(); 
+        config.defineMonitor("abc"); // Removed .setProperty("activeThreadMonitor", "10 minutes, 30 minutes, 1 hour");
+        config.defineAppender("APP1", TestAppender.class.getName(), "1 second");
+        config.attachAppenderToMonitor("abc", "APP1");
+        
+        PerfMon.configure(config);
+        assertNull("Dynamically created grandchild should also have a threshold monitor removed", grandchildMonitor.getActiveThreadMonitor());
+    }
+
     public void testConfigureWillSkipClassNotFoundSnapShotMonitor() throws Exception {
         PerfMon.deInit();
         
@@ -1626,6 +1809,31 @@ public class PerfMonTest extends PerfMonTestCase {
 
         mon = PerfMon.getMonitor(NOMATCH);
         assertEquals("should have an appender", 0, mon.getNumAppenders());
+    }
+    
+    
+    public void testRoundInterval() {
+    	// For intervals divisible by 1 minute we round to the nearest minute.
+    	assertEquals("Our starting is 30 seconds with 1 minute interval, should round up "
+    			+ "to 2 minutes", 
+    			90000, PerfMon.roundInterval(30000, 60000));
+    	
+    	// For intervals divisible by 1 minute we round to the nearest minute.
+    	assertEquals("Our starting is 29.999 seconds with 1 minute interval, should round down "
+    			+ "to 1 minute", 
+    			30001, PerfMon.roundInterval(29999, 60000));
+
+    	assertEquals("For intervals evenly divisible by one second we round to nearest second", 
+    			999, PerfMon.roundInterval(1, 1000));
+    	
+    	assertEquals("For intervals evenly divisible by two second we round to nearest second", 
+    			1999, PerfMon.roundInterval(1, 2000));
+    
+    	assertEquals("For intervals not evenly divisible by one second we don't do any rounding", 
+    			500, PerfMon.roundInterval(1, 500));
+    	
+    	assertEquals("For intervals not evenly divisible by one second we don't do any rounding", 
+    			1500, PerfMon.roundInterval(1, 1500));
     }
 
     

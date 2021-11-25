@@ -64,7 +64,7 @@ class Log4JLogger implements Logger {
 		try {
 			if (!log4jInitialized && (rootLogger != null)) {
 				Enumeration<?> allAppendersOnRoot = (Enumeration<?>)getAllAppenders.invoke(rootLogger, new Object[]{}); 
-				log4jInitialized = allAppendersOnRoot.hasMoreElements();
+				log4jInitialized = allAppendersOnRoot != null;
 			}
 		} catch (Exception ex) {
 			// Ignore exceptions...  Just assume it is not initialized.
@@ -187,15 +187,19 @@ class Log4JLogger implements Logger {
 	}
 	
 	public boolean isDebugEnabled() {
-		boolean result = false;
-		try {
-			result = ((Boolean) debugEnabledMethod.invoke(loggerObject,
-					new Object[] {})).booleanValue();
-		} catch (Exception ex) {
-			handleReflectionException(ex);
+		if (LoggerFactory.isDefaultDebugEnabled()) {
+			return true;
+		} else {
+			boolean result = false;
+			try {
+				result = ((Boolean) debugEnabledMethod.invoke(loggerObject,
+						new Object[] {})).booleanValue();
+			} catch (Exception ex) {
+				handleReflectionException(ex);
+			}
+	
+			return result;
 		}
-
-		return result;
 	}
 
 	public boolean isInfoEnabled() {
@@ -215,18 +219,28 @@ class Log4JLogger implements Logger {
 	}
 
 	public void logDebug(String msg) {
-		try {
-			debugMethod.invoke(loggerObject, new Object[] { msg });
-		} catch (Exception ex) {
-			handleReflectionException(ex);
+		if (LoggerFactory.isDefaultDebugEnabled()) {
+			// If perfmon4j verbose or debug mode is enabled, upgrade debug statements to info
+			logInfo(msg);
+		} else {
+			try {
+				debugMethod.invoke(loggerObject, new Object[] { msg });
+			} catch (Exception ex) {
+				handleReflectionException(ex);
+			}
 		}
 	}
 
 	public void logDebug(String msg, Throwable th) {
-		try {
-			debugMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
-		} catch (Exception ex) {
-			handleReflectionException(ex);
+		if (LoggerFactory.isDefaultDebugEnabled()) {
+			// If perfmon4j verbose or debug mode is enabled, upgrade debug statements to info
+			logInfo(msg, th);
+		} else {
+			try {
+				debugMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
+			} catch (Exception ex) {
+				handleReflectionException(ex);
+			}
 		}
 	}
 

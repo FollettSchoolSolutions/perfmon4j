@@ -25,6 +25,14 @@ import org.perfmon4j.util.MiscHelper;
 /**
  * Utility class used to implement SQLBased monitoring within 
  * interval timers.
+ * 
+ * The class name is misleading. It should be more correctly called
+ * JDBC time.  It attempts to determine how much time the thread
+ * spends communicating with a SQL database by capturing
+ * how much time is spent in the JDBC layer. Although not
+ * exact it typically does provide a useful approximation of
+ * SQL time. 
+ * 
  * @author ddeucher
  */
 public class SQLTime {
@@ -67,6 +75,10 @@ public class SQLTime {
 			currentSQLTime += Math.max(0, (MiscHelper.currentTimeWithMilliResolution() - startTime));
 		}
 	}
+	
+	private boolean isInSQL() {
+		return refCount > 0;
+	}
 
 	/**
 	 * NOTE will always return 0 of SQLTime monitoring is NOT enabled...
@@ -97,6 +109,10 @@ public class SQLTime {
 		if (enabled) {
 			sqlTimeForThread.get().stop();
 		}
+	}
+	
+	public static boolean isThreadInSQL() {
+		return sqlTimeForThread.get().isInSQL();
 	}
 	
 	public static boolean isEnabled() {

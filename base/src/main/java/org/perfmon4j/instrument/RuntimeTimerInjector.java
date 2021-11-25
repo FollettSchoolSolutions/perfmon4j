@@ -8,10 +8,13 @@ public abstract class RuntimeTimerInjector {
 	    		TransformerParams params, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] installUndertowOrTomcatSetValveHook(byte[] classfileBuffer, ClassLoader loader) throws Exception;	
     public abstract byte[] wrapTomcatRegistry(byte[] classfileBuffer, ClassLoader loader) throws Exception;
+    public abstract byte[] installRequestSkipLogTracker(byte[] classfileBuffer, ClassLoader loader) throws Exception;    
     public abstract byte[] disableSystemGC(byte[] classfileBuffer, ClassLoader loader) throws Exception;
     public abstract byte[] installHystrixCommandMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] installHystrixThreadPoolMetricsHook(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
-
+	public abstract byte[] instrumentExceptionOrErrorClass(String className, byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	public abstract void createExceptionTrackerBridgeClass(ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	
 	public abstract byte[] attachAgentToPerfMonAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] attachAgentToPerfMonTimerAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] attachAgentToSQLTimeAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;

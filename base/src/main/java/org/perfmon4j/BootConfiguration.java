@@ -21,12 +21,30 @@
 
 package org.perfmon4j;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
 
 
 public class BootConfiguration {
 	private ServletValveConfig servletValveConfig = null;
+	private ExceptionTrackerConfig exceptionTrackerConfig = null;
+	
+	public static BootConfiguration getDefault() {
+		return new BootConfiguration();
+	}
+
+	public boolean isServletValveEnabled() {
+		return servletValveConfig != null;
+	}
+	
+	public boolean isExceptionTrackerEnabled() {
+		return exceptionTrackerConfig != null && exceptionTrackerConfig.elements.size() > 0;
+	}
 	
 	public ServletValveConfig getServletValveConfig() {
 		return servletValveConfig;
@@ -34,6 +52,14 @@ public class BootConfiguration {
 
 	public void setServletValveConfig(ServletValveConfig servletValveConfig) {
 		this.servletValveConfig = servletValveConfig;
+	}
+	
+	public ExceptionTrackerConfig getExceptionTrackerConfig() {
+		return exceptionTrackerConfig;
+	}
+
+	public void setExceptionTrackerConfig(ExceptionTrackerConfig exceptionTrackerConfig) {
+		this.exceptionTrackerConfig = exceptionTrackerConfig;
 	}
 
 	public static final class ServletValveConfig {
@@ -46,6 +72,7 @@ public class BootConfiguration {
 	    private String pushCookiesOnNDC = null;
 	    private String pushSessionAttributesOnNDC = null;
 	    private boolean pushClientInfoOnNDC = false;
+	    private boolean pushURLOnNDC = false;
 	    private String servletPathTransformationPattern = null;
 	    
 		public String getBaseFilterCategory() {
@@ -103,6 +130,13 @@ public class BootConfiguration {
 			this.pushClientInfoOnNDC = pushClientInfoOnNDC;
 		}
 		
+		public boolean isPushURLOnNDC() {
+			return pushURLOnNDC;
+		}
+		public void setPushURLOnNDC(boolean pushURLOnNDC) {
+			this.pushURLOnNDC = pushURLOnNDC;
+		}
+		
 		public String getServletPathTransformationPattern() {
 			return servletPathTransformationPattern;
 		}
@@ -134,6 +168,69 @@ public class BootConfiguration {
 			setValue(valve, "abortTimerOnImageResponse", Boolean.valueOf(isAbortTimerOnImageResponse()));
 			setValue(valve, "outputRequestAndDuration", Boolean.valueOf(isOutputRequestAndDuration()));
 			setValue(valve, "pushClientInfoOnNDC", Boolean.valueOf(isPushClientInfoOnNDC()));
+			setValue(valve, "pushURLOnNDC", Boolean.valueOf(isPushURLOnNDC()));
 		}	    
 	}
+	
+	public static final class ExceptionTrackerConfig {
+		private final Set<ExceptionElement> elements = new HashSet<BootConfiguration.ExceptionElement>();
+
+		public void addElement(ExceptionElement element) {
+			elements.add(element);
+		}
+		
+		public Set<ExceptionElement> getElements() {
+			return Collections.unmodifiableSet(elements);
+		}
+	}
+	
+	public static final class ExceptionElement {
+		private final String className;
+		private final String displayName;
+		private final boolean includeSQL;
+
+		public ExceptionElement(String className) {
+			this(className, className, false);
+			
+		}
+		public ExceptionElement(String className, String displayName) {
+			this(className, displayName, false);
+		}
+		
+		public ExceptionElement(String className, String displayName, boolean includeSQL) {
+			this.className = className;
+			this.displayName = displayName;
+			this.includeSQL = includeSQL;
+		}
+		
+		public String getDisplayName() {
+			return displayName;
+		}
+
+		public String getClassName() {
+			return className;
+		}
+		
+		public boolean isIncludeSQL() {
+			return includeSQL;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(className);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ExceptionElement other = (ExceptionElement) obj;
+			return Objects.equals(className, other.className);
+		}
+	}
+
 }

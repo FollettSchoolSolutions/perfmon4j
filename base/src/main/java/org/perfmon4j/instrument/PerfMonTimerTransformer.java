@@ -32,6 +32,7 @@ import java.io.OutputStream;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -41,12 +42,17 @@ import java.net.URLClassLoader;
 import java.rmi.RemoteException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.perfmon4j.BootConfiguration;
+import org.perfmon4j.BootConfiguration.ExceptionElement;
+import org.perfmon4j.BootConfiguration.ExceptionTrackerConfig;
+import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
 import org.perfmon4j.XMLBootParser;
@@ -382,17 +388,18 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
             
             boolean installValve = engineClassName.equals(className)  || undertowDeployInfoClassName.equals(className);
             boolean wrapTomcatRegistry = tomcatRegistryClassName.equals(className);
+            boolean installRequestSkipLogTracker = "io/undertow/servlet/spec/HttpServletRequestImpl".equals(className);
             
-            if (installValve || wrapTomcatRegistry) {
-            	try {
-		            if (installValve) {
-		            	result = runtimeTimerInjector.installUndertowOrTomcatSetValveHook(classfileBuffer, loader);
-		            } else {
-		            	result = runtimeTimerInjector.wrapTomcatRegistry(classfileBuffer, loader);
-		            }
-	            } catch (Exception ex) {
-	            	logger.logError(installValve ? "Unable to insert addValveHook" : "Unable to wrap tomcat registry", ex);
+        	try {
+	            if (installValve) {
+	            	result = runtimeTimerInjector.installUndertowOrTomcatSetValveHook(classfileBuffer, loader);
+	            } else if (wrapTomcatRegistry){
+	            	result = runtimeTimerInjector.wrapTomcatRegistry(classfileBuffer, loader);
+	            } else if (installRequestSkipLogTracker) {
+	            	result = runtimeTimerInjector.installRequestSkipLogTracker(classfileBuffer, loader);
 	            }
+            } catch (Exception ex) {
+            	logger.logError(installValve ? "Unable to insert addValveHook" : "Unable to wrap tomcat registry", ex);
             }
 			return result;
 		}
@@ -481,6 +488,39 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         }
     }
 
+    private static class ExceptionTrackerInstaller implements ClassFileTransformer {
+    	private final ExceptionTrackerConfig config;
+    	private final boolean verboseEnabled;
+    	private final Set<String> exceptionClasses = new HashSet<String>();
+    	
+    	ExceptionTrackerInstaller(ExceptionTrackerConfig config, boolean verboseEnabled) {
+    		this.config = config;
+    		this.verboseEnabled = verboseEnabled;
+    		for (ExceptionElement element : config.getElements()) {
+    			exceptionClasses.add(element.getClassName().replaceAll("\\.", "/"));
+    		}
+    	}
+    	
+        public byte[] transform(ClassLoader loader, String className, 
+                Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
+                byte[] classfileBuffer) {
+            byte[] result = null;
+            
+            if (exceptionClasses.contains(className)) {
+	            try {
+            		result = runtimeTimerInjector.instrumentExceptionOrErrorClass(className, classfileBuffer, loader, protectionDomain);
+            		if (verboseEnabled) {
+            			logger.logInfo("Added class to exceptionTracker: " + className);
+            		}
+	            } catch (Exception ex) {
+	            	logger.logWarn("Perfmon4j was unable to add ExceptionTracker to Class: " + className, ex);
+	            }
+            }
+			
+			return result;
+		}
+    }
+
     private static class SystemGCDisabler implements ClassFileTransformer {
         public byte[] transform(ClassLoader loader, String className, 
                 Class<?> classBeingRedefined, ProtectionDomain protectionDomain, 
@@ -559,7 +599,27 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 			return result;
 		}
     }
-    
+
+    private static void redefineClass(Instrumentation inst, Class<?> clazz) throws IOException, ClassNotFoundException, UnmodifiableClassException {
+        ClassLoader loader = clazz.getClassLoader();
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader();
+        }
+        String resourceName =  clazz.getName().replace('.', '/') + ".class";
+        InputStream stream = loader.getResourceAsStream(resourceName);
+        if (stream == null) {
+            logger.logError("Unable to load bytes for resourcename: " + resourceName 
+                + " from loader: " + loader.toString());
+        } else {
+            ByteArrayOutputStream o = new ByteArrayOutputStream();
+            int c = 0;
+            while ((c = stream.read()) != -1) {
+                o.write(c);
+            }
+            ClassDefinition def = new ClassDefinition(clazz, o.toByteArray()); 
+            inst.redefineClasses(new ClassDefinition[]{def});
+        }
+    }
     
     private static void addPerfmon4jToJBoss7SystemPackageList() {
     	// For the JBoss 7 package list, we must set include org.perfmon4j in the
@@ -585,8 +645,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	}
     }
     	
-    private static void doPremain(String packageName,  Instrumentation inst)  {    	
+    private static void doPremain(String packageName,  Instrumentation inst)  {
     	addPerfmon4jToJBoss7SystemPackageList();
+    	
+    
+    	
         PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
 
         LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled() || t.params.isVerboseInstrumentationEnabled());
@@ -644,22 +707,24 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     		}
         }
 
-        if (t.params.isInstallServletValve()) {
-        	BootConfiguration.ServletValveConfig valveConfig = null;
-        	String configFile = t.params.getXmlFileToConfig();
-        	if (configFile != null) {
-        		FileReader reader = null;
-        		try {
-        			reader = new FileReader(configFile);
-					valveConfig = XMLBootParser.parseXML(reader).getServletValveConfig();
-				} catch (FileNotFoundException e) {
-					logger.logError("Perfmon4j unable to load boot configuration", e);
-				} finally {
-					if (reader != null) {
-						try {reader.close();} catch (Exception ex) {}
-					}
+        BootConfiguration bootConfiguration = BootConfiguration.getDefault();
+    	String configFile = t.params.getXmlFileToConfig();
+    	if (configFile != null) {
+    		FileReader reader = null;
+    		try {
+    			reader = new FileReader(configFile);
+    			bootConfiguration = XMLBootParser.parseXML(reader);
+			} catch (FileNotFoundException e) {
+				logger.logError("Perfmon4j unable to load boot configuration -- using default", e);
+			} finally {
+				if (reader != null) {
+					try {reader.close();} catch (Exception ex) {}
 				}
-        	}
+			}
+    	}
+        
+        if (t.params.isInstallServletValve()) {
+        	BootConfiguration.ServletValveConfig valveConfig = bootConfiguration.getServletValveConfig();
         	valveHookInserter = new ValveHookInserter(valveConfig);
             inst.addTransformer(valveHookInserter);
         	logger.logInfo("Perfmon4j will attempt to install a Servlet Valve in Tomcat, JBoss or Wildfly Servers");
@@ -691,25 +756,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	}
         	if (disabler != null) {
         		try {
-	        		Class<?> clazz = System.class;       		
-	                ClassLoader loader = clazz.getClassLoader();
-	                if (loader == null) {
-	                    loader = ClassLoader.getSystemClassLoader();
-	                }
-	                String resourceName =  clazz.getName().replace('.', '/') + ".class";
-	                InputStream stream = loader.getResourceAsStream(resourceName);
-	                if (stream == null) {
-	                    logger.logError("Unable to load bytes for resourcename: " + resourceName 
-	                        + " from loader: " + loader.toString());
-	                } else {
-	                    ByteArrayOutputStream o = new ByteArrayOutputStream();
-	                    int c = 0;
-	                    while ((c = stream.read()) != -1) {
-	                        o.write(c);
-	                    }
-	                    ClassDefinition def = new ClassDefinition(clazz, o.toByteArray()); 
-	                    inst.redefineClasses(new ClassDefinition[]{def});
-	                }
+        			redefineClass(inst, System.class);
         		} catch (Exception ex) {
         			logger.logError("Perfmon4j failed disabling System.gc()", ex);
         		}
@@ -789,6 +836,37 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         if (disabler != null) {
         	inst.removeTransformer(disabler);
         }
+        
+        if (bootConfiguration.isExceptionTrackerEnabled()) {
+        	boolean trackerInitialized = false;
+        	BootConfiguration.ExceptionTrackerConfig config = bootConfiguration.getExceptionTrackerConfig();
+        	try {
+	        	ExceptionTrackerInstaller installer = new ExceptionTrackerInstaller(config, t.params.isVerboseInstrumentationEnabled());
+	        	inst.addTransformer(installer);
+        		runtimeTimerInjector.createExceptionTrackerBridgeClass(Object.class.getClassLoader(), Object.class.getProtectionDomain());
+        		trackerInitialized = ExceptionTracker.registerWithBridge(config);
+        	} catch (Exception ex) {
+        		logger.logError("Perfmon4j unable to initialize Exception Tracker", ex);
+        	}
+	        if (trackerInitialized && inst.isRedefineClassesSupported()) {
+	        	// Check to see if any exception classes have already been loaded,
+	        	// and instrument any we find.
+	           	Set<String> classNames = new HashSet<String>();
+	        	for (ExceptionElement element : config.getElements()) {
+	        		classNames.add(element.getClassName());
+	        	}
+        		for (Class<?> clazz : inst.getAllLoadedClasses()) {
+        			if (classNames.contains(clazz.getName())) {
+        				try {
+	        				redefineClass(inst, clazz);
+	        				logger.logDebug("Redefined loaded class for Exception Tracker: " + clazz.getName());
+        				} catch (Exception ex) {
+	        				logger.logError("Perfmon4j unable to redefined loaded class for Exception Tracker: " + clazz.getName());
+        				}
+        			}
+        		}
+	        } 
+        } 
         
         String xmlFileToConfig = t.params.getXmlFileToConfig();
         if (xmlFileToConfig != null) {

@@ -240,9 +240,19 @@ public abstract class Appender {
     }
     
     public IntervalData newIntervalData(PerfMon owner, long timeStart) {
-        return new IntervalData(owner, timeStart, 
+    	IntervalData result = new IntervalData(owner, timeStart, 
             medianCalculator != null ? medianCalculator.clone() : null,
-            thresholdCalculator != null ? thresholdCalculator.clone() : null);
+            getPreferredThresholdCalculator(owner != null ? owner.getThresholdCalculator() : null, 
+            	this.thresholdCalculator));
+        result.setActiveThreadMonitor(owner != null ? owner.getActiveThreadMonitor() : null);	
+        
+        return result;
+    }
+    
+    static ThresholdCalculator getPreferredThresholdCalculator(ThresholdCalculator monitorsCalculator, ThresholdCalculator appendersCalculator) {
+    	ThresholdCalculator result = MiscHelper.isNull(monitorsCalculator, appendersCalculator); 
+    	
+    	return result != null ? result.clone() : null;
     }
     
     public final static class AppenderID extends ObjectID {

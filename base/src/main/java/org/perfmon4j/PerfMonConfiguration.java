@@ -20,6 +20,7 @@
 */
 package org.perfmon4j;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -99,17 +100,39 @@ public class PerfMonConfiguration {
     }
     
 /*----------------------------------------------------------------------------*/
-    public void defineMonitor(String monitorName) {
+    public MonitorConfig defineMonitor(String monitorName) {
+    	String key = monitorName;
         if (PerfMon.ROOT_MONITOR_NAME.equalsIgnoreCase(monitorName)) {
-            monitorName = ""; // Make sure root always sorts to the top..
+            key = ""; // Make sure root always sorts to the top..
+        }
+        MonitorConfig result = monitorMap.get(key); 
+        if (result == null) {
+        	result = new MonitorConfig(monitorName);
+            monitorMap.put(key, result);
         }
         
-        if ( monitorMap.get(monitorName) == null) {
-            monitorMap.put(monitorName, new MonitorConfig());
+        return result;
+    }
+    
+    /*----------------------------------------------------------------------------*/
+    public MonitorConfig[] getMonitorConfigArray() {
+    	List<MonitorConfig> result = new ArrayList<MonitorConfig>();
+        String keys[] = monitorMap.keySet().toArray(new String[]{});
+        Arrays.sort(keys);
+        
+        for (String key : keys) {
+        	result.add(monitorMap.get(key));
         }
+        
+        return result.toArray(new MonitorConfig[]{});
     }
 
 /*----------------------------------------------------------------------------*/
+    @Deprecated
+    /**
+     * Should replace with calls to getMonitorConfigArray()
+     * @return
+     */
     public String[] getMonitorArray() {
         String result[] = monitorMap.keySet().toArray(new String[]{});
         Arrays.sort(result);
@@ -224,13 +247,14 @@ public class PerfMonConfiguration {
     
     
 /*----------------------------------------------------------------------------*/
-    private static class MonitorConfig {
+    public static class MonitorConfig {
         private final Set<Appender.AppenderID> appenderSet = new HashSet<Appender.AppenderID>();
         private final Map<Appender.AppenderID, String> patternMap = new HashMap<Appender.AppenderID, String>();
-        private final Properties attributes = new Properties();
+        private final Properties properties = new Properties();
+        private final String monitorName;
         
-        
-        private MonitorConfig() {
+        private MonitorConfig(String monitorName) {
+        	this.monitorName = monitorName;
         }
         
         private void addAppender(Appender.AppenderID appenderID, String appenderPattern) {
@@ -238,9 +262,17 @@ public class PerfMonConfiguration {
             patternMap.put(appenderID, cleanAppenderPattern(appenderPattern));
         }
         
-        private void setAttribute(String key, String value) {
-            attributes.setProperty(key, value);
+        void setProperty(String key, String value) {
+            properties.setProperty(key, value);
         }
+
+		String getProperty(String key) {
+			return properties.getProperty(key);
+		}
+
+		public String getMonitorName() {
+			return monitorName;
+		}
     }
 
 /*----------------------------------------------------------------------------*/

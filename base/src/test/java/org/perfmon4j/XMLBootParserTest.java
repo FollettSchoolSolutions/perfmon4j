@@ -81,6 +81,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
             "			outputRequestAndDuration='true'" +
             "			pushClientInfoOnNDC='true'" +
             "			pushSessionAttributesOnNDC='name'" +
+            "			pushURLOnNDC='true'" +
             "			abortTimerOnURLPattern='abortPattern'" +
             "			skipTimerOnURLPattern='skipPattern'" +
             "			pushCookiesOnNDC='pushCookies'" +
@@ -88,7 +89,6 @@ public class XMLBootParserTest extends PerfMonTestCase {
             "		/>" +
             "	</boot>" +
             "</Perfmon4JConfig>";
-
         BootConfiguration boot = XMLBootParser.parseXML(XML);
         
         BootConfiguration.ServletValveConfig valveConfig = boot.getServletValveConfig();
@@ -99,6 +99,7 @@ public class XMLBootParserTest extends PerfMonTestCase {
         assertTrue(valveConfig.isAbortTimerOnImageResponse());
         assertTrue(valveConfig.isOutputRequestAndDuration());
         assertTrue(valveConfig.isPushClientInfoOnNDC());
+        assertTrue(valveConfig.isPushURLOnNDC());
         
         assertEquals("name",valveConfig.getPushSessionAttributesOnNDC());
         assertEquals("abortPattern",valveConfig.getAbortTimerOnURLPattern());
@@ -185,6 +186,101 @@ public class XMLBootParserTest extends PerfMonTestCase {
         BootConfiguration boot = XMLBootParser.parseXML(XML_BOGUS);
         assertNotNull("Should have a default boot configuration", boot);
         assertNull("Servlet valve config should be null by default", boot.getServletValveConfig());
+    }
+    
+    public void testParseEmptyExceptionTrackerConfig() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker/>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        assertNotNull("Should have an Exception Tracker Configuration", etConfig);
+        assertEquals("Not very useful since no exceptions have been defined", 0, etConfig.getElements().size());
+    }
+    
+    public void testParseExceptionWithClassName() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker>" +
+            "			<exception className='java.lang.Exception'/>" +
+            "		</exceptionTracker>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        assertNotNull("Should have an Exception Tracker Configuration", etConfig);
+        assertEquals("Should have one exception", 1, etConfig.getElements().size());
+        
+        BootConfiguration.ExceptionElement element = etConfig.getElements().iterator().next();
+        
+        assertEquals("expected className", "java.lang.Exception", element.getClassName());
+        assertEquals("displayName defaults to className if not defined", 
+        		"java.lang.Exception", element.getDisplayName());
+        assertFalse("Should default includeSQL to false", element.isIncludeSQL());
+    }
+
+    public void testParseExceptionWithClassAndDisplayName() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker>" +
+            "			<exception className='java.lang.Error' displayName='Java Error' />" +
+            "		</exceptionTracker>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        assertNotNull("Should have an Exception Tracker Configuration", etConfig);
+        assertEquals("Should have one exception", 1, etConfig.getElements().size());
+        
+        BootConfiguration.ExceptionElement element = etConfig.getElements().iterator().next();
+        
+        assertEquals("expected className", "java.lang.Error", element.getClassName());
+        assertEquals("expected displayName", "Java Error", element.getDisplayName());
+        assertFalse("Should default includeSQL to false", element.isIncludeSQL());
+    }
+
+    
+    public void testParseExceptionWithIncludeSQL() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker>" +
+            "			<exception className='java.lang.Error' includeSQL='true' />" +
+            "		</exceptionTracker>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        BootConfiguration.ExceptionElement element = etConfig.getElements().iterator().next();
+        assertTrue("Should set includeSQL to true", element.isIncludeSQL());
+    }
+    
+    
+    public void testParseMultipleExceptionElements() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<exceptionTracker>" +
+            "			<exception className='java.lang.Error' displayName='Java Error' />" +
+            "			<exception className='java.lang.Exception' />" +
+            "			<exception className='java.lang.RuntimeException' />" +
+            "		</exceptionTracker>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        
+        BootConfiguration.ExceptionTrackerConfig etConfig = boot.getExceptionTrackerConfig();
+        assertNotNull("Should have an Exception Tracker Configuration", etConfig);
+        assertEquals("Expected number of elements", 3, etConfig.getElements().size());
     }
     
 /*----------------------------------------------------------------------------*/    

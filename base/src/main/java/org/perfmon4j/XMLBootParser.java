@@ -83,6 +83,8 @@ public class XMLBootParser extends DefaultHandler {
     private final static String ROOT_ELEMENT_NAME = "Perfmon4JConfig";
     private final static String BOOT_NAME = "boot";
     private final static String SERVLET_VALVE_NAME = "servletValve";
+    private final static String EXCEPTION_TRACKER_NAME = "exceptionTracker";
+    private final static String EXCEPTION_ELEMENT_NAME = "exception";
     
     private final int STATE_UNDEFINED                           = 0;
     private final int STATE_IN_ROOT                             = 1;
@@ -90,6 +92,8 @@ public class XMLBootParser extends DefaultHandler {
     private final int STATE_IN_SERVLET_VALVE               		= 3;
     private final int STATE_IN_IGNORED_ELEMENT					= 4;
     private final int STATE_DONE               					= 5;
+    private final int STATE_IN_EXCEPTION_TRACKER               	= 6;
+    private final int STATE_IN_EXCEPTION_ELEMENT               	= 7;
     
     private int currentState = STATE_UNDEFINED;
     
@@ -113,7 +117,27 @@ public class XMLBootParser extends DefaultHandler {
                 	currentState = STATE_IN_IGNORED_ELEMENT;
                 }
                 break;
-              
+
+            case STATE_IN_EXCEPTION_TRACKER:
+                if (EXCEPTION_ELEMENT_NAME.equalsIgnoreCase(name)) {
+                	currentState = STATE_IN_EXCEPTION_ELEMENT;
+                	
+                	String className = atts.getValue("className");
+                	String displayName = atts.getValue("displayName");
+                	
+                	if (displayName == null) {
+                		displayName = className;
+                	}
+                	
+                	config.getExceptionTrackerConfig().addElement(
+                			new BootConfiguration.ExceptionElement(className, displayName, 
+                				Boolean.valueOf(atts.getValue("includeSQL")).booleanValue()));
+                } else {
+                    throw new SAXException("Unexpected element: " + name);
+                }
+                break;
+                
+                
             case STATE_IN_BOOT:
                 if (SERVLET_VALVE_NAME.equalsIgnoreCase(name)) {
                 	currentState = STATE_IN_SERVLET_VALVE;
@@ -148,6 +172,10 @@ public class XMLBootParser extends DefaultHandler {
                 	if (push != null) {
                 		valveConfig.setPushCookiesOnNDC(push);
                 	}
+                	push = atts.getValue("pushURLOnNDC");
+                	if (push != null) {
+                		valveConfig.setPushURLOnNDC(Boolean.parseBoolean(push));
+                	}
                 	abort = atts.getValue("abortTimerOnURLPattern");
                 	if (abort != null) {
                 		valveConfig.setAbortTimerOnURLPattern(abort);
@@ -162,6 +190,9 @@ public class XMLBootParser extends DefaultHandler {
                 	}
                 			
                 	config.setServletValveConfig(valveConfig);
+                } else if (EXCEPTION_TRACKER_NAME.equalsIgnoreCase(name)) { 
+                	config.setExceptionTrackerConfig(new BootConfiguration.ExceptionTrackerConfig());
+                	currentState = STATE_IN_EXCEPTION_TRACKER;
                 } else {
                     throw new SAXException("Unexpected element: " + name);
                 }
@@ -189,6 +220,15 @@ public class XMLBootParser extends DefaultHandler {
         if (SERVLET_VALVE_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_SERVLET_VALVE) {
             currentState = STATE_IN_BOOT;
         }
+        
+        if (EXCEPTION_TRACKER_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_EXCEPTION_TRACKER) {
+            currentState = STATE_IN_BOOT;
+        }
+        
+        if (EXCEPTION_ELEMENT_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_EXCEPTION_ELEMENT) {
+            currentState = STATE_IN_EXCEPTION_TRACKER;
+        }
+        
     }
     
     public void characters (char ch[], int start, int length) throws SAXException {

@@ -1,3 +1,5 @@
+
+
 Copyright 2008-2021 Follett School Solutions, LLC
  
 Perfmon4j(tm) is free software: you can redistribute it and/or modify
@@ -8,14 +10,59 @@ OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU
 License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
 http://www.gnu.org/licenses/
 
-perfmon4j@fsc.follett.com
+ddeuchert@follett.com
 David Deuchert
-Follett Software Company
+Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
 
 Changes
+
+** 1.6.0-rc.1 - 2021-11-24
+
+- Added exception tracking.  This can be used to track the number of 
+  times specified instance of Exceptions are created.
+  See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/ExceptionTracker 
+  for usage information. 
+
+- Now Perfmon4j Interval Monitors can track the duration of threads that 
+  have not yet completed.  This is a low overhead, in terms of both
+  performance and memory.  This initial implementation is exposed through
+  two additional attributes on each interval monitor.  The first is named
+  “OldestActiveThread”, this is the name of the longest running thread that
+  has yet to finish. The second is “OldestActiveThreadDuration” this is the
+  number of milliseconds that the Oldest Active Thread has been active within
+  the monitor.
+  
+  See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/ActiveThreadMonitor
+  for usage information.
+
+  The implementation for tracking active threads is very efficient
+  and introduces little overhead. However, if you want to test your 
+  application to determine if this overhead is acceptable you can define
+  the system property:  
+  “-Dorg.perfmon4j.MonitorThreadTracker.DisableThreadTracking=true"
+  when launching your application.
+
+- Fixed a minor defect that could prevent the Log4jLogger from 
+  being initialized.
+
+- Added 2 enhancements to the servlet path transformer. The first 
+  allows you to indicate a specific root category as a replacement
+  for a servlet path.  The second allows you to specify multiple patterns.
+
+- Provided an option for an application to inform the Perfmon4j Wildfly 
+  valve not to write a specific http request to the server log. This allows
+  an application to override the default log format for default requests.
+  Add an attribute named “PERFMON4J_SKIP_LOG_FOR_REQUEST” to the 
+  HttpServletRequest object (with any non-null value) to trigger this 
+  behavior.
+
+- With this version perfmon4j is switching to semantic versioning.
+
+- Now interval durations will synchronized.  Example: 1 minute interval
+  appender will all be round up to the top of the minute.   	
 
 ** 1.5.2 -  2021-10-10
 
@@ -41,7 +88,7 @@ Changes
 
 ** 1.5.1 - 2020-08-21
 
-- Added a new Appender (org.perfmon4j.azure.LogAnalyticsAppender). This appender will 
+- Added a new Appender (org.perfmon4j.azure.). This appender will 
   write perfmon4j observations to the Log Analytics workspace in Azure Monitor. Run 
   perfmon4j in debug mode (-dtrue on javaagent command line) for details
   regarding successful request to Azure Log Analytics

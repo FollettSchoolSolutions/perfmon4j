@@ -30,13 +30,20 @@ import java.util.regex.PatternSyntaxException;
 public class ServletPathTransformer {
 	private static final Logger logger = LoggerFactory.initLogger(ServletPathTransformer.class);
 	
+	@Deprecated
 	public static ServletPathTransformer newTransformer(String transformations) {
-		return new ServletPathTransformer(transformations);
+		return new ServletPathTransformer(transformations, "WebRequest");
+	}
+	
+	public static ServletPathTransformer newTransformer(String transformations, String baseCategory) {
+		return new ServletPathTransformer(transformations, baseCategory);
 	}
 	
 	private final Transformation transforms[];
-	
-	private ServletPathTransformer(String transformations) {
+	private final String baseCategory;
+
+	private ServletPathTransformer(String transformations, String baseCategory) {
+		this.baseCategory = baseCategory;
 		List<ServletPathTransformer.Transformation> tList = new ArrayList<ServletPathTransformer.Transformation>();
 		
 		if (transformations != null) {
@@ -46,7 +53,7 @@ public class ServletPathTransformer {
 					String patternString = tranDefParts[0].trim();
 					String replacement = tranDefParts[1].trim();
 					if (!patternString.isBlank()) {
-						Pattern pattern = compilePattern(patternString);
+						Pattern pattern = compilePattern(patternString, replacement.startsWith("$"));
 						if (pattern != null) {
 							tList.add(new Transformation(pattern, replacement));
 						}
@@ -63,19 +70,29 @@ public class ServletPathTransformer {
 	}
 	
 	private final String ASTRISKS_REPLACEMENT =  "934234ASTRISKS08234986";
+	private final String DOUBLE_ASTRISKS_REPLACEMENT =  "2374DOUBLEASTRISKS32386";
 	private final String QUESTION_MARK_REPLACEMENT =  "0349945QMARKS878353";
+	private final String BAR_REPLACEMENT =  "03045945BARS87382353";
 	
 	
-	private Pattern compilePattern(String patternString) {
+	private Pattern compilePattern(String patternString, boolean makeStartsWith) {
+		patternString = patternString.replaceAll("\\*{2}", DOUBLE_ASTRISKS_REPLACEMENT);
 		patternString = patternString.replaceAll("\\*", ASTRISKS_REPLACEMENT);
 		patternString = patternString.replaceAll("\\?", QUESTION_MARK_REPLACEMENT);
+		patternString = patternString.replaceAll("\\|", BAR_REPLACEMENT);
 		
-		// Found this unique way to safely escape, all special characters 
-		// in a pattern string here: https://stackoverflow.com/questions/14134558/list-of-all-special-characters-that-need-to-be-escaped-in-a-regex
-		patternString = patternString.replaceAll("[\\W]", "\\\\$0");
 		
+		patternString = escapeRegEx(patternString);
+		
+		patternString  = patternString.replaceAll(DOUBLE_ASTRISKS_REPLACEMENT, ".*");
 		patternString  = patternString.replaceAll(ASTRISKS_REPLACEMENT, "[^/]*");
 		patternString  = patternString.replaceAll(QUESTION_MARK_REPLACEMENT, "[^/]");
+		patternString  = patternString.replaceAll(BAR_REPLACEMENT, "|");
+		
+		if (makeStartsWith) {
+			patternString = "^(" + patternString + ")";
+		}
+		
 		try {
 			return Pattern.compile(patternString);
 		} catch (PatternSyntaxException pse) {
@@ -88,15 +105,41 @@ public class ServletPathTransformer {
 	int getNumTransforms() {
 		return transforms.length;
 	}
+
+	private String escapeRegEx(String value) {
+		// Found this unique way to safely escape, all special characters 
+		// in a pattern string here: https://stackoverflow.com/questions/14134558/list-of-all-special-characters-that-need-to-be-escaped-in-a-regex
+		return value.replaceAll("[\\W]", "\\\\$0");
+	}
 	
+	@Deprecated
 	public String transform(String servletPath) {
 		for (Transformation t : transforms) {
 			Matcher m = t.pattern.matcher(servletPath);
-			servletPath = m.replaceAll(t.replacement);
+			servletPath = m.replaceAll(escapeRegEx(t.replacement));
+		}
+		if (!servletPath.startsWith("/") && !servletPath.startsWith("$")) {
+			servletPath = "/" + servletPath;
 		}
 		
 		return servletPath;
 	}
+
+	public String transformToCategory(String servletPath) {
+		servletPath = transform(servletPath);
+		
+		if (servletPath.startsWith("$")) {
+			servletPath = servletPath.replaceFirst("\\$", "");
+		} else {
+			servletPath = baseCategory + servletPath;
+		}
+		
+		return servletPath.replaceAll("\\.", "_")
+				.replaceAll("/", "\\.")
+				.replaceAll("[\\.\\_]+$", "")  // Remove trailing periods or underscores
+				.replaceAll("\\.{2,}", "."); // Remove duplicate periods
+		}
+	
 	
 	private static class Transformation {
 		private final Pattern pattern;
@@ -104,6 +147,11 @@ public class ServletPathTransformer {
 		
 		Transformation(Pattern pattern, String replacement) {
 			this.pattern = pattern;
+			if (replacement.startsWith("$") && !replacement.endsWith("/")) {
+				// If they are doing a Category substitution make sure it ends wit a slash.
+				replacement += "/";
+			}
+			
 			this.replacement = replacement;
 		}
 	}
