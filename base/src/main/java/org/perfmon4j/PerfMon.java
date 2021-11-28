@@ -135,16 +135,21 @@ public class PerfMon {
     private static final Lock mapMonitorReadLock;
     private static final Lock mapMonitorWriteLock;
 
+    static public final String version;
+    static public final String copyright;
     
     static {
         // Order of these is important....
         nextMonitorID = 0;
         ROOT_MONITOR_NAME = "<ROOT>";
         rootMonitor = new PerfMon(null, ROOT_MONITOR_NAME);
+
+        version = getImplementationVersion();
+        copyright = "Copyright (c) 2015-2021 Follett School Solutions, LLC"; 
         
-        System.setProperty(PERFMON4J_VERSION, getImplementationVersion());
+        System.setProperty(PERFMON4J_VERSION, version);
         System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
-        System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015,2019 Follett School Solutions, Inc");
+        System.setProperty(PERFMON4J_COPYRIGHT, copyright);
 
     	if (USE_LEGACY_MONITOR_MAP_LOCK) {
     		System.out.println("***Perfmon4j Using Legacy Monitor Map Lock***");

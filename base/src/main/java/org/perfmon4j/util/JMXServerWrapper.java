@@ -20,12 +20,19 @@
 */
 package org.perfmon4j.util;
 
+import java.lang.management.ManagementFactory;
 import java.util.List;
 
+import javax.management.InstanceAlreadyExistsException;
 import javax.management.JMException;
+import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
+import javax.management.MalformedObjectNameException;
+import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
+
+import org.perfmon4j.jmx.NamedObject;
 
 public class JMXServerWrapper {
 	private static final Logger logger = LoggerFactory.initLogger(JMXServerWrapper.class);
@@ -34,9 +41,13 @@ public class JMXServerWrapper {
 	public JMXServerWrapper() throws JMException {
 		List<MBeanServer> servers = MBeanServerFactory.findMBeanServer(null);
 		if (servers == null || servers.isEmpty()) {
-			throw new JMException("Unable to find MBeanServer");
+			server = ManagementFactory.getPlatformMBeanServer();
+			if (server == null) {
+				throw new JMException("Unable to find MBeanServer");
+			}
+		} else {
+			server = servers.get(0);
 		}
-		server = servers.get(0);
 	}
 
 	
@@ -80,4 +91,13 @@ public class JMXServerWrapper {
 		return result;
 	}
 
+	public void registerMBean(NamedObject mBean) {
+		try {
+		    ObjectName objectName = new ObjectName(mBean.getObjectName());
+		    server.registerMBean(mBean, objectName);
+		} catch (MalformedObjectNameException | InstanceAlreadyExistsException |
+		        MBeanRegistrationException | NotCompliantMBeanException e) {
+			logger.logError("Unable to register MBean Object: " + mBean.getObjectName(), e);
+		}	
+	}
 }
