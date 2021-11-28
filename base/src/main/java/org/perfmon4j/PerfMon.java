@@ -38,9 +38,12 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.management.JMException;
+
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.MonitorThreadTracker.Tracker;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
+import org.perfmon4j.jmx.Perfmon4j;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.ActiveThreadMonitor;
@@ -1187,6 +1190,14 @@ public class PerfMon {
     
 /*----------------------------------------------------------------------------*/    
     public static void configure(PerfMonConfiguration config) throws InvalidConfigException {
+    	if (!configured  && !Perfmon4j.isInitialized()) {
+	        try {
+	        	Perfmon4j.getSingleton(true);
+			} catch (JMException e) {
+				logger.logError("Unabled to initialize Perfmon4j JMX Interface", e);
+			}
+    	}
+    	
         // First flush all active appenders..
         if (PerfMon.isConfigured()) {
             Appender.flushAllAppenders();

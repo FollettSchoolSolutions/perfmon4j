@@ -49,8 +49,6 @@ import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.management.JMException;
-
 import org.perfmon4j.BootConfiguration;
 import org.perfmon4j.BootConfiguration.ExceptionElement;
 import org.perfmon4j.BootConfiguration.ExceptionTrackerConfig;
@@ -61,7 +59,6 @@ import org.perfmon4j.XMLBootParser;
 import org.perfmon4j.XMLConfigurator;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
-import org.perfmon4j.jmx.Perfmon4j;
 import org.perfmon4j.remotemanagement.RemoteImpl;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
@@ -892,12 +889,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         	int port = t.params.getRemoteManagementPort();
         	new LazyLoadRemoteListener(port).schedule(Integer.getInteger(REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY, REMOTE_INTERFACE_DEFAULT_DELAY_SECONDS).intValue());
         }
-        
-        try {
-        	Perfmon4j.getSingleton(true);
-		} catch (JMException e) {
-			logger.logError("Unabled to initialize Perfmon4j JMX Interface", e);
-		}
     }
     
     private static class LazyLoadRemoteListener extends TimerTask {
