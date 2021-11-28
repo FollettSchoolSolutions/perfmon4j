@@ -19,7 +19,7 @@ McHenry, IL 60050
 
 Changes
 
-** Next Version - TBD
+** 1.7.0 - TBD
 
 
 ** 1.6.0-rc.1 - 2021-11-24
