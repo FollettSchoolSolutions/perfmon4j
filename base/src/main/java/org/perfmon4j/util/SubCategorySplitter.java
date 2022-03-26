@@ -26,6 +26,8 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 public class SubCategorySplitter {
+	private static final String autoRemoveStartingPattern = "(Interval\\.|Snapshot\\.)?";
+	
 	private static final Logger logger = LoggerFactory.initLogger(SubCategorySplitter.class);
 	
 	private static final Pattern leadingAndTrailingPeriods = Pattern.compile("^\\.*|\\.*$");
@@ -35,7 +37,7 @@ public class SubCategorySplitter {
 	public SubCategorySplitter(String regEx) {
 		Pattern tmp = null;
 		try {
-			tmp = Pattern.compile(regEx);
+			tmp = Pattern.compile(autoRemoveStartingPattern + regEx);
 		} catch (PatternSyntaxException ex) {
 			logger.logWarn("Invalid Sub Category Splitter pattern found and will be ignored: " + regEx);
 		}
@@ -47,8 +49,9 @@ public class SubCategorySplitter {
 			Matcher m = pattern.matcher(category);
 			
 			if (m.find()) {
-				String subCategory = m.group(1);
-				category = category.substring(0, m.start(1)) + "." + category.substring(m.end(1), category.length());
+				final int groupWithMatch = m.groupCount();
+				String subCategory = m.group(groupWithMatch);
+				category = category.substring(0, m.start(groupWithMatch)) + "." + category.substring(m.end(groupWithMatch), category.length());
 				return new Split(fixupPeriods(category), fixupPeriods(subCategory));
 			} else {
 				return new Split(category, null);

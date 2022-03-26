@@ -95,6 +95,68 @@ public class SubCategorySplitterTest extends TestCase {
     	assertEquals("Expected subCategory after the split", "dist_0001.circulation", split.getSubCategory());
     	assertEquals("Expected category after the split", "DistrictRequest", split.getCategory());
     }
+    
+    /**
+     * For dynamic Appenders (like the InfluxAppender) Perfmon4j
+     * prepends the pattern with "Interval." (for Interval monitors)
+     * or "Snapshot." (for Snapshot monitors).  The user
+     * does not have to account for this prefix in their pattern.
+     * @throws Exception
+     */
+    public void testPatternAutoHandlesIntervalPrefix() throws Exception {
+    	String category = "DistrictRequest.dist_0001";
+    	String finalInfluxDbCategory = "Interval." + category; 
+    	
+    	String pattern = "DistrictRequest\\.(.*)";
+    	SubCategorySplitter splitter = new SubCategorySplitter(pattern);
+
+    	Split split = splitter.split(finalInfluxDbCategory);
+    	
+    	assertEquals("Expected subCategory after the split", "dist_0001", split.getSubCategory());
+    	assertEquals("Expected category after the split", "Interval.DistrictRequest", split.getCategory());
+   
+    
+    	// Now make sure the "autoHandle" function does not get in the way if the
+    	// user specifies a full pattern that includes the "Interval." prefix
+    	String patternWithPrefixIncluded = "Interval.DistrictRequest\\.(.*)";
+    	splitter = new SubCategorySplitter(patternWithPrefixIncluded);
+    	
+    	split = splitter.split(finalInfluxDbCategory);
+    	
+    	assertEquals("Expected subCategory after the split", "dist_0001", split.getSubCategory());
+    	assertEquals("Expected category after the split", "Interval.DistrictRequest", split.getCategory());
+    }
+
+    /**
+     * For dynamic Appenders (like the InfluxAppender) Perfmon4j
+     * prepends the pattern with "Interval." (for Interval monitors)
+     * or "Snapshot." (for Snapshot monitors).  The user
+     * does not have to account for this prefix in their pattern.
+     * @throws Exception
+     */
+    public void testPatternAutoHandlesSnapshotPrefix() throws Exception {
+    	String category = "DistrictRequest.dist_0001";
+    	String finalInfluxDbCategory = "Snapshot." + category; 
+    	
+    	String pattern = "DistrictRequest\\.(.*)";
+    	SubCategorySplitter splitter = new SubCategorySplitter(pattern);
+
+    	Split split = splitter.split(finalInfluxDbCategory);
+    	
+    	assertEquals("Expected subCategory after the split", "dist_0001", split.getSubCategory());
+    	assertEquals("Expected category after the split", "Snapshot.DistrictRequest", split.getCategory());
+   
+    
+    	// Now make sure the "autoHandle" function does not get in the way if the
+    	// user specifies a full pattern that includes the "Snapshot." prefix
+    	String patternWithPrefixIncluded = "Snapshot.DistrictRequest\\.(.*)";
+    	splitter = new SubCategorySplitter(patternWithPrefixIncluded);
+    	
+    	split = splitter.split(finalInfluxDbCategory);
+    	
+    	assertEquals("Expected subCategory after the split", "dist_0001", split.getSubCategory());
+    	assertEquals("Expected category after the split", "Snapshot.DistrictRequest", split.getCategory());
+    }
 
     public void fixupPeriodsOnConcatBeforeAfterSubCategory() throws Exception {
     	String category = "DistrictRequest.dist_0001.circulation";
