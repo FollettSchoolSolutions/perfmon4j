@@ -1,14 +1,35 @@
+/*
+ *	Copyright 2022 Follett School Solutions, LLC 
+ *
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ *  Follett School Solutions, LLC
+ *  1340 Ridgeview Drive
+ *  McHenry, IL 60050
+ *
+ */
 package org.perfmon4j.influxdb;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import junit.framework.TestCase;
-
 import org.mockito.Mockito;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.PerfMonObservableDatum;
+import org.perfmon4j.util.SubCategorySplitter;
+
+import junit.framework.TestCase;
 
 public class InfluxAppenderTest extends TestCase {
 
@@ -188,4 +209,14 @@ public class InfluxAppenderTest extends TestCase {
 		assertEquals("Should escape the escape character", "DAP\\\\TODAY", appender.decorateTagKeyTagValueFieldKeyForInflux("DAP\\TODAY"));
 	}
 
+	public void testBuildDataLineWithSubCategory() {
+		appender.setSystemNameBody("MySystemName");
+		appender.setGroups("MyGroup");
+		appender.setSubCategorySplitter(new SubCategorySplitter("DistrictResource\\.(.*)"));
+		
+		Mockito.when(mockData.getDataCategory()).thenReturn("DistrictResource.dist_1234");
+
+		assertEquals("DistrictResource,system=MySystemName,group=MyGroup,subCategory=dist_1234 throughput=25i 1",
+			appender.buildPostDataLine(mockData));
+	}
 }
