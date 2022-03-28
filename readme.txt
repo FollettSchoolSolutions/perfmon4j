@@ -19,8 +19,12 @@ McHenry, IL 60050
 
 Changes
 
-** Next Version - TBD
-
+** 1.6.1 - TBD
+- The InfluxAppender and LogAnalytics appender have the ability
+  to group measurements into a single category by using a regular
+  expression to define a subCategory. See:
+  https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Sub-Category-Splitter
+  for more information. 
 
 ** 1.6.0-rc.1 - 2021-11-24
 
