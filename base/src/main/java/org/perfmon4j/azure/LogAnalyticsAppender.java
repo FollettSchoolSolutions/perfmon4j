@@ -29,6 +29,7 @@ import org.perfmon4j.util.HttpHelper.Response;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.SubCategorySplitter;
 
 
 public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
@@ -53,6 +54,9 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	private static final Object dedicatedTimerThreadLockTocken = new Object();
 	private static ScheduledExecutorService dedicatedExecutor = null;
 
+	private SubCategorySplitter subCategorySplitter = null;
+
+	
 	
 	// This is a fail safe to prevent failure of writing to Azure to allow measurements
 	// to continue to accumulate and run out of memory.
@@ -171,9 +175,22 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 	/* package level for testing */ 
 	String buildJSONElement(PerfMonObservableData data) {
 		StringBuilder json = new StringBuilder();
+		String category = data.getDataCategory();
+		String subCategory = null;
+		
+		if (subCategorySplitter != null) {
+			SubCategorySplitter.Split split = subCategorySplitter.split(category);
+			category = split.getCategory();
+			subCategory = split.getSubCategory();
+		}
 		
 		json.append("{");
-		json.append(addValue("category", trimPrefixOffCategory(data.getDataCategory()), false));
+		json.append(addValue("category", trimPrefixOffCategory(category), false));
+		
+		if (subCategory != null) {
+			json.append(addValue("subCategory", subCategory, false));
+		}
+		
 		json.append(addValue("systemName", getSystemName(), false));
 		
 		String[] groups = getGroupsAsArray();
@@ -310,6 +327,14 @@ public class LogAnalyticsAppender extends SystemNameAndGroupsAppender {
 		this.azureResourceID = azureResourceID;
 	}
 	
+	public SubCategorySplitter getSubCategorySplitter() {
+		return subCategorySplitter;
+	}
+
+	public void setSubCategorySplitter(SubCategorySplitter subCategorySplitter) {
+		this.subCategorySplitter = subCategorySplitter;
+	}
+
 	static class QueueElement {
 		private static final String INTERVAL_PREFIX = "P4J_Interval";
 		private static final String MISC_PREFIX = "P4J_Misc";

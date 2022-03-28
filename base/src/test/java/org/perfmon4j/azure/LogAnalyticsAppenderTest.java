@@ -14,6 +14,7 @@ import org.mockito.Mockito;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.PerfMonObservableDatum;
+import org.perfmon4j.util.SubCategorySplitter;
 
 import junit.framework.TestCase;
 
@@ -241,4 +242,17 @@ public class LogAnalyticsAppenderTest extends TestCase {
 		assertEquals("Should not level empty string", "Snapshot", 
 				LogAnalyticsAppender.trimPrefixOffCategory("Snapshot"));
 	}
+
+	public void testBuildDataLineWithSubCategory() { 
+		appender.setSystemNameBody("MySystemName"); 
+		appender.setGroups("MyGroup");
+		appender.setSubCategorySplitter(new SubCategorySplitter("DistrictResource\\.(.*)")); 
+		 
+		Mockito.when(mockData.getDataCategory()).thenReturn("DistrictResource.dist_1234");
+		
+		final String JSONValue = appender.buildJSONElement(mockData);
+//System.out.println(JSONValue);		
+		assertTrue("Category should be \"DistrictResource\"", JSONValue.contains("\"category\" : \"DistrictResource\","));
+		assertTrue("Sub-Category should be \"dist_1234\"", JSONValue.contains("\"subCategory\" : \"dist_1234\","));
+	} 
 }
