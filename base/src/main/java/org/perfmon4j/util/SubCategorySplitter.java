@@ -44,12 +44,22 @@ public class SubCategorySplitter {
 		pattern = tmp;
 	}
 	
+	private int getLastGroupWithNonNullMatch(Matcher m) {
+		for (int i = m.groupCount(); i >= 0; i--) {
+			if (m.group(i) != null) {
+				return i;
+			}
+		}
+		return 0;
+	}
+	
+	
 	public Split split(String category) {
 		if (pattern != null) {
 			Matcher m = pattern.matcher(category);
 			
 			if (m.find()) {
-				final int groupWithMatch = m.groupCount();
+				final int groupWithMatch = getLastGroupWithNonNullMatch(m);
 				String subCategory = m.group(groupWithMatch);
 				category = category.substring(0, m.start(groupWithMatch)) + "." + category.substring(m.end(groupWithMatch), category.length());
 				return new Split(fixupPeriods(category), fixupPeriods(subCategory));

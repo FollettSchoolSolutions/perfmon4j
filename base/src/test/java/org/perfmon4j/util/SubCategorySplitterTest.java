@@ -82,7 +82,7 @@ public class SubCategorySplitterTest extends TestCase {
     	assertEquals("Expected category since splitter was invalid", "DistrictRequest.blue", split.getCategory());
     }
     
-    public void fixupPeriodsOnSubCategory() throws Exception {
+    public void testFixupPeriodsOnSubCategory() throws Exception {
     	String category = "DistrictRequest.dist_0001.circulation";
     	
     	// This is not a great pattern, because it will leave a subcategory that starts with a
@@ -158,7 +158,7 @@ public class SubCategorySplitterTest extends TestCase {
     	assertEquals("Expected category after the split", "Snapshot.DistrictRequest", split.getCategory());
     }
 
-    public void fixupPeriodsOnConcatBeforeAfterSubCategory() throws Exception {
+    public void testFixupPeriodsOnConcatBeforeAfterSubCategory() throws Exception {
     	String category = "DistrictRequest.dist_0001.circulation";
     	
     	// This is NOT a great pattern so we will help.
@@ -179,5 +179,29 @@ public class SubCategorySplitterTest extends TestCase {
     	
     	assertEquals("Expected subCategory after the split", "dist_0001", split.getSubCategory());
     	assertEquals("Expected category after the split", "DistrictRequest.circulation", split.getCategory());
+    }
+    
+    public void testMultiplePatterns() throws Exception {
+    	String categoryA = "DistrictRequest.dist_0001";
+    	String categoryB = "WebRequest.circulation";
+    	SubCategorySplitter splitter = new SubCategorySplitter("(DistrictRequest\\.(.*))|(WebRequest\\.(.*))");
+
+    	Split split = splitter.split(categoryA);
+    	assertEquals("Expected subCategory after the split", "dist_0001", split.getSubCategory());
+    	assertEquals("Expected category after the split", "DistrictRequest", split.getCategory());
+
+    	split = splitter.split(categoryB);
+    	assertEquals("Expected subCategory after the split", "circulation", split.getSubCategory());
+    	assertEquals("Expected category after the split", "WebRequest", split.getCategory());
+
+    	// Try again with the "Interval." and "Snapshot." category prefix. Make sure the pattern
+    	// provided to the splitter is not required to account for these prefixes.
+    	split = splitter.split("Interval." + categoryA);
+    	assertEquals("Expected subCategory after the split", "dist_0001", split.getSubCategory());
+    	assertEquals("Expected category after the split", "Interval.DistrictRequest", split.getCategory());
+
+    	split = splitter.split("Snapshot." + categoryB);
+    	assertEquals("Expected subCategory after the split", "circulation", split.getSubCategory());
+    	assertEquals("Expected category after the split", "Snapshot.WebRequest", split.getCategory());
     }
 }
