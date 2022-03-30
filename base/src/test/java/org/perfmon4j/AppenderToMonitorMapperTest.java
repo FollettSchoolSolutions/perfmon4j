@@ -1,10 +1,31 @@
-package org.perfmon4j;
+/*
+ *	Copyright 2022 Follett School Solutions, LLC 
+ *
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ *  Follett School Solutions, LLC
+ *  1340 Ridgeview Drive
+ *  McHenry, IL 60050
+ * 
+*/
 
-import junit.framework.TestCase;
+package org.perfmon4j;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.AppenderToMonitorMapper.Builder;
 import org.perfmon4j.AppenderToMonitorMapper.HashableRegEx;
+
+import junit.framework.TestCase;
 
 public class AppenderToMonitorMapperTest extends TestCase {
 	
@@ -103,6 +124,24 @@ public class AppenderToMonitorMapperTest extends TestCase {
 		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.abc");
 		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.abc.x");
 		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.abc.xyz");
+	}
+	
+	public void testBuildPatternMatcherWithOptions() {
+		String monitorName = "com.acme.myMonitor";
+		String pattern = "/(dog|cat|bird)";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// Base does not match
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor");
+		
+		// base + one of the three options (dog, cat or bird) should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.cat");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
+		
+		// turtle is not in the list of options
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle");
 	}
 
 	public void testAddToRootMonitor() {

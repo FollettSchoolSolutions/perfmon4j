@@ -1,3 +1,23 @@
+/*
+ *	Copyright 2022 Follett School Solutions, LLC 
+ *
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ *  Follett School Solutions, LLC
+ *  1340 Ridgeview Drive
+ *  McHenry, IL 60050
+ *
+ */
 package org.perfmon4j.influxdb;
 
 
@@ -19,6 +39,7 @@ import org.perfmon4j.util.HttpHelper;
 import org.perfmon4j.util.HttpHelper.Response;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+import org.perfmon4j.util.SubCategorySplitter;
 
 /**
  * This appender uses the InfluxDb write endpoint.  For details
@@ -36,6 +57,8 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	private String password = null;
 	private String retentionPolicy = null;
 	private boolean numericOnly = false;
+	private SubCategorySplitter subCategorySplitter = null;
+	
 	private int batchSeconds = 5; // How long to delay before sending a batch of measurements out.
 	private int maxMeasurementsPerBatch = 1000;  // Max number of measurements to send per post.
 	private final HttpHelper helper = new HttpHelper();
@@ -151,11 +174,22 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		
 		return url.toString();
 	}
+
+	
+	
 	
 	/* package level for testing */ String buildPostDataLine(PerfMonObservableData data) {
 		StringBuilder postLine = new StringBuilder();
+		String category = data.getDataCategory();
+		String subCategory = null;
 		
-		postLine.append(decorateMeasurementForInflux(data.getDataCategory()))
+		if (subCategorySplitter != null) {
+			SubCategorySplitter.Split split = subCategorySplitter.split(category);
+			category = split.getCategory();
+			subCategory = split.getSubCategory();
+		}
+		
+		postLine.append(decorateMeasurementForInflux(category))
 			.append(",system=")
 			.append(decorateTagKeyTagValueFieldKeyForInflux(this.getSystemName()));
 		
@@ -164,6 +198,12 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 			postLine.append(",group=")
 				.append(decorateTagKeyTagValueFieldKeyForInflux(groups[0]));
 		}
+		
+		if (subCategory != null) {
+			postLine.append(",subCategory=")
+				.append(decorateTagKeyTagValueFieldKeyForInflux(subCategory));
+		}
+		
 		postLine.append(" ");
 		
 		boolean first = true;
@@ -292,6 +332,14 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 
 	public void setMaxMeasurementsPerBatch(int maxMeasurementsPerBatch) {
 		this.maxMeasurementsPerBatch = maxMeasurementsPerBatch;
+	}
+
+	public SubCategorySplitter getSubCategorySplitter() {
+		return subCategorySplitter;
+	}
+	
+	public void setSubCategorySplitter(SubCategorySplitter subCategorySplitter) {
+		this.subCategorySplitter = subCategorySplitter;
 	}
 
 	public HttpHelper getHelper() {
