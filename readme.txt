@@ -30,6 +30,7 @@ Changes
   mode.  The 1.x method will be used if your appender definition includes
   database, retentionPolicy, and username attributes.  The 2.x method will 
   be used if your definition includes org, bucket, and token attributes. 
+  See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Perfmon4j-Influx-Appender
 
 ** 1.6.0-rc.1 - 2021-11-24
 
