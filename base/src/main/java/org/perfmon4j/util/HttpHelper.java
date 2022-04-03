@@ -5,14 +5,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class HttpHelper {
 	private String userAgent = "PerfMon4j";
 	private int connectTimeoutMillis = 2500;
 	private int readTimeoutMillis = 2500;
+	private static final String UTF_8_CHARSET = StandardCharsets.UTF_8.toString(); 
 	
 	public String getUserAgent() {
 		return userAgent;
@@ -40,6 +44,17 @@ public class HttpHelper {
 	
 	public Response doPost(String urlparam, String body) throws IOException {
 		return doPost(urlparam, body, null);
+	}
+	
+	public String urlEncodeUTF_8(String value) {
+		if (value != null) {
+			try {
+				value = URLEncoder.encode(value, UTF_8_CHARSET);
+			} catch (UnsupportedEncodingException e) {
+				// Ignore, what are the odds that UTF_8 isn't supported in Java?
+			}
+		}
+		return value;
 	}
 
 	public Response doPost(String urlparam, String body, Map<String, String>requestHeaders) throws IOException {
