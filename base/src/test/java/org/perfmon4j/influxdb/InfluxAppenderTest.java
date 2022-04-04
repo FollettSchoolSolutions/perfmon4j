@@ -21,6 +21,7 @@
 package org.perfmon4j.influxdb;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.mockito.Mockito;
@@ -64,7 +65,7 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setDatabase("perfmon4j");
 		
 		assertEquals("baseURL", "http://localhost:8086/write?db=perfmon4j&precision=s",
-			appender.buildPostURL());
+			appender.buildPostURL().getUrl());
 	}
 
 	public void testBuildPostURLDoesNotAddExtraPathSep() {
@@ -72,7 +73,7 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setDatabase("perfmon4j");
 		
 		assertEquals("baseURL", "http://localhost:8086/write?db=perfmon4j&precision=s",
-			appender.buildPostURL());
+			appender.buildPostURL().getUrl());
 	}
 	
 	public void testBuildPostURLAddsUserNameAndPassword() {
@@ -82,8 +83,8 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setPassword("fish");
 		
 		assertEquals("baseURL", 
-			"http://localhost:8086/write?db=perfmon4j&precision=s&u=dave&p=fish",
-			appender.buildPostURL());
+			"http://localhost:8086/write?db=perfmon4j&u=dave&p=fish&precision=s",
+			appender.buildPostURL().getUrl());
 	}
 
 	public void testBuildPostURLAddsOptionalRetentionPolicy() {
@@ -92,8 +93,20 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setRetentionPolicy("3months");
 		
 		assertEquals("baseURL", 
-			"http://localhost:8086/write?db=perfmon4j&precision=s&rp=3months",
-			appender.buildPostURL());
+			"http://localhost:8086/write?db=perfmon4j&rp=3months&precision=s",
+			appender.buildPostURL().getUrl());
+	}
+
+	public void testBuildPostURLIsEncoded() {
+		appender.setBaseURL("http://localhost:8086/");
+		appender.setDatabase("data/base");
+		appender.setUserName("dave smith");
+		appender.setPassword("my password");
+		appender.setRetentionPolicy("3 months");
+		
+		assertEquals("baseURL", 
+			"http://localhost:8086/write?db=data%2Fbase&u=dave+smith&p=my+password&rp=3+months&precision=s",
+			appender.buildPostURL().getUrl());
 	}
 	
 	public void testBuildDataLine() {
@@ -219,4 +232,43 @@ public class InfluxAppenderTest extends TestCase {
 		assertEquals("DistrictResource,system=MySystemName,group=MyGroup,subCategory=dist_1234 throughput=25i 1",
 			appender.buildPostDataLine(mockData));
 	}
+	
+	public void testInfluxDb1xOutput() {
+		appender.setDatabase("perfmon4j");
+		assertFalse("Since bucket is NOT set we output to the 1.x API", appender.isInfluxDb2Output());
+	}	
+	
+	public void testInfluxDb2xOutput() {
+		appender.setBucket("perfmon4j/one_week");
+		assertTrue("Since bucket is set we output to the 2.x API", appender.isInfluxDb2Output());
+	}
+	
+	/* See https://docs.influxdata.com/influxdb/v2.1/write-data/developer-tools/api/ 
+	 * for information on the version 2 API.
+	 */
+	public void testBuildURL2x() {
+		appender.setBaseURL("http://localhost:8086/");
+		appender.setBucket("perfmon4j/one_week");
+		appender.setOrg("My Organization");
+		
+		assertEquals("baseURL", "http://localhost:8086/api/v2/write?org=My+Organization&bucket=perfmon4j%2Fone_week&precision=s",
+			appender.buildPostURL().getUrl());	
+	}
+	
+	public void testBuildURL2xHeaders() {
+		appender.setBaseURL("http://localhost:8086/");
+		appender.setBucket("perfmon4j/one_week");
+		appender.setOrg("My Organization");
+		appender.setToken("ABCDE");
+		
+		Map<String, String> headers = appender.buildPostURL().getHeaders();
+		
+		assertNotNull("headers should be non-null", headers);
+		assertEquals("number of headers", 3, headers.size());
+		
+		assertEquals("Authorization header","Token ABCDE", headers.get("Authorization"));
+		assertEquals("Content-Type header","text/plain; charset=utf-8", headers.get("Content-Type"));
+		assertEquals("Accept header","application/json", headers.get("Accept"));
+	}
+	
 }
