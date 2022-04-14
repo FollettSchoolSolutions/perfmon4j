@@ -31,6 +31,12 @@ Changes
   database, retentionPolicy, and username attributes.  The 2.x method will 
   be used if your definition includes org, bucket, and token attributes. 
   See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Perfmon4j-Influx-Appender
+  
+- Enhanced monitor pattern to support definition of a regular expression
+  that includes children of a regular expression match. For example
+  with the following Monitor definition. See 
+  https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Interval-Monitor-Pattern-Definition
+  for more details.
 
 ** 1.6.0-rc.1 - 2021-11-24
 

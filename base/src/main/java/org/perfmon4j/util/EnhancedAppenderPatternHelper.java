@@ -121,6 +121,13 @@ public class EnhancedAppenderPatternHelper {
 
 	public static String buildPattern(String monitorName, String pattern) {
 		if (!isTraditionalPattern(pattern) && (pattern.startsWith("/") || pattern.startsWith("./"))) {
+			// Check to see if we have a trailing child (/*) pattern
+			if (pattern.endsWith(PerfMon.APPENDER_PATTERN_CHILDREN_ONLY)) {
+				pattern = pattern.replaceAll("/\\*" + "$", "(\\.[^.]+)??");
+			} else if (pattern.endsWith(PerfMon.APPENDER_PATTERN_ALL_DESCENDENTS)) {
+				pattern = pattern.replaceAll("/\\*{2}" + "$", "(\\.[^.]+)*?");
+			}
+			
 			// Remove the prefix ("./" or "/") from the pattern.
 			pattern = pattern.replaceFirst("(\\/|\\.\\/)", "");
 			pattern = pattern.replaceAll("\\.", "\\\\.");

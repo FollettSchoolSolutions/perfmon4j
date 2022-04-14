@@ -143,6 +143,68 @@ public class AppenderToMonitorMapperTest extends TestCase {
 		// turtle is not in the list of options
 		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle");
 	}
+	
+	public void testAppendClassicChildPatternToRegex() {
+		String monitorName = "com.acme.myMonitor";
+		String pattern = "/(dog|cat|bird)/*";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// By if you suffix a regex with the /* any child monitor, whose parent matches
+		// the regex will also match.
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild");
+
+		// Grand child will NOT match
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild.anygrandchild");
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild.anygrandchild");
+
+		// Direct regex matches must still work.
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
+		
+		// Must direct match must still match regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle");
+		// Child must still match the regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle.anychild");
+	}	
+	
+	
+	/**
+	 * Usage of the all descendants pattern (/**)in general should be highly
+	 * discouraged.  Still we will include it here for completeness
+	 */
+	public void testAppendClassicAllDescendantsPatternToRegex() {
+		String monitorName = "com.acme.myMonitor";
+		String pattern = "/(dog|cat|bird)/**";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// By if you suffix a regex with the /* any child monitor, whose parent matches
+		// the regex will also match.
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild");
+
+		// Grand child must match
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild.anygrandchild");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild.anygrandchild");
+		
+		// All descendants must match
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild.anygrandchild.anygreat");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild.anygrandchild.anygreat.anygreatgreat");
+		
+		// Direct regex matches must still work.
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
+		
+		// Must still match regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle");
+		// Child must still match the regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle.anychild");
+		// Grand child must still match the regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle.anychild.anygrandchild");
+	}	
+	
 
 	public void testAddToRootMonitor() {
 		String monitorName = PerfMon.ROOT_MONITOR_NAME;
