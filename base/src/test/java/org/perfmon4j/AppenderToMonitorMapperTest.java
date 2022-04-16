@@ -140,9 +140,34 @@ public class AppenderToMonitorMapperTest extends TestCase {
 		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.cat");
 		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
 		
-		// turtle is not in the list of options
-		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle");
+		// birds is not in the list of options
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.birds");
 	}
+
+	public void testBuildPatternMatcherWithOptions_includeParent() {
+		String monitorName = "com.acme.myMonitor";
+		String pattern = "./(dog|cat|bird)";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// Parent does match
+		validatePatternMatches(monitorName, pattern, regEx, monitorName);
+		
+		// Parent with suffix does NOT match
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, monitorName + "s");
+		
+		// base + one of the three options (dog, cat or bird) should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.cat");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
+
+		// Suffix on parent does not match (note myMonitors vs myMonitor)
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, monitorName + "s.dog");
+		
+		// Birds is not in the list of options
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.birds");
+	}
+	
 	
 	public void testBuildPatternMatcherAllChildrenWithTrailingRegexGrandChildren() {
 		String monitorName = "DistrictRequest";

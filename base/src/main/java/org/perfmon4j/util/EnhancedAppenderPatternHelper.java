@@ -136,6 +136,10 @@ public class EnhancedAppenderPatternHelper {
 				pattern = pattern.replaceFirst("\\./\\*/", "[^\\.]+((\\$|\\.");
 				patternSuffix = "))))";
 				patternPrefix = "($|\\.(";	
+			} else if (pattern.startsWith(PerfMon.APPENDER_PATTERN_PARENT_ONLY )) {
+				pattern = pattern.replaceFirst("\\./", "(\\$|\\.");
+				patternSuffix = ")";
+				patternPrefix = "";	
 			} 
 
 			
