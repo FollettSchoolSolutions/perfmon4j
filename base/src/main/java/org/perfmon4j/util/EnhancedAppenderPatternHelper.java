@@ -121,21 +121,44 @@ public class EnhancedAppenderPatternHelper {
 
 	public static String buildPattern(String monitorName, String pattern) {
 		if (!isTraditionalPattern(pattern) && (pattern.startsWith("/") || pattern.startsWith("./"))) {
+			String patternSuffix = null;
+			String patternPrefix = "\\.";
+			
 			// Check to see if we have a trailing child (/*) pattern
 			if (pattern.endsWith(PerfMon.APPENDER_PATTERN_CHILDREN_ONLY)) {
 				pattern = pattern.replaceAll("/\\*" + "$", "(\\.[^.]+)??");
 			} else if (pattern.endsWith(PerfMon.APPENDER_PATTERN_ALL_DESCENDENTS)) {
 				pattern = pattern.replaceAll("/\\*{2}" + "$", "(\\.[^.]+)*?");
-			}
+			} else if (pattern.startsWith(PerfMon.APPENDER_PATTERN_CHILDREN_ONLY + "/")) {
+				pattern = pattern.replaceFirst("/\\*/", "[^\\.]+(\\$|(\\.");
+				patternSuffix = "))";
+			} else if (pattern.startsWith(PerfMon.APPENDER_PATTERN_PARENT_AND_CHILDREN_ONLY + "/")) {
+				pattern = pattern.replaceFirst("\\./\\*/", "[^\\.]+((\\$|\\.");
+				patternSuffix = "))))";
+				patternPrefix = "($|\\.(";	
+			} else if (pattern.startsWith(PerfMon.APPENDER_PATTERN_PARENT_ONLY )) {
+				pattern = pattern.replaceFirst("\\./", "(\\$|\\.");
+				patternSuffix = ")";
+				patternPrefix = "";	
+			} 
+
 			
-			// Remove the prefix ("./" or "/") from the pattern.
-			pattern = pattern.replaceFirst("(\\/|\\.\\/)", "");
+			if (patternSuffix == null) {
+				// Remove the prefix ("./" or "/") from the pattern.
+				pattern = pattern.replaceFirst("(\\/|\\.\\/)", "");
+			}	
 			pattern = pattern.replaceAll("\\.", "\\\\.");
 			pattern = pattern.replaceAll("/", "\\\\.");
 			pattern = pattern.replaceAll("#\\*", "\\\\w+");
 			pattern = pattern.replaceAll("#", "\\\\w");
+			
+			if (patternSuffix != null) {
+				pattern += patternSuffix;
+			}
 		   
-			return Pattern.quote(monitorName) + "\\." + pattern;
+			pattern = Pattern.quote(monitorName) + patternPrefix + pattern; 
+			
+			return pattern;
 		} else {
 			return null;
 		}

@@ -20,9 +20,9 @@
 */
 package org.perfmon4j.util;
 
-import junit.framework.TestCase;
-
 import org.perfmon4j.PerfMon;
+
+import junit.framework.TestCase;
 
 public class EnhancedAppenderPatternHelperTest extends TestCase {
 
@@ -117,7 +117,7 @@ public class EnhancedAppenderPatternHelperTest extends TestCase {
 
     public void testBuildPattern() {
     	// Pattern should start with a  "./";
-    	validatePattern("\\Qcom.acme.myMonitor\\E\\.a\\w\\w\\.xy\\w+", "com.acme.myMonitor", "./a##/xy#*");
+    	validatePattern("\\Qcom.acme.myMonitor\\E($|\\.a\\w\\w\\.xy\\w+)", "com.acme.myMonitor", "./a##/xy#*");
 
     	// We will also accept a prefix of  "/";
     	validatePattern("\\Qcom.acme.myMonitor\\E\\.a\\w\\w\\.xy\\w+", "com.acme.myMonitor", "/a##/xy#*");
