@@ -144,6 +144,56 @@ public class AppenderToMonitorMapperTest extends TestCase {
 		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle");
 	}
 	
+	public void testBuildPatternMatcherAllChildrenWithTrailingRegexGrandChildren() {
+		String monitorName = "DistrictRequest";
+		String pattern = "/*/(circulation|cataloging|backoffice)";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// Base does not match
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest");
+		
+		// base + any child should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_002");
+		
+		// base + any child + matching grand child should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.circulation");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.cataloging");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.backoffice");
+		
+		// base + any child + non-matching grand child should NOT match. 
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest.app_001.other");
+
+		// base + any child + matching grand child + great grand child should NOT match. 
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest.app_001.circulation.backoffice");
+	}
+	
+	public void testBuildPatternMatcherParentAndlChildrenWithTrailingRegexGrandChildren() {
+		String monitorName = "DistrictRequest";
+		String pattern = "./*/(circulation|cataloging|backoffice)";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// Should match the parent
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest");
+		
+		// base + any child should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_002");
+		
+		// base + any child + matching grand child should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.circulation");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.cataloging");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.backoffice");
+		
+		// base + any child + non-matching grand child should NOT match. 
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest.app_001.other");
+
+		// base + any child + matching grand child + great grand child should NOT match. 
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest.app_001.circulation.backoffice");
+	}
+	
 	public void testAppendClassicChildPatternToRegex() {
 		String monitorName = "com.acme.myMonitor";
 		String pattern = "/(dog|cat|bird)/*";
