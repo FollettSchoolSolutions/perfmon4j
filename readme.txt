@@ -19,7 +19,7 @@ McHenry, IL 60050
 
 Changes
 
-** 1.6.1 - TBD
+** 1.6.1 - 2022-04-16
 - The InfluxAppender and LogAnalytics appender have the ability
   to group measurements into a single category by using a regular
   expression to define a subCategory. See:
