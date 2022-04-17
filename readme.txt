@@ -19,6 +19,25 @@ McHenry, IL 60050
 
 Changes
 
+** 1.6.1 - 2022-04-16
+- The InfluxAppender and LogAnalytics appender have the ability
+  to group measurements into a single category by using a regular
+  expression to define a subCategory. See:
+  https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Sub-Category-Splitter
+  for more information. 
+  
+- The InfluxAppender can now be configured to write to InfluxDb 2.x in non-1.x legacy
+  mode.  The 1.x method will be used if your appender definition includes
+  database, retentionPolicy, and username attributes.  The 2.x method will 
+  be used if your definition includes org, bucket, and token attributes. 
+  See: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Perfmon4j-Influx-Appender
+  
+- Enhanced monitor pattern to support definition of a regular expression
+  that includes children of a regular expression match. For example
+  with the following Monitor definition. See 
+  https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Interval-Monitor-Pattern-Definition
+  for more details.
+
 ** 1.6.0-rc.1 - 2021-11-24
 
 - Added exception tracking.  This can be used to track the number of 

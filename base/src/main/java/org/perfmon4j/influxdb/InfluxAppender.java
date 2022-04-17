@@ -1,11 +1,34 @@
+/*
+ *	Copyright 2022 Follett School Solutions, LLC 
+ *
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ *  Follett School Solutions, LLC
+ *  1340 Ridgeview Drive
+ *  McHenry, IL 60050
+ *
+ */
 package org.perfmon4j.influxdb;
 
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,6 +42,7 @@ import org.perfmon4j.util.HttpHelper;
 import org.perfmon4j.util.HttpHelper.Response;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+import org.perfmon4j.util.SubCategorySplitter;
 
 /**
  * This appender uses the InfluxDb write endpoint.  For details
@@ -31,11 +55,20 @@ import org.perfmon4j.util.LoggerFactory;
 public class InfluxAppender extends SystemNameAndGroupsAppender {
 	private static final Logger logger = LoggerFactory.initLogger(InfluxAppender.class);
 	private String baseURL = null;
+	private boolean numericOnly = false;
+	private SubCategorySplitter subCategorySplitter = null;
+
+	// InfluxDb 1.x attributes
 	private String database = null;
 	private String userName = null;
 	private String password = null;
 	private String retentionPolicy = null;
-	private boolean numericOnly = false;
+	
+	// InfluxDb 2.x attributes
+	private String bucket = null;
+	private String org = null;
+	private String token = null;
+	
 	private int batchSeconds = 5; // How long to delay before sending a batch of measurements out.
 	private int maxMeasurementsPerBatch = 1000;  // Max number of measurements to send per post.
 	private final HttpHelper helper = new HttpHelper();
@@ -122,40 +155,61 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	}
 	
 	
-	/* package level for testing */ String buildPostURL() {
+	
+	/* package level for testing */ PostUrlAndHeaders buildPostURL() {
 		StringBuilder url = new StringBuilder();
 		url.append(baseURL);
+		Map<String, String> headers = null;
+		final boolean api2Output = isInfluxDb2Output();
 
 		if (!baseURL.endsWith("/")) {
 			url.append("/");
 		}
 		
-		url.append("write?db=")
-			.append(database)
-			.append("&precision=")
-			.append(precision);
-		
-		if (userName != null) {
-			url.append("&u=")
-				.append(userName);
+		if (api2Output) {
+			url.append("api/v2/write?org=")
+				.append(helper.urlEncodeUTF_8(org))
+				.append("&bucket=")
+				.append(helper.urlEncodeUTF_8(bucket));
+			
+			headers = new HashMap<String, String>();
+			headers.put("Authorization", "Token " + token);
+			headers.put("Content-Type", "text/plain; charset=utf-8");
+			headers.put("Accept", "application/json");
+		} else {
+			url.append("write?db=")
+				.append(helper.urlEncodeUTF_8(database));
+			if (userName != null) {
+				url.append("&u=")
+					.append(helper.urlEncodeUTF_8(userName));
+			}
+			if (password != null) {
+				url.append("&p=")
+					.append(helper.urlEncodeUTF_8(password));
+			}
+			if (retentionPolicy != null) {
+				url.append("&rp=")
+					.append(helper.urlEncodeUTF_8(retentionPolicy));
+			}
 		}
-		if (password != null) {
-			url.append("&p=")
-				.append(password);
-		}
-		
-		if (retentionPolicy != null) {
-			url.append("&rp=")
-				.append(retentionPolicy);
-		}
-		
-		return url.toString();
+		url.append("&precision=")
+		.append(precision);
+
+		return new PostUrlAndHeaders(url.toString(), headers);
 	}
 	
 	/* package level for testing */ String buildPostDataLine(PerfMonObservableData data) {
 		StringBuilder postLine = new StringBuilder();
+		String category = data.getDataCategory();
+		String subCategory = null;
 		
-		postLine.append(decorateMeasurementForInflux(data.getDataCategory()))
+		if (subCategorySplitter != null) {
+			SubCategorySplitter.Split split = subCategorySplitter.split(category);
+			category = split.getCategory();
+			subCategory = split.getSubCategory();
+		}
+		
+		postLine.append(decorateMeasurementForInflux(category))
 			.append(",system=")
 			.append(decorateTagKeyTagValueFieldKeyForInflux(this.getSystemName()));
 		
@@ -164,6 +218,12 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 			postLine.append(",group=")
 				.append(decorateTagKeyTagValueFieldKeyForInflux(groups[0]));
 		}
+		
+		if (subCategory != null) {
+			postLine.append(",subCategory=")
+				.append(decorateTagKeyTagValueFieldKeyForInflux(subCategory));
+		}
+		
 		postLine.append(" ");
 		
 		boolean first = true;
@@ -294,12 +354,48 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		this.maxMeasurementsPerBatch = maxMeasurementsPerBatch;
 	}
 
+	public SubCategorySplitter getSubCategorySplitter() {
+		return subCategorySplitter;
+	}
+	
+	public void setSubCategorySplitter(SubCategorySplitter subCategorySplitter) {
+		this.subCategorySplitter = subCategorySplitter;
+	}
+
+	public String getBucket() {
+		return bucket;
+	}
+
+	public void setBucket(String bucket) {
+		this.bucket = bucket;
+	}
+
+	public String getOrg() {
+		return org;
+	}
+
+	public void setOrg(String org) {
+		this.org = org;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setToken(String token) {
+		this.token = token;
+	}
+
 	public HttpHelper getHelper() {
 		return helper;
 	}
 	
 	public boolean isNumericOnly() {
 		return numericOnly;
+	}
+	
+	/* package level for testing */ boolean isInfluxDb2Output() {
+		return bucket != null;
 	}
 
 	public void setNumericOnly(boolean numericOnly) {
@@ -345,10 +441,10 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 					postBody.append(line);
 				}
 				HttpHelper helper = getHelper();
-				String postURL = buildPostURL();
+				PostUrlAndHeaders postURL = buildPostURL();
 				String debugOutput = "URL(" + postURL + ") batchSize(" + batchSize + ")";
 				try {
-					Response response = helper.doPost(postURL, postBody.toString());
+					Response response = helper.doPost(postURL.getUrl(), postBody.toString(), postURL.getHeaders());
 					if (!response.isSuccess()) {
 						String message = "Http error writing to InfluxDb: \"" + debugOutput + 
 							"\" Response: " + response.toString();
@@ -365,6 +461,37 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 						logger.logWarn(message);
 					}
 				}
+			}
+		}
+	}
+	
+	static class PostUrlAndHeaders {
+		private final String url;
+		private final Map<String, String> headers;
+		
+		private PostUrlAndHeaders(String url, Map<String, String> headers) {
+			this.url = url;
+			this.headers = (headers != null) ? Collections.unmodifiableMap(headers) : null;
+		}
+
+		public String getUrl() {
+			return url;
+		}
+
+		public Map<String, String> getHeaders() {
+			return headers;
+		}
+		
+		private boolean hasHeaders() {
+			return headers != null;
+		}
+
+		@Override
+		public String toString() {
+			if (headers == null) {
+				return url;
+			} else {
+				return "[url=" + url + ", headers=" + headers + "]";
 			}
 		}
 	}

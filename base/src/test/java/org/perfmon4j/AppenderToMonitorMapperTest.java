@@ -1,10 +1,31 @@
-package org.perfmon4j;
+/*
+ *	Copyright 2022 Follett School Solutions, LLC 
+ *
+ *	This file is part of PerfMon4j(tm).
+ *
+ * 	Perfmon4j is free software: you can redistribute it and/or modify
+ * 	it under the terms of the GNU Lesser General Public License, version 3,
+ * 	as published by the Free Software Foundation.  This program is distributed
+ * 	WITHOUT ANY WARRANTY OF ANY KIND, WITHOUT AN IMPLIED WARRANTY OF MERCHANTIBILITY,
+ * 	OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU Lesser General Public 
+ * 	License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
+ * 	http://www.gnu.org/licenses/
+ * 	
+ * 	perfmon4j@fsc.follett.com
+ * 	David Deuchert
+ *  Follett School Solutions, LLC
+ *  1340 Ridgeview Drive
+ *  McHenry, IL 60050
+ * 
+*/
 
-import junit.framework.TestCase;
+package org.perfmon4j;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.AppenderToMonitorMapper.Builder;
 import org.perfmon4j.AppenderToMonitorMapper.HashableRegEx;
+
+import junit.framework.TestCase;
 
 public class AppenderToMonitorMapperTest extends TestCase {
 	
@@ -104,6 +125,161 @@ public class AppenderToMonitorMapperTest extends TestCase {
 		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.abc.x");
 		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.abc.xyz");
 	}
+	
+	public void testBuildPatternMatcherWithOptions() {
+		String monitorName = "com.acme.myMonitor";
+		String pattern = "/(dog|cat|bird)";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// Base does not match
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor");
+		
+		// base + one of the three options (dog, cat or bird) should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.cat");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
+		
+		// birds is not in the list of options
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.birds");
+	}
+
+	public void testBuildPatternMatcherWithOptions_includeParent() {
+		String monitorName = "com.acme.myMonitor";
+		String pattern = "./(dog|cat|bird)";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// Parent does match
+		validatePatternMatches(monitorName, pattern, regEx, monitorName);
+		
+		// Parent with suffix does NOT match
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, monitorName + "s");
+		
+		// base + one of the three options (dog, cat or bird) should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.cat");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
+
+		// Suffix on parent does not match (note myMonitors vs myMonitor)
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, monitorName + "s.dog");
+		
+		// Birds is not in the list of options
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.birds");
+	}
+	
+	
+	public void testBuildPatternMatcherAllChildrenWithTrailingRegexGrandChildren() {
+		String monitorName = "DistrictRequest";
+		String pattern = "/*/(circulation|cataloging|backoffice)";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// Base does not match
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest");
+		
+		// base + any child should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_002");
+		
+		// base + any child + matching grand child should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.circulation");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.cataloging");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.backoffice");
+		
+		// base + any child + non-matching grand child should NOT match. 
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest.app_001.other");
+
+		// base + any child + matching grand child + great grand child should NOT match. 
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest.app_001.circulation.backoffice");
+	}
+	
+	public void testBuildPatternMatcherParentAndlChildrenWithTrailingRegexGrandChildren() {
+		String monitorName = "DistrictRequest";
+		String pattern = "./*/(circulation|cataloging|backoffice)";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// Should match the parent
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest");
+		
+		// base + any child should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_002");
+		
+		// base + any child + matching grand child should match. 
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.circulation");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.cataloging");
+		validatePatternMatches(monitorName, pattern, regEx, "DistrictRequest.app_001.backoffice");
+		
+		// base + any child + non-matching grand child should NOT match. 
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest.app_001.other");
+
+		// base + any child + matching grand child + great grand child should NOT match. 
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "DistrictRequest.app_001.circulation.backoffice");
+	}
+	
+	public void testAppendClassicChildPatternToRegex() {
+		String monitorName = "com.acme.myMonitor";
+		String pattern = "/(dog|cat|bird)/*";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// By if you suffix a regex with the /* any child monitor, whose parent matches
+		// the regex will also match.
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild");
+
+		// Grand child will NOT match
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild.anygrandchild");
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild.anygrandchild");
+
+		// Direct regex matches must still work.
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
+		
+		// Must direct match must still match regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle");
+		// Child must still match the regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle.anychild");
+	}	
+	
+	
+	/**
+	 * Usage of the all descendants pattern (/**)in general should be highly
+	 * discouraged.  Still we will include it here for completeness
+	 */
+	public void testAppendClassicAllDescendantsPatternToRegex() {
+		String monitorName = "com.acme.myMonitor";
+		String pattern = "/(dog|cat|bird)/**";
+		
+		HashableRegEx regEx = AppenderToMonitorMapper.buildRegEx(monitorName, pattern);
+
+		// By if you suffix a regex with the /* any child monitor, whose parent matches
+		// the regex will also match.
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild");
+
+		// Grand child must match
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild.anygrandchild");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild.anygrandchild");
+		
+		// All descendants must match
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog.anychild.anygrandchild.anygreat");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird.anychild.anygrandchild.anygreat.anygreatgreat");
+		
+		// Direct regex matches must still work.
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.dog");
+		validatePatternMatches(monitorName, pattern, regEx, "com.acme.myMonitor.bird");
+		
+		// Must still match regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle");
+		// Child must still match the regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle.anychild");
+		// Grand child must still match the regex
+		validatePatternDoesNotMatch(monitorName, pattern, regEx, "com.acme.myMonitor.turtle.anychild.anygrandchild");
+	}	
+	
 
 	public void testAddToRootMonitor() {
 		String monitorName = PerfMon.ROOT_MONITOR_NAME;
