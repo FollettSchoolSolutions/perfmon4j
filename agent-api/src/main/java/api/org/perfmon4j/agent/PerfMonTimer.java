@@ -60,6 +60,10 @@ public class PerfMonTimer {
     public static void stop(PerfMonTimer timer) {
     }
     
+    public static PerfMonTimer getNullTimer() {
+    	return noOpTimer;
+    }
+    
     /**
      * If true this class has been rewritten by the Perfmon4j agent.
      * @return
