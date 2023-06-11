@@ -34,6 +34,7 @@
 		<module>agent-api</module>
 		<module>dbupgrader</module>
 		<module>base</module>
+		<module>genericfilter</module>
 		<module>servlet</module>
 		<module>tomcat7</module>
 		<module>tomcat55</module>
@@ -43,6 +44,7 @@
 		<module>utils</module>
 		<module>webapp</module>
 		<module>wildfly8</module>
+		<module>quarkus</module>
  	</modules>
 
 	<profiles>

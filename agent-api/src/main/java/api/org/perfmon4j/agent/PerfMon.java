@@ -43,10 +43,16 @@ public class PerfMon {
     public static PerfMon getMonitor(String key, boolean isDynamicPath) {
         return new PerfMon(key);
     }
-
+    
     public boolean isActive() {
         return false;
     }
+    
+    
+    public static boolean isConfigured() {
+    	return false;
+    }
+    
     
     /**
      * If true this class has been rewritten by the Perfmon4j agent.
@@ -55,5 +61,4 @@ public class PerfMon {
     public static boolean isAttachedToAgent() {
     	return false;
     }
-    
 }
