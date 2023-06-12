@@ -1193,7 +1193,15 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         
         getMonitorMethod.setBody(src);
-      
+        
+        
+        CtMethod isConfiguredMethod = findMethod(clazz, "isConfigured");
+        if (isConfiguredMethod != null) {
+	        src = "{\r\n"
+	        		+ " return org.perfmon4j.PerfMon.isConfigured();\r\n"  	
+	        		+ "}";
+	        isConfiguredMethod.setBody(src);
+        }
         
         CtMethod isActiveMethod = findMethod(clazz, "isActive");
         isActiveMethod.setBody("return nativeObject.isActive();");
@@ -1252,12 +1260,12 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         stopMethod.setBody(src);
         
-        
+
         src = "public org.perfmon4j.PerfMonTimer getNativeObject() {\r\n" 
         		+ " return nativeObject;\r\n"
         		+ "}";
         clazz.addMethod(CtMethod.make(src, clazz));
-        
+
         return clazz.toBytecode();
 	}
 
