@@ -135,7 +135,16 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				config.defineMonitor(monitorName);
 				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
 				config.attachAppenderToMonitor(monitorName, appenderName, "./*");
+				
+				if (api.org.perfmon4j.agent.PerfMon.isConfigured()) {
+					System.out.println("**FAIL: PerfMon agent incorrectly showing as configured prior to configuration");
+				}
+				
 				PerfMon.configure(config);
+
+				if (!api.org.perfmon4j.agent.PerfMon.isConfigured()) {
+					System.out.println("**FAIL: PerfMon agent incorrectly showing as NOT configured after configuration");
+				}
 				
 				api.org.perfmon4j.agent.PerfMon apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor("not.active");
 				if (apiPerfMon.isActive()) {
@@ -151,6 +160,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 					System.out.println("**FAIL: 'test.category' is configured to be monitored/active");
 				}
 			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -159,7 +169,6 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void testAttachedPerfMonAPI() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(AgentAPIPerfMonInstTest.class, perfmon4jJar));
-//System.out.println(output);    	
     	String failures = extractFailures(output);
     	
     	if (!failures.isEmpty()) {
@@ -204,7 +213,12 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 					System.out.println("**FAIL: still should have 1 completion, we aborted first time but passed the second");
 				}
 				
+				// Make sure a nullTimer functions as expected for stop and abort
+				api.org.perfmon4j.agent.PerfMonTimer.stop(api.org.perfmon4j.agent.PerfMonTimer.getNullTimer());
+				api.org.perfmon4j.agent.PerfMonTimer.abort(api.org.perfmon4j.agent.PerfMonTimer.getNullTimer());
+				
 			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -214,7 +228,6 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void testAttachedPerfMonTimerAPI() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(AgentAPIPerfMonTimerInstTest.class, perfmon4jJar));
-//System.out.println(output);    	
     	String failures = extractFailures(output);
     	
     	if (!failures.isEmpty()) {
@@ -245,6 +258,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 					System.out.println("**FAIL: Should have at least 10 millis SQLTime on this thread");
 				}
 			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -289,6 +303,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				}
 				
 			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -360,6 +375,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				Appender.flushAllAppenders();
 				
 			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -415,6 +431,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				Appender.flushAllAppenders();
 				
 			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
