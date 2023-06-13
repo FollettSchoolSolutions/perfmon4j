@@ -20,20 +20,11 @@ public class PerfmonHandler extends GenericFilter implements Handler<RoutingCont
 		Request request = new Request(event);
 		Response response = new Response(event);
 		
-		PerfmonRequestContextWrapper wrapper = new PerfmonRequestContextWrapper(request, response);
-		event.addBodyEndHandler(wrapper::end);
-		
-//		ServerTracingFilter
-		
-		RequestChain chain = new RequestChain(event);
-//		Request request = new Request(event);
-//		Response response = new Response(event);
-		
-		try {
-			this.handleRequest(request, response, chain);
-		} catch (Exception ex) {
-			logger.error("Unexpected exception handling request", ex);
+		AsyncFinishRequestCallback callback = this.startAsyncRequest(request, response);
+		if (callback != null) {
+			event.addBodyEndHandler(callback::finishRequest);
 		}
+		event.next();
 	}
 
 	@Override
@@ -44,24 +35,5 @@ public class PerfmonHandler extends GenericFilter implements Handler<RoutingCont
 	@Override
 	protected void logInfo(String value, Exception ex) {
 		logger.info(value, ex);
-	}
-	
-	public class PerfmonRequestContextWrapper {
-		private final Request request;
-		private final Response response;
-		private long startTime;
-		
-		PerfmonRequestContextWrapper(Request request, Response response) {
-			this.request = request;
-			this.response = response;
-			this.startTime = System.currentTimeMillis();
-		}
-		
-		public void start() {
-		}
-		
-		public void end(Object obj) {
-			System.out.println("DONE!!!! - " + (System.currentTimeMillis() - startTime));
-		}
 	}
 }

@@ -13,6 +13,43 @@ import api.org.perfmon4j.agent.PerfMonTimer;
 import api.org.perfmon4j.agent.SQLTime;
 
 
+/**
+ * This GenericFilter can be used as a TWO ways:
+ * 
+ * 1) As a traditional Filter that wraps around an HttpRequestProcessor thread
+ * 		Usage:
+ * 			init() {
+ * 				GenericFilter filter = new GenericFilter();
+ * 			}
+ * 
+ * 			handleRequest() {
+ * 				...
+ * 				filter.handleRequest(request, response, requestChain);
+ * 				...
+ * 			}
+ * 
+ * 2) In a callback method, suitible for Vert.x or other reactive web contatiner
+ * 		Usage:
+
+ * 			init() {
+ * 				GenericFilter filter = new GenericFilter();
+ * 			}
+ * 
+ * 			handleRequest() {
+ * 				...
+ * 				AsyncRequestContext context = ...
+ * 
+ * 				AsyncFinishRequestCallback callback = filter.startAsyncRequest(request, response);
+ * 				if (callback != null) {
+ * 					context.addBodyEndHandler(callback::finishRequest);
+ * 				}
+ * 				...
+ * 			}
+ * 
+ * 
+ * @author ddeucher
+ *
+ */
 public abstract class GenericFilter {
 	public static final String PERFMON4J_SKIP_LOG_FOR_REQUEST = "PERFMON4J_SKIP_LOG_FOR_REQUEST";
 //	private static final Logger logger = LoggerFactory.initLogger(GenericFilter.class);
@@ -97,13 +134,20 @@ public abstract class GenericFilter {
 		}
 	}
 
-	private void doHandleRequest(HttpRequest request, HttpResponse response, HttpRequestChain chain) throws Exception {
-        Long localStartTime = null;
-        Long localSQLStartTime = null;
-
-		PerfMonTimer timer = null;
-		try {
-/*			
+	public class AsyncFinishRequestCallback {
+		private final HttpRequest request;
+		private final HttpResponse response;
+		private final PerfMonTimer timer;
+        private final Long localStartTime;
+        private final Long localSQLStartTime;
+		
+		private AsyncFinishRequestCallback(HttpRequest request, HttpResponse response) {
+			this.request = request;
+			this.response = response;
+			timer = startTimerForRequest(request);
+			localStartTime = outputRequestAndDuration ? Long.valueOf(System.currentTimeMillis()) : null;
+    		localSQLStartTime = outputRequestAndDuration && SQLTime.isEnabled() ?  Long.valueOf(SQLTime.getSQLTime()) : null;
+    		/*			
 			if (pushNDC) {
 				String ndc = buildNDC(request, pushURLOnNDC, pushClientInfoOnNDC, pushCookiesOnNDC, pushSessionAttributesOnNDC);
 				if (ndc.length() > 0) {
@@ -111,42 +155,37 @@ public abstract class GenericFilter {
 					pushedElementOnNDCStack = true;
 				}
 			}
-*/
-			
-/**
-TODO:  Must deal with Triggers			
-		boolean pushedRequestValidator = false;
-		boolean pushedSessionValidator = false;
-		boolean pushedCookieValidator = false;
-		boolean pushedElementOnNDCStack = false;
+    		*/
+    		
+    		
+    		/**
+    		TODO:  Must deal with Triggers			
+    				boolean pushedRequestValidator = false;
+    				boolean pushedSessionValidator = false;
+    				boolean pushedCookieValidator = false;
+    				boolean pushedElementOnNDCStack = false;
 
-        	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
-        		ThreadTraceConfig.pushValidator(new RequestValidator(exchange));
-        		pushedRequestValidator = true;
-        	}			
-			
-        	if (PerfMon.hasHttpSessionBasedThreadTraceTriggers()) {
-        		ThreadTraceConfig.pushValidator(new SessionValidator(exchange));
-        		pushedSessionValidator = true;
-        	}			
+    		        	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
+    		        		ThreadTraceConfig.pushValidator(new RequestValidator(exchange));
+    		        		pushedRequestValidator = true;
+    		        	}			
+    					
+    		        	if (PerfMon.hasHttpSessionBasedThreadTraceTriggers()) {
+    		        		ThreadTraceConfig.pushValidator(new SessionValidator(exchange));
+    		        		pushedSessionValidator = true;
+    		        	}			
 
-        	if (PerfMon.hasHttpCookieBasedThreadTraceTriggers()) {
-        		ThreadTraceConfig.pushValidator(new CookieValidator(exchange));
-        		pushedCookieValidator = true;
-        	}			
-*/
+    		        	if (PerfMon.hasHttpCookieBasedThreadTraceTriggers()) {
+    		        		ThreadTraceConfig.pushValidator(new CookieValidator(exchange));
+    		        		pushedCookieValidator = true;
+    		        	}			
+    		*/    		
+		}
+		
+		public void finishRequest(Object unused) {
+			boolean doAbort = false;
+			
 			try {
-				timer = startTimerForRequest(request);
-		        if (outputRequestAndDuration) {
-		        	localStartTime = Long.valueOf(System.currentTimeMillis());
-		        	if (SQLTime.isEnabled()) {
-		        		localSQLStartTime = Long.valueOf(SQLTime.getSQLTime());
-		        	}
-		        }
-				chain.next(request, response, chain);
-			} finally {
-				boolean doAbort = false;
-				
 				if (!doAbort && abortTimerOnRedirect) {
 					doAbort = (response.getStatus() / 100) == 3;
 				}
@@ -165,11 +204,66 @@ TODO:  Must deal with Triggers
 	            	PerfMonTimer.abort(timer);
 	            } else {
 	            	PerfMonTimer.stop(timer);
-//	            	notifyUserAgentMonitor(exchange);
 		        	if ((localStartTime != null) && !skipLogOutput() ) {
 		        		outputToLog(request, localStartTime, localSQLStartTime);
 		        	}
 	            }
+			} finally {
+				/*			
+				if (pushedRequestValidator) {
+					ThreadTraceConfig.popValidator();
+				}
+				if (pushedSessionValidator) {
+					ThreadTraceConfig.popValidator();
+				}
+				if (pushedCookieValidator) {
+					ThreadTraceConfig.popValidator();
+				}
+				
+				if (pushedElementOnNDCStack) {
+					NDC.pop();
+				}
+				 */					
+			}
+			
+		}
+		
+	}
+
+	public AsyncFinishRequestCallback startAsyncRequest(HttpRequest request, HttpResponse response) {
+		AsyncFinishRequestCallback result = null;
+
+		boolean skip = ((skipTimerOnURLPattern != null) 
+				&& skipTimerOnURLPattern.matcher(request.getServletPath()).matches());
+		
+		if (!skip) {
+			result = new AsyncFinishRequestCallback(request, response);
+		}
+		
+		return result;
+	}
+
+	
+	
+	private void doHandleRequest(HttpRequest request, HttpResponse response, HttpRequestChain chain) throws Exception {
+		AsyncFinishRequestCallback callback = null;
+		try {
+/*			
+			if (pushNDC) {
+				String ndc = buildNDC(request, pushURLOnNDC, pushClientInfoOnNDC, pushCookiesOnNDC, pushSessionAttributesOnNDC);
+				if (ndc.length() > 0) {
+					NDC.push(ndc);
+					pushedElementOnNDCStack = true;
+				}
+			}
+*/
+			try {
+				callback = startAsyncRequest(request, response);
+				chain.next(request, response, chain);
+			} finally {
+				if (callback != null) {
+					callback.finishRequest(null);
+				}
 			}
 		} finally {
 			
