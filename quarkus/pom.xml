@@ -11,17 +11,62 @@
 	<packaging>jar</packaging>
 	<name>Perfmon4j Quarkus Extras</name>
 	<build>
-		<plugins>
-		</plugins>
+	  <plugins>
+    <plugin>
+      <groupId>io.smallrye</groupId>
+      <artifactId>jandex-maven-plugin</artifactId>
+      <version>3.1.1</version>
+      <executions>
+        <execution>
+          <id>make-index</id>
+          <goals>
+            <goal>jandex</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
 	</build>
-
+	
+	
+ 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.quarkus.platform</groupId>
+        <artifactId>quarkus-bom</artifactId>
+        <version>3.1.0.Final</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  
 <dependencies>
-
 	<dependency>
 		<groupId>${project.groupId}</groupId>
 		<version>${project.version}</version>
 		<artifactId>perfmon4j-generic-filter</artifactId>
 	</dependency>
+
+<!--  
+     <dependency>
+        <groupId>io.quarkus.http</groupId>
+        <artifactId>quarkus-http-core</artifactId>
+        <scope>provided</scope>
+      </dependency>
+-->
+      <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-smallrye-opentracing</artifactId>
+        <scope>provided</scope>
+      </dependency>      
+
+      <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-vertx-http</artifactId>
+        <scope>provided</scope>
+      </dependency>      
 
 	<dependency>
 		<groupId>org.mockito</groupId>

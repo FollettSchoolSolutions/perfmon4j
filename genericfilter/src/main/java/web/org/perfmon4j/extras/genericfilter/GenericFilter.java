@@ -16,18 +16,21 @@ import api.org.perfmon4j.agent.SQLTime;
 public abstract class GenericFilter {
 	public static final String PERFMON4J_SKIP_LOG_FOR_REQUEST = "PERFMON4J_SKIP_LOG_FOR_REQUEST";
 //	private static final Logger logger = LoggerFactory.initLogger(GenericFilter.class);
-	private final HttpRequestChain next;
+//	private final HttpRequestChain next;
 	private final String baseFilterCategory;
 	private final boolean outputRequestAndDuration;
 	private final boolean abortTimerOnImageResponse;
 	private final boolean abortTimerOnRedirect;
 	private final Pattern abortTimerOnURLPattern;
 	private final Pattern skipTimerOnURLPattern;
+	/*	
+	 TODO: HandleNDC
 	private final boolean pushNDC;
     private final boolean pushURLOnNDC;
     private final String[] pushCookiesOnNDC;
     private final String[] pushSessionAttributesOnNDC;
     private final boolean pushClientInfoOnNDC;
+    */
     
     private final ServletPathTransformer servletPathTransformer;
     
@@ -45,19 +48,22 @@ public abstract class GenericFilter {
 	private static final String CONTENT_TYPE = "Content-Type";
     private static final Pattern passwordParamPattern = Pattern.compile("[\\?|\\&]{1}password\\=([^\\&\\;]*)");
 
-	GenericFilter(GenericFilterParams params, HttpRequestChain next) {
-		this.next = next;
+	protected GenericFilter(FilterParams params) {
 		this.baseFilterCategory = params.getBaseFilterCategory();
 		this.outputRequestAndDuration = params.isOutputRequestAndDuration();
 		this.abortTimerOnImageResponse = params.isAbortTimerOnImageResponse();
 		this.abortTimerOnRedirect = params.isAbortTimerOnRedirect();
 		this.abortTimerOnURLPattern = compilePattern(params.getAbortTimerOnURLPattern());
 		this.skipTimerOnURLPattern = compilePattern(params.getSkipTimerOnURLPattern());
+/*	
+ TODO: HandleNDC
+  	
 		this.pushURLOnNDC = params.isPushURLOnNDC();
 		this.pushClientInfoOnNDC = params.isPushClientInfoOnNDC();
 		this.pushCookiesOnNDC = tokenizeCSVString(params.getPushCookiesOnNDC());
 		this.pushSessionAttributesOnNDC = tokenizeCSVString(params.getPushSessionAttributesOnNDC());
 		this.pushNDC = pushURLOnNDC || pushClientInfoOnNDC || (pushCookiesOnNDC != null) || (pushSessionAttributesOnNDC != null);
+*/		
 
 		String servletPathTransformerStr = params.getServletPathTransformationPattern();
 		if (servletPathTransformerStr != null && !servletPathTransformerStr.isBlank()) {
@@ -82,7 +88,7 @@ public abstract class GenericFilter {
 						&& skipTimerOnURLPattern.matcher(request.getServletPath()).matches());
 			}
 			if (skip) {
-				next.next(request, response, chain);
+				chain.next(request, response, chain);
 			} else {
 				doHandleRequest(request, response, chain);			
 			}
@@ -91,15 +97,11 @@ public abstract class GenericFilter {
 		}
 	}
 
-	private void doHandleRequest(HttpRequest request, HttpResponse response, HttpRequestChain exchange) throws Exception {
+	private void doHandleRequest(HttpRequest request, HttpResponse response, HttpRequestChain chain) throws Exception {
         Long localStartTime = null;
         Long localSQLStartTime = null;
 
 		PerfMonTimer timer = null;
-		boolean pushedRequestValidator = false;
-		boolean pushedSessionValidator = false;
-		boolean pushedCookieValidator = false;
-		boolean pushedElementOnNDCStack = false;
 		try {
 /*			
 			if (pushNDC) {
@@ -113,6 +115,10 @@ public abstract class GenericFilter {
 			
 /**
 TODO:  Must deal with Triggers			
+		boolean pushedRequestValidator = false;
+		boolean pushedSessionValidator = false;
+		boolean pushedCookieValidator = false;
+		boolean pushedElementOnNDCStack = false;
 
         	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
         		ThreadTraceConfig.pushValidator(new RequestValidator(exchange));
@@ -137,7 +143,7 @@ TODO:  Must deal with Triggers
 		        		localSQLStartTime = Long.valueOf(SQLTime.getSQLTime());
 		        	}
 		        }
-				next.next(request, response, exchange);
+				chain.next(request, response, chain);
 			} finally {
 				boolean doAbort = false;
 				
@@ -438,7 +444,7 @@ TODO: Log this better.
 		return result;
 	}
 	
-	abstract void logInfo(String value);
-	abstract void logInfo(String value, Exception ex);
+	abstract protected void logInfo(String value);
+	abstract protected void logInfo(String value, Exception ex);
     
 }
