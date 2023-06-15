@@ -15,14 +15,14 @@ public class ReactiveContextManager {
 		private static final long serialVersionUID = 1L;
 	};
 	
-	private static final Map<Object, ReactiveContext<?>> globalContextMap = new HashMap<Object, ReactiveContext<?>>();
+	private static final Map<String, ReactiveContext> globalContextMap = new HashMap<String, ReactiveContext>();
 	/** GLOBAL Members - End **/
 		
 	
 	/** Thread Specific Members - Start **/
-	private volatile ReactiveContext<?>[] cachedContexts = null; 
+	private volatile ReactiveContext[] cachedContexts = null; 
 	
-	private final Map<Object, ReactiveContext<?>> threadContextMap = new HashMap<Object, ReactiveContext<?>>();
+	private final Map<String, ReactiveContext> threadContextMap = new HashMap<String, ReactiveContext>();
 
 	private static final ThreadLocal<ReactiveContextManager> threadLocal = new ThreadLocal<ReactiveContextManager>() {
 		@Override
@@ -36,38 +36,48 @@ public class ReactiveContextManager {
 		return threadLocal.get();
 	}
 	
-	public void newContext(ReactiveContext<?> context) {
+	
+	public void addPayload(String contextID, Long monitorID, Object payload) {
 		synchronized(bindToken) {
-			// TODO: Assert that context.threadManager == null
-			
-			// Associate with the global MAP
-			globalContextMap.put(context.getContextID(), context);
-			
-			// Associate with the Thread
-			threadContextMap.put(context.getContextID(), context);
-			context.activeThread = this;
+			ReactiveContext result = globalContextMap.get(contextID);
+			if (result == null) {
+				result = new ReactiveContext();
+
+				// Associate with the global MAP
+				globalContextMap.put(contextID, result);
+				
+				// Associate with the Thread
+				threadContextMap.put(contextID, result);
+				result.activeThread = this;
+			}
+			result.addPayload(monitorID, payload);
 			
 			// Clear the cache.
 			cachedContexts = null;
 		}
 	}
 	
-	public void deleteContext(Object contextID) {
+	public Object deletePayload(String contextID, Long monitorID) {
+		Object result = null;
+		
 		synchronized(bindToken) {
-			// Remove from the global Map
-			ReactiveContext<?> contextFromGlobal = globalContextMap.remove(contextID);
-			
-			// Remove from the thread based map
-			ReactiveContext<?> contextFromThread = threadContextMap.remove(contextID);
-	
-			ReactiveContext<?> contextToCleanUp = contextFromGlobal != null ? contextFromGlobal : contextFromThread;
-			if (contextToCleanUp != null) {
-				contextToCleanUp.activeThread = null;
+			ReactiveContext context = globalContextMap.get(contextID);
+			if (context != null) {
+				result = context.removePayload(monitorID);
+				
+				// If the context is empty remove it.
+				if (context.isEmpty()) {
+					// Remove from the global Map
+					globalContextMap.remove(contextID);
+
+					// Remove from the thread based map
+					threadContextMap.remove(contextID);
+				}
 			}
-			
 			// Clear the cache.
 			cachedContexts = null;
 		}
+		return result;
 	}
 	
 	/**
@@ -75,9 +85,9 @@ public class ReactiveContextManager {
 	 * and associates it with the thread associated with the caller.
 	 * @param contextID
 	 */
-	public void moveContext(Object contextID) {
+	public void moveContext(String contextID) {
 		synchronized(bindToken) {
-			ReactiveContext<?> context = globalContextMap.get(contextID);
+			ReactiveContext context = globalContextMap.get(contextID);
 			if (context == null) {
 				logger.logError("Context not found, unable to move. contextID: " + contextID);
 			} else {
@@ -95,12 +105,12 @@ public class ReactiveContextManager {
 		}
 	}
 	
-	public ReactiveContext<?>[] getContextsOnThread() {
-		ReactiveContext<?>[] result = cachedContexts;
+	public ReactiveContext[] getContextsOnThread() {
+		ReactiveContext[] result = cachedContexts;
 		
 		if (result == null) {
 			synchronized (bindToken) {
-				result = cachedContexts = threadContextMap.values().toArray(new ReactiveContext<?>[]{});
+				result = cachedContexts = threadContextMap.values().toArray(new ReactiveContext[]{});
 			}
 		}
 		
