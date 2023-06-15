@@ -35,6 +35,22 @@ public class PerfMonTimer {
 		return noOpTimer;
 	}
 
+	/**
+	 * @param mon
+	 * @param reactiveContextID - used when working with a reactive model
+	 * where you want the timer to span across multiple threads in a reactive
+	 * model.
+	 * 
+	 * IMPORTANT you must be using a programming framework (i.e. Quarkus)
+	 * that supports tracing across threads.
+	 * 
+	 * @return
+	 */
+	public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
+		return noOpTimer;
+	}
+	
+	
     public static PerfMonTimer start(String key) {
     	return start(key, false);
     }
@@ -54,10 +70,33 @@ public class PerfMonTimer {
     	return noOpTimer;
     }
 
+    /**
+     * 
+     * @param key
+     * @param isDynamicKey
+	 * @param reactiveContextID - used when working with a reactive model
+	 * where you want the timer to span across multiple threads in a reactive
+	 * model.
+	 * 
+	 * IMPORTANT you must be using a programming framework (i.e. Quarkus)
+	 * that supports tracing across threads.
+	 * 
+     * @return
+     */
+    public static PerfMonTimer start(String key, boolean isDynamicKey, String reactiveContextID) {
+    	return noOpTimer;
+    }
+
     public static void abort(PerfMonTimer timer) {
+    }
+
+    public static void abort(PerfMonTimer timer, String reactiveContextID) {
     }
     
     public static void stop(PerfMonTimer timer) {
+    }
+
+    public static void stop(PerfMonTimer timer, String reactiveContextID) {
     }
     
     public static PerfMonTimer getNullTimer() {

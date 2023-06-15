@@ -165,7 +165,7 @@ public class PerfMonTimer {
         }
     }
     
-    private static void stop(PerfMonTimer timer, boolean abort) {
+    private static void stop(PerfMonTimer timer, boolean abort, String reactiveContextID) {
         if (timer != NULL_TIMER && timer != null && !timer.hasBeenStopped()) {
 	        try {
                 UniqueThreadTraceTimerKey keyInternal = timer.getUniqueInternalTimerKey();
@@ -178,29 +178,30 @@ public class PerfMonTimer {
                 	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
                     tOnStack.exitCheckpoint(keyExternal);
                 }
-                timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort);
-	        } catch (ThreadDeath th) {
-	            throw th;   // Always rethrow this error
-	        } catch (Throwable th) {
-	            logger.logError("Error stopping timer", th);
-	        } finally {
-	        	timer.flagStopped();
-	        }
-    	}
-	}
+                timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort, reactiveContextID);
+            }
+        } catch (ThreadDeath th) {
+            throw th;   // Always rethrow this error
+        } catch (Throwable th) {
+            logger.logError("Error stopping timer", th);
+        }
+    }
 
     public static void abort(PerfMonTimer timer) {
-        stop(timer, true);
+        abort(timer, null);
+    }
+
+    public static void abort(PerfMonTimer timer, String reactiveContextID) {
+        stop(timer, true, reactiveContextID);
     }
     
     public static void stop(PerfMonTimer timer) {
-        stop(timer, false);
+        stop(timer, null);
     }
-
-    private void stop(long now, boolean abort) {
+    private void stop(long now, boolean abort, String reactiveContextID) {
         if (perfMon != null) {
-            next.stop(now, abort);
-            perfMon.stop(now, abort, this);
+            next.stop(now, abort, reactiveContextID);
+            perfMon.stop(now, abort, this, reactiveContextID);
         }
     }
     

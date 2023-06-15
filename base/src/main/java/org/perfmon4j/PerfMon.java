@@ -474,12 +474,11 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-    void stop(long systemTime, boolean abort, PerfMonTimer initiatingTimer) {
+    void stop(long systemTime, boolean abort, PerfMonTimer initiatingTimer, String reactiveContextID) {
         ReferenceCount count = initiatingTimer.getReferenceCount();
         if (count == null) {
         	count = getThreadLocalReferenceCount();
         }
-        
         if (count.dec() == 0) {
             if (count.hasExternalThreadTrace) {
                 ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
@@ -618,15 +617,21 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-	private ReferenceCount getThreadLocalReferenceCount() {
-        Map<Long, ReferenceCount> map = activeMonitors.get();
-        // No need to synchronize here since this is a thread local object...
-        ReferenceCount count = map.get(monitorID);
-        if (count == null) {
-            count = new ReferenceCount(Thread.currentThread());
-            map.put(monitorID, count);
-        }
-        return count;
+	private ReferenceCount getThreadLocalReferenceCount(String reactiveContextID) {
+		ReferenceCount result = null;
+		if (reactiveContextID != null) {
+			result = (ReferenceCount)ReactiveContextManager.getContextManagerForThread().getPayload(reactiveContextID, 
+					monitorID, () -> new ReferenceCount(this));
+		} else {
+	        Map<Long, ReferenceCount> map = activeMonitors.get();
+	        // No need to synchronize here since this is a thread local object...
+	        ReferenceCount count = map.get(monitorID);
+	        if (count == null) {
+	            count = new ReferenceCount(Thread.currentThread());
+	            map.put(monitorID, count);
+	        }
+		}
+        return result;
     }
     
 /*----------------------------------------------------------------------------*/    

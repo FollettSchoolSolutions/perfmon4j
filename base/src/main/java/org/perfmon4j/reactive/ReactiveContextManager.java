@@ -3,6 +3,7 @@ package org.perfmon4j.reactive;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -36,24 +37,32 @@ public class ReactiveContextManager {
 		return threadLocal.get();
 	}
 	
+	public Object getPayload(String contextID, Long monitorID) {
+		return getPayload(contextID, monitorID, null);
+	}
 	
-	public void addPayload(String contextID, Long monitorID, Object payload) {
+	public Object getPayload(String contextID, Long monitorID, Supplier<Object> defaultSupplier) {
 		synchronized(bindToken) {
-			ReactiveContext result = globalContextMap.get(contextID);
-			if (result == null) {
-				result = new ReactiveContext();
+			ReactiveContext context = globalContextMap.get(contextID);
+			if (context == null) {
+				context = new ReactiveContext();
 
 				// Associate with the global MAP
-				globalContextMap.put(contextID, result);
+				globalContextMap.put(contextID, context);
 				
 				// Associate with the Thread
-				threadContextMap.put(contextID, result);
-				result.activeThread = this;
+				threadContextMap.put(contextID, context);
+				context.activeThread = this;
 			}
-			result.addPayload(monitorID, payload);
-			
-			// Clear the cache.
-			cachedContexts = null;
+			Object result = context.getPayload(monitorID);
+			if (result == null && defaultSupplier != null) {
+				result = defaultSupplier.get();
+				context.addPayload(monitorID, result);
+				
+				// Clear the cache.
+				cachedContexts = null;
+			}
+			return result;
 		}
 	}
 	
