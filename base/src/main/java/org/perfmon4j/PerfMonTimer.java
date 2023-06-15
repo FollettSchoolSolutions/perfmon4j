@@ -168,7 +168,7 @@ public class PerfMonTimer {
         }
     }
     
-    private static void stop(PerfMonTimer timer, boolean abort) {
+    private static void stop(PerfMonTimer timer, boolean abort, String reactiveContextID) {
         try {
             if (timer != NULL_TIMER && timer != null) {
                 UniqueThreadTraceTimerKey keyInternal = timer.getUniqueInternalTimerKey();
@@ -181,7 +181,7 @@ public class PerfMonTimer {
                 	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
                     tOnStack.exitCheckpoint(keyExternal);
                 }
-                timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort);
+                timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort, reactiveContextID);
             }
         } catch (ThreadDeath th) {
             throw th;   // Always rethrow this error
@@ -191,17 +191,25 @@ public class PerfMonTimer {
     }
 
     public static void abort(PerfMonTimer timer) {
-        stop(timer, true);
+        abort(timer, null);
+    }
+
+    public static void abort(PerfMonTimer timer, String reactiveContextID) {
+        stop(timer, true, reactiveContextID);
     }
     
     public static void stop(PerfMonTimer timer) {
-        stop(timer, false);
+        stop(timer, null);
+    }
+
+    public static void stop(PerfMonTimer timer, String reactiveContextID) {
+        stop(timer, false, reactiveContextID);
     }
     
-    private void stop(long now, boolean abort) {
+    private void stop(long now, boolean abort, String reactiveContextID) {
         if (perfMon != null) {
-            next.stop(now, abort);
-            perfMon.stop(now, abort);
+            next.stop(now, abort, reactiveContextID);
+            perfMon.stop(now, abort, reactiveContextID);
         }
     }
     
