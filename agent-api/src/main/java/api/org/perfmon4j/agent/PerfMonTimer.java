@@ -24,6 +24,9 @@ package api.org.perfmon4j.agent;
  * 		execute the code declared within this source file.  Essentially it will be running in a non-operative state.
  * 	Attached - When this class is loaded in a JVM that was booted with the Perfmon4j instrumentation agent, The agent  will
  * 		re-write this class and it will be in an operating state.
+ * 
+ *  The code is instrumented in method JavassistRuntimeTimerInjector.attachAgentToPerfMonTimerAPIClass(). 
+ * 
  */
 public class PerfMonTimer {
 	private static final PerfMonTimer noOpTimer = new PerfMonTimer();

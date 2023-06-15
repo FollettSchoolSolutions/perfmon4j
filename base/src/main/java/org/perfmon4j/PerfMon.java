@@ -625,10 +625,10 @@ public class PerfMon {
 		} else {
 	        Map<Long, ReferenceCount> map = activeMonitors.get();
 	        // No need to synchronize here since this is a thread local object...
-	        ReferenceCount count = map.get(monitorID);
-	        if (count == null) {
-	            count = new ReferenceCount(Thread.currentThread());
-	            map.put(monitorID, count);
+	       result = map.get(monitorID);
+	        if (result == null) {
+	            result = new ReferenceCount(Thread.currentThread());
+	            map.put(monitorID, result);
 	        }
 		}
         return result;
@@ -1570,7 +1570,7 @@ public class PerfMon {
     public static String buildHTMLString() {
         return buildHTMLString(PerfMon.getRootMonitor());
     }
-
+    
 
     public static ClassLoader getClassLoader() {
         return classLoader;
@@ -1635,4 +1635,9 @@ public class PerfMon {
 		
 		return version;
 	}
+	
+	public static void moveReactiveContextToCurrentThread(String contextID) {
+		ReactiveContextManager.getContextManagerForThread().moveContext(contextID);
+	}
+	
 }

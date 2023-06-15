@@ -17,13 +17,15 @@
 */
 package api.org.perfmon4j.agent;
 
-
 /**
  * This class will execute in one of two modes:
  * 	Unattached - When running in a JVM that was not booted with the Perfmon4j instrumentation agent this class will 
  * 		execute the code declared within this source file.  Essentially it will be running in a non-operative state.
  * 	Attached - When this class is loaded in a JVM that was booted with the Perfmon4j instrumentation agent, The agent  will
  * 		re-write this class and it will be in an operating state.
+ * 
+ *  The code is instrumented in method JavassistRuntimeTimerInjector.attachAgentToPerfMonAPIClass(). 
+ * 
  */
 public class PerfMon {
 	private final String name;
@@ -53,6 +55,10 @@ public class PerfMon {
     	return false;
     }
     
+    
+	public static void moveReactiveContextToCurrentThread(String contextID) {
+	}
+	    
     
     /**
      * If true this class has been rewritten by the Perfmon4j agent.
