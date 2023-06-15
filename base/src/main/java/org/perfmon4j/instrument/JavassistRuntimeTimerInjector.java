@@ -60,6 +60,10 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     final private static String IMPL_METHOD_SUFFIX = "$Impl";
     private static int serialNumber = 0;
     final private static Logger logger = LoggerFactory.initLogger(JavassistRuntimeTimerInjector.class);
+
+    private static final String PERFMON_API_CLASSNAME = "api.org.perfmon4j.agent.PerfMon";
+    private static final String PERFMON_TIMER_API_CLASSNAME = "api.org.perfmon4j.agent.PerfMonTimer";
+    private static final String PERFMON_SQL_TIME_API_CLASSNAME = "api.org.perfmon4j.agent.SQLTime";
     
     /* (non-Javadoc)
 	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#injectPerfMonTimers(javassist.CtClass, boolean)
@@ -1167,12 +1171,17 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	
     	return clazz.toBytecode();
 	}
-
+	
 	@Override
+	/**
+	 * Unit tests for this code can be found in: org.perfmon4j.instrument.PerfMonAgentAPITest
+	 */
 	public byte[] attachAgentToPerfMonAPIClass(byte[] classfileBuffer, ClassLoader loader,
 			ProtectionDomain protectionDomain) throws Exception {
     	ClassPool classPool = getClassPool(loader);
     	CtClass clazz = getClazz(classPool, classfileBuffer);
+
+    	logger.logInfo("Instrumenting agent class " + PERFMON_API_CLASSNAME + ". " );
     	
         updateIsAttachedToAgent(clazz);
         
@@ -1186,40 +1195,58 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         clazz.addConstructor(CtNewConstructor.make(src, clazz));
         
-        CtMethod getMonitorMethod = findMethod(clazz, "getMonitor", 2);
+//		public static PerfMon getMonitor(String key, boolean isDynamicPath);
         src = "{"
         		+ "org.perfmon4j.PerfMon p = org.perfmon4j.PerfMon.getMonitor($1, $2);\r\n"
         		+ "return new  api.org.perfmon4j.agent.PerfMon(p);"
         		+ "}";
+        replaceMethodIfExists(clazz, "getMonitor", src, String.class.getName(), CtClass.booleanType.getName());
         
-        getMonitorMethod.setBody(src);
+
+//    	public static boolean isConfigured();
+        src = "{\r\n"
+        		+ " return org.perfmon4j.PerfMon.isConfigured();\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "isConfigured", src);
         
+
+//    	public static void moveReactiveContextToCurrentThread(String contextID) {
+        src = "{\r\n"
+        		+ " org.perfmon4j.reactive.ReactiveContextManager.getContextManagerForThread().moveContext($1);\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "moveReactiveContextToCurrentThread", src, String.class.getName());
         
-        CtMethod isConfiguredMethod = findMethod(clazz, "isConfigured");
-        if (isConfiguredMethod != null) {
-	        src = "{\r\n"
-	        		+ " return org.perfmon4j.PerfMon.isConfigured();\r\n"  	
-	        		+ "}";
-	        isConfiguredMethod.setBody(src);
-        }
-        
-        CtMethod isActiveMethod = findMethod(clazz, "isActive");
-        isActiveMethod.setBody("return nativeObject.isActive();");
+//      public boolean isActive();
+        src = "{\r\n"
+        		+ " return nativeObject.isActive();\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "isActive", src);
+
         
         src = "public org.perfmon4j.PerfMon getNativeObject() {\r\n" 
         		+ " return nativeObject;\r\n"
         		+ "}";
         clazz.addMethod(CtMethod.make(src, clazz));
         
+    	logger.logDebug("Completed instrumenting agent class " + PERFMON_API_CLASSNAME + ". " );
+        
         return clazz.toBytecode();
 	}
-	
+
 	@Override
+	/**
+	 * Unit tests for this code can be found in: org.perfmon4j.instrument.PerfMonAgentAPITest
+	 */
 	public byte[] attachAgentToPerfMonTimerAPIClass(byte[] classfileBuffer, ClassLoader loader,
 			ProtectionDomain protectionDomain) throws Exception {
 		ClassPool classPool = getClassPool(loader);
     	CtClass clazz = getClazz(classPool, classfileBuffer);
+
+   	
+    	logger.logInfo("Instrumenting agent class " + PERFMON_TIMER_API_CLASSNAME + ". " );
     	
+    	
+//      public static boolean isAttachedToAgent();
         updateIsAttachedToAgent(clazz);
 
         clazz.addInterface(classPool.getCtClass(PerfMonTimerAgentApiWrapper.class.getName()));
@@ -1230,84 +1257,160 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "	this.nativeObject = nativeObject;\r\n"
         		+ "}";
         clazz.addConstructor(CtNewConstructor.make(src, clazz));
-        
-        CtMethod startMethod = findMethod(clazz, "start", "api.org.perfmon4j.agent.PerfMon");
+       
+//  	public static PerfMonTimer start(PerfMon mon) {
         src = "{ "
-        		+ " org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();"  	
-        		+ " return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon));"
+        		+ "org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();\r\n"
+        		+ "return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon));"
         		+ "}";
-        startMethod.setBody(src);
-      
+        replaceMethodIfExists(clazz, "start", src, PERFMON_API_CLASSNAME);
 
-        startMethod = findMethod(clazz, "start", 2);
+//    	public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
         src = "{ "
-        		+ " return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1, $2));"
+        		+ "org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();\r\n"
+        		+ "return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon, $2));"
         		+ "}";
-        startMethod.setBody(src);
+        replaceMethodIfExists(clazz, "start", src, PERFMON_API_CLASSNAME, String.class.getName());
+
         
+//      public static PerfMonTimer start(String key) {
+        src = "{ "
+        		+ " return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1));"
+        		+ "}";
+        replaceMethodIfExists(clazz, "start", src, String.class.getName());
+
+//     	public static PerfMonTimer start(String key, boolean isDynamicKey) {
+        src = "{ "
+        		+ " return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1, $2));"
+        		+ "}";
+        replaceMethodIfExists(clazz, "start", src, String.class.getName(), CtClass.booleanType.getName());
+
+//      public static PerfMonTimer start(String key, boolean isDynamicKey, String reactiveContextID) {
+        src = "{ "
+        		+ " return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1, $2, $3));"
+        		+ "}";
+        replaceMethodIfExists(clazz, "start", src, String.class.getName(), CtClass.booleanType.getName(), String.class.getName());
         
-        
-        CtMethod abortMethod = findMethod(clazz, "abort");
+
+//      public static void abort(PerfMonTimer timer)
         src = "{\r\n"
         		+ " org.perfmon4j.PerfMonTimer.abort(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject());\r\n"  	
         		+ "}";
-        abortMethod.setBody(src);
+        replaceMethodIfExists(clazz, "abort", src, PERFMON_TIMER_API_CLASSNAME);
         
+//      public static void abort(PerfMonTimer timer, String reactiveContextID)
+        src = "{\r\n"
+        		+ " org.perfmon4j.PerfMonTimer.abort(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject(), $2);\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "abort", src, PERFMON_TIMER_API_CLASSNAME, String.class.getName());
+
         
-        CtMethod stopMethod = findMethod(clazz, "stop");
+//      public static void stop(PerfMonTimer timer)
         src = "{\r\n"
         		+ " org.perfmon4j.PerfMonTimer.stop(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject());\r\n"  	
         		+ "}";
-        stopMethod.setBody(src);
+        replaceMethodIfExists(clazz, "stop", src, PERFMON_TIMER_API_CLASSNAME);
         
-
-        src = "public org.perfmon4j.PerfMonTimer getNativeObject() {\r\n" 
-        		+ " return nativeObject;\r\n"
+//      public static void stop(PerfMonTimer timer, String reactiveContextID)
+        src = "{\r\n"
+        		+ " org.perfmon4j.PerfMonTimer.stop(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject(), $2);\r\n"  	
         		+ "}";
-        clazz.addMethod(CtMethod.make(src, clazz));
+        replaceMethodIfExists(clazz, "stop", src, PERFMON_TIMER_API_CLASSNAME, String.class.getName());
+        
+        org.perfmon4j.PerfMonTimer.getNullTimer();
+        src = "{\r\n"
+        		+ " return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.getNullTimer());\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "getNullTimer", src);
+        
+    	logger.logDebug("Completed instrumenting agent class " + PERFMON_TIMER_API_CLASSNAME + ". " );
 
         return clazz.toBytecode();
 	}
 
 	@Override
+	/**
+	 * Unit tests for this code can be found in: org.perfmon4j.instrument.PerfMonAgentAPITest
+	 */
 	public byte[] attachAgentToSQLTimeAPIClass(byte[] classfileBuffer, ClassLoader loader,
 			ProtectionDomain protectionDomain) throws Exception {
+		
+    	logger.logInfo("Instrumenting agent class " + PERFMON_SQL_TIME_API_CLASSNAME + ". " );
 
+    	
 		ClassPool classPool = getClassPool(loader);
     	CtClass clazz = getClazz(classPool, classfileBuffer);
-
-        CtMethod method = findMethod(clazz, "isEnabled");
-        String src = "{ return org.perfmon4j.SQLTime.isEnabled(); }";
-        method.setBody(src);
     	
-        method = findMethod(clazz, "getSQLTime");
-        src = "{ return org.perfmon4j.SQLTime.getSQLTime(); }";
-        method.setBody(src);
+       	updateIsAttachedToAgent(clazz);
 
-    	updateIsAttachedToAgent(clazz);
+        String src = "{ return org.perfmon4j.SQLTime.isEnabled(); }";
+        replaceMethodIfExists(clazz, "isEnabled", src);
+    	
+        src = "{ return org.perfmon4j.SQLTime.getSQLTime(); }";
+        replaceMethodIfExists(clazz, "getSQLTime", src);
+
+
+    	logger.logDebug("Completed instrumenting agent class " + PERFMON_SQL_TIME_API_CLASSNAME + ". " );
         
         return clazz.toBytecode();
 	}
 	
 	private void updateIsAttachedToAgent(CtClass clazz) throws Exception {
+    	String methodDescription = buildMethodDescription(clazz, "isAttachedToAgent"); 
+		
         CtMethod method = findMethod(clazz, "isAttachedToAgent");
         if (method != null) {
-	        method.setBody("return true;");
+        	String newMethodBody = "return true;";
+        	method.setBody(newMethodBody);
+        	logger.logDebug("Replacing method " + methodDescription + " with body: '" + newMethodBody + "'");
         } else {
-        	throw new Exception("Expected API class to have isAttachedToAgent method.  Class:" + clazz.getName());
+        	throw new Exception("Unable to attach agent class.  Could not find method: " + methodDescription);
         }
 	}
 	
-	
 	private CtMethod findMethod(CtClass clazz, String methodName) throws Exception {
-		return findMethod(clazz, methodName, -1);
+		return findMethod(clazz, methodName, new String[]{});
 	}
 
-	
-	private CtMethod findMethod(CtClass clazz, String methodName, int numParameters) throws Exception {
+    private void replaceMethodIfExists(CtClass clazz, String methodName, String newMethodBody) throws Exception {
+    	replaceMethodIfExists(clazz, methodName, newMethodBody, new String[] {});
+    }
+
+    private void replaceMethodIfExists(CtClass clazz, String methodName, String newMethodBody, String... argumentTypes) throws Exception {
+    	String methodDescription = logger.isDebugEnabled() ? buildMethodDescription(clazz, methodName, argumentTypes) : ""; 
+    	
+        CtMethod method = findMethod(clazz, methodName, argumentTypes);
+        if (method != null) {
+        	method.setBody(newMethodBody);
+        	logger.logDebug("Replacing method " + methodDescription + " with body: '" + newMethodBody + "'");
+        } else {
+        	logger.logDebug("Skipping update of method " + methodDescription + ". Method not found.");
+        	
+        }
+    }
+
+    private String buildMethodDescription(CtClass clazz, String methodName, String... argumentTypes) {
+    	StringBuilder builder =  new StringBuilder(clazz.getName() + "." + methodName + "(");
+    	
+    	boolean firstArg = true;
+    	for (String argumentType : argumentTypes) {
+    		if (!firstArg) {
+    			builder.append(", ");
+    		} else {
+    			firstArg = false;
+    		}
+    		builder.append(argumentType);
+    	}
+    	builder.append(")");
+    	
+    	return builder.toString();
+    }
+    
+
+	private CtMethod findMethod(CtClass clazz, String methodName, String... argumentTypes) throws Exception {
 		for (CtMethod method : clazz.getDeclaredMethods()) {
 			if (methodName.equals(method.getName())
-					&& (numParameters == -1 || method.getParameterTypes().length == numParameters)
+					&& parameterTypesMatch(method, argumentTypes)
 					) {
 				return method;
 			}
@@ -1315,20 +1418,22 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 		
 		return null;
 	}
-
-	private CtMethod findMethod(CtClass clazz, String methodName, String argumentType) throws Exception {
-		for (CtMethod method : clazz.getDeclaredMethods()) {
-			if (methodName.equals(method.getName())
-					&&  method.getParameterTypes().length == 1
-					&&  argumentType.equals(method.getParameterTypes()[0].getName())
-					) {
-				return method;
+	
+	
+	private boolean parameterTypesMatch(CtMethod method, String... argumentTypes) throws NotFoundException {
+		boolean result = true;
+		
+		CtClass[] parameters = method.getParameterTypes();
+		if (parameters.length == argumentTypes.length) {
+			for (int i = 0; i < parameters.length && result; i++) {
+				result = argumentTypes[i].equals(parameters[i].getName());
 			}
+		} else {
+			result = false;
 		}
 		
-		return null;
+		return result;
 	}
-	
 	
 	
 	private ClassPool getClassPool(ClassLoader loader) {
