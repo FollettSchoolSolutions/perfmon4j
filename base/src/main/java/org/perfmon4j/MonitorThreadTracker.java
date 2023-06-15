@@ -221,6 +221,9 @@ public class MonitorThreadTracker {
 	}
 
 	static interface Tracker {
+		public String getReactiveCategoryName();
+		public boolean isReactiveRequest();
+		
 		public Thread getThread();  
 		
 		public void setPrevious(Tracker previous);
@@ -239,7 +242,12 @@ public class MonitorThreadTracker {
 		
 		private TrackerValue(Tracker tracker) {
 			this.thread = tracker.getThread();
-			this.threadName = this.thread != null ?  thread.getName() : MonitorThreadTracker.REMOVED_THREAD;
+			String reactiveCategoryName = tracker.getReactiveCategoryName();
+			if (reactiveCategoryName != null) {
+				this.threadName = reactiveCategoryName;
+			} else {
+				this.threadName = this.thread != null ?  thread.getName() : MonitorThreadTracker.REMOVED_THREAD;
+			}
 			this.startTime = tracker.getStartTime(); 
 		}
 		/**

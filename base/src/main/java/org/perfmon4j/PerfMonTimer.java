@@ -45,8 +45,12 @@ public class PerfMonTimer {
         this.perfMon = perfMon;
         this.next = next;
     }
-
+    
     public static PerfMonTimer start(PerfMon mon) {
+    	return start(mon, null);
+    }
+
+    public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
         if (!PerfMon.isConfigured() && !ExternalAppender.isActive()) {
             return NULL_TIMER;
         }
@@ -79,7 +83,7 @@ public class PerfMonTimer {
 		            // To keep track of the checkpoints for thread tracing we 
 		            // must be able to identify the timer passed to PerfMonTimer.stop()
 		            result = new TimerWrapper(result, wrapperInternalKey, wrapperExternalKey);
-	            	result.start(startTime);
+	            	result.start(startTime, reactiveContextID);
 	            }
 	        } catch (ThreadDeath th) {
 	            throw th;   // Always rethrow this error
@@ -93,7 +97,22 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer start(String key) {
-    	return start(key, false);
+    	return start(key, false, null);
+    }
+
+    /**
+     * Pass in true if this is a dynamically generated key (i.e. not a method
+     * name or some know value.  This prevents monitors from being created
+     * that are not actively attached to appenders.
+     * 
+     * for example:
+     * 	   private void lookupUser(String userName) {
+     * 		    PerfMonTimer.start("lookupUser." + userName, true); 
+     * 			...
+     * 	   }
+     */
+    public static PerfMonTimer start(String key, boolean isDynamicKey) {
+    	return start(key, isDynamicKey, null);
     }
     
     /**
@@ -107,7 +126,7 @@ public class PerfMonTimer {
      * 			...
      * 	   }
      */
-    public static PerfMonTimer start(String key, boolean isDynamicKey) {
+    public static PerfMonTimer start(String key, boolean isDynamicKey, String reactiveContextID) {
         PerfMonTimer result = NULL_TIMER;
         
         try {
@@ -116,7 +135,7 @@ public class PerfMonTimer {
             		setLastFullyQualifiedStartNameForThread(key);
             	}
             	try {
-                    result = start(PerfMon.getMonitor(key, isDynamicKey));
+                    result = start(PerfMon.getMonitor(key, isDynamicKey), reactiveContextID);
             	} finally {
             		// Always clear the lastFullyQualifiedName.
             		if (!isDynamicKey) {
@@ -134,11 +153,15 @@ public class PerfMonTimer {
         return result;
     }
 
-    
     private void start(long now) {
+    	start(now, null);
+    }
+
+    
+    private void start(long now, String reactiveContextID) {
         if (perfMon != null) {
-            perfMon.start(now, this);
-            next.start(now);
+            perfMon.start(now, this, reactiveContextID);
+            next.start(now, reactiveContextID);
         }
     }
     

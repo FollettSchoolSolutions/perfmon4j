@@ -288,6 +288,16 @@ public class MonitorThreadTrackerTest extends PerfMonTestCase {
 		public long getStartTime() {
 			return startTime;
 		}
+
+		@Override
+		public boolean isReactiveRequest() {
+			return false;
+		}
+
+		@Override
+		public String getReactiveCategoryName() {
+			return null;
+		}
     }
     	
     	

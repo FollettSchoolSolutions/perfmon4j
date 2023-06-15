@@ -42,6 +42,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.MonitorThreadTracker.Tracker;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
+import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.ActiveThreadMonitor;
@@ -405,14 +406,20 @@ public class PerfMon {
         return result;
     }
     
-/*----------------------------------------------------------------------------*/ 
+    /*----------------------------------------------------------------------------*/ 
     /**
      * Package level...
      * Applications should use PerfMonTimer.start() to start a timer
      * using this monitor!
      */
-    void start(long systemTime, PerfMonTimer startingTimer) {
-        ReferenceCount count = getThreadLocalReferenceCount();
+    void start(long systemTime, PerfMonTimer startingTimer, String reactiveContextID) {
+    	ReferenceCount count = null;
+    	if (reactiveContextID != null) {
+    		count = new ReferenceCount(this);
+    		ReactiveContextManager.getContextManagerForThread().addPayload(reactiveContextID, monitorID, count);
+    	} else {
+    		count = getThreadLocalReferenceCount();
+    	}
         if (count.inc(systemTime) == 1) {
         	// Save off the starting timer so that it can
         	// stop this instance even if it has moved to another thread.
@@ -664,11 +671,12 @@ public class PerfMon {
     MonitorThreadTracker getActiveThreadList() {
 		return activeThreadList;
 	}
-    
+  
 /*----------------------------------------------------------------------------*/    
     static class ReferenceCount implements MonitorThreadTracker.Tracker {
     	/** Store as a weak reference in case owningThread is aborted and Garbage Collected **/
     	private final WeakReference<Thread> owningThread;
+    	private final String reactiveCategoryName;
     	
         private AtomicInteger refCount = new AtomicInteger(0);
         private long startTime;
@@ -680,6 +688,12 @@ public class PerfMon {
         
         ReferenceCount(Thread owningThread) {
         	this.owningThread = new WeakReference<Thread>(owningThread);
+        	this.reactiveCategoryName = null;
+        }
+        
+        ReferenceCount(PerfMon reactiveMonitor) {
+        	this.owningThread = null;
+        	this.reactiveCategoryName = reactiveMonitor.getName();
         }
         
         /**
@@ -729,7 +743,7 @@ public class PerfMon {
 		 * be prepared for this method to return null.
 		 */
 		public Thread getThread() {
-			return owningThread.get();
+			return owningThread == null ? null : owningThread.get();
 		}
 		
 		@Override
@@ -755,6 +769,16 @@ public class PerfMon {
 		@Override
 		public long getStartTime() {
 			return startTime;
+		}
+
+		@Override
+		public String getReactiveCategoryName() {
+			return reactiveCategoryName;
+		}
+
+		@Override
+		public boolean isReactiveRequest() {
+			return reactiveCategoryName != null;
 		}
        
     }

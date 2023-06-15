@@ -4,42 +4,61 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.perfmon4j.PerfMon;
-
-public abstract class ReactiveContext<T extends Object> {
-	private final Object contextID;
-	
+public class ReactiveContext {
 	private final Serializable payloadLockToken = new Serializable() {
 		private static final long serialVersionUID = 1L;
 	};
-	private final Map<PerfMon, T> payloadMap= new HashMap<PerfMon,T>();
+	private final Map<Long, Object> payloadMap= new HashMap<Long, Object>();
 	
 	/**
 	 * This member must only be modified by the ReactiveContextManager 
 	 * class
 	 */
 	volatile ReactiveContextManager activeThread = null;
+	private volatile boolean empty = true;
+	private volatile Object[] cachedPayloads = null;
 	
-	public ReactiveContext(Object contextID) {
-		this.contextID = contextID;
-	}
-	
-	public Object getContextID() {
-		return contextID;
+	public ReactiveContext() {
 	}
 
-	public T getPayload(PerfMon owner) {
+	public Object getPayload(Long monitorID) {
 		synchronized (payloadLockToken) {
-			T result = payloadMap.get(owner);
-			
-			if (result == null) {
-				result = newPayload();
-				payloadMap.put(owner, result);
-			}
+			return payloadMap.get(monitorID);
+		}
+	}
+	
+	public void addPayload(Long monitorID, Object payload) {
+		synchronized (payloadLockToken) {
+			payloadMap.put(monitorID, payload);
+			empty = false;
+			cachedPayloads = null;
+		}
+	}
+
+	public Object removePayload(Long monitorID) {
+		synchronized (payloadLockToken) {
+			Object result = payloadMap.remove(monitorID); 
+			empty = payloadMap.isEmpty();
+			cachedPayloads = null;
 			return result;
 		}
 	}
 	
+	public Object[] getPayloads() {
+		Object[] result = cachedPayloads;
+		
+		if (result == null) {
+			synchronized (payloadLockToken) {
+				result = cachedPayloads = payloadMap.values().toArray();
+			}
+		}
+		
+		return result;
+	}
 	
-	protected abstract T newPayload(); 
+	public boolean isEmpty() {
+		synchronized (payloadLockToken) {
+			return empty;
+		}
+	}
 }
