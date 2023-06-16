@@ -20,9 +20,14 @@ public class PerfmonHandler extends GenericFilter implements Handler<RoutingCont
 		Request request = new Request(event);
 		Response response = new Response(event);
 		
-		AsyncFinishRequestCallback callback = this.startAsyncRequest(request, response);
+		final String requestContext = TracingContextProvider.REQUEST_CONTEXT.get().initContext();
+		AsyncFinishRequestCallback callback = this.startAsyncRequest(request, response, requestContext);
 		if (callback != null) {
-			event.addBodyEndHandler(callback::finishRequest);
+			event.addEndHandler()
+				.andThen((E) -> {
+					callback.finishRequest(requestContext);
+					TracingContextProvider.REQUEST_CONTEXT.get().clearContext();
+				});
 		}
 		event.next();
 	}

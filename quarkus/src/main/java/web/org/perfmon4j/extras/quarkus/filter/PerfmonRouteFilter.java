@@ -11,7 +11,6 @@ import web.org.perfmon4j.extras.quarkus.filter.impl.PerfmonHandler;
 
 @Singleton
 public class PerfmonRouteFilter {
-
 	
 	public void init(@Observes Filters filters) {
 		filters.register(new PerfmonRouteFilter().getHandler(), 0);
