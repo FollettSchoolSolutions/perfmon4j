@@ -141,10 +141,10 @@ public abstract class GenericFilter {
         private final Long localStartTime;
         private final Long localSQLStartTime;
 		
-		private AsyncFinishRequestCallback(HttpRequest request, HttpResponse response) {
+		private AsyncFinishRequestCallback(HttpRequest request, HttpResponse response, String requestContext) {
 			this.request = request;
 			this.response = response;
-			timer = startTimerForRequest(request);
+			timer = startTimerForRequest(request, requestContext);
 			localStartTime = outputRequestAndDuration ? Long.valueOf(System.currentTimeMillis()) : null;
     		localSQLStartTime = outputRequestAndDuration && SQLTime.isEnabled() ?  Long.valueOf(SQLTime.getSQLTime()) : null;
     		/*			
@@ -182,7 +182,7 @@ public abstract class GenericFilter {
     		*/    		
 		}
 		
-		public void finishRequest(Object unused) {
+		public void finishRequest(String requestContext) {
 			boolean doAbort = false;
 			
 			try {
@@ -201,9 +201,9 @@ public abstract class GenericFilter {
 	            }
 				
 	            if (doAbort) {
-	            	PerfMonTimer.abort(timer);
+	            	PerfMonTimer.abort(timer, requestContext);
 	            } else {
-	            	PerfMonTimer.stop(timer);
+	            	PerfMonTimer.stop(timer, requestContext);
 		        	if ((localStartTime != null) && !skipLogOutput() ) {
 		        		outputToLog(request, localStartTime, localSQLStartTime);
 		        	}
@@ -230,14 +230,14 @@ public abstract class GenericFilter {
 		
 	}
 
-	public AsyncFinishRequestCallback startAsyncRequest(HttpRequest request, HttpResponse response) {
+	public AsyncFinishRequestCallback startAsyncRequest(HttpRequest request, HttpResponse response, String requestContext) {
 		AsyncFinishRequestCallback result = null;
 
 		boolean skip = ((skipTimerOnURLPattern != null) 
 				&& skipTimerOnURLPattern.matcher(request.getServletPath()).matches());
 		
 		if (!skip) {
-			result = new AsyncFinishRequestCallback(request, response);
+			result = new AsyncFinishRequestCallback(request, response, requestContext);
 		}
 		
 		return result;
@@ -258,7 +258,7 @@ public abstract class GenericFilter {
 			}
 */
 			try {
-				callback = startAsyncRequest(request, response);
+				callback = startAsyncRequest(request, response, null);
 				chain.next(request, response, chain);
 			} finally {
 				if (callback != null) {
@@ -305,7 +305,7 @@ public abstract class GenericFilter {
 		logInfo(duration + sqlDurationStr + " " + buildRequestDescription(request));
 	}
 	
-    protected PerfMonTimer startTimerForRequest(HttpRequest request ) {
+    protected PerfMonTimer startTimerForRequest(HttpRequest request, String requestContext) {
         PerfMonTimer result = PerfMonTimer.getNullTimer();
         if (PerfMon.isConfigured()) {
         	String requestPath = request.getServletPath();
@@ -314,7 +314,7 @@ public abstract class GenericFilter {
         			requestPath = requestPath.substring(0, requestPath.length()-1);
         		}
         		String monitorCategory = servletPathTransformer.transformToCategory(requestPath);
-                result = PerfMonTimer.start(monitorCategory, true);
+                result = PerfMonTimer.start(monitorCategory, true, requestContext);
         	}
         }
         return result;
