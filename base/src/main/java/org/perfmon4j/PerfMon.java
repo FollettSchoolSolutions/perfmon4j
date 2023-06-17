@@ -470,6 +470,11 @@ public class PerfMon {
     void stop(long systemTime, boolean abort, String reactiveContextID) {
         ReferenceCount count = getThreadLocalReferenceCount(reactiveContextID);
         if (count.dec() == 0) {
+        	if (reactiveContextID != null) {
+        		// Clean up the reactive context
+				ReactiveContextManager.getContextManagerForThread().deletePayload(reactiveContextID, 
+					monitorID);
+        	}
             if (count.hasExternalThreadTrace) {
                 ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
                 ThreadTraceData data = tOnStack.stop(getName());
@@ -611,7 +616,7 @@ public class PerfMon {
 		ReferenceCount result = null;
 		if (reactiveContextID != null) {
 			result = (ReferenceCount)ReactiveContextManager.getContextManagerForThread().getPayload(reactiveContextID, 
-					monitorID, () -> new ReferenceCount(this));
+					monitorID, () -> new ReferenceCount(this, reactiveContextID));
 		} else {
 	        Map<Long, ReferenceCount> map = activeMonitors.get();
 	        // No need to synchronize here since this is a thread local object...
@@ -686,9 +691,9 @@ public class PerfMon {
         	this.reactiveCategoryName = null;
         }
         
-        ReferenceCount(PerfMon reactiveMonitor) {
+        ReferenceCount(PerfMon reactiveMonitor, String reactiveContextID) {
         	this.owningThread = null;
-        	this.reactiveCategoryName = reactiveMonitor.getName();
+        	this.reactiveCategoryName = reactiveContextID + "("  + reactiveMonitor.getName() + ")";
         }
         
         /**
