@@ -1261,21 +1261,21 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 //  	public static PerfMonTimer start(PerfMon mon) {
         src = "{ "
         		+ "org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();\r\n"
-        		+ "return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon));"
+        		+ "return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon));"
         		+ "}";
         replaceMethodIfExists(clazz, "start", src, PERFMON_API_CLASSNAME);
 
 //    	public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
         src = "{ "
         		+ "org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();\r\n"
-        		+ "return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon, $2));"
+        		+ "return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start(nativePerfMon, $2));"
         		+ "}";
         replaceMethodIfExists(clazz, "start", src, PERFMON_API_CLASSNAME, String.class.getName());
 
         
 //      public static PerfMonTimer start(String key) {
         src = "{ "
-        		+ " return new  api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1));"
+        		+ " return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1));"
         		+ "}";
         replaceMethodIfExists(clazz, "start", src, String.class.getName());
 
@@ -1294,26 +1294,30 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 
 //      public static void abort(PerfMonTimer timer)
         src = "{\r\n"
-        		+ " org.perfmon4j.PerfMonTimer.abort(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject());\r\n"  	
+        		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
+        		+ "org.perfmon4j.PerfMonTimer.abort(nativeTimer);\r\n"  	
         		+ "}";
         replaceMethodIfExists(clazz, "abort", src, PERFMON_TIMER_API_CLASSNAME);
         
 //      public static void abort(PerfMonTimer timer, String reactiveContextID)
         src = "{\r\n"
-        		+ " org.perfmon4j.PerfMonTimer.abort(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject(), $2);\r\n"  	
+        		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
+        		+ "org.perfmon4j.PerfMonTimer.abort(nativeTimer, $2);\r\n"  	
         		+ "}";
         replaceMethodIfExists(clazz, "abort", src, PERFMON_TIMER_API_CLASSNAME, String.class.getName());
 
         
 //      public static void stop(PerfMonTimer timer)
         src = "{\r\n"
-        		+ " org.perfmon4j.PerfMonTimer.stop(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject());\r\n"  	
+        		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
+        		+ "org.perfmon4j.PerfMonTimer.stop(nativeTimer);\r\n"  	
         		+ "}";
         replaceMethodIfExists(clazz, "stop", src, PERFMON_TIMER_API_CLASSNAME);
         
 //      public static void stop(PerfMonTimer timer, String reactiveContextID)
         src = "{\r\n"
-        		+ " org.perfmon4j.PerfMonTimer.stop(((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject(), $2);\r\n"  	
+        		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
+        		+ "org.perfmon4j.PerfMonTimer.stop(nativeTimer, $2);\r\n"  	
         		+ "}";
         replaceMethodIfExists(clazz, "stop", src, PERFMON_TIMER_API_CLASSNAME, String.class.getName());
         
@@ -1322,6 +1326,11 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ " return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.getNullTimer());\r\n"  	
         		+ "}";
         replaceMethodIfExists(clazz, "getNullTimer", src);
+        
+        src = "public org.perfmon4j.PerfMonTimer getNativeObject() {\r\n"  
+        		+ " return nativeObject;\r\n" 
+        		+ "}"; 
+        clazz.addMethod(CtMethod.make(src, clazz));         
         
     	logger.logDebug("Completed instrumenting agent class " + PERFMON_TIMER_API_CLASSNAME + ". " );
 
