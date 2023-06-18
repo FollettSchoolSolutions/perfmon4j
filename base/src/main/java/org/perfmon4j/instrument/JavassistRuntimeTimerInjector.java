@@ -1215,6 +1215,13 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ " org.perfmon4j.reactive.ReactiveContextManager.getContextManagerForThread().moveContext($1);\r\n"  	
         		+ "}";
         replaceMethodIfExists(clazz, "moveReactiveContextToCurrentThread", src, String.class.getName());
+
+//    	public static void dissociateReactiveContextFromCurrentThread(String contextID) {
+        src = "{\r\n"
+        		+ " org.perfmon4j.reactive.ReactiveContextManager.getContextManagerForThread().dissociateContextFromThread($1);\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "dissociateReactiveContextFromCurrentThread", src, String.class.getName());
+        
         
 //      public boolean isActive();
         src = "{\r\n"

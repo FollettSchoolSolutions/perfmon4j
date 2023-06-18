@@ -1,4 +1,4 @@
-package web.org.perfmon4j.extras.quarkus.filter.impl;
+package web.org.perfmon4j.extras.quarkus.filter.impl.vertx;
 
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
@@ -7,10 +7,10 @@ import web.org.perfmon4j.extras.genericfilter.HttpResponse;
 
 
 
-class Response implements HttpResponse {
+public class Response implements HttpResponse {
 	private final HttpServerResponse response;
 
-	Response(RoutingContext event) {
+	public Response(RoutingContext event) {
 		this.response = event.response();
 	}
 
