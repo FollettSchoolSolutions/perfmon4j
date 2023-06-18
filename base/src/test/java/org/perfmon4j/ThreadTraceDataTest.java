@@ -25,14 +25,14 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.GregorianCalendar;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
+import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
 import org.perfmon4j.util.JDBCHelper;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class ThreadTraceDataTest extends SQLTest {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";

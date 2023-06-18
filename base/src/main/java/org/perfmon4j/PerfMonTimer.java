@@ -20,7 +20,7 @@
 */
 package org.perfmon4j;
 
-import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
+import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -66,8 +66,8 @@ public class PerfMonTimer {
 	        	long startTime = MiscHelper.currentTimeWithMilliResolution(); 
 	            monitorName = mon.getName();
 	            if (haveActiveThreadTrace) {
-	                ThreadTraceMonitor.ThreadTracesOnStack tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
-	                ThreadTraceMonitor.ThreadTracesOnStack tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+	                ThreadTracesBase tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+	                ThreadTracesBase tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
 
 	            	final boolean haveActiveInternalThreadTrace = tInternalOnStack.isActive();
 	            	final boolean haveActiveExternalThreadTrace = tExternalOnStack.isActive();
@@ -173,12 +173,12 @@ public class PerfMonTimer {
             if (timer != NULL_TIMER && timer != null) {
                 UniqueThreadTraceTimerKey keyInternal = timer.getUniqueInternalTimerKey();
                 if (keyInternal != null) {
-                	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+                	ThreadTracesBase tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
                     tOnStack.exitCheckpoint(keyInternal);
                 }
                 UniqueThreadTraceTimerKey keyExternal = timer.getUniqueExternalTimerKey();
                 if (keyExternal != null) {
-                	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+                	ThreadTracesBase tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
                     tOnStack.exitCheckpoint(keyExternal);
                 }
                 timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort, reactiveContextID);

@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
+import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.util.JDBCHelper;
 import org.perfmon4j.util.MiscHelper;
