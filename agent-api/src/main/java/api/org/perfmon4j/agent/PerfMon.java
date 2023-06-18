@@ -58,7 +58,9 @@ public class PerfMon {
     
 	public static void moveReactiveContextToCurrentThread(String contextID) {
 	}
-	    
+	  
+	public static void dissociateReactiveContextFromCurrentThread(String contextID) {
+	}
     
     /**
      * If true this class has been rewritten by the Perfmon4j agent.

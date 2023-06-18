@@ -1645,4 +1645,7 @@ public class PerfMon {
 		ReactiveContextManager.getContextManagerForThread().moveContext(contextID);
 	}
 	
+	public static void dissociateReactiveContextFromCurrentThread(String contextID) {
+		ReactiveContextManager.getContextManagerForThread().dissociateContextFromThread(contextID);
+	}
 }

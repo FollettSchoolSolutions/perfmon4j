@@ -1,13 +1,13 @@
-package web.org.perfmon4j.extras.quarkus.filter.impl;
+package web.org.perfmon4j.extras.quarkus.filter.impl.vertx;
 
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import web.org.perfmon4j.extras.genericfilter.HttpRequest;
 
-class Request implements HttpRequest {
+public class Request implements HttpRequest {
 	private final HttpServerRequest request;
 	
-	Request(RoutingContext event) {
+	public Request(RoutingContext event) {
 		this.request = event.request();
 	}
 	

@@ -136,15 +136,19 @@ public abstract class GenericFilter {
 
 	public class AsyncFinishRequestCallback {
 		private final HttpRequest request;
-		private final HttpResponse response;
+		private final String reactiveContext;
 		private final PerfMonTimer timer;
         private final Long localStartTime;
         private final Long localSQLStartTime;
-		
-		private AsyncFinishRequestCallback(HttpRequest request, HttpResponse response, String requestContext) {
+        
+		private AsyncFinishRequestCallback(HttpRequest request) {
+			this(request, null);
+		}
+        
+		private AsyncFinishRequestCallback(HttpRequest request, String reactiveContext) {
 			this.request = request;
-			this.response = response;
-			timer = startTimerForRequest(request, requestContext);
+			this.reactiveContext = reactiveContext;
+			timer = startTimerForRequest(request, reactiveContext);
 			localStartTime = outputRequestAndDuration ? Long.valueOf(System.currentTimeMillis()) : null;
     		localSQLStartTime = outputRequestAndDuration && SQLTime.isEnabled() ?  Long.valueOf(SQLTime.getSQLTime()) : null;
     		/*			
@@ -181,8 +185,8 @@ public abstract class GenericFilter {
     		        	}			
     		*/    		
 		}
-		
-		public void finishRequest(String requestContext) {
+
+		public void finishRequest(HttpResponse response) {
 			boolean doAbort = false;
 			
 			try {
@@ -201,9 +205,9 @@ public abstract class GenericFilter {
 	            }
 				
 	            if (doAbort) {
-	            	PerfMonTimer.abort(timer, requestContext);
+	            	PerfMonTimer.abort(timer, reactiveContext);
 	            } else {
-	            	PerfMonTimer.stop(timer, requestContext);
+	            	PerfMonTimer.stop(timer, reactiveContext);
 		        	if ((localStartTime != null) && !skipLogOutput() ) {
 		        		outputToLog(request, localStartTime, localSQLStartTime);
 		        	}
@@ -230,14 +234,14 @@ public abstract class GenericFilter {
 		
 	}
 
-	public AsyncFinishRequestCallback startAsyncRequest(HttpRequest request, HttpResponse response, String requestContext) {
+	public AsyncFinishRequestCallback startAsyncRequest(HttpRequest request, String reactiveContext) {
 		AsyncFinishRequestCallback result = null;
 
 		boolean skip = ((skipTimerOnURLPattern != null) 
 				&& skipTimerOnURLPattern.matcher(request.getServletPath()).matches());
 		
 		if (!skip) {
-			result = new AsyncFinishRequestCallback(request, response, requestContext);
+			result = new AsyncFinishRequestCallback(request, reactiveContext);
 		}
 		
 		return result;
@@ -258,11 +262,11 @@ public abstract class GenericFilter {
 			}
 */
 			try {
-				callback = startAsyncRequest(request, response, null);
+				callback = startAsyncRequest(request, null);
 				chain.next(request, response, chain);
 			} finally {
 				if (callback != null) {
-					callback.finishRequest(null);
+					callback.finishRequest(response);
 				}
 			}
 		} finally {
