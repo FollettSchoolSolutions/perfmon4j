@@ -429,7 +429,9 @@ public class PerfMon {
         		ExternalThreadTraceConfig externalConfig = externalThreadTraceQueue.assignToThread();
 	        	if (externalConfig != null) {
 	        		count.hasExternalThreadTrace = true;
-	                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+	        		
+	        		
+	                ThreadTracesBase tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
 	                tOnStack.start(getName(), externalConfig.getMaxDepth(), externalConfig.getMinDurationToCapture(), systemTime);
 	                tOnStack.setExternalConfig(externalConfig);
 	        	}
@@ -486,7 +488,7 @@ public class PerfMon {
 					monitorID);
         	}
             if (count.hasExternalThreadTrace) {
-                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+                ThreadTracesBase tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
                 ThreadTraceData data = tOnStack.stop(getName());
                 count.hasExternalThreadTrace = false;
                 ExternalThreadTraceConfig externalConfig = tOnStack.popExternalConfig();
