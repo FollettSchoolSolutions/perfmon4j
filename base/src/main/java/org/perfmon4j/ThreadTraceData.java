@@ -51,11 +51,11 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     private long sqlEndTime = -1;
     private boolean overflow;
     
-    ThreadTraceData(UniqueThreadTraceTimerKey key, long startTime) {
-        this(key, null, startTime);
+    ThreadTraceData(UniqueThreadTraceTimerKey key, long startTime, long sqlStartTime) {
+        this(key, null, startTime, sqlStartTime);
     }
 
-    ThreadTraceData(UniqueThreadTraceTimerKey key, ThreadTraceData parent, long startTime) {
+    ThreadTraceData(UniqueThreadTraceTimerKey key, ThreadTraceData parent, long startTime, long sqlStartTime) {
         this.key = key;
         String nameToUse = key.getMonitorName();
         
@@ -75,7 +75,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
         
         this.parent = parent;
         this.startTime = startTime;
-        this.sqlStartTime = SQLTime.getSQLTime();
+        this.sqlStartTime = sqlStartTime;
         if (parent != null) {
             parent.children.add(this);
             depth = parent.depth + 1;
@@ -97,9 +97,9 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
         return endTime;
     }
 
-    void stop() {
-        endTime = MiscHelper.currentTimeWithMilliResolution();
-        sqlEndTime = SQLTime.getSQLTime();
+    void stop(long stopTime, long sqlStopTime) {
+        endTime = stopTime;
+        sqlEndTime = sqlStopTime;
     }
     
     ThreadTraceData getParent() {

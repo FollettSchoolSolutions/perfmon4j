@@ -304,6 +304,11 @@ public class MonitorThreadTrackerTest extends PerfMonTestCase {
 		public ReactiveContext getOwningContext() {
 			return null;
 		}
+
+		@Override
+		public long getCurrentSQLMillis() {
+			return 0;
+		}
     }
     	
     	
