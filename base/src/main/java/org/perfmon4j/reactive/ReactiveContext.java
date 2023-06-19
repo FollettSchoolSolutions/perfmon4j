@@ -13,6 +13,9 @@ public class ReactiveContext {
 	private final Serializable payloadLockToken = new Serializable() {
 		private static final long serialVersionUID = 1L;
 	};
+	private static final AtomicInteger activeThreadTraceFlag = new AtomicInteger(0);
+
+	
 	private final Map<Long, Object> payloadMap= new HashMap<Long, Object>();
 	
 	private final Serializable activeThreadLockToken = new Serializable() {
@@ -33,7 +36,6 @@ public class ReactiveContext {
 	
 	private volatile boolean empty = true;
 	private volatile Object[] cachedPayloads = null;
-	private final AtomicInteger activeThreadTraceFlag = new AtomicInteger(0);
 	private final ThreadTracesBase internalMonitorsOnContext = new ThreadTracesOnReactiveContext(this, PerfMon.MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS);
 	private final ThreadTracesBase externalMonitorsOnContext = new ThreadTracesOnReactiveContext(this, PerfMon.MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS);
 
@@ -120,7 +122,7 @@ public class ReactiveContext {
 		}
 	}
 	
-	public boolean isActiveThreadTracesOnContext() {
+	static public boolean isActiveThreadTracesOnContext() {
 		return activeThreadTraceFlag.get() > 0;
 	}
 
@@ -148,13 +150,12 @@ public class ReactiveContext {
 		
 		@Override
 		public void incrementActiveThreadTraceFlag() {
-			context.activeThreadTraceFlag.incrementAndGet();
+			ReactiveContext.activeThreadTraceFlag.incrementAndGet();
 		}
 
 		@Override
 		public void decrementActiveThreadTraceFlag() {
-			
-			context.activeThreadTraceFlag.decrementAndGet();
+			ReactiveContext.activeThreadTraceFlag.decrementAndGet();
 		}
 
 		@Override

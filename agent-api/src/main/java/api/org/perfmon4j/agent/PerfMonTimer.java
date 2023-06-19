@@ -93,15 +93,9 @@ public class PerfMonTimer {
     public static void abort(PerfMonTimer timer) {
     }
 
-    public static void abort(PerfMonTimer timer, String reactiveContextID) {
-    }
-    
     public static void stop(PerfMonTimer timer) {
     }
 
-    public static void stop(PerfMonTimer timer, String reactiveContextID) {
-    }
-    
     public static PerfMonTimer getNullTimer() {
     	return noOpTimer;
     }

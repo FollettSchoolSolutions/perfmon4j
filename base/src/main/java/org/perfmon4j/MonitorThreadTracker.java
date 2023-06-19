@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotCounter.Display;
 import org.perfmon4j.instrument.SnapShotProvider;
+import org.perfmon4j.reactive.ReactiveContext;
 import org.perfmon4j.util.MiscHelper;
 
 /**
@@ -223,7 +224,8 @@ public class MonitorThreadTracker {
 	static interface Tracker {
 		public String getReactiveCategoryName();
 		public boolean isReactiveRequest();
-		
+		public ReactiveContext getOwningContext();
+
 		public Thread getThread();  
 		
 		public void setPrevious(Tracker previous);
