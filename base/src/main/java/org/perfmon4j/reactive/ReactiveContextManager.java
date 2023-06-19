@@ -4,19 +4,25 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
 public class ReactiveContextManager {
 	private static final Logger logger = LoggerFactory.initLogger(ReactiveContextManager.class);
-
+	private static final ReactiveContext[] EMPTY_CONTEXT_ARRAY = new ReactiveContext[] {};
+	
 	/** GLOBAL Members - Start **/
 	private static final Serializable bindToken = new Serializable() {
 		private static final long serialVersionUID = 1L;
 	};
+
 	
 	private static final Map<String, ReactiveContext> globalContextMap = new HashMap<String, ReactiveContext>();
+	
+	
+	private static final AtomicInteger activeContextFlag = new AtomicInteger(0);
 	/** GLOBAL Members - End **/
 	
 	/** Thread Specific Members - Start **/
@@ -67,6 +73,18 @@ public class ReactiveContextManager {
 	public static ReactiveContextManager getContextManagerForThread() {
 		return threadLocal.get();
 	}
+	
+	
+	/**
+	 * This is a cheap, inexpensive call, with very minimal synchronization required,
+	 * to determine if any reactiveContexts are currently active
+	 * within the JVM.
+	 * 
+	 * @return
+	 */
+	public static boolean areReactiveContextsActiveInJVM() {
+		return activeContextFlag.get() > 0;
+	}
 
 	/**
 	 * This method is called by a thread to populate a named (contextID/monitorID) payload on
@@ -102,7 +120,8 @@ public class ReactiveContextManager {
 
 				// Associate with the global MAP
 				globalContextMap.put(contextID, context);
-
+				activeContextFlag.set(globalContextMap.size());
+				
 				if (logger.isDebugEnabled()) {
 					logger.logDebug(methodLine + " is initializing global context.");
 				}
@@ -174,6 +193,7 @@ public class ReactiveContextManager {
 				if (context.isEmpty()) {
 					// Remove from the global Map
 					globalContextMap.remove(contextID);
+					activeContextFlag.set(globalContextMap.size());
 
 					ReactiveContextManager activeOwner = context.getActiveOwner();
 					activeOwner.managerContextMap.remove(contextID);
@@ -267,14 +287,18 @@ public class ReactiveContextManager {
 	 * @return
 	 */
 	public ReactiveContext[] getActiveContexts() {
-		ReactiveContext[] result = cachedContexts;
-	
-		if (result == null) {
-			synchronized (bindToken) {
-				result = cachedContexts = managerContextMap.values().toArray(new ReactiveContext[] {}); 
+		if (!areReactiveContextsActiveInJVM()) {
+			return EMPTY_CONTEXT_ARRAY; 
+		} else {
+			ReactiveContext[] result = cachedContexts;
+		
+			if (result == null) {
+				synchronized (bindToken) {
+					result = cachedContexts = managerContextMap.values().toArray(EMPTY_CONTEXT_ARRAY); 
+				}
 			}
+			return result;
 		}
-		return result;
 	}
 
 	@FunctionalInterface

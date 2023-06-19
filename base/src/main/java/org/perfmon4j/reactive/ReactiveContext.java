@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.ThreadTraceData;
@@ -14,7 +15,6 @@ public class ReactiveContext {
 		private static final long serialVersionUID = 1L;
 	};
 	private static final AtomicInteger activeThreadTraceFlag = new AtomicInteger(0);
-
 	
 	private final Map<Long, Object> payloadMap= new HashMap<Long, Object>();
 	
@@ -38,7 +38,7 @@ public class ReactiveContext {
 	private volatile Object[] cachedPayloads = null;
 	private final ThreadTracesBase internalMonitorsOnContext = new ThreadTracesOnReactiveContext(PerfMon.MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS);
 	private final ThreadTracesBase externalMonitorsOnContext = new ThreadTracesOnReactiveContext(PerfMon.MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS);
-
+	private final AtomicLong sqlTimeAccumulator = new AtomicLong(0);
 	
 	public ReactiveContext(String contextID) {
 		this.contextID = contextID;
@@ -134,6 +134,25 @@ public class ReactiveContext {
 		return externalMonitorsOnContext;
 	}
 	
+	/**
+	 * Returns the accumulated number of milliseconds that
+	 * methods running under this context have spent 
+	 * in the JDBC layer since the context was created
+	 * (If SQLTime is enabled). 
+	 * @return
+	 */
+	public long getSQLTime() {
+		return sqlTimeAccumulator.get();
+	}
+
+	/**
+	 * Should only be called by org.perfmon4j.SQLTime
+	 * @param millis
+	 */
+	public void incrementSQLTime(long millis) {
+		sqlTimeAccumulator.addAndGet(millis);
+	}
+	
     private static class ThreadTracesOnReactiveContext extends ThreadTracesBase {
     	// Although this shouldn't be accessed across threads, it still could
     	// so we need to synchronize access to the linked list.
@@ -156,30 +175,30 @@ public class ReactiveContext {
 		}
 
 		@Override
-		protected void start(String monitorName, int maxDepth, int minDurationToCapture, long startTime) {
+		protected void start(String monitorName, int maxDepth, int minDurationToCapture, long startTime, long sqlStartTime) {
 			synchronized (tracesLockToken) {
-				super.start(monitorName, maxDepth, minDurationToCapture, startTime);
+				super.start(monitorName, maxDepth, minDurationToCapture, startTime, sqlStartTime);
 			}
 		}
 
 		@Override
-		protected ThreadTraceData stop(String monitorName) {
+		protected ThreadTraceData stop(String monitorName, long stopTime, long sqlStopTime) {
 			synchronized (tracesLockToken) {
-				return super.stop(monitorName);
+				return super.stop(monitorName, stopTime, sqlStopTime);
 			}
 		}
 
 		@Override
-		protected UniqueThreadTraceTimerKey enterCheckpoint(String timerMonitorName, long startTime) {
+		protected UniqueThreadTraceTimerKey enterCheckpoint(String timerMonitorName, long startTime, long sqlStartTime) {
 			synchronized (tracesLockToken) {
-				return super.enterCheckpoint(timerMonitorName, startTime);
+				return super.enterCheckpoint(timerMonitorName, startTime, sqlStartTime);
 			}
 		}
 
 		@Override
-		protected void exitCheckpoint(UniqueThreadTraceTimerKey timerKey) {
+		protected void exitCheckpoint(UniqueThreadTraceTimerKey timerKey, long stopTime, long sqlStopTime) {
 			synchronized (tracesLockToken) {
-				super.exitCheckpoint(timerKey);
+				super.exitCheckpoint(timerKey, stopTime, sqlStopTime);
 			}
 		}
     }

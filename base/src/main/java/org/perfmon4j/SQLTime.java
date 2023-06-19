@@ -20,6 +20,8 @@
 */
 package org.perfmon4j;
 
+import org.perfmon4j.reactive.ReactiveContext;
+import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.util.MiscHelper;
 
 /**
@@ -58,6 +60,9 @@ public class SQLTime {
 	private SQLTime() {
 	}
 	
+	/** 
+	 * No need to synchronize or use AtomicLong values, these members are all stored on a thread local.
+	 */
 	private long currentSQLTime = 0;
 	private long startTime;
 	private int refCount = 0;
@@ -72,7 +77,13 @@ public class SQLTime {
 		if (--refCount == 0) {
 			// Fail-SAFE non negative durations to support clock slewing that can occur on some 
 			// virtual machines.
-			currentSQLTime += Math.max(0, (MiscHelper.currentTimeWithMilliResolution() - startTime));
+			long duration = Math.max(0, (MiscHelper.currentTimeWithMilliResolution() - startTime)); 
+			currentSQLTime += duration;
+			if (ReactiveContextManager.areReactiveContextsActiveInJVM()) {
+				for (ReactiveContext context : ReactiveContextManager.getContextManagerForThread().getActiveContexts()) {
+					context.incrementSQLTime(duration);
+				}
+			}
 		}
 	}
 	

@@ -67,14 +67,15 @@ public class PerfMonTimer {
     			&& (ThreadTraceMonitor.activeThreadTraceFlag.get().isActive()
     				|| ReactiveContext.isActiveThreadTracesOnContext()); 
     	
-    	List<Runnable> exitMethods = null;
+    	List<ExitCheckpoint> exitMethods = null;
         if (haveActiveTimer || haveActiveThreadTrace) {
         	String monitorName = "";
 	        try {
 	        	long startTime = MiscHelper.currentTimeWithMilliResolution(); 
 	            monitorName = mon.getName();
 	            if (haveActiveThreadTrace) {
-	            	exitMethods = new ArrayList<Runnable>();
+		        	long sqlStartTime = SQLTime.getSQLTime(); 
+	            	exitMethods = new ArrayList<ExitCheckpoint>();
 	            	
 	                ThreadTracesBase tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
 	                ThreadTracesBase tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
@@ -83,25 +84,25 @@ public class PerfMonTimer {
 	            	final boolean haveActiveExternalThreadTrace = tExternalOnStack.isActive();
 	            
 		            if (haveActiveInternalThreadTrace) {
-		            	final UniqueThreadTraceTimerKey key = tInternalOnStack.enterCheckpoint(monitorName, startTime);
-		            	exitMethods.add(() -> tInternalOnStack.exitCheckpoint(key));
+		            	final UniqueThreadTraceTimerKey key = tInternalOnStack.enterCheckpoint(monitorName, startTime, sqlStartTime);
+		            	exitMethods.add((S, S1) -> tInternalOnStack.exitCheckpoint(key, S, S1));
 		            }
 		            if (haveActiveExternalThreadTrace) {
-		            	final UniqueThreadTraceTimerKey key = tExternalOnStack.enterCheckpoint(monitorName, startTime);
-		            	exitMethods.add(() -> tExternalOnStack.exitCheckpoint(key));
+		            	final UniqueThreadTraceTimerKey key = tExternalOnStack.enterCheckpoint(monitorName, startTime, sqlStartTime);
+		            	exitMethods.add((S, S1) -> tExternalOnStack.exitCheckpoint(key, S, S1));
 		            }
 
 		            if (ReactiveContext.isActiveThreadTracesOnContext()) {
 		            	for (ReactiveContext context : ReactiveContextManager.getContextManagerForThread().getActiveContexts()) {
 		            		final ThreadTracesBase tExternal =  context.getExternalMonitorsOnContext();
 		            		if (tExternal != null && tExternal.isActive()) {
-		            			final UniqueThreadTraceTimerKey key = tExternal.enterCheckpoint(monitorName, startTime); 
-				            	exitMethods.add(() -> tExternal.exitCheckpoint(key));
+		            			final UniqueThreadTraceTimerKey key = tExternal.enterCheckpoint(monitorName, startTime, sqlStartTime); 
+				            	exitMethods.add((S, S1) -> tExternal.exitCheckpoint(key, S, S1));
 		            		}
 		            		final ThreadTracesBase tInternal =  context.getInternalMonitorsOnContext();
 		            		if (tInternal != null && tInternal.isActive()) {
-		            			final UniqueThreadTraceTimerKey key = tInternal.enterCheckpoint(monitorName, startTime); 
-				            	exitMethods.add(() -> tInternal.exitCheckpoint(key));
+		            			final UniqueThreadTraceTimerKey key = tInternal.enterCheckpoint(monitorName, startTime, sqlStartTime);
+				            	exitMethods.add((S, S1) -> tInternal.exitCheckpoint(key, S, S1));
 		            		}
 		            	}
 		            }
@@ -232,15 +233,20 @@ public class PerfMonTimer {
     }
     
     
+    @FunctionalInterface
+    private static interface ExitCheckpoint {
+    	public void exit(long stopTime, long sqlStopTime);
+    }
+    
     /**
      * This class is only used when we return a Timer that is part of
      * a thread trace.
      */
     private static class TimerWrapper extends PerfMonTimer {
     	final private String reactiveContextID;
-    	final private List<Runnable> exitCheckpoints; 
+    	final private List<ExitCheckpoint> exitCheckpoints; 
         
-        TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<Runnable> exitCheckpoints) {
+        TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<ExitCheckpoint> exitCheckpoints) {
             super(timer.perfMon, timer.next); 
             this.reactiveContextID = reactiveContextID;
             this.exitCheckpoints = exitCheckpoints;
@@ -254,8 +260,11 @@ public class PerfMonTimer {
         @Override
         protected void exitAllCheckpoints() {
         	if (exitCheckpoints != null) {
-	        	for (Runnable exitCheckpoint : exitCheckpoints) {
-        			exitCheckpoint.run();
+        		long stopTime = MiscHelper.currentTimeWithMilliResolution();
+        		long sqlStopTime = SQLTime.getSQLTime();
+        		
+	        	for (ExitCheckpoint exitCheckpoint : exitCheckpoints) {
+        			exitCheckpoint.exit(stopTime, sqlStopTime);
 	        	}
         	}
         }

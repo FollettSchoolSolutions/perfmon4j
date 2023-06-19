@@ -38,14 +38,14 @@ public abstract class ThreadTracesBase {
     	return active;
     }
     
-    protected void start(String monitorName, int maxDepth, int minDurationToCapture, long startTime) {
-        ThreadTraceData rootElement = new ThreadTraceData(new UniqueThreadTraceTimerKey(monitorName), startTime);
+    protected void start(String monitorName, int maxDepth, int minDurationToCapture, long startTime, long sqlStartTime) {
+        ThreadTraceData rootElement = new ThreadTraceData(new UniqueThreadTraceTimerKey(monitorName), startTime, sqlStartTime);
         threadDataMap.put(monitorName, new PointerToHead(rootElement, maxDepth, minDurationToCapture));
         active = true;
         incrementActiveThreadTraceFlag();
     }
     
-    protected ThreadTraceData stop(String monitorName) {
+    protected ThreadTraceData stop(String monitorName, long stopTime, long sqlStopTime) {
         ThreadTraceData result = null;
         PointerToHead head = threadDataMap.get(monitorName);
         if (head != null) {
@@ -55,7 +55,7 @@ public abstract class ThreadTracesBase {
                 		monitorName); 
             }
             threadDataMap.remove(monitorName);
-            head.rootElement.stop();
+            head.rootElement.stop(stopTime, sqlStopTime);
             result = head.rootElement;
         }
         active = !threadDataMap.isEmpty();
@@ -64,7 +64,7 @@ public abstract class ThreadTracesBase {
         return result;
     }
     
-    protected UniqueThreadTraceTimerKey enterCheckpoint(String timerMonitorName, long startTime) {
+    protected UniqueThreadTraceTimerKey enterCheckpoint(String timerMonitorName, long startTime, long sqlStartTime) {
     	UniqueThreadTraceTimerKey result = null;
     	if (!insideThreadTracesOnStack) {
     		insideThreadTracesOnStack = true;
@@ -88,7 +88,7 @@ public abstract class ThreadTracesBase {
                         		head.rootElement.setOverflow(true);
                         		head.checkpointsIgnoredDueToOverflow++;
                         	} else {
-                        		head.topOfTheStackElement = new ThreadTraceData(result, head.topOfTheStackElement, startTime);
+                        		head.topOfTheStackElement = new ThreadTraceData(result, head.topOfTheStackElement, startTime, sqlStartTime);
                         	}
                         }
                     }
@@ -118,7 +118,7 @@ public abstract class ThreadTracesBase {
     }
     
     
-    protected void exitCheckpoint(UniqueThreadTraceTimerKey timerKey) {
+    protected void exitCheckpoint(UniqueThreadTraceTimerKey timerKey, long stopTime, long sqlStopTime) {
     	if (!insideThreadTracesOnStack) {
     		insideThreadTracesOnStack = true;
         	// Make sure we DO NOT RECURSE.... This can happen if one of the
@@ -147,7 +147,7 @@ public abstract class ThreadTracesBase {
                                 	head.numElements--;
                                 }
                                 if (!missNestedElementPurged) {
-                                    exitTraceData.stop();
+                                    exitTraceData.stop(stopTime, sqlStopTime);
                                     head.topOfTheStackElement = exitTraceData.getParent();
                                     if (head.minDuratinToCapture > 0 &&
                                         head.minDuratinToCapture > (exitTraceData.getEndTime() - exitTraceData.getStartTime())) {

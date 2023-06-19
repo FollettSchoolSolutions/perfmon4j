@@ -68,7 +68,7 @@ public class ThreadTraceDataTest extends SQLTest {
     
 /*----------------------------------------------------------------------------*/
     public void testSimpleToAppenderString() throws Exception {
-        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE + (SECOND) + 1);
+        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE + (SECOND) + 1, 0);
         data.setEndTime(MIDNIGHT + HOUR + MINUTE + MINUTE);
     
         assertEquals("\r\n********************************************************************************\r\n" +
@@ -79,10 +79,10 @@ public class ThreadTraceDataTest extends SQLTest {
 
 /*----------------------------------------------------------------------------*/
     public void testNestedToAppenderString() throws Exception {
-        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE);
+        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE, 0);
         data.setEndTime(MIDNIGHT + HOUR + MINUTE + MINUTE);
     
-        ThreadTraceData child = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.MiscHelper.formatString"), data, data.getStartTime() + SECOND);
+        ThreadTraceData child = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.MiscHelper.formatString"), data, data.getStartTime() + SECOND, 0);
         child.setEndTime(data.getEndTime() - SECOND);
         
         assertEquals("\r\n********************************************************************************\r\n" +
@@ -94,10 +94,10 @@ public class ThreadTraceDataTest extends SQLTest {
     }
 
     public void testNestedToSQL() throws Exception {
-        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE);
+        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE, 0);
         data.setEndTime(MIDNIGHT + HOUR + MINUTE + MINUTE);
     
-        ThreadTraceData child = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.MiscHelper.formatString"), data, data.getStartTime() + SECOND);
+        ThreadTraceData child = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.MiscHelper.formatString"), data, data.getStartTime() + SECOND, 0);
         child.setEndTime(data.getEndTime() - SECOND);
         
         data.writeToSQL(conn, "mydb", appender.getSystemID());
@@ -133,10 +133,10 @@ System.out.println(JDBCHelper.dumpQuery(conn, "SELECT c.categoryName, tt.*\r\n" 
 
     
     private void writeTraceData() throws SQLException {
-        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE);
+        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE, 0);
         data.setEndTime(MIDNIGHT + HOUR + MINUTE + MINUTE);
     
-        ThreadTraceData child = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.MiscHelper.formatString"), data, data.getStartTime() + SECOND);
+        ThreadTraceData child = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.MiscHelper.formatString"), data, data.getStartTime() + SECOND, 0);
         child.setEndTime(data.getEndTime() - SECOND);
         
         data.writeToSQL(conn, "mydb", appender.getSystemID());
