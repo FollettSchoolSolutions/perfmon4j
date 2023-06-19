@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -89,10 +88,10 @@ public class ReactiveContextManager {
 	 * @param defaultSupplier
 	 * @return
 	 */
-	public Object getPayload(String contextID, Long monitorID, Supplier<Object> defaultSupplier) {
+	public Object getPayload(String contextID, Long monitorID, ContextPayloadConstructor payloadConstructor) {
 		String methodLine = buildMethodCallDebugLine("getPayload", 
-				new String[] {"contextID", "monitorID", "defaultSupplier"}, 
-				new Object[] {contextID, monitorID, defaultSupplier != null ? "(included=true)" : "(included=false)"});
+				new String[] {"contextID", "monitorID", "payloadConstructor"}, 
+				new Object[] {contextID, monitorID, payloadConstructor != null ? "(included=true)" : "(included=false)"});
 
 		synchronized(bindToken) {
 			boolean createdNewContext = false;
@@ -125,8 +124,8 @@ public class ReactiveContextManager {
 			}
 			
 			Object result = context.getPayload(monitorID);
-			if (result == null && defaultSupplier != null) {
-				result = defaultSupplier.get();
+			if (result == null && payloadConstructor != null) {
+				result = payloadConstructor.buildPayload(context);
 				context.addPayload(monitorID, result);
 				if (logger.isDebugEnabled()) {
 					logger.logDebug(methodLine + " has initialized the payload."); 
@@ -276,6 +275,11 @@ public class ReactiveContextManager {
 			}
 		}
 		return result;
+	}
+
+	@FunctionalInterface
+	public static interface ContextPayloadConstructor {
+		Object buildPayload(ReactiveContext context);
 	}
 	
 	/**

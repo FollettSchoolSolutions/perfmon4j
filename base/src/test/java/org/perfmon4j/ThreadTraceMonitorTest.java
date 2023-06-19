@@ -21,12 +21,13 @@
 
 package org.perfmon4j;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.reactive.ReactiveContextManager;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class ThreadTraceMonitorTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -517,9 +518,7 @@ System.out.println("outputCount: " + outputCount);
 //System.out.println(appenderString);
 		
 		// Remove times/durations and line feeds for easy compare.
-		appenderString = appenderString.replaceAll("\\d+", "X");
-		appenderString = appenderString.replaceAll("\r", "");
-		appenderString = appenderString.replaceAll("\n", "");
+		appenderString = normalizeTraceOutput(appenderString);
 		
 		final String expectedOutput = "********************************************************************************" +
 				"+-X:X:X:X (X) testSimpleDiscovery" +
@@ -831,6 +830,85 @@ System.out.println(appenderString);
         assertNotNull("Output should have been written by asynch thread", TestAppender.getOutputCount());
     }
     
+    public void testTraceOnReactiveMonitor() throws Exception {
+    	final String REACTIVE_CONTEXT = "ctx-ReactiveTrace";
+        final String MONITOR_KEY = "ReactiveTrace";
+
+        // Main Thread.
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        
+        PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
+        traceMonitor.setInternalThreadTraceConfig(config);
+        
+        
+        final PerfMonTimer reactiveTimer = PerfMonTimer.start(MONITOR_KEY + ".SubCategory", false, REACTIVE_CONTEXT );
+        PerfMonTimer traceNestedOnStartedThread = PerfMonTimer.start("traceNestedOnStartedThread");
+        
+        new Thread(() -> {
+        	// 2nd Thread
+        	ReactiveContextManager.getContextManagerForThread().moveContext(REACTIVE_CONTEXT);
+        	PerfMonTimer traceNestedOnStoppingThread = PerfMonTimer.start("traceNestedOnSecondThread");
+            PerfMonTimer.stop(traceNestedOnStoppingThread);
+        	ReactiveContextManager.getContextManagerForThread().dissociateContextFromThread(REACTIVE_CONTEXT);
+        }).start();
+
+        Thread.sleep(250); // Give thread time to complete.
+
+        // Since the context has not been restored to this thread, this timer
+        // must not be part of this trace.
+        PerfMonTimer timerNotInReactiveContext = PerfMonTimer.start("timerNotInReactiveContext");
+        PerfMonTimer.stop(timerNotInReactiveContext);
+
+        // Move the context back to the main thread
+    	ReactiveContextManager.getContextManagerForThread().moveContext(REACTIVE_CONTEXT);
+        
+        PerfMonTimer.stop(traceNestedOnStartedThread);
+        
+        // Finally stop the timer asssociated with the reactive Context on a 3rd thread
+        
+        new Thread(() -> {
+        	// 3nd Thread
+        	// This time we'll cheat and not explicitly move the reactiveContext
+        	// to the thread.  We can get away with that here because we are
+        	// stopping the reactive timer and passing in the matching 
+        	// reactive context.
+        	PerfMonTimer.stop(reactiveTimer);
+        }).start();
+
+        Thread.sleep(250); // Give thread time to complete.
+    	
+        ThreadTraceData trace = TestAppender.getLastResult();
+        String appenderString = trace.toAppenderString();
+//System.out.println(appenderString);
+        
+		
+		appenderString = normalizeTraceOutput(appenderString);
+//System.out.println(appenderString);
+		
+		final String expectedOutput = 
+				"********************************************************************************"
+				+ "+-X:X:X:X (X) ReactiveTrace.SubCategory"
+				+ "|	+-X:X:X:X (X) traceNestedOnStartedThread"
+				+ "|	|	+-X:X:X:X (X) traceNestedOnSecondThread"
+				+ "|	|	+-X:X:X:X traceNestedOnSecondThread"
+				+ "|	+-X:X:X:X traceNestedOnStartedThread"
+				+ "+-X:X:X:X ReactiveTrace.SubCategory"
+				+ "********************************************************************************";
+		assertEquals("Expected output should contain timers across threads within the same context"
+			, expectedOutput, appenderString);
+    }
+    
+    
+	// Remove times/durations and line feeds from thread trace appender output for easy compare.
+    private String normalizeTraceOutput(String appenderString) {
+		appenderString = appenderString.replaceAll("\\d+", "X");
+		appenderString = appenderString.replaceAll("\r", "");
+		appenderString = appenderString.replaceAll("\n", "");
+
+		return appenderString;
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

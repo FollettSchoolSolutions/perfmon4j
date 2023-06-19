@@ -20,8 +20,13 @@
 */
 package org.perfmon4j;
 
-import org.perfmon4j.PerfMon.ReferenceCount;
-import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
+import org.perfmon4j.reactive.ReactiveContext;
+import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -55,17 +60,22 @@ public class PerfMonTimer {
             return NULL_TIMER;
         }
         PerfMonTimer result = mon.getPerfMonTimer();
+        final boolean isReactiveTimer = reactiveContextID != null;
     	final boolean haveActiveTimer = (NULL_TIMER != result);  // It is OK to do an object compare here.
-    	final boolean haveActiveThreadTrace = ThreadTraceMonitor.activeThreadTraceFlag.get().isActive(); 
+    	final boolean haveActiveThreadTrace = 
+    			!isReactiveTimer // Reactive timers do not get tracked within thread traces.
+    			&& (ThreadTraceMonitor.activeThreadTraceFlag.get().isActive()
+    				|| ReactiveContext.isActiveThreadTracesOnContext()); 
     	
+    	List<WeakReference<Procedure>> exitMethods = null;
         if (haveActiveTimer || haveActiveThreadTrace) {
         	String monitorName = "";
-	        UniqueThreadTraceTimerKey wrapperInternalKey = null;
-	        UniqueThreadTraceTimerKey wrapperExternalKey = null;
 	        try {
 	        	long startTime = MiscHelper.currentTimeWithMilliResolution(); 
 	            monitorName = mon.getName();
 	            if (haveActiveThreadTrace) {
+	            	exitMethods = new ArrayList<WeakReference<Procedure>>();
+	            	
 	                ThreadTracesBase tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
 	                ThreadTracesBase tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
 
@@ -73,10 +83,27 @@ public class PerfMonTimer {
 	            	final boolean haveActiveExternalThreadTrace = tExternalOnStack.isActive();
 	            
 		            if (haveActiveInternalThreadTrace) {
-		            	wrapperInternalKey = tInternalOnStack.enterCheckpoint(monitorName, startTime);
+		            	final UniqueThreadTraceTimerKey key = tInternalOnStack.enterCheckpoint(monitorName, startTime);
+		            	exitMethods.add(new WeakReference<Procedure>(() -> tInternalOnStack.exitCheckpoint(key)));
 		            }
 		            if (haveActiveExternalThreadTrace) {
-		            	wrapperExternalKey = tExternalOnStack.enterCheckpoint(monitorName, startTime);
+		            	final UniqueThreadTraceTimerKey key = tExternalOnStack.enterCheckpoint(monitorName, startTime);
+		            	exitMethods.add(new WeakReference<Procedure>(() -> tExternalOnStack.exitCheckpoint(key)));
+		            }
+
+		            if (ReactiveContext.isActiveThreadTracesOnContext()) {
+		            	for (ReactiveContext context : ReactiveContextManager.getContextManagerForThread().getActiveContexts()) {
+		            		final ThreadTracesBase tExternal =  context.getExternalMonitorsOnContext();
+		            		if (tExternal != null && tExternal.isActive()) {
+		            			final UniqueThreadTraceTimerKey key = tExternal.enterCheckpoint(monitorName, startTime); 
+				            	exitMethods.add(new WeakReference<Procedure>(() -> tExternal.exitCheckpoint(key)));
+		            		}
+		            		final ThreadTracesBase tInternal =  context.getInternalMonitorsOnContext();
+		            		if (tInternal != null && tInternal.isActive()) {
+		            			final UniqueThreadTraceTimerKey key = tInternal.enterCheckpoint(monitorName, startTime); 
+				            	exitMethods.add(new WeakReference<Procedure>(() -> tInternal.exitCheckpoint(key)));
+		            		}
+		            	}
 		            }
 	            }
 	            if (haveActiveTimer || haveActiveThreadTrace) {
@@ -90,6 +117,12 @@ public class PerfMonTimer {
 	        } catch (Throwable th) {
 	            logger.logError("Error starting monitor: " + monitorName, th);
 	            result = NULL_TIMER;
+	        }
+	        
+	        if (reactiveContextID != null || (exitMethods != null && !exitMethods.isEmpty())) {
+	            // To keep track of tracing exit methods AND/OR the reactiveContext we 
+	            // must be able to identify the timer passed to PerfMonTimer.stop()
+	            result = new TimerWrapper(result, reactiveContextID, exitMethods);
 	        }
         }
         
@@ -152,11 +185,6 @@ public class PerfMonTimer {
         
         return result;
     }
-
-    private void start(long now) {
-    	start(now, null);
-    }
-
     
     private void start(long now, String reactiveContextID) {
         if (perfMon != null) {
@@ -167,17 +195,8 @@ public class PerfMonTimer {
     
     private static void stop(PerfMonTimer timer, boolean abort, String reactiveContextID) {
         if (timer != NULL_TIMER && timer != null && !timer.hasBeenStopped()) {
-	        try {
-                UniqueThreadTraceTimerKey keyInternal = timer.getUniqueInternalTimerKey();
-                if (keyInternal != null) {
-                	ThreadTracesBase tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
-                    tOnStack.exitCheckpoint(keyInternal);
-                }
-                UniqueThreadTraceTimerKey keyExternal = timer.getUniqueExternalTimerKey();
-                if (keyExternal != null) {
-                	ThreadTracesBase tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
-                    tOnStack.exitCheckpoint(keyExternal);
-                }
+        try {
+            	timer.exitAllCheckpoints();
                 timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort, reactiveContextID);
             }
         } catch (ThreadDeath th) {
@@ -188,15 +207,11 @@ public class PerfMonTimer {
     }
 
     public static void abort(PerfMonTimer timer) {
-        abort(timer, null);
+        stop(timer, true);
     }
 
-    public static void abort(PerfMonTimer timer, String reactiveContextID) {
-        stop(timer, true, reactiveContextID);
-    }
-    
     public static void stop(PerfMonTimer timer) {
-        stop(timer, null);
+        stop(timer, false);
     }
     private void stop(long now, boolean abort, String reactiveContextID) {
         if (perfMon != null) {
@@ -209,23 +224,15 @@ public class PerfMonTimer {
         return NULL_TIMER;
     }
     
-    /**
-     * Used for the ThreadTraceTimers...
-     * Implemented in TimerWrapper class
-     * @return
-     */
-    protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
-        return null;
+    protected void exitAllCheckpoints() {
+    	// Do Nothing - Functionality will be provided by TimerWrapper
     }
-
-    /**
-     * Used for the ThreadTraceTimers...
-     * Implemented in TimerWrapper class
-     * @return
-     */
-    protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
-        return null;
+    
+    protected String getReactiveContextID() {
+    	// Do Nothing (except return null)- Functionality will be provided by TimerWrapper
+    	return null;
     }
+    
     
     /**
      * Implemented in TimerWrapper class
@@ -303,19 +310,15 @@ public class PerfMonTimer {
      */
     private static class TimerWrapper extends PerfMonTimer {
     	private boolean hasBeenStopped = false;
-        final private UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey;
-        final private UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey;
+    	final private String reactiveContextID;
+    	final private List<WeakReference<Procedure>> exitCheckpoints; 
         private ReferenceCount referenceCount = null;
         private final String effectiveCategory;
         
-        private TimerWrapper(PerfMonTimer timer, 
-            UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey,
-            UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey) {
-            
-        	super(timer.perfMon, wrapIfNeeded(timer.next)); 
-            this.uniqueInternalThreadTraceTimerKey = uniqueInternalThreadTraceTimerKey;
-            this.uniqueExternalThreadTraceTimerKey = uniqueExternalThreadTraceTimerKey;
-            
+        TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<WeakReference<Procedure>> exitCheckpoints) {
+            super(timer.perfMon, timer.next); 
+            this.reactiveContextID = reactiveContextID;
+            this.exitCheckpoints = exitCheckpoints;
             if (timer.perfMon != null) {
             	effectiveCategory = timer.perfMon.getName();	
             } else {
@@ -332,59 +335,42 @@ public class PerfMonTimer {
 				return new TimerWrapper(timer, null, null);
 			}
 			return result;
-		}
+        @Override
+        protected String getReactiveContextID() {
+        	return reactiveContextID;
+        }        
         
-        protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
-            return uniqueInternalThreadTraceTimerKey;
+        @Override
+        protected void exitAllCheckpoints() {
+        	if (exitCheckpoints != null) {
+	        	for (WeakReference<Procedure> c : exitCheckpoints) {
+	        		Procedure exitCheckpoint = c.get();
+	        		if (exitCheckpoint != null) {
+	        			exitCheckpoint.execute();
+	        		}
+	        	}
+        	}
         }
-        protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
-            return uniqueExternalThreadTraceTimerKey;
-        }
-
-		@Override
-		protected boolean hasBeenStopped() {
-			return hasBeenStopped;
-		}
-
-		@Override
-		protected void flagStopped() {
-			hasBeenStopped = true;
-		}
-		
-		@Override
-		/* package */ void storeReferenceCountForOffThreadStop(ReferenceCount referenceCount) {
-			this.referenceCount = referenceCount;
-		}
-		
-		@Override
-		/* package */ ReferenceCount getReferenceCount() {
-			return referenceCount;
-		}
-
-		@Override
-		/* package */ String getEffectiveMonitorCategory() {
-			return effectiveCategory;
-		}
-
-		@Override
-		boolean isMutable() {
-			return true;
-		}
     }
     
-    private static class FullyQualifiedTimerStartName {
-    	private String fullName;
-
-		public String getFullName() {
-			return fullName;
-		}
-
-		public void setFullName(String fullName) {
-			this.fullName = fullName;
-		}
+    @FunctionalInterface
+    private static interface Procedure {
+    	public void execute();
     }
+
+    private static class FullyQualifiedTimerStartName { 
+    	private String fullName; 
+ 
+		public String getFullName() { 
+			return fullName; 
+		} 
+ 
+		public void setFullName(String fullName) { 
+			this.fullName = fullName; 
+		} 
+    } 
     
-    static private final ThreadLocal<FullyQualifiedTimerStartName> last = new ThreadLocal<PerfMonTimer.FullyQualifiedTimerStartName>() {
+    static private final ThreadLocal<PerfMonTimer.FullyQualifiedTimerStartName> last = new ThreadLocal<PerfMonTimer.FullyQualifiedTimerStartName>() {
         protected FullyQualifiedTimerStartName initialValue() {
             return new FullyQualifiedTimerStartName();
         }

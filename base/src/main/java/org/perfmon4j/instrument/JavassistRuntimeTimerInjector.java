@@ -1306,14 +1306,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         replaceMethodIfExists(clazz, "abort", src, PERFMON_TIMER_API_CLASSNAME);
         
-//      public static void abort(PerfMonTimer timer, String reactiveContextID)
-        src = "{\r\n"
-        		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
-        		+ "org.perfmon4j.PerfMonTimer.abort(nativeTimer, $2);\r\n"  	
-        		+ "}";
-        replaceMethodIfExists(clazz, "abort", src, PERFMON_TIMER_API_CLASSNAME, String.class.getName());
-
-        
 //      public static void stop(PerfMonTimer timer)
         src = "{\r\n"
         		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
@@ -1321,12 +1313,6 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         replaceMethodIfExists(clazz, "stop", src, PERFMON_TIMER_API_CLASSNAME);
         
-//      public static void stop(PerfMonTimer timer, String reactiveContextID)
-        src = "{\r\n"
-        		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
-        		+ "org.perfmon4j.PerfMonTimer.stop(nativeTimer, $2);\r\n"  	
-        		+ "}";
-        replaceMethodIfExists(clazz, "stop", src, PERFMON_TIMER_API_CLASSNAME, String.class.getName());
         
         org.perfmon4j.PerfMonTimer.getNullTimer();
         src = "{\r\n"

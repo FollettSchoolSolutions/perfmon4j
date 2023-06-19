@@ -205,9 +205,9 @@ public abstract class GenericFilter {
 	            }
 				
 	            if (doAbort) {
-	            	PerfMonTimer.abort(timer, reactiveContext);
+	            	PerfMonTimer.abort(timer);
 	            } else {
-	            	PerfMonTimer.stop(timer, reactiveContext);
+	            	PerfMonTimer.stop(timer);
 		        	if ((localStartTime != null) && !skipLogOutput() ) {
 		        		outputToLog(request, localStartTime, localSQLStartTime);
 		        	}
