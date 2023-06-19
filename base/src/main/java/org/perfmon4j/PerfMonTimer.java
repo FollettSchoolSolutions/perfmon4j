@@ -20,7 +20,6 @@
 */
 package org.perfmon4j;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,14 +67,14 @@ public class PerfMonTimer {
     			&& (ThreadTraceMonitor.activeThreadTraceFlag.get().isActive()
     				|| ReactiveContext.isActiveThreadTracesOnContext()); 
     	
-    	List<WeakReference<Procedure>> exitMethods = null;
+    	List<Runnable> exitMethods = null;
         if (haveActiveTimer || haveActiveThreadTrace) {
         	String monitorName = "";
 	        try {
 	        	long startTime = MiscHelper.currentTimeWithMilliResolution(); 
 	            monitorName = mon.getName();
 	            if (haveActiveThreadTrace) {
-	            	exitMethods = new ArrayList<WeakReference<Procedure>>();
+	            	exitMethods = new ArrayList<Runnable>();
 	            	
 	                ThreadTracesBase tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
 	                ThreadTracesBase tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
@@ -85,11 +84,11 @@ public class PerfMonTimer {
 	            
 		            if (haveActiveInternalThreadTrace) {
 		            	final UniqueThreadTraceTimerKey key = tInternalOnStack.enterCheckpoint(monitorName, startTime);
-		            	exitMethods.add(new WeakReference<Procedure>(() -> tInternalOnStack.exitCheckpoint(key)));
+		            	exitMethods.add(() -> tInternalOnStack.exitCheckpoint(key));
 		            }
 		            if (haveActiveExternalThreadTrace) {
 		            	final UniqueThreadTraceTimerKey key = tExternalOnStack.enterCheckpoint(monitorName, startTime);
-		            	exitMethods.add(new WeakReference<Procedure>(() -> tExternalOnStack.exitCheckpoint(key)));
+		            	exitMethods.add(() -> tExternalOnStack.exitCheckpoint(key));
 		            }
 
 		            if (ReactiveContext.isActiveThreadTracesOnContext()) {
@@ -97,12 +96,12 @@ public class PerfMonTimer {
 		            		final ThreadTracesBase tExternal =  context.getExternalMonitorsOnContext();
 		            		if (tExternal != null && tExternal.isActive()) {
 		            			final UniqueThreadTraceTimerKey key = tExternal.enterCheckpoint(monitorName, startTime); 
-				            	exitMethods.add(new WeakReference<Procedure>(() -> tExternal.exitCheckpoint(key)));
+				            	exitMethods.add(() -> tExternal.exitCheckpoint(key));
 		            		}
 		            		final ThreadTracesBase tInternal =  context.getInternalMonitorsOnContext();
 		            		if (tInternal != null && tInternal.isActive()) {
 		            			final UniqueThreadTraceTimerKey key = tInternal.enterCheckpoint(monitorName, startTime); 
-				            	exitMethods.add(new WeakReference<Procedure>(() -> tInternal.exitCheckpoint(key)));
+				            	exitMethods.add(() -> tInternal.exitCheckpoint(key));
 		            		}
 		            	}
 		            }
@@ -239,9 +238,9 @@ public class PerfMonTimer {
      */
     private static class TimerWrapper extends PerfMonTimer {
     	final private String reactiveContextID;
-    	final private List<WeakReference<Procedure>> exitCheckpoints; 
+    	final private List<Runnable> exitCheckpoints; 
         
-        TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<WeakReference<Procedure>> exitCheckpoints) {
+        TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<Runnable> exitCheckpoints) {
             super(timer.perfMon, timer.next); 
             this.reactiveContextID = reactiveContextID;
             this.exitCheckpoints = exitCheckpoints;
@@ -255,20 +254,13 @@ public class PerfMonTimer {
         @Override
         protected void exitAllCheckpoints() {
         	if (exitCheckpoints != null) {
-	        	for (WeakReference<Procedure> c : exitCheckpoints) {
-	        		Procedure exitCheckpoint = c.get();
-	        		if (exitCheckpoint != null) {
-	        			exitCheckpoint.execute();
-	        		}
+	        	for (Runnable exitCheckpoint : exitCheckpoints) {
+        			exitCheckpoint.run();
 	        	}
         	}
         }
     }
     
-    @FunctionalInterface
-    private static interface Procedure {
-    	public void execute();
-    }
 
     private static class FullyQualifiedTimerStartName { 
     	private String fullName; 
