@@ -136,7 +136,6 @@ public abstract class GenericFilter {
 
 	public class AsyncFinishRequestCallback {
 		private final HttpRequest request;
-		private final String reactiveContext;
 		private final PerfMonTimer timer;
         private final Long localStartTime;
         private final Long localSQLStartTime;
@@ -147,7 +146,6 @@ public abstract class GenericFilter {
         
 		private AsyncFinishRequestCallback(HttpRequest request, String reactiveContext) {
 			this.request = request;
-			this.reactiveContext = reactiveContext;
 			timer = startTimerForRequest(request, reactiveContext);
 			localStartTime = outputRequestAndDuration ? Long.valueOf(System.currentTimeMillis()) : null;
     		localSQLStartTime = outputRequestAndDuration && SQLTime.isEnabled() ?  Long.valueOf(SQLTime.getSQLTime()) : null;
