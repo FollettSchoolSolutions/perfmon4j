@@ -36,8 +36,8 @@ public class ReactiveContext {
 	
 	private volatile boolean empty = true;
 	private volatile Object[] cachedPayloads = null;
-	private final ThreadTracesBase internalMonitorsOnContext = new ThreadTracesOnReactiveContext(this, PerfMon.MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS);
-	private final ThreadTracesBase externalMonitorsOnContext = new ThreadTracesOnReactiveContext(this, PerfMon.MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS);
+	private final ThreadTracesBase internalMonitorsOnContext = new ThreadTracesOnReactiveContext(PerfMon.MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS);
+	private final ThreadTracesBase externalMonitorsOnContext = new ThreadTracesOnReactiveContext(PerfMon.MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS);
 
 	
 	public ReactiveContext(String contextID) {
@@ -135,17 +135,14 @@ public class ReactiveContext {
 	}
 	
     private static class ThreadTracesOnReactiveContext extends ThreadTracesBase {
-    	private final ReactiveContext context;
-    	
     	// Although this shouldn't be accessed across threads, it still could
     	// so we need to synchronize access to the linked list.
     	private final Serializable tracesLockToken = new Serializable() {
 			private static final long serialVersionUID = 1L;
 		};
 
-		ThreadTracesOnReactiveContext(ReactiveContext context, int maxElements) {
+		ThreadTracesOnReactiveContext(int maxElements) {
 			super(maxElements);
-			this.context = context;
 		}
 		
 		@Override
