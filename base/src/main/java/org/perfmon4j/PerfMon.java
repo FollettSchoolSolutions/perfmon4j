@@ -534,6 +534,7 @@ public class PerfMon {
         			sqlTime = context.getSQLTime();
         			trace = context.getInternalMonitorsOnContext();
         		} else {
+        			sqlTime = SQLTime.getSQLTime();
         			trace = ThreadTraceMonitor.getInternalThreadTracesOnStack();
         		}
                 ThreadTraceData data = trace.stop(getName(), systemTime, sqlTime);
