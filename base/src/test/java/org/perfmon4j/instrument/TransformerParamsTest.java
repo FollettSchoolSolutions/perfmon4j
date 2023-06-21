@@ -812,7 +812,7 @@ public class TransformerParamsTest extends PerfMonTestCase {
         	params = new TransformerParams("-eHYSTRIX");
         	props = params.exportAsProperties();
         	
-        	assertEquals("install-hystrix-monitor", "false", props.get("perfmon4j.javaagent.install-hystrix-monitor"));
+        	assertEquals("install-hystrix-monitor", "true", props.get("perfmon4j.javaagent.install-hystrix-monitor"));
         }
 
         public void testInstallDebugEnabled() {
