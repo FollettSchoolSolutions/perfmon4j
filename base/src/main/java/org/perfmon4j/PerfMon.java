@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Timer;
 import java.util.WeakHashMap;
@@ -1679,5 +1680,18 @@ public class PerfMon {
 	
 	public static void dissociateReactiveContextFromCurrentThread(String contextID) {
 		ReactiveContextManager.getContextManagerForThread().dissociateContextFromThread(contextID);
+	}
+	
+	/**
+	 * 
+	 * @return A copy of the current settings.  This copy is simply a reference
+	 * to give the caller access to many (but not all) of Perfmon4j's current
+	 * running configuration.  
+	 *
+	 * Making changes to the copy of properties received has NO impact. 
+	 * 
+	 */
+	public static Properties getConfiguredSettings() {
+		return ConfiguredSettings.getConfiguredSettings();
 	}
 }

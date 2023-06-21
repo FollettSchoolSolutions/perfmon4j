@@ -1222,6 +1222,11 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         replaceMethodIfExists(clazz, "dissociateReactiveContextFromCurrentThread", src, String.class.getName());
         
+//    	public static Properties getConfiguredSettings() {        
+        src = "{\r\n"
+        		+ " return org.perfmon4j.PerfMon.getConfiguredSettings();\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "getConfiguredSettings", src);
         
 //      public boolean isActive();
         src = "{\r\n"

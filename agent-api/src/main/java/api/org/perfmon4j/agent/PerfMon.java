@@ -17,6 +17,8 @@
 */
 package api.org.perfmon4j.agent;
 
+import java.util.Properties;
+
 /**
  * This class will execute in one of two modes:
  * 	Unattached - When running in a JVM that was not booted with the Perfmon4j instrumentation agent this class will 
@@ -62,6 +64,19 @@ public class PerfMon {
 	public static void dissociateReactiveContextFromCurrentThread(String contextID) {
 	}
     
+	/**
+	 * When the perfmon4j javaagent has been installed this method
+	 * will return a collection of properties that provide a read-only
+	 * reference to many (but not all) of Perfmon4j current running settings.
+	 * 
+	 * The Properties returned CAN NOT be used to modify any running settings.
+	 * 
+	 * @return
+	 */
+	public static Properties getConfiguredSettings() {
+		return new Properties();
+	}
+	
     /**
      * If true this class has been rewritten by the Perfmon4j agent.
      * @return

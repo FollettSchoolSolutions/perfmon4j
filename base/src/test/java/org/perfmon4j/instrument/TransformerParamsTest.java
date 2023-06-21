@@ -24,6 +24,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+import java.util.Properties;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -719,7 +720,6 @@ public class TransformerParamsTest extends PerfMonTestCase {
         	// Can specify a partial package name...
         	assertPossibleJDBCDriver(false, false, false, false, false, true, new TransformerParams("-eSQL(org.perfmon4j.jdbc)"));
         }
-
         
         public void testMicrosoftAsPossibleJDBCDriver() {
         	TransformerParams params = new TransformerParams("-eSQL(MICROSOFT)");
@@ -727,6 +727,112 @@ public class TransformerParamsTest extends PerfMonTestCase {
         	
         	params = new TransformerParams("-eSQL");
         	assertTrue(params.isPossibleJDBCDriver("com.microsoft.sqlserver.jdbc.Driver"));
+        }
+        
+        public void testExportsParamsAnnotateClasses() {
+        	TransformerParams params = new TransformerParams("-aorg.acme.products,-aorg.other.MyClass");
+        	
+        	Properties props = params.exportAsProperties();
+        	
+        	assertEquals("Annotation 1", "org.acme.products", props.get("perfmon4j.javaagent.annotation.class.1"));
+        	assertEquals("Annotation 2", "org.other.MyClass", props.get("perfmon4j.javaagent.annotation.class.2"));
+        }
+        
+        public void testExportsParamsExtremeClasses() {
+        	TransformerParams params = new TransformerParams("-eorg.acme.products,-e(+getter,+setter)org.other.MyClass");
+        	
+        	Properties props = params.exportAsProperties();
+        	
+        	assertEquals("Extreme 1", "org.acme.products", props.get("perfmon4j.javaagent.extreme.class.1"));
+        	assertEquals("Extreme 1", "false", props.get("perfmon4j.javaagent.extreme.class.1.option.instrument-setters"));
+        	assertEquals("Extreme 1", "false", props.get("perfmon4j.javaagent.extreme.class.1.option.instrument-getters"));
+        	
+        	assertEquals("Extreme 2", "org.other.MyClass", props.get("perfmon4j.javaagent.extreme.class.2"));
+        	assertEquals("Extreme 2", "true", props.get("perfmon4j.javaagent.extreme.class.2.option.instrument-setters"));
+        	assertEquals("Extreme 2", "true", props.get("perfmon4j.javaagent.extreme.class.2.option.instrument-getters"));
+        }
+
+        public void testExportsParamsIgnoreClasses() {
+        	TransformerParams params = new TransformerParams("-iorg.acme.products,-iorg.other.MyClass");
+        	
+        	Properties props = params.exportAsProperties();
+        	
+        	assertEquals("Ignore 1", "org.acme.products", props.get("perfmon4j.javaagent.ignore.class.1"));
+        	assertEquals("Ignore 2", "org.other.MyClass", props.get("perfmon4j.javaagent.ignore.class.2"));
+        }
+        
+        public void testExportsParamsExtremeSQL() {
+        	// -eSQL includes packages for some commonly used JDBC drivers
+        	TransformerParams params = new TransformerParams("-eSQL");
+        	Properties props = params.exportAsProperties();
+        	
+        	// Indicate which jdbc packages should be tracked to measure SQL duration.
+        	// Note: Time spent in JDBC objects is not an exact measure of SQL time, but in most
+        	// applications it has a solid correlation and is a useful measure.
+        	assertEquals("ExtremeSQL 1", "org.postgresql", props.get("perfmon4j.javaagent.sql.package.1"));
+        	assertEquals("ExtremeSQL 2", "net.sourceforge.jtds", props.get("perfmon4j.javaagent.sql.package.2"));
+        	assertEquals("ExtremeSQL 3", "com.mysql.jdbc", props.get("perfmon4j.javaagent.sql.package.3"));
+        	assertEquals("ExtremeSQL 4", "org.apache.derby", props.get("perfmon4j.javaagent.sql.package.4"));
+        	assertEquals("ExtremeSQL 5", "oracle.jdbc", props.get("perfmon4j.javaagent.sql.package.5"));
+        	assertEquals("ExtremeSQL 6", "com.microsoft.sqlserver.jdbc", props.get("perfmon4j.javaagent.sql.package.6"));
+        	
+        	// You can also limit to specific supported named jdbc packages.
+        	params = new TransformerParams("-eSQL(MICROSOFT)");
+        	props = params.exportAsProperties();
+        	
+        	assertEquals("ExtremeSQL 1", "com.microsoft.sqlserver.jdbc", props.get("perfmon4j.javaagent.sql.package.1"));
+
+        	// Finally you can name any specific package
+        	params = new TransformerParams("-eSQL(org.acme.super.jdbc)");
+        	props = params.exportAsProperties();
+        	
+        	assertEquals("ExtremeSQL 1", "org.acme.super.jdbc", props.get("perfmon4j.javaagent.sql.package.1"));
+        }
+        
+        public void testInstallValve() {
+        	// -eVALVE instructs perfmon4j to look for a location to install a "ServletValve"
+        	// to monitor incoming web requests.
+        	TransformerParams params = new TransformerParams("");
+        	Properties props = params.exportAsProperties();
+
+        	assertEquals("install-valve", "false", props.get("perfmon4j.javaagent.install-servlet-valve"));
+        	
+        	params = new TransformerParams("-eVALVE");
+        	props = params.exportAsProperties();
+        	
+        	assertEquals("install-valve", "true", props.get("perfmon4j.javaagent.install-servlet-valve"));
+        }
+
+        public void testInstallHystrixMonitor() {
+        	TransformerParams params = new TransformerParams("");
+        	Properties props = params.exportAsProperties();
+
+        	assertEquals("install-hystrix-monitor", "false", props.get("perfmon4j.javaagent.install-hystrix-monitor"));
+        	
+        	params = new TransformerParams("-eHYSTRIX");
+        	props = params.exportAsProperties();
+        	
+        	assertEquals("install-hystrix-monitor", "false", props.get("perfmon4j.javaagent.install-hystrix-monitor"));
+        }
+
+        public void testInstallDebugEnabled() {
+        	TransformerParams params = new TransformerParams("");
+        	Properties props = params.exportAsProperties();
+
+        	assertEquals("perfmon4j-debug-logging", "false", props.get("perfmon4j.javaagent.logging.debug"));
+        	assertEquals("perfmon4j-verbose-logging", "false", props.get("perfmon4j.javaagent.logging.verbose"));
+        	
+        	params = new TransformerParams("-dtrue");
+        	props = params.exportAsProperties();
+        	
+        	assertEquals("perfmon4j-debug-logging", "true", props.get("perfmon4j.javaagent.logging.debug"));
+        	assertEquals("perfmon4j-verbose-logging", "false", props.get("perfmon4j.javaagent.logging.verbose"));
+
+        	params = new TransformerParams("-vtrue"); // Verbose implicitly sets debug-logging = true
+        	props = params.exportAsProperties();
+
+        	assertEquals("perfmon4j-debug-logging", "true", props.get("perfmon4j.javaagent.logging.debug"));
+        	assertEquals("perfmon4j-verbose-logging", "true", props.get("perfmon4j.javaagent.logging.verbose"));
         }
         
 /*----------------------------------------------------------------------------*/    
