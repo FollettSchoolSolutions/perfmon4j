@@ -44,6 +44,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
@@ -52,6 +53,7 @@ import java.util.regex.Pattern;
 import org.perfmon4j.BootConfiguration;
 import org.perfmon4j.BootConfiguration.ExceptionElement;
 import org.perfmon4j.BootConfiguration.ExceptionTrackerConfig;
+import org.perfmon4j.ConfiguredSettings;
 import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
@@ -670,11 +672,17 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	    	logger.logInfo("                                              |__/ ");
 	    	logger.logInfo("To hide banner add \"-D" + hideBannerProperty + "=true\" to your command line");
     	}
-    	logger.logInfo("Perfmon4j Instrumentation Agent v." + PerfMonTimerTransformer.class.getPackage().getImplementationVersion() + " installed. (http://perfmon4j.org)");
+        Properties agentProperties = t.params.exportAsProperties();
+
+    	String perfmon4jVersion = PerfMonTimerTransformer.class.getPackage().getImplementationVersion();
+    	logger.logInfo("Perfmon4j Instrumentation Agent v." + perfmon4jVersion + " installed. (http://perfmon4j.org)");
+        agentProperties.setProperty("perfmon4j.javaagent.version", perfmon4jVersion == null ? "unknown" : perfmon4jVersion);
     	
         if (javassistVersion != null) {
         	logger.logInfo("Perfmon4j found Javassist bytcode instrumentation library version: " + javassistVersion);
+            agentProperties.setProperty("javassist.version", javassistVersion);
         }
+        ConfiguredSettings.setJavaAgentSettings(agentProperties);
         
     	logger.logInfo(MiscHelper.getHighResolutionTimerEnabledDisabledMessage());
     	 

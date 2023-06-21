@@ -18,6 +18,7 @@
 package org.perfmon4j.instrument;
 
 import java.io.File;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.log4j.BasicConfigurator;
@@ -445,7 +446,31 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	
     	assertTrue("Should have the cacheHitRate value in text output", output.contains("cacheHitRate............. 25.000%"));
     }
-    
+
+	public static class AgentGetConfiguredSettings implements Runnable {
+		public void run() {
+			try {
+				for (Map.Entry<Object, Object> entry : api.org.perfmon4j.agent.PerfMon.getConfiguredSettings().entrySet()) {
+					System.out.println(entry.getKey() + "=" + entry.getValue());
+				}
+			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+    public void testGetConfiguredSettings() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(AgentGetConfiguredSettings.class, perfmon4jJar));
+//System.out.println(output);    	
+		assertTrue("should find property for perfmon4j agent version (even though it might be null)",
+				output.contains("perfmon4j.javaagent.version="));
+		String failures = extractFailures(output);
+		if (!failures.isEmpty()) {
+			fail("One or more exceptions thrown: " + failures);
+		}
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

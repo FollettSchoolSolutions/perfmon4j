@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -521,5 +522,40 @@ public class TransformerParams {
 
 	public boolean isHystrixInstrumentationEnabled() {
 		return hystrixInstrumentationEnabled;
+	}
+
+	public Properties exportAsProperties() {
+		Properties props = new Properties();
+		
+		int count = 1;
+		for (String value : annotateList) {
+			props.setProperty("perfmon4j.javaagent.annotation.class." + (count++), value);
+		}
+		
+		count  = 1;
+		for (ExtremeListElement element : extremeList) {
+			String baseName = "perfmon4j.javaagent.extreme.class." + (count++); 
+			props.setProperty(baseName, element.getValue());
+			props.setProperty(baseName + ".option.instrument-getters", Boolean.toString(element.getOptions().isInstrumentGetters()));
+			props.setProperty(baseName + ".option.instrument-setters", Boolean.toString(element.getOptions().isInstrumentSetters()));
+		}
+		
+		count  = 1;
+		for (String value : ignoreList) {
+			String baseName = "perfmon4j.javaagent.ignore.class." + (count++); 
+			props.setProperty(baseName, value);
+		}
+
+		count  = 1;
+		for (String value : extremeSQLPackages) {
+			String baseName = "perfmon4j.javaagent.sql.package." + (count++); 
+			props.setProperty(baseName, value);
+		}
+		props.setProperty("perfmon4j.javaagent.install-servlet-valve", Boolean.toString(installServletValve));
+		props.setProperty("perfmon4j.javaagent.install-hystrix-monitor", Boolean.toString(hystrixInstrumentationEnabled));
+		props.setProperty("perfmon4j.javaagent.logging.debug", Boolean.toString(debugEnabled || verboseEnabled));
+		props.setProperty("perfmon4j.javaagent.logging.verbose", Boolean.toString(verboseEnabled));
+		
+		return props;
 	}
 }
