@@ -27,7 +27,7 @@ jobs:
           ${{
           (github.event_name == 'push') && 
           (endsWith(github.ref, '/develop') || endsWith(github.ref, '/master'
-          || contains(github.event.head_commit.message, '#force deploy#')))
+          || contains(github.event.head_commit.message, 'force deploy')))
           }}
 
     steps:
