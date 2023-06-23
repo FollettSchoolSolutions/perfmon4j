@@ -25,7 +25,7 @@ jobs:
     env:
       DO_RELEASE: | 
           ${{
-          (github.event_name == 'push') && 
+          ((github.event_name == 'push') && 
           (endsWith(github.ref, '/develop') 
           || endsWith(github.ref, '/master')
           || startsWith(github.ref, 'refs/heads/hotfix/')
