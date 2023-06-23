@@ -58,7 +58,7 @@
 						<configuration>
 							<doctitle>${project.name} ${project.version}</doctitle>
 							<windowtitle>${project.name} ${project.version}</windowtitle>        			
-							<source>11</source>
+							<source>8</source>
 						</configuration>
 						<executions>
 							<execution>
