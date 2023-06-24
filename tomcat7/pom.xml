@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>1.6.2-SNAPSHOT</version>
+		<version>1.7.0-SNAPSHOT</version>
 	</parent>
   
 	<artifactId>perfmon4j-tomcat7</artifactId>
