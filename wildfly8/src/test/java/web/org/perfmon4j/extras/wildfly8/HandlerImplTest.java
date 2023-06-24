@@ -2,6 +2,12 @@ package web.org.perfmon4j.extras.wildfly8;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.servlet.ServletRequest;
 
@@ -13,6 +19,7 @@ import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
+import org.perfmon4j.ThreadTraceData;
 import org.xnio.OptionMap;
 
 import io.undertow.server.HttpHandler;
@@ -31,7 +38,6 @@ public class HandlerImplTest extends TestCase {
 	}
 
 	private PerfMonConfiguration config;
-	
 	protected void setUp() throws Exception {
 		super.setUp();
 		setUpSimpleAppender("WebRequest");
@@ -43,16 +49,13 @@ public class HandlerImplTest extends TestCase {
 		config.defineMonitor(monitorName);
 		config.attachAppenderToMonitor(monitorName, "SIMPLE", ".");
 		
-		SimpleAppender.reset();
 		PerfMon.configure(config);
-		Thread.sleep(100);
 	}
 	
 	protected void tearDown() throws Exception {
 		PerfMon.configure();
 		
 		super.tearDown();
-		Thread.sleep(100);
 	}
 	
 	public void testMaskPasswordInQueryString() {
@@ -65,57 +68,111 @@ public class HandlerImplTest extends TestCase {
 	}
 	
 	public static class SimpleAppender extends Appender {
-		static SimpleAppender appender = null; 
+		private static SimpleAppender appender = null; 
 		
-		public SimpleAppender(AppenderID id) {
-			super(id);
+		static SimpleAppender getSingleton() {
+			return appender;
+		}
+		
+		private final AtomicReference<CountDownLatch> latchSemaphore = new AtomicReference<>(null);
+		private final AtomicReference<Class<? extends PerfMonData>> typeToCapture = new AtomicReference<>(null); 
+		private final AtomicReference<PerfMonData> nextData = new AtomicReference<>(null);
+		
+		private final Object captureThreadTracesLockToken = new Object();
+		private List<ThreadTraceData> captureThreadTraces = null;
+
+		public SimpleAppender(AppenderID id) { 
+			super(id, false);
 			appender = this;
 		}
-	
-		static void reset() {
-			completions = 0;
-			hits = 0;
-			threadTraces = 0;
+
+		@SuppressWarnings("unchecked")
+		public <T extends PerfMonData > T getNextOuput(Class<? extends PerfMonData> dataType) {
+			nextData.set(null);
+			typeToCapture.set(dataType);
+			latchSemaphore.set(new CountDownLatch(1));
 			
+			try {
+				latchSemaphore.get().await(1, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				return null;
+			}
+			
+			return (T)nextData.getAndSet(null);
 		}
 		
-		static void flushOutput() throws Exception {
-			if (appender != null) {
-				Thread.sleep(100);
-				appender.flush();
-				Thread.sleep(100);
-			}
+		// Since the data will be collected often.  Do this to ensure
+		// that your observations are not collected across two time intervals.
+		public void waitForNewCollectionIntervalToStart(Class<? extends PerfMonData> dataType)  {
+			getNextOuput(IntervalData.class);
+		}
+		
+		public IntervalData runAndGetIntervalOutput(RunnableWithException runnable) throws Exception {
+			waitForNewCollectionIntervalToStart(IntervalData.class);
+			
+			runnable.run();
+			IntervalData result = getNextOuput(IntervalData.class);
+			assertNotNull("Did not recieve expected appender data outout of type: " + IntervalData.class, result);
+			
+			return result;
 		}
 
-		static int completions = 0;
-		static int hits = 0;
-		static int threadTraces = 0;
+		public ThreadTraceData[] runAndGetThreadTraceOutput(RunnableWithException runnable) throws Exception {
+			ThreadTraceData[] result = null;
+			
+			synchronized (captureThreadTracesLockToken) {
+				captureThreadTraces = new ArrayList<>();
+			}
+			
+			runnable.run();
+			
+			synchronized (captureThreadTracesLockToken) {
+				result = captureThreadTraces.toArray(new ThreadTraceData[] {});
+				captureThreadTraces = null;
+			}
+			
+			return result;
+		}
+		
+		
+		@FunctionalInterface
+		public static interface RunnableWithException {
+			public void run() throws Exception;
+		}
+		
 		
 		@Override
 		public void outputData(PerfMonData data) {
-			if (data instanceof IntervalData) {
-				IntervalData d = (IntervalData)data;
-				completions += d.getTotalCompletions();
-				hits += d.getTotalHits();
-			} else {
-				threadTraces++;
+			if (ThreadTraceData.class.equals(data.getClass())) {
+				synchronized(captureThreadTracesLockToken) {
+					if (captureThreadTraces != null) {
+						captureThreadTraces.add((ThreadTraceData)data);
+					}
+				}
 			}
-			System.out.println(data.toAppenderString());			
+			CountDownLatch latch = this.latchSemaphore.get();
+			if (latch != null) {
+				if (data.getClass().equals(typeToCapture.get())) {
+					nextData.set(data);
+					latchSemaphore.set(null);
+					latch.countDown();
+				}
+			}
 		}
 	}
 	
-	/* Disable test... it fails intermittently in GitHub Actions */
-	public void XtestSimpleMonitor() throws Exception {
+	public void testSimpleMonitor() throws Exception {
 		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
 		HttpHandler handler = buildMockHttpHandler();
 		HttpServerExchange exchange = buildMockExchange();
 		
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		impl.handleRequest(exchange);
-		SimpleAppender.flushOutput();
+		IntervalData data =  SimpleAppender.getSingleton().runAndGetIntervalOutput(() -> { 
+			impl.handleRequest(exchange);
+		});
 		
-		assertEquals(1, SimpleAppender.completions);
-		assertEquals("Should of had 1 hit", 1, SimpleAppender.hits);		
+		assertEquals(1, data.getTotalCompletions());
+		assertEquals("Should of had 1 hit", 1, data.getTotalHits());		
 	}
 	
 	public void testAbortTimerOnImageResponse() throws Exception {
@@ -127,12 +184,12 @@ public class HandlerImplTest extends TestCase {
 		exchange.getResponseHeaders().add(new HttpString("Content-Type"), "image/jpeg");
 		
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		impl.handleRequest(exchange);
+		IntervalData data =  SimpleAppender.getSingleton().runAndGetIntervalOutput(() -> { 
+			impl.handleRequest(exchange);
+		});
 		
-		SimpleAppender.flushOutput();
-		
-		assertEquals("Should of had 1 hit", 1, SimpleAppender.hits);
-		assertEquals("Completion should have been aborted", 0, SimpleAppender.completions);
+		assertEquals("Should of had 1 hit", 1, data.getTotalHits());
+		assertEquals("Completion should have been aborted", 0, data.getTotalCompletions());
 	}
 	
 	public void testAbortTimerOnRedirect() throws Exception {
@@ -144,12 +201,12 @@ public class HandlerImplTest extends TestCase {
 		exchange.setResponseCode(303);
 		
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		impl.handleRequest(exchange);
+		IntervalData data =  SimpleAppender.getSingleton().runAndGetIntervalOutput(() -> { 
+			impl.handleRequest(exchange);
+		});
 		
-		SimpleAppender.flushOutput();
-		
-		assertEquals("Should of had 1 hit", 1, SimpleAppender.hits);
-		assertEquals("Completion should have been aborted", 0, SimpleAppender.completions);
+		assertEquals("Should of had 1 hit", 1, data.getTotalHits());
+		assertEquals("Completion should have been aborted", 0, data.getTotalCompletions());
 	}
 
 	public void testAbortTimerOnURLPattern() throws Exception {
@@ -159,17 +216,17 @@ public class HandlerImplTest extends TestCase {
 		HttpHandler handler = buildMockHttpHandler();
 		
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		impl.handleRequest(buildMockExchange("/dave"));
-		impl.handleRequest(buildMockExchange("/notdave"));
 		
-		SimpleAppender.flushOutput();
+		IntervalData data =  SimpleAppender.getSingleton().runAndGetIntervalOutput(() -> { 
+			impl.handleRequest(buildMockExchange("/dave"));
+			impl.handleRequest(buildMockExchange("/notdave"));
+		});
 		
-		assertEquals("Both should have hit", 2, SimpleAppender.hits);
+		assertEquals("Both should have hit", 2, data.getTotalHits());
 		assertEquals("Only the request that did not match pattern should have been flagged complete", 
-				1, SimpleAppender.completions);
+				1, data.getTotalCompletions());
 	}
-	
-	
+
 	public void testServletPathTransformationPattern() throws Exception {
 		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
 		wrapper.setServletPathTransformationPattern("/context/mycontext/ => /");
@@ -178,14 +235,13 @@ public class HandlerImplTest extends TestCase {
 		HttpHandler handler = buildMockHttpHandler();
 		
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		impl.handleRequest(buildMockExchange("/context/mycontext/rest"));
-		
-		SimpleAppender.flushOutput();
+		IntervalData data =  SimpleAppender.getSingleton().runAndGetIntervalOutput(() -> { 
+			impl.handleRequest(buildMockExchange("/context/mycontext/rest"));
+		});
 		
 		assertEquals("Should have been captured in WebRequest.rest category", 
-				1, SimpleAppender.completions);
+				1, data.getTotalCompletions());
 	}
-	
 	
 	public void testSkipTimerOnURLPattern() throws Exception {
 		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
@@ -194,17 +250,16 @@ public class HandlerImplTest extends TestCase {
 		HttpHandler handler = buildMockHttpHandler();
 		
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		impl.handleRequest(buildMockExchange("/dave"));
-		impl.handleRequest(buildMockExchange("/notdave"));
-		
-		SimpleAppender.flushOutput();
+		IntervalData data =  SimpleAppender.getSingleton().runAndGetIntervalOutput(() -> { 
+			impl.handleRequest(buildMockExchange("/dave"));
+			impl.handleRequest(buildMockExchange("/notdave"));
+		});
 		
 		assertEquals("Only ther request that did not match pattern should have been flagged as a hit", 
-				1, SimpleAppender.hits);
+				1, data.getTotalHits());
 		assertEquals("Only the request that did not match pattern should have been flagged complete", 
-				1, SimpleAppender.completions);
+				1, data.getTotalCompletions());
 	}
-
 	
 	public void testThreadTraceHttpRequestTrigger() throws Exception {
 		Trigger trigger = new ThreadTraceConfig.HTTPRequestTrigger("userName", "Dave");
@@ -215,16 +270,14 @@ public class HandlerImplTest extends TestCase {
 		HttpServerExchange exchange = buildMockExchange();
 		
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		
-		impl.handleRequest(exchange);
-		
-		// Now add a request parameter that matches the trigger.
-		exchange.addQueryParam("userName", "Dave");
-		impl.handleRequest(exchange);
-		
-		SimpleAppender.flushOutput();
-		
-		assertEquals("Should have gotten 1 thread trace", 1, SimpleAppender.threadTraces);
+		ThreadTraceData[] data =  SimpleAppender.getSingleton().runAndGetThreadTraceOutput(() -> { 
+			impl.handleRequest(exchange);
+			
+			// Now add a request parameter that matches the trigger.
+			exchange.addQueryParam("userName", "Dave");
+			impl.handleRequest(exchange);
+		});
+		assertEquals("Should have gotten 1 thread trace", 1, data.length);
 	}
 
 	public void testSkipRequestLogOutput() throws Exception {
@@ -261,7 +314,6 @@ public class HandlerImplTest extends TestCase {
 		return context;
 	}
 	
-	
 	private void addSessionAttribute(HttpServerExchange exchange, String name, String value) {
 		ServletRequestContext context = getOrCreateServletContext(exchange);
 		HttpSessionImpl session = context.getSession(); 
@@ -281,8 +333,7 @@ public class HandlerImplTest extends TestCase {
 		}
 		Mockito.when(servletRequest.getAttribute(name)).thenReturn(value);
 	}
-	
-	
+
 	public void testThreadTraceHttpSessionTrigger() throws Exception {
 		Trigger trigger = new ThreadTraceConfig.HTTPSessionTrigger("userName", "Dave");
 		addThreadTraceTrigger(trigger);
@@ -290,20 +341,18 @@ public class HandlerImplTest extends TestCase {
 		PerfmonHandlerWrapper wrapper = new PerfmonHandlerWrapper();
 		HttpHandler handler = buildMockHttpHandler();
 		HttpServerExchange exchange = buildMockExchange();
-		
 	
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		impl.handleRequest(exchange);
+		ThreadTraceData[] data =  SimpleAppender.getSingleton().runAndGetThreadTraceOutput(() -> { 
+			impl.handleRequest(exchange);
+			
+			// Now add Session attribute that matches the trigger.
+			addSessionAttribute(exchange, "userName", "Dave");
+			impl.handleRequest(exchange);
+		});	
 		
-		// Now add Session attribute that matches the trigger.
-		addSessionAttribute(exchange, "userName", "Dave");
-		impl.handleRequest(exchange);
-		
-		SimpleAppender.flushOutput();
-		
-		assertEquals("Should have gotten 1 thread trace", 1, SimpleAppender.threadTraces);
+		assertEquals("Should have gotten 1 thread trace", 1, data.length);
 	}
-	
 
 	private void addCookie(HttpServerExchange exchange, String name, String value) throws Exception {
 		Cookie cookie = Mockito.mock(Cookie.class);
@@ -322,15 +371,15 @@ public class HandlerImplTest extends TestCase {
 		HttpServerExchange exchange = buildMockExchange();
 	
 		HandlerImpl impl = new HandlerImpl(wrapper, handler);
-		impl.handleRequest(exchange);
+		ThreadTraceData[] data =  SimpleAppender.getSingleton().runAndGetThreadTraceOutput(() -> { 
+			impl.handleRequest(exchange);
+			
+			// Now add Session attribute that matches the trigger.
+			addCookie(exchange, "userName", "Dave");
+			impl.handleRequest(exchange);
+		});	
 		
-		// Now add Session attribute that matches the trigger.
-		addCookie(exchange, "userName", "Dave");
-		impl.handleRequest(exchange);
-		
-		SimpleAppender.flushOutput();
-		
-		assertEquals("Should have gotten 1 thread trace", 1, SimpleAppender.threadTraces);
+		assertEquals("Should have gotten 1 thread trace", 1, data.length);
 	}
 
 	public void testBuildNDC() throws Exception {
@@ -365,7 +414,6 @@ public class HandlerImplTest extends TestCase {
 		assertEquals("ndc with all options", "/mycontext/myservlet?userName=dave&password=******* localhost/127.0.0.1[172.0.0.1] cookieA:cA cookieC:cC sessA:sA sessC:sC", ndc);
 	}
 	
-	
 	private HttpHandler buildMockHttpHandler() {
 		HttpHandler handler = Mockito.mock(HttpHandler.class);
 		
@@ -397,6 +445,5 @@ public class HandlerImplTest extends TestCase {
 		config.addThreadTraceConfig("WebRequest", ttConfig);
 		
 		PerfMon.configure(config);
-		Thread.sleep(100);
 	}
 }
