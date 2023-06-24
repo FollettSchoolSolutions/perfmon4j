@@ -23,13 +23,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+    
       DO_RELEASE: | 
           ${{
           ((github.event_name == 'push') && 
           (endsWith(github.ref, '/develop') 
           || endsWith(github.ref, '/master')
           || startsWith(github.ref, 'refs/heads/hotfix/')
-          || contains(github.event.head_commit.message, 'force deploy')))
+          || contains(${{github.event.head_commit.message}}, '[deploy]')))
           }}
 
     steps:
