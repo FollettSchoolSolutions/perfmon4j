@@ -35,6 +35,9 @@ jobs:
           }}
 
     steps:
+      - name: Echo Commit Message
+        run: echo Commit MSG = ${{ env.commitmsg }}
+        
       - name: Checking out the code
         uses: actions/checkout@v2
 
