@@ -421,7 +421,7 @@ public class PerfMon {
     void start(long systemTime, PerfMonTimer startingTimer, String reactiveContextID) {
         ReferenceCount count = getMonitorReferenceCount(reactiveContextID);
         if (count.inc(systemTime) == 1) {
-        	if (reactiveContextID != null) { // No need to save of reference for reactiveContext aware 
+        	if (reactiveContextID == null) { // No need to save of reference for reactiveContext aware 
         									 // timer since they are already designed to handle multiple threads.	
             	// Save off the starting timer so that it can
             	// stop this instance even if it has moved to another thread.
