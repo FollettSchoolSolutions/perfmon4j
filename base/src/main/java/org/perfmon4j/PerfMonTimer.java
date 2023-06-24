@@ -26,6 +26,7 @@ import java.util.List;
 import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
 import org.perfmon4j.reactive.ReactiveContext;
 import org.perfmon4j.reactive.ReactiveContextManager;
+import org.perfmon4j.PerfMon.ReferenceCount;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -40,7 +41,6 @@ public class PerfMonTimer {
     // Package level for testing...
     final PerfMon perfMon;
     final PerfMonTimer next;
-    
     /**
      * Package level... Only PerfMon.class should invoke this constructor
      * Applications using the PerfMonTimer should invoke the static method
@@ -68,7 +68,7 @@ public class PerfMonTimer {
     				|| ReactiveContext.isActiveThreadTracesOnContext()); 
     	
     	List<ExitCheckpoint> exitMethods = null;
-        if (haveActiveTimer || haveActiveThreadTrace) {
+        if (haveActiveTimer || haveActiveThreadTrace ) {
         	String monitorName = "";
 	        try {
 	        	long startTime = MiscHelper.currentTimeWithMilliResolution(); 
@@ -108,19 +108,16 @@ public class PerfMonTimer {
 		            }
 	            }
 	            if (haveActiveTimer) {
+	            	result = new TimerWrapper(result, reactiveContextID, exitMethods);
 	            	result.start(startTime, reactiveContextID);
+	            } else if (reactiveContextID != null || (exitMethods != null && !exitMethods.isEmpty())) {
+	            	result = new TimerWrapper(result, reactiveContextID, exitMethods);
 	            }
 	        } catch (ThreadDeath th) {
 	            throw th;   // Always rethrow this error
 	        } catch (Throwable th) {
 	            logger.logError("Error starting monitor: " + monitorName, th);
 	            result = NULL_TIMER;
-	        }
-	        
-	        if (reactiveContextID != null || (exitMethods != null && !exitMethods.isEmpty())) {
-	            // To keep track of tracing exit methods AND/OR the reactiveContext we 
-	            // must be able to identify the timer passed to PerfMonTimer.stop()
-	            result = new TimerWrapper(result, reactiveContextID, exitMethods);
 	        }
         }
         
@@ -186,23 +183,25 @@ public class PerfMonTimer {
     
     private void start(long now, String reactiveContextID) {
         if (perfMon != null) {
-            perfMon.start(now, reactiveContextID);
+            perfMon.start(now, this, reactiveContextID);
             next.start(now, reactiveContextID);
         }
     }
     
     private static void stop(PerfMonTimer timer, boolean abort) {
         try {
-            if (timer != NULL_TIMER && timer != null) {
+            if (timer != NULL_TIMER && timer != null && !timer.hasBeenStopped()) {
             	timer.exitAllCheckpoints();
                 timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort);
             }
         } catch (ThreadDeath th) {
-            throw th;   // Always rethrow this error
+        	throw th;   // Always rethrow this error
         } catch (Throwable th) {
-            logger.logError("Error stopping timer", th);
+        	logger.logError("Error stopping timer", th);
+        } finally {
+        	timer.flagStopped();
         }
-    }
+	}
 
     public static void abort(PerfMonTimer timer) {
         stop(timer, true);
@@ -215,7 +214,7 @@ public class PerfMonTimer {
     private void stop(long now, boolean abort) {
         if (perfMon != null) {
             next.stop(now, abort);
-            perfMon.stop(now, abort, getReactiveContextID());
+            perfMon.stop(now, abort, this, getReactiveContextID());
         }
     }
     
@@ -232,12 +231,84 @@ public class PerfMonTimer {
     	return null;
     }
     
-    
     @FunctionalInterface
     private static interface ExitCheckpoint {
     	public void exit(long stopTime, long sqlStopTime);
     }
     
+    /**
+     * Used for the ThreadTraceTimers...
+     * Implemented in TimerWrapper class
+     * @return
+     */
+    protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
+        return null;
+    }
+
+    /**
+     * Used for the ThreadTraceTimers...
+     * Implemented in TimerWrapper class
+     * @return
+     */
+    protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
+        return null;
+    }
+    
+    /**
+     * Implemented in TimerWrapper class
+     * @return
+     */
+    protected boolean hasBeenStopped() {
+    	return false;
+    }
+    
+    /**
+     * Implemented in TimerWrapper class
+     * @return
+     */
+    protected void flagStopped() {
+    	/** Empty **/
+    }
+
+    /**
+     * Implemented in TimerWrapper class
+     * @return
+     */
+	/* package */ void storeReferenceCountForOffThreadStop(ReferenceCount referenceCount) {
+		/** Empty **/
+	}
+
+    /**
+     * Implemented in TimerWrapper class
+     * @return
+     */
+	/* package */ ReferenceCount getReferenceCount() {
+		return null;
+	}
+
+    /**
+     * Implemented in TimerWrapper class
+     * 
+     * This should only be used for testing!
+     * 
+     * The name of the effective monitor category associated
+     * with this timer.
+     * 
+     * For example if you have appenders listening only to a 
+     * parent monitor (i.e. "a") and not a child (i.e. "a.b"), 
+     * by using appenderPattern = "./", both of the following 
+     * PerfMonTimer start() would be associated with the
+     * same effective category, "a":
+     * 		PerfMonTimer.start("a")
+     * 		PerfMonTimer.start("a.b");
+     * 
+     * @return
+     */
+	/* package */ String getEffectiveMonitorCategory() {
+		return null;
+	}
+	
+	
     /**
      * This class is only used when we return a Timer that is part of
      * a thread trace.
@@ -245,11 +316,19 @@ public class PerfMonTimer {
     private static class TimerWrapper extends PerfMonTimer {
     	final private String reactiveContextID;
     	final private List<ExitCheckpoint> exitCheckpoints; 
+    	private boolean hasBeenStopped = false;
+        private ReferenceCount referenceCount = null;
+        private final String effectiveCategory;
         
         TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<ExitCheckpoint> exitCheckpoints) {
             super(timer.perfMon, timer.next); 
             this.reactiveContextID = reactiveContextID;
             this.exitCheckpoints = exitCheckpoints;
+            if (timer.perfMon != null) {
+            	effectiveCategory = timer.perfMon.getName();	
+            } else {
+            	effectiveCategory = "";
+            }
         }
 
         @Override
@@ -268,6 +347,31 @@ public class PerfMonTimer {
 	        	}
         	}
         }
+
+		@Override
+		protected boolean hasBeenStopped() {
+			return hasBeenStopped;
+		}
+
+		@Override
+		protected void flagStopped() {
+			hasBeenStopped = true;
+		}
+		
+		@Override
+		/* package */ void storeReferenceCountForOffThreadStop(ReferenceCount referenceCount) {
+			this.referenceCount = referenceCount;
+		}
+		
+		@Override
+		/* package */ ReferenceCount getReferenceCount() {
+			return referenceCount;
+		}
+
+		@Override
+		/* package */ String getEffectiveMonitorCategory() {
+			return effectiveCategory;
+		}
     }
     
 
