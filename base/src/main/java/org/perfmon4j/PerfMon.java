@@ -423,9 +423,12 @@ public class PerfMon {
     		count = getThreadLocalReferenceCount();
     	}
         if (count.inc(systemTime) == 1) {
-        	// Save off the starting timer so that it can
-        	// stop this instance even if it has moved to another thread.
-        	startingTimer.storeReferenceCountForOffThreadStop(count);
+        	if (reactiveContextID == null) { // No need to save of reference for reactiveContext aware 
+        									 // timer since they are already designed to handle multiple threads.	
+            	// Save off the starting timer so that it can
+            	// stop this instance even if it has moved to another thread.
+        		startingTimer.storeReferenceCountForOffThreadStop(count);
+        	}
         	
         	if (externalThreadTraceQueue.hasPendingElements()) {
         		ExternalThreadTraceConfig externalConfig = externalThreadTraceQueue.assignToThread();

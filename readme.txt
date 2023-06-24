@@ -16,9 +16,12 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 1.7,0 - 2023-TBD
+- Added support for the Quarkus platorm.  Additions
+  include a ServletFilter and the ability to track Restful
+  requests across multiple theads.
 
-Changes
-** 1.6.2-SNAPSHOT - 2023-06-23
+** 1.6.2 - 2023-TBD
 - Minor changes to address the following:
 	- PerfMonTimers can now be stopped from a thread
 	other than the thread they were started on.

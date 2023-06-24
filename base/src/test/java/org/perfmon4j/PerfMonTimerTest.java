@@ -213,8 +213,6 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     	
     	// Wait for thread to run.
     	latch.await();
-    
-    	
     	
     	PerfMon mon = PerfMon.getMonitor(monitorName);
     	assertEquals("Should have stopped monitor", 0, mon.getActiveThreadCount());
