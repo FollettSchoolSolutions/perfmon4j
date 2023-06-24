@@ -30,7 +30,7 @@ jobs:
           (endsWith(github.ref, '/develop') 
           || endsWith(github.ref, '/master')
           || startsWith(github.ref, 'refs/heads/hotfix/')
-          || contains(${{github.event.head_commit.message}}, '[deploy]')))
+          || contains(${github.event.head_commit.message}, '[deploy]')))
           }}
 
     steps:
