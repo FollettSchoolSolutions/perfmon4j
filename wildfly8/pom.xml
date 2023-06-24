@@ -45,13 +45,6 @@
 		<version>1.0.16.Final</version>
 		<scope>provided</scope>
 	</dependency>	
-	
-	<dependency>
-		<groupId>org.mockito</groupId>
-		<artifactId>mockito-all</artifactId>
-		<version>1.8.0</version>
-		<scope>test</scope>
-	</dependency>	
 
 </dependencies>
  </project>
