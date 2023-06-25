@@ -23,11 +23,12 @@ package org.perfmon4j;
 
 
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+
+import org.apache.log4j.BasicConfigurator;
 
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
-
-import org.apache.log4j.BasicConfigurator;
 
 public class PerfMonTimerTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -192,6 +193,54 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     		numAtStart + 5, PerfMon.getMonitorKeys().size());
     }
     
+    public void testStartStopTimerAcrossThreads() throws Exception {
+    	String monitorName = "testStartStopTimerAcrossThreads";
+    	String childMonitorName = monitorName + ".child";
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor(monitorName, ".")
+    		.build(TestAppender.getAppenderID()));
+
+    	CountDownLatch latch = new CountDownLatch(1);
+    	PerfMonTimer timer = PerfMonTimer.start(monitorName);
+
+    	PerfMonTimer timerChild = PerfMonTimer.start(childMonitorName);
+		PerfMonTimer.stop(timerChild);
+    	
+    	(new Thread(() -> {
+    		PerfMonTimer.stop(timer);
+    		latch.countDown();
+    	})).start();
+    	
+    	// Wait for thread to run.
+    	latch.await();
+    
+    	
+    	
+    	PerfMon mon = PerfMon.getMonitor(monitorName);
+    	assertEquals("Should have stopped monitor", 0, mon.getActiveThreadCount());
+    	assertEquals("Should have 1 completion", 1, mon.getTotalCompletions());
+    }
+
+    
+    public void testMultipeStopsOnTimer() throws Exception {
+    	String monitorName = "testMultipeStopsOnTimer";
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor(monitorName, ".")
+    		.build(TestAppender.getAppenderID()));
+
+    	PerfMonTimer timer = PerfMonTimer.start(monitorName);
+    	
+    	// Call Stop 2 times
+    	PerfMonTimer.stop(timer);
+    	PerfMonTimer.stop(timer);
+    	
+    	timer = PerfMonTimer.start(monitorName);
+    	PerfMonTimer.stop(timer);
+
+    	PerfMon mon = PerfMon.getMonitor(monitorName);
+    	assertEquals("Expected number of completions", 2, mon.getTotalCompletions());
+    }
+    
 /*----------------------------------------------------------------------------*/
     private static class TestAppender extends Appender {
     	
@@ -206,11 +255,6 @@ public class PerfMonTimerTest extends PerfMonTestCase {
         public void outputData(@SuppressWarnings("unused") PerfMonData data) {
         }
     }
-    
-
-    
-   
-    
 
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

@@ -4,7 +4,7 @@
   
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>1.6.1</version>
+	<version>1.6.2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>org.perfmon4j:perfmon4j-project</name>
@@ -57,8 +57,11 @@
 						<version>2.10.3</version>
 						<configuration>
 							<doctitle>${project.name} ${project.version}</doctitle>
-							<windowtitle>${project.name} ${project.version}</windowtitle>        			
-							<source>11</source>
+							<windowtitle>${project.name} ${project.version}</windowtitle>
+							<additionalparam>-Xdoclint:none</additionalparam>
+							<additionalOptions>-Xdoclint:none</additionalOptions>
+							<additionalJOption>-Xdoclint:none</additionalJOption>							
+							<source>8</source>
 						</configuration>
 						<executions>
 							<execution>
