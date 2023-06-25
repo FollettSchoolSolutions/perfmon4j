@@ -729,6 +729,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 					try {reader.close();} catch (Exception ex) {}
 				}
 			}
+    		ConfiguredSettings.setBootConfigSettings(bootConfiguration.exportAsProperties());
     	}
         
         if (t.params.isInstallServletValve()) {

@@ -536,8 +536,8 @@ public class TransformerParams {
 		for (ExtremeListElement element : extremeList) {
 			String baseName = "perfmon4j.javaagent.extreme.class." + (count++); 
 			props.setProperty(baseName, element.getValue());
-			props.setProperty(baseName + ".option.instrument-getters", Boolean.toString(element.getOptions().isInstrumentGetters()));
-			props.setProperty(baseName + ".option.instrument-setters", Boolean.toString(element.getOptions().isInstrumentSetters()));
+			props.setProperty(baseName + ".option.instrumentGetters", Boolean.toString(element.getOptions().isInstrumentGetters()));
+			props.setProperty(baseName + ".option.instrumentSetters", Boolean.toString(element.getOptions().isInstrumentSetters()));
 		}
 		
 		count  = 1;
@@ -551,8 +551,8 @@ public class TransformerParams {
 			String baseName = "perfmon4j.javaagent.sql.package." + (count++); 
 			props.setProperty(baseName, value);
 		}
-		props.setProperty("perfmon4j.javaagent.install-servlet-valve", Boolean.toString(installServletValve));
-		props.setProperty("perfmon4j.javaagent.install-hystrix-monitor", Boolean.toString(hystrixInstrumentationEnabled));
+		props.setProperty("perfmon4j.javaagent.installServletValve", Boolean.toString(installServletValve));
+		props.setProperty("perfmon4j.javaagent.installHystrixMonitor", Boolean.toString(hystrixInstrumentationEnabled));
 		props.setProperty("perfmon4j.javaagent.logging.debug", Boolean.toString(debugEnabled || verboseEnabled));
 		props.setProperty("perfmon4j.javaagent.logging.verbose", Boolean.toString(verboseEnabled));
 		

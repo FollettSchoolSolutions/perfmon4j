@@ -1,5 +1,7 @@
 package org.perfmon4j;
 
+import java.util.Properties;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -105,6 +107,33 @@ public class BootConfigurationTest extends PerfMonTestCase {
 		
 		assertNotNull(props.baseFilterCategory);
 	}
+	
+
+	public void testExportAsPropertiesProperties() throws Exception {
+		BootConfiguration bootConfig = new BootConfiguration();
+		bootConfig.setServletValveConfig(new BootConfiguration.ServletValveConfig());
+		
+		Properties props = bootConfig.exportAsProperties();
+		assertNotNull(props);
+		
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.baseFilterCategory", "WebRequest");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.abortTimerOnRedirect", "false");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.abortTimerOnImageResponse", "false");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.abortTimerOnURLPattern", "");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.skipTimerOnURLPattern", "");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.outputRequestAndDuration", "false");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.pushCookiesOnNDC", "");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.pushSessionAttributesOnNDC", "");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.pushClientInfoOnNDC", "false");
+		assertProperty(props, "perfmon4j.bootconfiguration.servlet-valve.servletPathTransformationPattern", "");
+	}
+	
+	
+	private void assertProperty(Properties props, String propertyName, String expectedValue) throws Exception {
+		assertEquals(propertyName, expectedValue, props.getProperty(propertyName));
+	}
+	
+	
 	
 	/*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
