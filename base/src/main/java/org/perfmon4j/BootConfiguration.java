@@ -24,6 +24,7 @@ package org.perfmon4j;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 
 import org.perfmon4j.util.BeanHelper;
@@ -232,5 +233,37 @@ public class BootConfiguration {
 			return Objects.equals(className, other.className);
 		}
 	}
+
+	public Properties exportAsProperties() {
+		Properties result = new Properties();
+		
+		
+		ServletValveConfig servletConfig = getServletValveConfig();
+		
+		if (servletConfig != null) {
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.baseFilterCategory",nullFilter(servletConfig.getBaseFilterCategory()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.abortTimerOnURLPattern", nullFilter(servletConfig.getAbortTimerOnURLPattern()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.skipTimerOnURLPattern", nullFilter(servletConfig.getSkipTimerOnURLPattern()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.pushCookiesOnNDC", nullFilter(servletConfig.getPushCookiesOnNDC()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.pushSessionAttributesOnNDC", nullFilter(servletConfig.getPushSessionAttributesOnNDC()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.servletPathTransformationPattern", nullFilter(servletConfig.getServletPathTransformationPattern()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.abortTimerOnRedirect", Boolean.toString(servletConfig.isAbortTimerOnRedirect()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.abortTimerOnImageResponse", Boolean.toString(servletConfig.isAbortTimerOnImageResponse()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.outputRequestAndDuration", Boolean.toString(servletConfig.isOutputRequestAndDuration()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.pushClientInfoOnNDC", Boolean.toString(servletConfig.isPushClientInfoOnNDC()));
+			result.setProperty("perfmon4j.bootconfiguration.servlet-valve.pushURLOnNDC", Boolean.toString(servletConfig.isPushURLOnNDC()));
+		}
+
+		return result;
+	}
+	
+	private String nullFilter(String value) {
+		if (value == null) {
+			return "";
+		} else {
+			return value;
+		}
+	}
+	
 
 }

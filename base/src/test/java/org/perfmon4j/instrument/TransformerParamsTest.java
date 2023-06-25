@@ -744,12 +744,12 @@ public class TransformerParamsTest extends PerfMonTestCase {
         	Properties props = params.exportAsProperties();
         	
         	assertEquals("Extreme 1", "org.acme.products", props.get("perfmon4j.javaagent.extreme.class.1"));
-        	assertEquals("Extreme 1", "false", props.get("perfmon4j.javaagent.extreme.class.1.option.instrument-setters"));
-        	assertEquals("Extreme 1", "false", props.get("perfmon4j.javaagent.extreme.class.1.option.instrument-getters"));
+        	assertEquals("Extreme 1", "false", props.get("perfmon4j.javaagent.extreme.class.1.option.instrumentSetters"));
+        	assertEquals("Extreme 1", "false", props.get("perfmon4j.javaagent.extreme.class.1.option.instrumentGetters"));
         	
         	assertEquals("Extreme 2", "org.other.MyClass", props.get("perfmon4j.javaagent.extreme.class.2"));
-        	assertEquals("Extreme 2", "true", props.get("perfmon4j.javaagent.extreme.class.2.option.instrument-setters"));
-        	assertEquals("Extreme 2", "true", props.get("perfmon4j.javaagent.extreme.class.2.option.instrument-getters"));
+        	assertEquals("Extreme 2", "true", props.get("perfmon4j.javaagent.extreme.class.2.option.instrumentSetters"));
+        	assertEquals("Extreme 2", "true", props.get("perfmon4j.javaagent.extreme.class.2.option.instrumentGetters"));
         }
 
         public void testExportsParamsIgnoreClasses() {
@@ -795,24 +795,24 @@ public class TransformerParamsTest extends PerfMonTestCase {
         	TransformerParams params = new TransformerParams("");
         	Properties props = params.exportAsProperties();
 
-        	assertEquals("install-valve", "false", props.get("perfmon4j.javaagent.install-servlet-valve"));
+        	assertEquals("install-valve", "false", props.get("perfmon4j.javaagent.installServletValve"));
         	
         	params = new TransformerParams("-eVALVE");
         	props = params.exportAsProperties();
         	
-        	assertEquals("install-valve", "true", props.get("perfmon4j.javaagent.install-servlet-valve"));
+        	assertEquals("install-valve", "true", props.get("perfmon4j.javaagent.installServletValve"));
         }
 
         public void testInstallHystrixMonitor() {
         	TransformerParams params = new TransformerParams("");
         	Properties props = params.exportAsProperties();
 
-        	assertEquals("install-hystrix-monitor", "false", props.get("perfmon4j.javaagent.install-hystrix-monitor"));
+        	assertEquals("install-hystrix-monitor", "false", props.get("perfmon4j.javaagent.installHystrixMonitor"));
         	
         	params = new TransformerParams("-eHYSTRIX");
         	props = params.exportAsProperties();
         	
-        	assertEquals("install-hystrix-monitor", "true", props.get("perfmon4j.javaagent.install-hystrix-monitor"));
+        	assertEquals("install-hystrix-monitor", "true", props.get("perfmon4j.javaagent.installHystrixMonitor"));
         }
 
         public void testInstallDebugEnabled() {
