@@ -112,6 +112,7 @@ public abstract class GenericFilter {
 		PerfMon.getMonitor(this.baseFilterCategory, false);  // Always create the base category monitor, all child monitors are only created when a monitor is attached.
 	}
 	
+	
 	public void handleRequest(HttpRequest request, HttpResponse response, HttpRequestChain chain) throws Exception {
 
 		int recurse = recurseCount.get().incrementAndGet();
@@ -135,16 +136,18 @@ public abstract class GenericFilter {
 	}
 
 	public class AsyncFinishRequestCallback {
+        private final GenericFilter parent;
 		private final HttpRequest request;
 		private final PerfMonTimer timer;
         private final Long localStartTime;
         private final Long localSQLStartTime;
         
-		private AsyncFinishRequestCallback(HttpRequest request) {
-			this(request, null);
+		private AsyncFinishRequestCallback(GenericFilter parent, HttpRequest request) {
+			this(parent, request, null);
 		}
         
-		private AsyncFinishRequestCallback(HttpRequest request, String reactiveContext) {
+		private AsyncFinishRequestCallback(GenericFilter parent, HttpRequest request, String reactiveContext) {
+			this.parent = parent;
 			this.request = request;
 			timer = startTimerForRequest(request, reactiveContext);
 			localStartTime = outputRequestAndDuration ? Long.valueOf(System.currentTimeMillis()) : null;
@@ -203,9 +206,9 @@ public abstract class GenericFilter {
 	            }
 				
 	            if (doAbort) {
-	            	PerfMonTimer.abort(timer);
+	            	parent.abortTimer(timer);
 	            } else {
-	            	PerfMonTimer.stop(timer);
+	            	parent.stopTimer(timer);
 		        	if ((localStartTime != null) && !skipLogOutput() ) {
 		        		outputToLog(request, localStartTime, localSQLStartTime);
 		        	}
@@ -239,7 +242,7 @@ public abstract class GenericFilter {
 				&& skipTimerOnURLPattern.matcher(request.getServletPath()).matches());
 		
 		if (!skip) {
-			result = new AsyncFinishRequestCallback(request, reactiveContext);
+			result = new AsyncFinishRequestCallback(this, request, reactiveContext);
 		}
 		
 		return result;
@@ -309,18 +312,51 @@ public abstract class GenericFilter {
 	
     protected PerfMonTimer startTimerForRequest(HttpRequest request, String requestContext) {
         PerfMonTimer result = PerfMonTimer.getNullTimer();
-        if (PerfMon.isConfigured()) {
+        if (isPerfMonConfigured()) {
         	String requestPath = request.getServletPath();
         	if (requestPath != null) {
         		if (requestPath.endsWith("/")) {
         			requestPath = requestPath.substring(0, requestPath.length()-1);
         		}
         		String monitorCategory = servletPathTransformer.transformToCategory(requestPath);
-                result = PerfMonTimer.start(monitorCategory, true, requestContext);
+                result = startTimer(monitorCategory, true, requestContext);
         	}
         }
         return result;
     }	
+    
+    
+    /**
+     * Method will be overwritten by test class to help with unit testing.
+     * @return
+     */
+    /* package */ boolean isPerfMonConfigured() {
+    	return PerfMon.isConfigured() && PerfMon.isAttachedToAgent();
+    }
+    
+    /**
+     * Method will be overwritten by test class to help with unit testing.
+     * @return
+     */
+    /* package */ PerfMonTimer startTimer(String category, boolean isDynamicTimer, String requestContext) {
+    	return PerfMonTimer.start(category, true, requestContext);
+    }
+    
+    /**
+     * Method will be overwritten by test class to help with unit testing.
+     * @return
+     */
+    /* package */ void abortTimer(PerfMonTimer timer) {
+    	PerfMonTimer.abort(timer);;
+    }
+    
+    /**
+     * Method will be overwritten by test class to help with unit testing.
+     * @return
+     */
+    /* package */ void stopTimer(PerfMonTimer timer) {
+    	PerfMonTimer.stop(timer);;
+    }
 
 /* 
 TODO: Restore PushNDC or MDC    
