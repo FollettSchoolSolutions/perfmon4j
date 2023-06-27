@@ -173,7 +173,7 @@ public class PerfMonTimer {
     public static void stop(PerfMonTimer timer) {
         stop(timer, false);
     }
-    
+
     private void stop(long now, boolean abort) {
         if (perfMon != null) {
             next.stop(now, abort);
@@ -236,6 +236,21 @@ public class PerfMonTimer {
 	}
 
     /**
+     * If you need a mutable version, you must wrap the
+     * Immutable timer with the mutable TimerWrapper.
+     * 
+     * This allows the TimerInstance to maintain state
+     * between the start and stop calls.  
+     * @return
+     */
+	/* package */ boolean isMutable() {
+		// Will be overriden in WrapperClass to indicate it can
+		// accept and maintain state.
+		return false;
+	}
+	
+	
+    /**
      * Implemented in TimerWrapper class
      * 
      * This should only be used for testing!
@@ -272,9 +287,11 @@ public class PerfMonTimer {
         private TimerWrapper(PerfMonTimer timer, 
             UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey,
             UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey) {
-            super(timer.perfMon, timer.next); 
+            
+        	super(timer.perfMon, wrapIfNeeded(timer.next)); 
             this.uniqueInternalThreadTraceTimerKey = uniqueInternalThreadTraceTimerKey;
             this.uniqueExternalThreadTraceTimerKey = uniqueExternalThreadTraceTimerKey;
+            
             if (timer.perfMon != null) {
             	effectiveCategory = timer.perfMon.getName();	
             } else {
@@ -282,6 +299,17 @@ public class PerfMonTimer {
             }
         }
 
+		public static PerfMonTimer wrapIfNeeded(PerfMonTimer timer) {
+			PerfMonTimer result = timer;
+			
+			if (result != null
+				&& !result.isMutable() 
+				&& result != NULL_TIMER) {
+				return new TimerWrapper(timer, null, null);
+			}
+			return result;
+		}
+        
         protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
             return uniqueInternalThreadTraceTimerKey;
         }
@@ -312,6 +340,11 @@ public class PerfMonTimer {
 		@Override
 		/* package */ String getEffectiveMonitorCategory() {
 			return effectiveCategory;
+		}
+
+		@Override
+		boolean isMutable() {
+			return true;
 		}
     }
     

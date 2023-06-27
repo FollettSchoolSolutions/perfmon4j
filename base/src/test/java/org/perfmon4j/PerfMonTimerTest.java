@@ -221,6 +221,36 @@ public class PerfMonTimerTest extends PerfMonTestCase {
     	assertEquals("Should have 1 completion", 1, mon.getTotalCompletions());
     }
 
+    public void testStartStopChildRespectsParentAcrossThreads() throws Exception {
+    	String monitorName = "testStartStopChildRespectsParentAcrossThreads";
+    	String childMonitorName = monitorName + ".child";
+    	
+    	TestConfigBuilder builder = new TestConfigBuilder();
+    	PerfMon.configure(builder.defineMonitor(monitorName, "./*")
+    		.build(TestAppender.getAppenderID()));
+
+    	CountDownLatch latch = new CountDownLatch(1);
+
+    	PerfMonTimer timerChild = PerfMonTimer.start(childMonitorName);
+    	
+    	(new Thread(() -> {
+    		PerfMonTimer.stop(timerChild);
+    		latch.countDown();
+    	})).start();
+    	
+    	// Wait for thread to run.
+    	latch.await();
+    	
+    	PerfMon mon = PerfMon.getMonitor(childMonitorName);
+    	assertEquals("Should have 1 child hit", 1, mon.getTotalHits());
+    	assertEquals("Should have 1 child completion", 1, mon.getTotalCompletions());
+    	assertEquals("Should have stopped child monitor", 0, mon.getActiveThreadCount());
+
+    	mon = PerfMon.getMonitor(monitorName);
+    	assertEquals("Should have 1 parent hit", 1, mon.getTotalHits());
+    	assertEquals("Should have 1 parent completion", 1, mon.getTotalCompletions());
+    	assertEquals("Should have stopped parent monitor", 0, mon.getActiveThreadCount());
+    }
     
     public void testMultipeStopsOnTimer() throws Exception {
     	String monitorName = "testMultipeStopsOnTimer";
@@ -239,6 +269,44 @@ public class PerfMonTimerTest extends PerfMonTestCase {
 
     	PerfMon mon = PerfMon.getMonitor(monitorName);
     	assertEquals("Expected number of completions", 2, mon.getTotalCompletions());
+    }
+
+    public void testMultipeStopsOnChildTimer() throws Exception {
+    	String parentMonitorName = "testMultipeStopsOnChildTimer";
+    	String childMonitorName = "testMultipeStopsOnChildTimer.child";
+    	TestConfigBuilder builder = new TestConfigBuilder();
+
+    	PerfMon.configure(builder.defineMonitor(parentMonitorName, "./*")
+    		.build(TestAppender.getAppenderID()));
+
+    	// Starting the child will also start the parent..
+    	PerfMonTimer timer = PerfMonTimer.start(childMonitorName);
+    	
+    	// Stop the child twice. Make sure stop is only called once 
+    	// on both the child and the parent.
+    	PerfMonTimer.stop(timer);
+    	PerfMonTimer.stop(timer);
+    	
+    	timer = PerfMonTimer.start(childMonitorName);
+    	PerfMonTimer.stop(timer);
+
+    	PerfMon mon = PerfMon.getMonitor(childMonitorName);
+    	assertEquals("Expected number of completions on child", 2, mon.getTotalCompletions());
+    	assertEquals("Expected number of activeThreads on child", 0, mon.getActiveThreadCount());
+    	
+    	mon = PerfMon.getMonitor(parentMonitorName);
+    	assertEquals("Expected number of completions on parent", 2, mon.getTotalCompletions());
+    	assertEquals("Expected number of activeThreads on parent", 0, mon.getActiveThreadCount());
+    
+    	// As one final check to make sure the parent's referenceCount did not get
+    	// out of sync, we'll start and stop the parent directly.
+    	
+    	timer = PerfMonTimer.start(parentMonitorName);
+    	PerfMonTimer.stop(timer);
+    
+    	mon = PerfMon.getMonitor(parentMonitorName);
+    	assertEquals("Expected number of completions on parent", 3, mon.getTotalCompletions());
+    	assertEquals("Expected number of activeThreads on parent", 0, mon.getActiveThreadCount());
     }
     
 /*----------------------------------------------------------------------------*/
