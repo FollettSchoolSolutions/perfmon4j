@@ -23,6 +23,7 @@ package org.perfmon4j;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.perfmon4j.PerfMon.ReferenceCount;
 import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
 import org.perfmon4j.reactive.ReactiveContext;
 import org.perfmon4j.reactive.ReactiveContextManager;
@@ -321,7 +322,7 @@ public class PerfMonTimer {
         private final String effectiveCategory;
         
         TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<ExitCheckpoint> exitCheckpoints) {
-            super(timer.perfMon, timer.next); 
+            super(timer.perfMon, wrapIfNeeded(timer.next, reactiveContextID)); 
             this.reactiveContextID = reactiveContextID;
             this.exitCheckpoints = exitCheckpoints;
             if (timer.perfMon != null) {
@@ -331,15 +332,17 @@ public class PerfMonTimer {
             }
         }
 
-		public static PerfMonTimer wrapIfNeeded(PerfMonTimer timer) {
+		public static PerfMonTimer wrapIfNeeded(PerfMonTimer timer, String reactiveContextID) {
 			PerfMonTimer result = timer;
 			
 			if (result != null
-				&& !result.isMutable() 
-				&& result != NULL_TIMER) {
-				return new TimerWrapper(timer, null, null);
+				&& result != NULL_TIMER	
+				&& !result.isMutable()) {
+				return new TimerWrapper(timer, reactiveContextID, null);
 			}
 			return result;
+		}
+        
         @Override
         protected String getReactiveContextID() {
         	return reactiveContextID;
@@ -356,6 +359,7 @@ public class PerfMonTimer {
 	        	}
         	}
         }
+		@Override
     }
     
 
