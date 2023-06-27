@@ -23,10 +23,10 @@ package org.perfmon4j;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.perfmon4j.PerfMon.ReferenceCount;
 import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
 import org.perfmon4j.reactive.ReactiveContext;
 import org.perfmon4j.reactive.ReactiveContextManager;
-import org.perfmon4j.PerfMon.ReferenceCount;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -210,7 +210,7 @@ public class PerfMonTimer {
     public static void stop(PerfMonTimer timer) {
         stop(timer, false);
     }
-    
+
     private void stop(long now, boolean abort) {
         if (perfMon != null) {
             next.stop(now, abort);
@@ -287,6 +287,21 @@ public class PerfMonTimer {
 	}
 
     /**
+     * If you need a mutable version, you must wrap the
+     * Immutable timer with the mutable TimerWrapper.
+     * 
+     * This allows the TimerInstance to maintain state
+     * between the start and stop calls.  
+     * @return
+     */
+	/* package */ boolean isMutable() {
+		// Will be overriden in WrapperClass to indicate it can
+		// accept and maintain state.
+		return false;
+	}
+	
+	
+    /**
      * Implemented in TimerWrapper class
      * 
      * This should only be used for testing!
@@ -308,12 +323,7 @@ public class PerfMonTimer {
 		return null;
 	}
 	
-	
-    /**
-     * This class is only used when we return a Timer that is part of
-     * a thread trace.
-     */
-    private static class TimerWrapper extends PerfMonTimer {
+	private static class TimerWrapper extends PerfMonTimer {
     	final private String reactiveContextID;
     	final private List<ExitCheckpoint> exitCheckpoints; 
     	private boolean hasBeenStopped = false;
@@ -321,7 +331,7 @@ public class PerfMonTimer {
         private final String effectiveCategory;
         
         TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<ExitCheckpoint> exitCheckpoints) {
-            super(timer.perfMon, timer.next); 
+            super(timer.perfMon, wrapIfNeeded(timer.next, reactiveContextID)); 
             this.reactiveContextID = reactiveContextID;
             this.exitCheckpoints = exitCheckpoints;
             if (timer.perfMon != null) {
@@ -331,6 +341,17 @@ public class PerfMonTimer {
             }
         }
 
+		public static PerfMonTimer wrapIfNeeded(PerfMonTimer timer, String reactiveContextID) {
+			PerfMonTimer result = timer;
+			
+			if (result != null
+				&& result != NULL_TIMER	
+				&& !result.isMutable()) {
+				return new TimerWrapper(timer, reactiveContextID, null);
+			}
+			return result;
+		}
+        
         @Override
         protected String getReactiveContextID() {
         	return reactiveContextID;
@@ -371,6 +392,11 @@ public class PerfMonTimer {
 		@Override
 		/* package */ String getEffectiveMonitorCategory() {
 			return effectiveCategory;
+		}
+
+		@Override
+		boolean isMutable() {
+			return true;
 		}
     }
     
