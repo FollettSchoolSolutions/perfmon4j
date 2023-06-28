@@ -44,7 +44,8 @@
 		<module>utils</module>
 		<module>webapp</module>
 		<module>wildfly8</module>
-		<module>quarkus</module>
+		<module>quarkus2x</module>
+		<module>quarkus3x</module>
  	</modules>
 
 	<profiles>

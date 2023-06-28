@@ -704,6 +704,14 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	        }
 	        inst.addTransformer(t);
         }
+
+        if (t.params.isDebugEnabled()) {
+        	try {
+				logger.logInfo("Current working directory: " + (new File(".")).getCanonicalPath());
+			} catch (IOException e) {
+				logger.logWarn("Unable to determine current working directory", e);
+			}
+        }
         
         if (t.params.isDisableSystemGC()) {
     		if (inst.isRedefineClassesSupported()) {
