@@ -96,7 +96,7 @@ public class GenericFilterAsyncLoaderTest extends TestCase {
 //}
 		assertEquals("Expected number of log messages", 2, logOutput.length);
 		assertTrue("First message should indicate filter was not installed and we'll try again", 
-				logOutput[0].endsWith("Will attempt to load again in 3 milliseconds."));
+				logOutput[0].endsWith("Will attempt to load again in 0 second(s).")); // We are only waiting 3 milliseconds, so this will be rounded down to 0 seconds
 		assertTrue("Last message should indicate filter was installed", 
 				logOutput[1].endsWith("GenericFilter installed."));
 	}

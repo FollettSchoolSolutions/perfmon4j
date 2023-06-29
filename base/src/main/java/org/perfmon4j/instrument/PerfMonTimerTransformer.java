@@ -690,6 +690,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         if (t.params.isExtremeInstrumentationEnabled() && !t.params.isVerboseInstrumentationEnabled()) {
         	logger.logInfo("Perfmon4j verbose instrumentation logging disabled.  Add -vtrue to javaAgent parameters to enable.");
         }
+		logger.logInfo("Perfmon4j javaagent current working directory: " + safeGetCanonicalPathForFile(new File(".")));
+
         SystemGCDisabler disabler = null;
         
         if (DISABLE_CLASS_INSTRUMENTATION) {
@@ -703,14 +705,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	        	logger.logInfo("Perfmon4j SQL instrumentation disabled.  Add -eSQL to javaAgent parameters to enable.");
 	        }
 	        inst.addTransformer(t);
-        }
-
-        if (t.params.isDebugEnabled()) {
-        	try {
-				logger.logInfo("Current working directory: " + (new File(".")).getCanonicalPath());
-			} catch (IOException e) {
-				logger.logWarn("Unable to determine current working directory", e);
-			}
         }
         
         if (t.params.isDisableSystemGC()) {
@@ -728,6 +722,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	if (configFile != null) {
     		FileReader reader = null;
     		try {
+    			logger.logInfo("Loading boot configuration from: " + safeGetCanonicalPathForFile(new File(configFile)));
     			reader = new FileReader(configFile);
     			bootConfiguration = XMLBootParser.parseXML(reader);
 			} catch (FileNotFoundException e) {
@@ -982,6 +977,21 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		} catch (IOException e) {
 			// Nothing todo...  Just return the absolute path
 		}
+    	
+    	return result;
+    }
+
+    private static String safeGetCanonicalPathForFile(File file) {
+    	String result = "";
+    	if (file != null) {
+    		try {
+				result = file.getCanonicalPath();
+			} catch (IOException e) {
+				result = file.getAbsolutePath();
+			}
+    	} else {
+    		result = "File reference is null";
+    	}
     	
     	return result;
     }
