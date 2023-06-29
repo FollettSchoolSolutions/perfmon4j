@@ -4,6 +4,9 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Properties;
 
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
+
 /**
  * Maintains a properties object of Perfmon4j currently configured settings.
  * 
@@ -11,6 +14,8 @@ import java.util.Properties;
  * running settings.
  **/
 public class ConfiguredSettings {
+	private static final Logger logger = LoggerFactory.initLogger(ConfiguredSettings.class);
+	
 	static private final Serializable settingsLockToken = new Serializable() {
 		private static final long serialVersionUID = 1L;
 	};
@@ -27,6 +32,7 @@ public class ConfiguredSettings {
 	static private Properties allSettings = new Properties();
 
 	public static void setJavaAgentSettings(Properties javaAgentSettings) {
+		logger.logDebug("Updating javaAgentSettings");
 		synchronized (settingsLockToken) {
 			ConfiguredSettings.javaAgentSettings = (Properties)javaAgentSettings.clone();
 			ConfiguredSettings.javaAgentSettings.setProperty("perfmon4j.javaAgentSettings.loaded", "true");
@@ -35,6 +41,7 @@ public class ConfiguredSettings {
 	}
 
 	public static void setConfigFileSettings(Properties configFileSettings) {
+		logger.logDebug("Updating configFileSettings");
 		synchronized (settingsLockToken) {
 			ConfiguredSettings.configFileSettings = (Properties)configFileSettings.clone();
 			ConfiguredSettings.configFileSettings.setProperty("perfmon4j.configFileSettings.loaded", "true");
@@ -43,6 +50,7 @@ public class ConfiguredSettings {
 	}
 
 	public static void setBootConfigSettings(Properties bootConfigSettings) {
+		logger.logDebug("Updating bootConfigSettings");
 		synchronized (settingsLockToken) {
 			ConfiguredSettings.bootConfigSettings = (Properties)bootConfigSettings.clone();
 			ConfiguredSettings.bootConfigSettings.setProperty("perfmon4j.bootConfigSettings.loaded", "true");

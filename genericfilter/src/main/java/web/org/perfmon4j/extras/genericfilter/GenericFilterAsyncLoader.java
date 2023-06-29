@@ -86,18 +86,18 @@ public abstract class GenericFilterAsyncLoader {
 				+ "settings have not been initialized after %d attempt(s).", 
 				filterDisplayName, Integer.valueOf(numAttempts));
 			if (numAttempts < maxRetryLoadAttempts) {
-				logInfo(String.format(baseMsg + " Will attempt to load again in %d milliseconds.",
-					Integer.valueOf(maxRetryLoadAttempts)));
+				logInfo(String.format(baseMsg + " Will try another %d time(s). Will attempt to load again in %d second(s).",
+					Integer.valueOf(maxRetryLoadAttempts - numAttempts), Integer.valueOf(retryLoadWaitMillis/1000)));
 				scheduleTimerTask();
 			} else {
 				if (loadDefaultAfterMaxAttempts) {
-					logInfo(baseMsg + "  Will load using default parameters.");
+					logInfo(baseMsg + " Will load using default parameters.");
 					
 					GenericFilter filter = initGenericFilter(FilterParams.getDefault());
 					genericFilter.set(filter);
 					installed = true;
 				} else {
-					logInfo(baseMsg + "  Will not be installed.");
+					logInfo(baseMsg + " Will not be installed.");
 					cancelTimerTask();
 				}
 			}
