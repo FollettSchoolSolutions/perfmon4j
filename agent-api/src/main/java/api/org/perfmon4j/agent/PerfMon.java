@@ -52,11 +52,21 @@ public class PerfMon {
         return false;
     }
     
+	public static boolean hasHttpRequestBasedThreadTraceTriggers() {
+		return false;
+	}
+	
+	public static boolean hasHttpSessionBasedThreadTraceTriggers() {
+		return false;
+	}
+	
+	public static boolean hasHttpCookieBasedThreadTraceTriggers() {
+		return false;
+	}
     
     public static boolean isConfigured() {
     	return false;
     }
-    
     
 	public static void moveReactiveContextToCurrentThread(String contextID) {
 	}
