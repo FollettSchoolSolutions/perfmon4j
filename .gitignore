@@ -22,3 +22,7 @@ nohup.out
 quarkus/.classpath
 
 genericfilter/.classpath
+
+quarkus2x/.classpath
+
+quarkus3x/.classpath
