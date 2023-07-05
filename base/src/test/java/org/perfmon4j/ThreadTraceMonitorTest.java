@@ -21,10 +21,13 @@
 
 package org.perfmon4j;
 
+import java.util.concurrent.CountDownLatch;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.reactive.ReactiveContextManager;
+import org.perfmon4j.util.MiscHelper;
 
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -61,6 +64,26 @@ public class ThreadTraceMonitorTest extends PerfMonTestCase {
             PerfMonTimer.stop(timer);
         }
     }
+
+    private void doStartStopMonitorOnNewThread(PerfMon mon, String reactiveContextID) throws InterruptedException {
+    	CountDownLatch latch = new CountDownLatch(1);
+    	
+    	(new Thread(() -> {
+    		if (reactiveContextID != null) {
+    			ReactiveContextManager.getContextManagerForThread().moveContext(reactiveContextID);
+    		}
+    		doStartStopMonitor(mon);
+    		latch.countDown();
+    	})).start();
+    	
+    	latch.await();
+    	
+		if (reactiveContextID != null) {
+			ReactiveContextManager.getContextManagerForThread().moveContext(reactiveContextID);
+		}
+    }
+
+    
     
     public void testSamplingBasedThreadName() throws Exception {
         final String MONITOR_KEY = "testThreadBasedTrigger";
@@ -127,6 +150,58 @@ public class ThreadTraceMonitorTest extends PerfMonTestCase {
         }
     }
     
+    public void testSamplingBasedOnThreadProperty_OnReactiveContext() throws Exception {
+        final String MONITOR_KEY = "testSamplingBasedOnThreadProperty_OnReactiveContext";
+        final String OUTER_KEY = "OUTER" + MONITOR_KEY;
+
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor(OUTER_KEY);
+        config.defineAppender("appender", TestAppender.getAppenderID());
+        config.attachAppenderToMonitor(OUTER_KEY, "appender");
+        
+        ThreadTraceConfig ttConfig = new ThreadTraceConfig();
+        ttConfig.addAppender(TestAppender.getAppenderID());
+        ThreadTraceConfig.Trigger trigger = new ThreadTraceConfig.ThreadPropertytTrigger("jobID", "156");
+        ttConfig.setTriggers(new ThreadTraceConfig.Trigger[]{trigger});
+        config.addThreadTraceConfig(MONITOR_KEY, ttConfig);
+        
+        PerfMon.configure(config);
+
+        PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
+        
+        final String reactiveContextID = MiscHelper.generateOauthKey(); // Create a random context.
+        PerfMonTimer outerWithReactiveContext = PerfMonTimer.start(OUTER_KEY, false, reactiveContextID);
+        try {
+        	// Push property on the current context.
+        	ThreadTraceConfig.pushThreadProperty("jobID", "156", reactiveContextID);
+        	
+        	// Run once on this thread... it should count.
+        	doStartStopMonitor(mon);
+            int outputCount = TestAppender.getOutputCount();
+            assertEquals("Thread is associated with reactiveContextID - should trigger a trace", 
+            		1, outputCount);
+            TestAppender.clearResult();
+        	
+        	// Run monitor once on a thread that has NOT been assigned to the reactive context.
+        	// This should not trigger a thread trace.
+        	doStartStopMonitorOnNewThread(mon, null);
+            outputCount = TestAppender.getOutputCount();
+            assertEquals("Thread is not associated with reactiveContextID - should not trigger a trace", 
+            		0, outputCount);
+            TestAppender.clearResult();
+            
+            // Now run monitor on a thread that HAS been assigned to the ractive context. 
+        	// This should not trigger a thread.
+        	doStartStopMonitorOnNewThread(mon, reactiveContextID);
+            outputCount = TestAppender.getOutputCount();
+            assertEquals("Thread IS associated with reactiveContextID - should trigger a trace", 
+            		1, outputCount);
+            TestAppender.clearResult();
+        } finally {
+        	ThreadTraceConfig.popThreadProperty(reactiveContextID);
+        	PerfMonTimer.stop(outerWithReactiveContext);
+        }
+    }
     
     public void testRandomSampling() throws Exception {
         final String MONITOR_KEY = "testRandomSampling";
@@ -800,8 +875,10 @@ System.out.println(appenderString);
 				}
         		
         	}
-            outputCount++;
-            lastResult = (ThreadTraceData)data;
+        	if (data instanceof ThreadTraceData) {
+        		outputCount++;
+        		lastResult = (ThreadTraceData)data;
+        	}
         }
     }    
 
