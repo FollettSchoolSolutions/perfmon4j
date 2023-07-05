@@ -1233,7 +1233,24 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ " return nativeObject.isActive();\r\n"  	
         		+ "}";
         replaceMethodIfExists(clazz, "isActive", src);
-
+        
+//    	public static boolean hasHttpRequestBasedThreadTraceTriggers() {
+        src = "{\r\n"
+        		+ " return org.perfmon4j.PerfMon.hasHttpRequestBasedThreadTraceTriggers();\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "hasHttpRequestBasedThreadTraceTriggers", src);
+    	
+//    	public static boolean hasHttpSessionBasedThreadTraceTriggers() {
+        src = "{\r\n"
+        		+ " return org.perfmon4j.PerfMon.hasHttpSessionBasedThreadTraceTriggers();\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "hasHttpSessionBasedThreadTraceTriggers", src);
+    	
+//    	public static boolean hasHttpCookieBasedThreadTraceTriggers() {
+        src = "{\r\n"
+        		+ " return org.perfmon4j.PerfMon.hasHttpCookieBasedThreadTraceTriggers();\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "hasHttpCookieBasedThreadTraceTriggers", src);
         
         src = "public org.perfmon4j.PerfMon getNativeObject() {\r\n" 
         		+ " return nativeObject;\r\n"
