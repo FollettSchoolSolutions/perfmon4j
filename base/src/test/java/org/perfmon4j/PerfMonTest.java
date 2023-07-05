@@ -627,7 +627,7 @@ public class PerfMonTest extends PerfMonTestCase {
     	try {
     		timer1 = PerfMonTimer.start(timerKey1);
     		timer2 = PerfMonTimer.start(timerKey2);
-    		result = (timer1 == timer2);
+    		result = (timer1.getEffectiveMonitorCategory() == timer2.getEffectiveMonitorCategory());
     	} finally {
     		PerfMonTimer.stop(timer2);
     		PerfMonTimer.stop(timer1);
