@@ -1,6 +1,5 @@
 package api.org.perfmon4j.agent;
 
-
 /**
  * This class will execute in one of two modes:
  * 	Unattached - When running in a JVM that was not booted with the Perfmon4j instrumentation agent this class will 
@@ -11,26 +10,20 @@ package api.org.perfmon4j.agent;
  *  The code is instrumented in method JavassistRuntimeTimerInjector.attachAgentToThreadTraceConfigAPIClass(). 
  */
 public class ThreadTraceConfig {
-	
-	public static void pushValidator(TriggerValidator validator, String reactiveContextID) {
+	public static void pushValidator(SimpleTriggerValidator validator) {
+		pushValidator(validator, null);
 	}
 	
+	public static void pushValidator(SimpleTriggerValidator validator, String reactiveContextID) {
+		// This method will be rewritten when the Perfmon4j JavaAgent is loaded.
+	}
+
+	public static void popValidator() {
+		popValidator(null);
+	}
+
 	public static void popValidator(String reactiveContextID) {
-	}
-	
-	public static interface TriggerValidator {
-	}
-	
-	public static interface RequestTriggerValidator extends TriggerValidator {
-		public boolean isValid(String parameterName, String parameterValue);
-	}
-
-	public static interface SessionTriggerValidator extends TriggerValidator {
-		public boolean isValid(String attributeName, Object attributeValue);
-	}
-
-	public static interface CookieTriggerValidator extends TriggerValidator {
-		public boolean isValid(String cookieName, String cookieValue);
+		// This method will be rewritten when the Perfmon4j JavaAgent is loaded.
 	}
 	
 	/**

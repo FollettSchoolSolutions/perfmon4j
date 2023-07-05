@@ -1,6 +1,8 @@
 package web.org.perfmon4j.extras.genericfilter;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -9,6 +11,7 @@ import java.util.regex.PatternSyntaxException;
 import api.org.perfmon4j.agent.PerfMon;
 import api.org.perfmon4j.agent.PerfMonTimer;
 import api.org.perfmon4j.agent.SQLTime;
+import api.org.perfmon4j.agent.SimpleTriggerValidator;
 import api.org.perfmon4j.agent.ThreadTraceConfig;
 
 
@@ -232,9 +235,7 @@ public abstract class GenericFilter {
 				}
 				 */					
 			}
-			
 		}
-		
 	}
 
 	public AsyncFinishRequestCallback startAsyncRequest(HttpRequest request, String reactiveContext) {
@@ -459,46 +460,116 @@ TODO: Log this better.
     	return result;
     }
 
-    public static class RequestValidator implements ThreadTraceConfig.RequestTriggerValidator {
+    public abstract static class SimpleValidatorImpl implements SimpleTriggerValidator {
+    	private final String triggerStringPrefix;
+    	
+    	public SimpleValidatorImpl(String triggerStringPrefix) {
+    		this.triggerStringPrefix = triggerStringPrefix;
+    	}
+
+    	// Build one or more compare strings to compare to 
+    	// the triggers string.  Do not include the prefix,
+    	// the prefix on the trigger will be matched against
+    	// triggerStringPrefix before comparing.
+    	
+    	// Compare strings should simply be "<expected key>=<expected value>"
+    	abstract protected String[] buildCompareStrings(String key);
+
+		@Override
+		public boolean isValid(String triggerString) {
+			if (triggerString.startsWith(triggerStringPrefix + ":")) {
+				for (String value : buildCompareStrings(extractKey(triggerString))) {
+					if (triggerString.equals(triggerStringPrefix + ":" + value)) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+		
+		private static final Pattern extractKeyPattern = Pattern.compile("[^\\:]+([^\\=]+).*");
+		private String extractKey(String triggerString) {
+			String result = null;
+			
+			Matcher m = extractKeyPattern.matcher(triggerString);
+			if (m.matches()) {
+				result = m.group(1);
+			}
+			
+			return result;
+		}
+    }
+    
+    
+    public static class RequestValidator extends SimpleValidatorImpl {
     	private final HttpRequest request;
     	
     	RequestValidator(HttpRequest request) {
+    		super("HTTP");
     		this.request = request;
     	}
+
 		@Override
-		public boolean isValid(String parameterName, String parameterValue) {
-			List<String> values = request.getQueryParameter(parameterName);
-			return values != null && values.contains(parameterValue);
+		protected String[] buildCompareStrings(String parameterName) {
+			Set<String> result = new HashSet<String>();
+			
+			if (parameterName != null) {
+				List<String> values = request.getQueryParameter(parameterName);
+				if (values != null) {
+					for (String value : values) {
+						result.add(parameterName + "=" + value);
+					}
+				}
+			}
+			return result.toArray(new String[] {});	
 		}
     }
-    
-    public static class SessionValidator implements ThreadTraceConfig.SessionTriggerValidator {
-    	private final HttpRequest request;
-
-    	SessionValidator(HttpRequest request) {
-    		this.request = request;
-    	}
     	
+    	
+    public static class SessionValidator extends SimpleValidatorImpl {
+    	private final HttpRequest request;
+    	
+    	SessionValidator(HttpRequest request) {
+    		super("HTTP_SESSION");
+    		this.request = request;
+    	}
+
 		@Override
-		public boolean isValid(String attributeName, Object attributeValue) {
-			Object attribute = request.getSessionAttribute(attributeName);
-			return attribute != null && attribute.equals(attributeValue);
+		protected String[] buildCompareStrings(String attributeName) {
+			String[] result = new String[] {};
+			
+			if (attributeName != null) {
+				Object attribute = request.getSessionAttribute(attributeName);
+				if (attribute != null) {
+					result = new String[] {attributeName + "=" + attribute.toString()};
+				}
+			}
+			return result;	
 		}
     }
     
-    public static class CookieValidator implements ThreadTraceConfig.CookieTriggerValidator {
+    public static class CookieValidator extends SimpleValidatorImpl {
     	private final HttpRequest request;
-
-		public CookieValidator(HttpRequest request) {
-			this.request = request;
-		}
+    	
+    	CookieValidator(HttpRequest request) {
+    		super("HTTP_COOKIE");
+    		this.request = request;
+    	}
 
 		@Override
-		public boolean isValid(String cookieName, String cookieValue) {
-			String value = request.getCookieValue(cookieName);	
-			return value != null && value.equals(cookieValue);
+		protected String[] buildCompareStrings(String cookieName) {
+			String[] result = new String[] {};
+			
+			if (cookieName != null) {
+				String cookieValue = request.getCookieValue(cookieName);
+				if (cookieValue != null) {
+					result = new String[] {cookieName + "=" + cookieValue};
+				}
+			}
+			return result;	
 		}
     }
+    
     
 //	private String[] tokenizeCSVString(String src) {
 //		String[] result = null;
