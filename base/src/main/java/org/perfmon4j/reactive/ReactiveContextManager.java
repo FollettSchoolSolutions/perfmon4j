@@ -1,11 +1,15 @@
 package org.perfmon4j.reactive;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -244,7 +248,7 @@ public class ReactiveContextManager {
 			} 
 		} 
 	}
-
+	
 	public void dissociateContextFromThread(String contextID) {
 		if (contextID != null) {
 			String methodLine = buildMethodCallDebugLine("dissociateContextFromThread", 
@@ -367,6 +371,61 @@ public class ReactiveContextManager {
 		} else {
 			return"";
 		}
+	}
+	
+	
+	public static void pushValidator(ThreadTraceConfig.TriggerValidator validator,  String reactiveContextID) {
+		ReactiveContext context = null;
+		synchronized (bindToken) {
+			context = globalContextMap.get(reactiveContextID);
+		}
+		if (context != null) {
+			context.pushTriggerValidator(validator);
+		} else {
+			logger.logWarn("Warning attempt to push TriggerValidator on non-existant reactiveContextID: " + reactiveContextID);
+		}
+	}
+	
+	public static void popValidator(String reactiveContextID) {
+		ReactiveContext context = null;
+		synchronized (bindToken) {
+			context = globalContextMap.get(reactiveContextID);
+		}
+		if (context != null) {
+			context.popTriggerValidator();
+		} else {
+			logger.logWarn("Warning attempt to pop TriggerValidator off a non-existant reactiveContextID: " + reactiveContextID);
+		}
+	}
+	
+	private static final ThreadTraceConfig.TriggerValidator[] EMPTY_TRIGGER_VALIDATOR_ARRAY = new ThreadTraceConfig.TriggerValidator[] {};
+	
+	public ThreadTraceConfig.TriggerValidator[] getActiveContextTriggerValidatorsOnThread() {
+		ThreadTraceConfig.TriggerValidator[] result = null;	
+		
+		ReactiveContext contexts[] = getActiveContexts();
+		if (contexts.length == 0) {
+			// Most likely scenario...  Let's make it fast.
+			result = EMPTY_TRIGGER_VALIDATOR_ARRAY;
+		} else if (contexts.length == 1) {
+			// 2nd most likely scenario, while it is possible for a thread
+			// to be servicing more than one context concurrently, it's
+			// unlikely.  So lets make this one as fast as possible.
+			result = contexts[0].getValidators();
+		} else {
+			// This is an unlikely scenario.  So we can afford to be a 
+			// little less efficient.
+			Set<ThreadTraceConfig.TriggerValidator> validatorSet = new HashSet<ThreadTraceConfig.TriggerValidator>();
+			for (ReactiveContext context : contexts) {
+				ThreadTraceConfig.TriggerValidator[] validators = context.getValidators();
+				if (validators.length > 0) {
+					validatorSet.addAll(Arrays.asList(validators));
+				}
+			}
+			result = validatorSet.toArray(EMPTY_TRIGGER_VALIDATOR_ARRAY);
+		}
+		
+		return result;
 	}
 	
 }
