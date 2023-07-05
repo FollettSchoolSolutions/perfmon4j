@@ -18,3 +18,11 @@ tomcat7/.classpath
 settings.xml
 
 nohup.out
+
+quarkus/.classpath
+
+genericfilter/.classpath
+
+quarkus2x/.classpath
+
+quarkus3x/.classpath

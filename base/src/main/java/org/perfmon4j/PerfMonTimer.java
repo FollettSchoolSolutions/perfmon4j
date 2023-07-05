@@ -20,6 +20,7 @@
 */
 package org.perfmon4j;
 
+import org.perfmon4j.PerfMon.ReferenceCount;
 import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.Logger;
@@ -35,7 +36,6 @@ public class PerfMonTimer {
     // Package level for testing...
     final PerfMon perfMon;
     final PerfMonTimer next;
-    
     /**
      * Package level... Only PerfMon.class should invoke this constructor
      * Applications using the PerfMonTimer should invoke the static method
@@ -75,7 +75,10 @@ public class PerfMonTimer {
 		            	wrapperExternalKey = tExternalOnStack.enterCheckpoint(monitorName, startTime);
 		            }
 	            }
-	            if (haveActiveTimer) {
+	            if (haveActiveTimer || haveActiveThreadTrace) {
+		            // To keep track of the checkpoints for thread tracing we 
+		            // must be able to identify the timer passed to PerfMonTimer.stop()
+		            result = new TimerWrapper(result, wrapperInternalKey, wrapperExternalKey);
 	            	result.start(startTime);
 	            }
 	        } catch (ThreadDeath th) {
@@ -83,12 +86,6 @@ public class PerfMonTimer {
 	        } catch (Throwable th) {
 	            logger.logError("Error starting monitor: " + monitorName, th);
 	            result = NULL_TIMER;
-	        }
-	        
-	        if (haveActiveThreadTrace) {
-	            // To keep track of the checkpoints for thread tracing we 
-	            // must be able to identify the timer passed to PerfMonTimer.stop()
-	            result = new TimerWrapperWithThreadTraceKey(result, wrapperInternalKey, wrapperExternalKey);
 	        }
         }
         
@@ -140,14 +137,14 @@ public class PerfMonTimer {
     
     private void start(long now) {
         if (perfMon != null) {
-            perfMon.start(now);
+            perfMon.start(now, this);
             next.start(now);
         }
     }
     
     private static void stop(PerfMonTimer timer, boolean abort) {
-        try {
-            if (timer != NULL_TIMER && timer != null) {
+        if (timer != NULL_TIMER && timer != null && !timer.hasBeenStopped()) {
+	        try {
                 UniqueThreadTraceTimerKey keyInternal = timer.getUniqueInternalTimerKey();
                 if (keyInternal != null) {
                 	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
@@ -159,13 +156,15 @@ public class PerfMonTimer {
                     tOnStack.exitCheckpoint(keyExternal);
                 }
                 timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort);
-            }
-        } catch (ThreadDeath th) {
-            throw th;   // Always rethrow this error
-        } catch (Throwable th) {
-            logger.logError("Error stopping timer", th);
-        }
-    }
+	        } catch (ThreadDeath th) {
+	            throw th;   // Always rethrow this error
+	        } catch (Throwable th) {
+	            logger.logError("Error stopping timer", th);
+	        } finally {
+	        	timer.flagStopped();
+	        }
+    	}
+	}
 
     public static void abort(PerfMonTimer timer) {
         stop(timer, true);
@@ -174,11 +173,11 @@ public class PerfMonTimer {
     public static void stop(PerfMonTimer timer) {
         stop(timer, false);
     }
-    
+
     private void stop(long now, boolean abort) {
         if (perfMon != null) {
             next.stop(now, abort);
-            perfMon.stop(now, abort);
+            perfMon.stop(now, abort, this);
         }
     }
     
@@ -188,6 +187,7 @@ public class PerfMonTimer {
     
     /**
      * Used for the ThreadTraceTimers...
+     * Implemented in TimerWrapper class
      * @return
      */
     protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
@@ -196,6 +196,7 @@ public class PerfMonTimer {
 
     /**
      * Used for the ThreadTraceTimers...
+     * Implemented in TimerWrapper class
      * @return
      */
     protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
@@ -203,27 +204,148 @@ public class PerfMonTimer {
     }
     
     /**
+     * Implemented in TimerWrapper class
+     * @return
+     */
+    protected boolean hasBeenStopped() {
+    	return false;
+    }
+    
+    /**
+     * Implemented in TimerWrapper class
+     * @return
+     */
+    protected void flagStopped() {
+    	/** Empty **/
+    }
+
+    /**
+     * Implemented in TimerWrapper class
+     * @return
+     */
+	/* package */ void storeReferenceCountForOffThreadStop(ReferenceCount referenceCount) {
+		/** Empty **/
+	}
+
+    /**
+     * Implemented in TimerWrapper class
+     * @return
+     */
+	/* package */ ReferenceCount getReferenceCount() {
+		return null;
+	}
+
+    /**
+     * If you need a mutable version, you must wrap the
+     * Immutable timer with the mutable TimerWrapper.
+     * 
+     * This allows the TimerInstance to maintain state
+     * between the start and stop calls.  
+     * @return
+     */
+	/* package */ boolean isMutable() {
+		// Will be overriden in WrapperClass to indicate it can
+		// accept and maintain state.
+		return false;
+	}
+	
+	
+    /**
+     * Implemented in TimerWrapper class
+     * 
+     * This should only be used for testing!
+     * 
+     * The name of the effective monitor category associated
+     * with this timer.
+     * 
+     * For example if you have appenders listening only to a 
+     * parent monitor (i.e. "a") and not a child (i.e. "a.b"), 
+     * by using appenderPattern = "./", both of the following 
+     * PerfMonTimer start() would be associated with the
+     * same effective category, "a":
+     * 		PerfMonTimer.start("a")
+     * 		PerfMonTimer.start("a.b");
+     * 
+     * @return
+     */
+	/* package */ String getEffectiveMonitorCategory() {
+		return null;
+	}
+	
+	
+    /**
      * This class is only used when we return a Timer that is part of
      * a thread trace.
      */
-    private static class TimerWrapperWithThreadTraceKey extends PerfMonTimer {
+    private static class TimerWrapper extends PerfMonTimer {
+    	private boolean hasBeenStopped = false;
         final private UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey;
         final private UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey;
+        private ReferenceCount referenceCount = null;
+        private final String effectiveCategory;
         
-        private TimerWrapperWithThreadTraceKey(PerfMonTimer timer, 
+        private TimerWrapper(PerfMonTimer timer, 
             UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey,
             UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey) {
-            super(timer.perfMon, timer.next); 
+            
+        	super(timer.perfMon, wrapIfNeeded(timer.next)); 
             this.uniqueInternalThreadTraceTimerKey = uniqueInternalThreadTraceTimerKey;
             this.uniqueExternalThreadTraceTimerKey = uniqueExternalThreadTraceTimerKey;
+            
+            if (timer.perfMon != null) {
+            	effectiveCategory = timer.perfMon.getName();	
+            } else {
+            	effectiveCategory = "";
+            }
         }
 
+		public static PerfMonTimer wrapIfNeeded(PerfMonTimer timer) {
+			PerfMonTimer result = timer;
+			
+			if (result != null
+				&& !result.isMutable() 
+				&& result != NULL_TIMER) {
+				return new TimerWrapper(timer, null, null);
+			}
+			return result;
+		}
+        
         protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
             return uniqueInternalThreadTraceTimerKey;
         }
         protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
             return uniqueExternalThreadTraceTimerKey;
         }
+
+		@Override
+		protected boolean hasBeenStopped() {
+			return hasBeenStopped;
+		}
+
+		@Override
+		protected void flagStopped() {
+			hasBeenStopped = true;
+		}
+		
+		@Override
+		/* package */ void storeReferenceCountForOffThreadStop(ReferenceCount referenceCount) {
+			this.referenceCount = referenceCount;
+		}
+		
+		@Override
+		/* package */ ReferenceCount getReferenceCount() {
+			return referenceCount;
+		}
+
+		@Override
+		/* package */ String getEffectiveMonitorCategory() {
+			return effectiveCategory;
+		}
+
+		@Override
+		boolean isMutable() {
+			return true;
+		}
     }
     
     private static class FullyQualifiedTimerStartName {

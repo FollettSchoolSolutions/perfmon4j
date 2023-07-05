@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -410,9 +411,13 @@ public class PerfMon {
      * Applications should use PerfMonTimer.start() to start a timer
      * using this monitor!
      */
-    void start(long systemTime) {
+    void start(long systemTime, PerfMonTimer startingTimer) {
         ReferenceCount count = getThreadLocalReferenceCount();
         if (count.inc(systemTime) == 1) {
+        	// Save off the starting timer so that it can
+        	// stop this instance even if it has moved to another thread.
+        	startingTimer.storeReferenceCountForOffThreadStop(count);
+        	
         	if (externalThreadTraceQueue.hasPendingElements()) {
         		ExternalThreadTraceConfig externalConfig = externalThreadTraceQueue.assignToThread();
 	        	if (externalConfig != null) {
@@ -462,8 +467,12 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-    void stop(long systemTime, boolean abort) {
-        ReferenceCount count = getThreadLocalReferenceCount();
+    void stop(long systemTime, boolean abort, PerfMonTimer initiatingTimer) {
+        ReferenceCount count = initiatingTimer.getReferenceCount();
+        if (count == null) {
+        	count = getThreadLocalReferenceCount();
+        }
+        
         if (count.dec() == 0) {
             if (count.hasExternalThreadTrace) {
                 ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
@@ -657,11 +666,11 @@ public class PerfMon {
 	}
     
 /*----------------------------------------------------------------------------*/    
-    private static class ReferenceCount implements MonitorThreadTracker.Tracker {
+    static class ReferenceCount implements MonitorThreadTracker.Tracker {
     	/** Store as a weak reference in case owningThread is aborted and Garbage Collected **/
     	private final WeakReference<Thread> owningThread;
     	
-        private int refCount = 0;
+        private AtomicInteger refCount = new AtomicInteger(0);
         private long startTime;
         private long sqlStartMillis = 0;
         boolean hasInternalThreadTrace = false;
@@ -677,19 +686,37 @@ public class PerfMon {
          * @return The updated (incremented value of refCount)
          */
         private int inc(long startTime) {
-            if (refCount == 0) {
+            if (refCount.get() == 0) {
                 this.startTime = startTime;
                 this.sqlStartMillis = SQLTime.getSQLTime(); // Will always be 0 of SQLtime is NOT enabled.
             }
-            return ++refCount;
+            return refCount.incrementAndGet();
         }
         
         /**
          * @return The updated (decremented value of refCount)
          */
         private int dec() {
-            return --refCount;
+            return refCount.decrementAndGet();
         }
+
+        /**
+         * Should only be called by PerfMonTimer.TimerWrapper class.
+         * 
+         * This ensures that the PerfMonTimer instance that started 
+         * the monitor, has the ability to force stop the monitor.
+         * It must do this even when the timer is stopped from
+         * a different thread than the one that started it. 
+         * 
+         * even if the timer is being called from different thread.
+         * 
+         * @return
+         */
+        boolean resetCount() {
+        	return dec() == 0;
+        }
+        
+        
         
        private long getSQLStartMillis() {
     	   return sqlStartMillis;

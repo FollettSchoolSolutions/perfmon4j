@@ -1,6 +1,6 @@
 
 
-Copyright 2008-2021 Follett School Solutions, LLC
+Copyright 2008-2023 Follett School Solutions, LLC
  
 Perfmon4j(tm) is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License, version 3,
@@ -10,7 +10,7 @@ OR FITNESS FOR A PARTICULAR PURPOSE.  You should have received a copy of the GNU
 License, Version 3, along with this program.  If not, you can obtain the LGPL v.s at 
 http://www.gnu.org/licenses/
 
-ddeuchert@follett.com
+ddeuchert@follettlearning.com
 David Deuchert
 Follett School Solutions, LLC
 1391 Corporate Drive
@@ -18,6 +18,12 @@ McHenry, IL 60050
 
 
 Changes
+** 1.6.2-SNAPSHOT - 2023-06-23
+- Minor changes to address the following:
+	- PerfMonTimers can now be stopped from a thread
+	other than the thread they were started on.
+	- Calling PerfMonTimer.stop() more than once will
+	no longer have a negative effect.
 
 ** 1.6.2 - TBD
 
