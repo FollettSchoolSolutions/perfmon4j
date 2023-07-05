@@ -24,9 +24,13 @@ import java.util.Properties;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.Appender;
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTestCase;
+import org.perfmon4j.TextAppender;
+import org.perfmon4j.ThreadTraceConfig;
+import org.perfmon4j.ThreadTraceConfig.Trigger;
 import org.perfmon4j.instrument.PerfMonTimerTransformerTest.SQLStatementTester.BogusAppender;
 import org.perfmon4j.util.MiscHelper;
 
@@ -471,6 +475,70 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 			fail("One or more exceptions thrown: " + failures);
 		}
     }
+
+    private static ThreadTraceConfig createThreadTraceConfig(AppenderID appenderID, Trigger... triggers) {
+    	ThreadTraceConfig config = new ThreadTraceConfig();
+    	
+    	config.addAppender(appenderID);
+    	config.setTriggers(triggers);
+    	
+    	return config;
+    }
+    
+    
+	public static class HasTriggers implements Runnable {
+		public void run() {
+			try {
+				assertFalse("Should NOT have a request based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpRequestBasedThreadTraceTriggers());
+				assertFalse("Should NOT have a session based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpSessionBasedThreadTraceTriggers());
+				assertFalse("Should NOT have a cookie based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+				
+				
+				final String monitorName = "WebRequest";
+				final String appenderName = "textAppender";
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				
+				config.defineAppender(appenderName, TextAppender.class.getName(), "1 minute", null);
+				final AppenderID appenderID = config.getAppenderForName(appenderName);
+				
+				config.defineMonitor(monitorName);
+				config.attachAppenderToMonitor(monitorName, appenderName);
+	
+				config.addThreadTraceConfig(monitorName, createThreadTraceConfig(appenderID,
+					new Trigger[] {
+							new ThreadTraceConfig.HTTPRequestTrigger("name", "dave"),
+							new ThreadTraceConfig.HTTPSessionTrigger("userName", "dave"),
+							new ThreadTraceConfig.HTTPCookieTrigger("jsessionid", "1234")
+					}));
+				PerfMon.configure(config);
+				
+				assertTrue("Should have a request based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpRequestBasedThreadTraceTriggers());
+				assertTrue("Should have a session based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpSessionBasedThreadTraceTriggers());
+				assertTrue("Should have a cookie based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+    
+    public void testHasTriggers() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(HasTriggers.class, perfmon4jJar));
+System.out.println(output);    	
+		String failures = extractFailures(output);
+		if (!failures.isEmpty()) {
+			fail("One or more exceptions thrown: " + failures);
+		}
+    }
+    
+    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
