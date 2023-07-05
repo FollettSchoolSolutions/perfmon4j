@@ -18,12 +18,12 @@ McHenry, IL 60050
 
 
 Changes
-** 1.6.2-SNAPSHOT - 2023-06-23
+** 1.6.2 - 2023-07-05
 - Minor changes to address the following:
 	- PerfMonTimers can now be stopped from a thread
 	other than the thread they were started on.
 	- Calling PerfMonTimer.stop() more than once will
-	no longer have a negative effect.
+	no longer have a negative side effect.
 
 ** 1.6.1 - 2022-04-16
 - The InfluxAppender and LogAnalytics appender have the ability
