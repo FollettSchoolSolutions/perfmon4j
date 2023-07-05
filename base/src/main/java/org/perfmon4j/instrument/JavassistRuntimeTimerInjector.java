@@ -64,6 +64,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     private static final String PERFMON_API_CLASSNAME = "api.org.perfmon4j.agent.PerfMon";
     private static final String PERFMON_TIMER_API_CLASSNAME = "api.org.perfmon4j.agent.PerfMonTimer";
     private static final String PERFMON_SQL_TIME_API_CLASSNAME = "api.org.perfmon4j.agent.SQLTime";
+    private static final String PERFMON_THREAD_TRACE_CONFIG_API_CLASSNAME = "api.org.perfmon4j.agent.ThreadTraceConfig";
     
     /* (non-Javadoc)
 	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#injectPerfMonTimers(javassist.CtClass, boolean)
@@ -1262,6 +1263,54 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         return clazz.toBytecode();
 	}
 
+
+	@Override
+	/**
+	 * Unit tests for this code can be found in: org.perfmon4j.instrument.PerfMonAgentAPITest
+	 */
+	public byte[] attachAgentToThreadTraceConfigAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+    	ClassPool classPool = getClassPool(loader);
+    	
+    	logger.logInfo("Instrumenting agent class " + PERFMON_THREAD_TRACE_CONFIG_API_CLASSNAME + ". " );
+    	
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+    	CtClass clazzTriggerWrapper = clazz.makeNestedClass("TriggerValidatorWrapper",true);    	
+    	
+    	clazzTriggerWrapper.addInterface(classPool.get("org.perfmon4j.ThreadTraceConfig$TriggerValidator"));
+    	clazzTriggerWrapper.addField(CtField.make("private final api.org.perfmon4j.agent.SimpleTriggerValidator delegate;", clazzTriggerWrapper));
+
+    	CtConstructor constructor = new CtConstructor(new CtClass[] {classPool.get("api.org.perfmon4j.agent.SimpleTriggerValidator")}, clazzTriggerWrapper);
+    	constructor.setBody("{"
+    			+ "this.delegate = $1;"
+    			+ "}");
+    	clazzTriggerWrapper.addConstructor(constructor);
+
+    	clazzTriggerWrapper.addMethod(CtMethod.make("public boolean isValid(org.perfmon4j.ThreadTraceConfig.Trigger trigger) {\r\n"
+        		+ "	return this.delegate.isValid(trigger.getTriggerString());\r\n"
+        		+ "	}\r\n", clazzTriggerWrapper));
+    	clazzTriggerWrapper.toClass(loader, protectionDomain);
+    	
+        updateIsAttachedToAgent(clazz);
+        
+        String src = "{\r\n"
+        		+ "org.perfmon4j.ThreadTraceConfig.pushValidator(new api.org.perfmon4j.agent.ThreadTraceConfig.TriggerValidatorWrapper($1),$2);"
+        		+ "}";
+        
+        replaceMethodIfExists(clazz, "pushValidator", src, "api.org.perfmon4j.agent.SimpleTriggerValidator",  
+        	String.class.getName());
+
+        src = "{\r\n"
+        		+ " org.perfmon4j.ThreadTraceConfig.popValidator($1);\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "popValidator", src, String.class.getName());
+        
+    	logger.logDebug("Completed instrumenting agent class " + PERFMON_THREAD_TRACE_CONFIG_API_CLASSNAME + ". " );
+
+   	
+        return clazz.toBytecode();
+	}
+	
 	@Override
 	/**
 	 * Unit tests for this code can be found in: org.perfmon4j.instrument.PerfMonAgentAPITest
