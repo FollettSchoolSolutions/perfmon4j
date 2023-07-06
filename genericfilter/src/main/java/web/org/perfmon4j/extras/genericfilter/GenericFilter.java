@@ -1,8 +1,8 @@
 package web.org.perfmon4j.extras.genericfilter;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.StringTokenizer;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -11,6 +11,8 @@ import java.util.regex.PatternSyntaxException;
 import api.org.perfmon4j.agent.PerfMon;
 import api.org.perfmon4j.agent.PerfMonTimer;
 import api.org.perfmon4j.agent.SQLTime;
+import api.org.perfmon4j.agent.SimpleTriggerValidator;
+import api.org.perfmon4j.agent.ThreadTraceConfig;
 
 
 /**
@@ -137,10 +139,14 @@ public abstract class GenericFilter {
 
 	public class AsyncFinishRequestCallback {
         private final GenericFilter parent;
+        private final String reactiveContext;
 		private final HttpRequest request;
 		private final PerfMonTimer timer;
         private final Long localStartTime;
         private final Long localSQLStartTime;
+		private final boolean pushedRequestValidator;
+		private final boolean pushedSessionValidator;
+		private final boolean pushedCookieValidator;
         
 		private AsyncFinishRequestCallback(GenericFilter parent, HttpRequest request) {
 			this(parent, request, null);
@@ -148,10 +154,12 @@ public abstract class GenericFilter {
         
 		private AsyncFinishRequestCallback(GenericFilter parent, HttpRequest request, String reactiveContext) {
 			this.parent = parent;
+			this.reactiveContext = reactiveContext;
 			this.request = request;
 			timer = startTimerForRequest(request, reactiveContext);
 			localStartTime = outputRequestAndDuration ? Long.valueOf(System.currentTimeMillis()) : null;
     		localSQLStartTime = outputRequestAndDuration && SQLTime.isEnabled() ?  Long.valueOf(SQLTime.getSQLTime()) : null;
+
     		/*			
 			if (pushNDC) {
 				String ndc = buildNDC(request, pushURLOnNDC, pushClientInfoOnNDC, pushCookiesOnNDC, pushSessionAttributesOnNDC);
@@ -160,31 +168,29 @@ public abstract class GenericFilter {
 					pushedElementOnNDCStack = true;
 				}
 			}
-    		*/
-    		
-    		
-    		/**
-    		TODO:  Must deal with Triggers			
-    				boolean pushedRequestValidator = false;
-    				boolean pushedSessionValidator = false;
-    				boolean pushedCookieValidator = false;
     				boolean pushedElementOnNDCStack = false;
+    		
+    		*/
+        	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
+        		ThreadTraceConfig.pushValidator(new RequestValidator(request), reactiveContext);
+        		pushedRequestValidator = true;
+        	} else {
+        		pushedRequestValidator = false;
+        	}
+			
+        	if (PerfMon.hasHttpSessionBasedThreadTraceTriggers()) {
+        		ThreadTraceConfig.pushValidator(new SessionValidator(request), reactiveContext);
+        		pushedSessionValidator = true;
+        	} else {
+        		pushedSessionValidator = false;
+        	}
 
-    		        	if (PerfMon.hasHttpRequestBasedThreadTraceTriggers()) {
-    		        		ThreadTraceConfig.pushValidator(new RequestValidator(exchange));
-    		        		pushedRequestValidator = true;
-    		        	}			
-    					
-    		        	if (PerfMon.hasHttpSessionBasedThreadTraceTriggers()) {
-    		        		ThreadTraceConfig.pushValidator(new SessionValidator(exchange));
-    		        		pushedSessionValidator = true;
-    		        	}			
-
-    		        	if (PerfMon.hasHttpCookieBasedThreadTraceTriggers()) {
-    		        		ThreadTraceConfig.pushValidator(new CookieValidator(exchange));
-    		        		pushedCookieValidator = true;
-    		        	}			
-    		*/    		
+        	if (PerfMon.hasHttpCookieBasedThreadTraceTriggers()) {
+        		ThreadTraceConfig.pushValidator(new CookieValidator(request), reactiveContext);
+        		pushedCookieValidator = true;
+        	} else {
+        		pushedCookieValidator = false;
+        	}
 		}
 
 		public void finishRequest(HttpResponse response) {
@@ -214,25 +220,22 @@ public abstract class GenericFilter {
 		        	}
 	            }
 			} finally {
-				/*			
 				if (pushedRequestValidator) {
-					ThreadTraceConfig.popValidator();
+					ThreadTraceConfig.popValidator(reactiveContext);
 				}
 				if (pushedSessionValidator) {
-					ThreadTraceConfig.popValidator();
+					ThreadTraceConfig.popValidator(reactiveContext);
 				}
 				if (pushedCookieValidator) {
-					ThreadTraceConfig.popValidator();
+					ThreadTraceConfig.popValidator(reactiveContext);
 				}
-				
+				/*
 				if (pushedElementOnNDCStack) {
 					NDC.pop();
 				}
 				 */					
 			}
-			
 		}
-		
 	}
 
 	public AsyncFinishRequestCallback startAsyncRequest(HttpRequest request, String reactiveContext) {
@@ -248,45 +251,15 @@ public abstract class GenericFilter {
 		return result;
 	}
 
-	
-	
 	private void doHandleRequest(HttpRequest request, HttpResponse response, HttpRequestChain chain) throws Exception {
 		AsyncFinishRequestCallback callback = null;
 		try {
-/*			
-			if (pushNDC) {
-				String ndc = buildNDC(request, pushURLOnNDC, pushClientInfoOnNDC, pushCookiesOnNDC, pushSessionAttributesOnNDC);
-				if (ndc.length() > 0) {
-					NDC.push(ndc);
-					pushedElementOnNDCStack = true;
-				}
-			}
-*/
-			try {
-				callback = startAsyncRequest(request, null);
-				chain.next(request, response, chain);
-			} finally {
-				if (callback != null) {
-					callback.finishRequest(response);
-				}
-			}
+			callback = startAsyncRequest(request, null);
+			chain.next(request, response, chain);
 		} finally {
-			
-/*			
-			if (pushedRequestValidator) {
-				ThreadTraceConfig.popValidator();
+			if (callback != null) {
+				callback.finishRequest(response);
 			}
-			if (pushedSessionValidator) {
-				ThreadTraceConfig.popValidator();
-			}
-			if (pushedCookieValidator) {
-				ThreadTraceConfig.popValidator();
-			}
-			
-			if (pushedElementOnNDCStack) {
-				NDC.pop();
-			}
-*/			
 		}
 	}
 	
@@ -476,6 +449,7 @@ TODO: Restore PushNDC or MDC
 	        try {
 	        	result = Pattern.compile(pattern);
 	        } catch (PatternSyntaxException ex) {
+	        
 /*
 TODO: Log this better.	        	
 	            log.error("Error compiling pattern: " + pattern, ex);
@@ -486,95 +460,133 @@ TODO: Log this better.
     	return result;
     }
 
-/*    
-    public static class RequestValidator implements ThreadTraceConfig.TriggerValidator {
-    	private final HttpServerExchange exchange;
-    	RequestValidator(HttpServerExchange exchange) {
-    		this.exchange = exchange;
-    	}
+    public abstract static class SimpleValidatorImpl implements SimpleTriggerValidator {
+    	private final String triggerStringPrefix;
     	
-		public boolean isValid(Trigger trigger) {
-			boolean result = false;
-			
-			if (trigger.getType() == ThreadTraceConfig.TriggerType.HTTP_REQUEST_PARAM) {
-				ThreadTraceConfig.HTTPRequestTrigger t = (ThreadTraceConfig.HTTPRequestTrigger)trigger;
-				
-				Map<String, Deque<String>> map = exchange.getQueryParameters();
-				if (map != null) {
-					Deque<String> values = map.get(t.getName());
-					result = values != null && values.contains(t.getValue());
-				}
-			}
-			return result;
-		}
-    }
+    	public SimpleValidatorImpl(String triggerStringPrefix) {
+    		this.triggerStringPrefix = triggerStringPrefix;
+    	}
 
-    public static class SessionValidator implements ThreadTraceConfig.TriggerValidator {
-    	private final HttpServerExchange exchange;
+    	// Build one or more compare strings to compare to 
+    	// the triggers string.  Do not include the prefix,
+    	// the prefix on the trigger will be matched against
+    	// triggerStringPrefix before comparing.
     	
-    	SessionValidator(HttpServerExchange exchange) {
-    		this.exchange = exchange;
-    	}
-    	
-		public boolean isValid(Trigger trigger) {
-			boolean result = false;
-			
-			if (trigger.getType() == ThreadTraceConfig.TriggerType.HTTP_SESSION_PARAM) {
-				ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-				if (context != null) {
-					HttpSessionImpl session = context.getSession();
-					if (session != null) {
-						ThreadTraceConfig.HTTPSessionTrigger t = (ThreadTraceConfig.HTTPSessionTrigger)trigger;
-						Object value = session.getAttribute(t.getName());
-						if (value != null) {
-							result = t.getValue().equals(value.toString());
-						}
+    	// Compare strings should simply be "<expected key>=<expected value>"
+    	abstract protected String[] buildCompareStrings(String key);
+
+		@Override
+		public boolean isValid(String triggerString) {
+			if (triggerString.startsWith(triggerStringPrefix + ":")) {
+				for (String value : buildCompareStrings(extractKey(triggerString))) {
+					if (triggerString.equals(triggerStringPrefix + ":" + value)) {
+						return true;
 					}
 				}
 			}
-			return result;
+			return false;
 		}
-    }    
-    
-    public static class CookieValidator implements ThreadTraceConfig.TriggerValidator {
-    	private final HttpServerExchange exchange;
-    	
-    	CookieValidator(HttpServerExchange exchange) {
-    		this.exchange = exchange;
-    	}
-    	
-		public boolean isValid(Trigger trigger) {
-			boolean result = false;
-			
-			if (trigger.getType() == ThreadTraceConfig.TriggerType.HTTP_COOKIE_PARAM) {
-				ThreadTraceConfig.HTTPCookieTrigger t = (ThreadTraceConfig.HTTPCookieTrigger)trigger;
-				Map<String, Cookie> cookies = exchange.getRequestCookies();
-				if (cookies != null) {
-					Cookie cookie = cookies.get(t.getName());
-					result = (cookie != null && t.getValue().equals(cookie.getValue()));
-				}
-			}
-			return result;
-		}  
-    }
-*/    
-    
-	private String[] tokenizeCSVString(String src) {
-		String[] result = null;
 		
-		if (src != null && !src.trim().equals("")) {
-			List<String> x = new ArrayList<String>();
-			StringTokenizer t = new StringTokenizer(src, ",");
-			while (t.hasMoreTokens()) {
-				String str = t.nextToken().trim();
-				if (!str.equals("")) {
-					x.add(str);
+		private static final Pattern extractKeyPattern = Pattern.compile("[^\\:]+([^\\=]+).*");
+		private String extractKey(String triggerString) {
+			String result = null;
+			
+			Matcher m = extractKeyPattern.matcher(triggerString);
+			if (m.matches()) {
+				result = m.group(1);
+			}
+			
+			return result;
+		}
+    }
+    
+    
+    public static class RequestValidator extends SimpleValidatorImpl {
+    	private final HttpRequest request;
+    	
+    	RequestValidator(HttpRequest request) {
+    		super("HTTP");
+    		this.request = request;
+    	}
+
+		@Override
+		protected String[] buildCompareStrings(String parameterName) {
+			Set<String> result = new HashSet<String>();
+			
+			if (parameterName != null) {
+				List<String> values = request.getQueryParameter(parameterName);
+				if (values != null) {
+					for (String value : values) {
+						result.add(parameterName + "=" + value);
+					}
 				}
 			}
-			result = x.toArray(new String[]{});
+			return result.toArray(new String[] {});	
 		}
-		return result;
-	}
+    }
+    	
+    	
+    public static class SessionValidator extends SimpleValidatorImpl {
+    	private final HttpRequest request;
+    	
+    	SessionValidator(HttpRequest request) {
+    		super("HTTP_SESSION");
+    		this.request = request;
+    	}
+
+		@Override
+		protected String[] buildCompareStrings(String attributeName) {
+			String[] result = new String[] {};
+			
+			if (attributeName != null) {
+				Object attribute = request.getSessionAttribute(attributeName);
+				if (attribute != null) {
+					result = new String[] {attributeName + "=" + attribute.toString()};
+				}
+			}
+			return result;	
+		}
+    }
+    
+    public static class CookieValidator extends SimpleValidatorImpl {
+    	private final HttpRequest request;
+    	
+    	CookieValidator(HttpRequest request) {
+    		super("HTTP_COOKIE");
+    		this.request = request;
+    	}
+
+		@Override
+		protected String[] buildCompareStrings(String cookieName) {
+			String[] result = new String[] {};
+			
+			if (cookieName != null) {
+				String cookieValue = request.getCookieValue(cookieName);
+				if (cookieValue != null) {
+					result = new String[] {cookieName + "=" + cookieValue};
+				}
+			}
+			return result;	
+		}
+    }
+    
+    
+//	private String[] tokenizeCSVString(String src) {
+//		String[] result = null;
+//		
+//		if (src != null && !src.trim().equals("")) {
+//			List<String> x = new ArrayList<String>();
+//			StringTokenizer t = new StringTokenizer(src, ",");
+//			while (t.hasMoreTokens()) {
+//				String str = t.nextToken().trim();
+//				if (!str.equals("")) {
+//					x.add(str);
+//				}
+//			}
+//			result = x.toArray(new String[]{});
+//		}
+//		return result;
+//	}
 	
 	abstract protected void logInfo(String value);
 	abstract protected void logInfo(String value, Exception ex);

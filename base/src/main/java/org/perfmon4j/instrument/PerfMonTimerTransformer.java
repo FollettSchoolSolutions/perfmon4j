@@ -569,6 +569,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to attach SQLTime API class to agent", ex);
 	            }
+	        } else if ("api/org/perfmon4j/agent/ThreadTraceConfig".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToThreadTraceConfigAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached ThreadTraceConfig API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach ThreadTraceConfig API class to agent", ex);
+	            }
 	        }
 
 			return result;

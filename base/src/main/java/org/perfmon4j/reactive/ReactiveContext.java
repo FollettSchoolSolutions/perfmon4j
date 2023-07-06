@@ -1,16 +1,23 @@
 package org.perfmon4j.reactive;
 
 import java.io.Serializable;
+import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceData;
 import org.perfmon4j.ThreadTracesBase;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
 
 public class ReactiveContext {
+	private final static Logger logger = LoggerFactory.initLogger(ReactiveContext.class);
+	
 	private final Serializable payloadLockToken = new Serializable() {
 		private static final long serialVersionUID = 1L;
 	};
@@ -39,6 +46,11 @@ public class ReactiveContext {
 	private final ThreadTracesBase internalMonitorsOnContext = new ThreadTracesOnReactiveContext(PerfMon.MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS);
 	private final ThreadTracesBase externalMonitorsOnContext = new ThreadTracesOnReactiveContext(PerfMon.MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS);
 	private final AtomicLong sqlTimeAccumulator = new AtomicLong(0);
+		
+	private final Serializable triggerValidatorToken = new Serializable() {
+		private static final long serialVersionUID = 1L;
+	};	
+	private final Stack<ThreadTraceConfig.TriggerValidator> triggerValidatorStack = new Stack<ThreadTraceConfig.TriggerValidator>();
 	
 	public ReactiveContext(String contextID) {
 		this.contextID = contextID;
@@ -151,6 +163,28 @@ public class ReactiveContext {
 	 */
 	public void incrementSQLTime(long millis) {
 		sqlTimeAccumulator.addAndGet(millis);
+	}
+	
+	/* package */ void pushTriggerValidator(ThreadTraceConfig.TriggerValidator validator) {
+		synchronized(triggerValidatorToken) {
+			triggerValidatorStack.push(validator);
+		}
+	}
+	
+	/* package */  void popTriggerValidator() {
+		synchronized(triggerValidatorToken) {
+			try {
+				triggerValidatorStack.pop();
+			} catch(EmptyStackException e) {
+				logger.logWarn("Unbalanced call to ReactiveContext.popTriggerValidator");
+			}
+		}
+	}
+	
+	/* package */ ThreadTraceConfig.TriggerValidator[] getValidators() {
+		synchronized(triggerValidatorToken) {
+			return triggerValidatorStack.toArray(new ThreadTraceConfig.TriggerValidator[] {});
+		}
 	}
 	
     private static class ThreadTracesOnReactiveContext extends ThreadTracesBase {

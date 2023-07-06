@@ -20,13 +20,18 @@ package org.perfmon4j.instrument;
 import java.io.File;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.Appender;
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTestCase;
+import org.perfmon4j.TextAppender;
+import org.perfmon4j.ThreadTraceConfig;
+import org.perfmon4j.ThreadTraceConfig.Trigger;
 import org.perfmon4j.instrument.PerfMonTimerTransformerTest.SQLStatementTester.BogusAppender;
 import org.perfmon4j.util.MiscHelper;
 
@@ -466,6 +471,130 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 //System.out.println(output);    	
 		assertTrue("should find property for perfmon4j agent version (even though it might be null)",
 				output.contains("perfmon4j.javaagent.version="));
+		String failures = extractFailures(output);
+		if (!failures.isEmpty()) {
+			fail("One or more exceptions thrown: " + failures);
+		}
+    }
+
+    private static ThreadTraceConfig createThreadTraceConfig(AppenderID appenderID, Trigger... triggers) {
+    	ThreadTraceConfig config = new ThreadTraceConfig();
+    	
+    	config.addAppender(appenderID);
+    	config.setTriggers(triggers);
+    	
+    	return config;
+    }
+    
+    
+	public static class HasTriggers implements Runnable {
+		protected void configurePerfmon4j() throws Exception {
+			final String monitorName = "WebRequest";
+			final String appenderName = "textAppender";
+			PerfMonConfiguration config = new PerfMonConfiguration();
+			
+			config.defineAppender(appenderName, TextAppender.class.getName(), "1 minute", null);
+			final AppenderID appenderID = config.getAppenderForName(appenderName);
+			
+			config.defineMonitor(monitorName);
+			config.attachAppenderToMonitor(monitorName, appenderName);
+
+			config.addThreadTraceConfig(monitorName, createThreadTraceConfig(appenderID,
+				new Trigger[] {
+						new ThreadTraceConfig.HTTPRequestTrigger("name", "dave"),
+						new ThreadTraceConfig.HTTPSessionTrigger("userName", "dave"),
+						new ThreadTraceConfig.HTTPCookieTrigger("jsessionid", "1234")
+				}));
+			PerfMon.configure(config);
+		}
+		
+		
+		public void run() {
+			try {
+				assertFalse("Should NOT have a request based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpRequestBasedThreadTraceTriggers());
+				assertFalse("Should NOT have a session based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpSessionBasedThreadTraceTriggers());
+				assertFalse("Should NOT have a cookie based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+				
+
+				configurePerfmon4j();
+				
+				assertTrue("Should have a request based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpRequestBasedThreadTraceTriggers());
+				assertTrue("Should have a session based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpSessionBasedThreadTraceTriggers());
+				assertTrue("Should have a cookie based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+
+	
+	
+	
+	
+    public void testHasTriggers() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(HasTriggers.class, perfmon4jJar));
+//System.out.println(output);    	
+		String failures = extractFailures(output);
+		if (!failures.isEmpty()) {
+			fail("One or more exceptions thrown: " + failures);
+		}
+    }
+
+    
+	public static class InstallAgentValidator extends HasTriggers {
+		static final String AFTER_POPVALIDATOR = "***After PopValidator***"; 
+		
+		public void run() {
+			try {
+				configurePerfmon4j();
+
+				// Our validator should be invoked for each trigger.
+				api.org.perfmon4j.agent.ThreadTraceConfig.pushValidator(new api.org.perfmon4j.agent.SimpleTriggerValidator() {
+					@Override
+					public boolean isValid(String triggerString) {
+						System.out.println("[" + triggerString + "]");
+						return false;
+					}
+				});
+				try {
+					api.org.perfmon4j.agent.PerfMonTimer requestTimer = api.org.perfmon4j.agent.PerfMonTimer.start("WebRequest");
+					api.org.perfmon4j.agent.PerfMonTimer.stop(requestTimer);
+				} finally {
+					api.org.perfmon4j.agent.ThreadTraceConfig.popValidator();
+				}
+	
+				System.out.println(AFTER_POPVALIDATOR);
+	
+				// Since we removed our validator it should no longer be called.
+				api.org.perfmon4j.agent.PerfMonTimer requestTimer = api.org.perfmon4j.agent.PerfMonTimer.start("WebRequest");
+				api.org.perfmon4j.agent.PerfMonTimer.stop(requestTimer);
+			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+    
+    public void testInstallAgentValidator() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(InstallAgentValidator.class, perfmon4jJar));
+    	
+    	String[] split = output.split(Pattern.quote(InstallAgentValidator.AFTER_POPVALIDATOR));
+    	String withValidatorsInstalled = split[0];
+    	String withValidatorsRemoved = split[1];
+    	
+    	assertTrue("Should have indication our validator was invoked", withValidatorsInstalled.contains("[HTTP:name=dave]"));
+    	assertFalse("Validator should not be accessed after the popValidator was called", withValidatorsRemoved.contains("[HTTP:name=dave]"));
+    	
+
 		String failures = extractFailures(output);
 		if (!failures.isEmpty()) {
 			fail("One or more exceptions thrown: " + failures);
