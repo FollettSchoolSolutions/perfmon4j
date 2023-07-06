@@ -782,8 +782,6 @@ public class PerfMon {
         	return dec() == 0;
         }
         
-        
-        
        private long getSQLStartMillis() {
     	   return sqlStartMillis;
        }

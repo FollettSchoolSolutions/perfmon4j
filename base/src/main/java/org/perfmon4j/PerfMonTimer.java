@@ -212,7 +212,7 @@ public class PerfMonTimer {
     public static void stop(PerfMonTimer timer) {
         stop(timer, false);
     }
-    
+
     private void stop(long now, boolean abort) {
         if (perfMon != null) {
             next.stop(now, abort);
@@ -308,15 +308,10 @@ public class PerfMonTimer {
 		return null;
 	}
 	
-	
-    /**
-     * This class is only used when we return a Timer that is part of
-     * a thread trace.
-     */
-    private static class TimerWrapper extends PerfMonTimer {
-    	private boolean hasBeenStopped = false;
+	private static class TimerWrapper extends PerfMonTimer {
     	final private String reactiveContextID;
     	final private List<ExitCheckpoint> exitCheckpoints; 
+    	private boolean hasBeenStopped = false;
         private ReferenceCount referenceCount = null;
         private final String effectiveCategory;
         
