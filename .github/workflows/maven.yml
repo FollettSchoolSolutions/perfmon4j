@@ -25,7 +25,10 @@ jobs:
     env:
       DO_PUBLISH: | 
           ${{
-          ((github.event_name == 'push') && 
+          (
+          !contains(github.event.head_commit.message, '[skip deploy]') &&
+          !contains(github.event.head_commit.message, '#skip deploy#') &&
+          (github.event_name == 'push') && 
           (endsWith(github.ref, '/develop') 
           || endsWith(github.ref, '/master')
           || startsWith(github.ref, 'refs/heads/hotfix/')
