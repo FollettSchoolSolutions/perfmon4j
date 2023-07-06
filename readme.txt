@@ -21,12 +21,13 @@ McHenry, IL 60050
   include a ServletFilter and the ability to track Restful
   requests across multiple theads.
 
-** 1.6.2 - 2023-TBD
+Changes
+** 1.6.2 - 2023-07-05
 - Minor changes to address the following:
 	- PerfMonTimers can now be stopped from a thread
 	other than the thread they were started on.
 	- Calling PerfMonTimer.stop() more than once will
-	no longer have a negative effect.
+	no longer have a negative side effect.
 
 ** 1.6.2 - TBD
 
