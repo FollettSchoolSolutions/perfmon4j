@@ -415,13 +415,7 @@ public class PerfMon {
      * using this monitor!
      */
     void start(long systemTime, PerfMonTimer startingTimer, String reactiveContextID) {
-    	ReferenceCount count = null;
-    	if (reactiveContextID != null) {
-    		count = new ReferenceCount(this);
-    		ReactiveContextManager.getContextManagerForThread().addPayload(reactiveContextID, monitorID, count);
-    	} else {
-    		count = getThreadLocalReferenceCount();
-    	}
+    	ReferenceCount count = getMonitorReferenceCount(reactiveContextID); 
         if (count.inc(systemTime) == 1) {
         	if (reactiveContextID == null) { // No need to save of reference for reactiveContext aware 
         									 // timer since they are already designed to handle multiple threads.	
@@ -502,7 +496,7 @@ public class PerfMon {
     void stop(long systemTime, boolean abort, PerfMonTimer initiatingTimer, String reactiveContextID) {
         ReferenceCount count = initiatingTimer.getReferenceCount();
         if (count == null) {
-        	count = getThreadLocalReferenceCount();
+        	count = getMonitorReferenceCount(reactiveContextID);
         }
         if (count.dec() == 0) {
         	if (reactiveContextID != null) {

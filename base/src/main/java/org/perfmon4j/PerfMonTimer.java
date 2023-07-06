@@ -107,23 +107,19 @@ public class PerfMonTimer {
 		            	}
 		            }
 	            }
-	            if (haveActiveTimer || haveActiveThreadTrace) {
+	            if (haveActiveTimer) {
 		            // To keep track of the checkpoints for thread tracing we 
 		            // must be able to identify the timer passed to PerfMonTimer.stop()
-		            result = new TimerWrapper(result, wrapperInternalKey, wrapperExternalKey);
+		            result = new TimerWrapper(result, reactiveContextID, exitMethods);
 	            	result.start(startTime, reactiveContextID);
+	            } else if (reactiveContextID != null || (exitMethods != null && !exitMethods.isEmpty())) {
+	            	result = new TimerWrapper(result, reactiveContextID, exitMethods);
 	            }
 	        } catch (ThreadDeath th) {
 	            throw th;   // Always rethrow this error
 	        } catch (Throwable th) {
 	            logger.logError("Error starting monitor: " + monitorName, th);
 	            result = NULL_TIMER;
-	        }
-	        
-	        if (reactiveContextID != null || (exitMethods != null && !exitMethods.isEmpty())) {
-	            // To keep track of tracing exit methods AND/OR the reactiveContext we 
-	            // must be able to identify the timer passed to PerfMonTimer.stop()
-	            result = new TimerWrapper(result, reactiveContextID, exitMethods);
 	        }
         }
         
@@ -194,16 +190,18 @@ public class PerfMonTimer {
         }
     }
     
-    private static void stop(PerfMonTimer timer, boolean abort, String reactiveContextID) {
-        if (timer != NULL_TIMER && timer != null && !timer.hasBeenStopped()) {
+    private static void stop(PerfMonTimer timer, boolean abort) {
         try {
+            if (timer != null && timer != NULL_TIMER && !timer.hasBeenStopped()) {
             	timer.exitAllCheckpoints();
-                timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort, reactiveContextID);
+                timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort);
             }
         } catch (ThreadDeath th) {
             throw th;   // Always rethrow this error
         } catch (Throwable th) {
             logger.logError("Error stopping timer", th);
+        } finally {
+        	timer.flagStopped();
         }
     }
 
@@ -214,10 +212,11 @@ public class PerfMonTimer {
     public static void stop(PerfMonTimer timer) {
         stop(timer, false);
     }
-    private void stop(long now, boolean abort, String reactiveContextID) {
+    
+    private void stop(long now, boolean abort) {
         if (perfMon != null) {
-            next.stop(now, abort, reactiveContextID);
-            perfMon.stop(now, abort, this, reactiveContextID);
+            next.stop(now, abort);
+            perfMon.stop(now, abort, this, getReactiveContextID());
         }
     }
     
@@ -317,7 +316,7 @@ public class PerfMonTimer {
     private static class TimerWrapper extends PerfMonTimer {
     	private boolean hasBeenStopped = false;
     	final private String reactiveContextID;
-    	final private List<Runnable> exitCheckpoints; 
+    	final private List<ExitCheckpoint> exitCheckpoints; 
         private ReferenceCount referenceCount = null;
         private final String effectiveCategory;
         
@@ -359,7 +358,36 @@ public class PerfMonTimer {
 	        	}
         	}
         }
+        
 		@Override
+		protected boolean hasBeenStopped() {
+			return hasBeenStopped;
+		}
+
+		@Override
+		protected void flagStopped() {
+			hasBeenStopped = true;
+		}
+		
+		@Override
+		/* package */ void storeReferenceCountForOffThreadStop(ReferenceCount referenceCount) {
+			this.referenceCount = referenceCount;
+		}
+		
+		@Override
+		/* package */ ReferenceCount getReferenceCount() {
+			return referenceCount;
+		}
+
+		@Override
+		/* package */ String getEffectiveMonitorCategory() {
+			return effectiveCategory;
+		}
+
+		@Override
+		boolean isMutable() {
+			return true;
+		}        
     }
     
 
