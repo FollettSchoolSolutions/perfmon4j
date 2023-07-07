@@ -18,12 +18,9 @@ import org.perfmon4j.util.LoggerFactory;
 public class ReactiveContext {
 	private final static Logger logger = LoggerFactory.initLogger(ReactiveContext.class);
 	
-	private final Serializable payloadLockToken = new Serializable() {
-		private static final long serialVersionUID = 1L;
-	};
+
 	private static final AtomicInteger activeThreadTraceFlag = new AtomicInteger(0);
 	
-	private final Map<Long, Object> payloadMap= new HashMap<Long, Object>();
 	
 	private final Serializable activeThreadLockToken = new Serializable() {
 		private static final long serialVersionUID = 1L;
@@ -41,16 +38,32 @@ public class ReactiveContext {
 	
 	private final String contextID;
 	
-	private volatile boolean empty = true;
-	private volatile Object[] cachedPayloads = null;
 	private final ThreadTracesBase internalMonitorsOnContext = new ThreadTracesOnReactiveContext(PerfMon.MAX_ALLOWED_INTERNAL_THREAD_TRACE_ELEMENTS);
 	private final ThreadTracesBase externalMonitorsOnContext = new ThreadTracesOnReactiveContext(PerfMon.MAX_ALLOWED_EXTERNAL_THREAD_TRACE_ELEMENTS);
 	private final AtomicLong sqlTimeAccumulator = new AtomicLong(0);
 		
-	private final Serializable triggerValidatorToken = new Serializable() {
+	/** START Comment - mutableMemberData
+	 * The payloadMap and the triggerValidatorStack are the two data members 
+	 * that are used to indicate when a context is no longer needed 
+	 * and can be dereferenced.
+	 * 
+	 *  When there are no remaining payload objects (Used to store PerfMon referenceCounts accross Monitors)
+	 *  or ThreadTraceTriggers the element can be considered empty.
+	 * 
+	 * If you are adding/removing elements from this list make sure you have 
+	 * synchronize on the mutableMemberDataLockToken. 
+	 * **/
+	private final Serializable mutableMemberDataLockToken = new Serializable() {
 		private static final long serialVersionUID = 1L;
-	};	
+	};
+	
+	private volatile boolean empty = true;
+	private volatile Object[] cachedPayloads = null;
+	private volatile ThreadTraceConfig.TriggerValidator[] cachedTriggerValidatorArray = null;
+	
+	private final Map<Long, Object> payloadMap= new HashMap<Long, Object>();
 	private final Stack<ThreadTraceConfig.TriggerValidator> triggerValidatorStack = new Stack<ThreadTraceConfig.TriggerValidator>();
+	/** END Comment **/
 	
 	public ReactiveContext(String contextID) {
 		this.contextID = contextID;
@@ -61,13 +74,13 @@ public class ReactiveContext {
 	}
 	
 	public Object getPayload(Long monitorID) {
-		synchronized (payloadLockToken) {
+		synchronized (mutableMemberDataLockToken) {
 			return payloadMap.get(monitorID);
 		}
 	}
 	
 	public void addPayload(Long monitorID, Object payload) {
-		synchronized (payloadLockToken) {
+		synchronized (mutableMemberDataLockToken) {
 			payloadMap.put(monitorID, payload);
 			empty = false;
 			cachedPayloads = null;
@@ -75,19 +88,36 @@ public class ReactiveContext {
 	}
 
 	public Object removePayload(Long monitorID) {
-		synchronized (payloadLockToken) {
+		synchronized (mutableMemberDataLockToken) {
 			Object result = payloadMap.remove(monitorID); 
-			empty = payloadMap.isEmpty();
+			empty = determineIsEmpty();
 			cachedPayloads = null;
 			return result;
 		}
 	}
 	
+	/**
+	 * When a context is "empty" it can be dereferenced from all context manager
+	 * maps and be made available for Garbage Collection (unless it is
+	 * referenced by an external object).
+	 * 
+	 * For our purposes the context is empty once it has no more payload
+	 * objects in the payloadMap or triggerValidators in the triggerValidatorStack.
+	 * 
+	 * @return
+	 */
+	private boolean determineIsEmpty() {
+		synchronized (mutableMemberDataLockToken) {
+			return (payloadMap.isEmpty() && triggerValidatorStack.isEmpty());
+		}
+	}
+	
+	
 	public Object[] getPayloads() {
 		Object[] result = cachedPayloads;
 		
 		if (result == null) {
-			synchronized (payloadLockToken) {
+			synchronized (mutableMemberDataLockToken) {
 				result = cachedPayloads = payloadMap.values().toArray();
 			}
 		}
@@ -96,7 +126,7 @@ public class ReactiveContext {
 	}
 	
 	public boolean isEmpty() {
-		synchronized (payloadLockToken) {
+		synchronized (mutableMemberDataLockToken) {
 			return empty;
 		}
 	}
@@ -130,7 +160,7 @@ public class ReactiveContext {
 	
 	public void setActiveThread(ReactiveContextManagerIdentifier activeThread) {
 		synchronized (activeThreadLockToken) {
-			this.activeThread = activeThread;;
+			this.activeThread = activeThread;
 		}
 	}
 	
@@ -166,15 +196,19 @@ public class ReactiveContext {
 	}
 	
 	/* package */ void pushTriggerValidator(ThreadTraceConfig.TriggerValidator validator) {
-		synchronized(triggerValidatorToken) {
+		synchronized(mutableMemberDataLockToken) {
 			triggerValidatorStack.push(validator);
+			empty = false;
+			cachedTriggerValidatorArray = null;
 		}
 	}
 	
 	/* package */  void popTriggerValidator() {
-		synchronized(triggerValidatorToken) {
+		synchronized(mutableMemberDataLockToken) {
 			try {
 				triggerValidatorStack.pop();
+				empty = determineIsEmpty();
+				cachedTriggerValidatorArray = null;
 			} catch(EmptyStackException e) {
 				logger.logWarn("Unbalanced call to ReactiveContext.popTriggerValidator");
 			}
@@ -182,9 +216,15 @@ public class ReactiveContext {
 	}
 	
 	/* package */ ThreadTraceConfig.TriggerValidator[] getValidators() {
-		synchronized(triggerValidatorToken) {
-			return triggerValidatorStack.toArray(new ThreadTraceConfig.TriggerValidator[] {});
+		ThreadTraceConfig.TriggerValidator[] result = cachedTriggerValidatorArray;
+		
+		if (result == null) {
+			synchronized(mutableMemberDataLockToken) {
+				result = cachedTriggerValidatorArray = triggerValidatorStack.toArray(new ThreadTraceConfig.TriggerValidator[] {});
+			}
 		}
+		
+		return result;
 	}
 	
     private static class ThreadTracesOnReactiveContext extends ThreadTracesBase {

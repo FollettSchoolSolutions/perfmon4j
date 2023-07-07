@@ -98,12 +98,6 @@ public class ReactiveContextManager {
 	 * associated with this reactiveContext (associated with contextID).  If we find the 
 	 * current thread is designated as the active thread we will move it.
 	 * 
-	 * SIDE EFFECTS - 
-	 * 	1) This method WILL designate the caller as the active thread for the 
-	 * associated reactiveContext.   
-	 * 		 
-	 *  2) If the reactiveContext does not exist it WILL be created.
-	 * 
 	 * Returns the specified payload
 	 * @param contextID
 	 * @param monitorID
@@ -116,44 +110,22 @@ public class ReactiveContextManager {
 				new Object[] {contextID, monitorID, payloadConstructor != null ? "(included=true)" : "(included=false)"});
 
 		synchronized(bindToken) {
-			boolean createdNewContext = false;
-			ReactiveContext context = globalContextMap.get(contextID);
-			if (context == null) {
-				// For some reason the context does not exist... We will create it.
-				context = new ReactiveContext(contextID);
-
-				// Associate with the global MAP
-				globalContextMap.put(contextID, context);
-				activeContextFlag.set(globalContextMap.size());
-				
-				if (logger.isDebugEnabled()) {
-					logger.logDebug(methodLine + " is initializing global context.");
-				}
-				createdNewContext = true;
-			}
+			Object result = null;
+			boolean createContext = (payloadConstructor != null);
+			ReactiveContext context = getOrCreateGlobalContext(contextID, createContext, methodLine);
 			
-			if (!this.equals(context.getActiveOwner())) {
-				String threadNameForContext = buildThreadNameForContext(context);
-				
-				moveContextToCurrentThread(contextID, context);
-				
-				if (logger.isDebugEnabled()) {
-					if (createdNewContext) {
-						logger.logDebug(methodLine + " new context has been assigned to thread.");
-					} else {
-						logger.logDebug(methodLine + " has moved context from " + threadNameForContext);
+			if (context != null) {
+				result = context.getPayload(monitorID);
+				if (result == null && payloadConstructor != null) {
+					result = payloadConstructor.buildPayload(context);
+					context.addPayload(monitorID, result);
+					if (logger.isDebugEnabled()) {
+						logger.logDebug(methodLine + " has initialized the payload."); 
 					}
 				}
+				moveContextToCurrentThread(context);
 			}
 			
-			Object result = context.getPayload(monitorID);
-			if (result == null && payloadConstructor != null) {
-				result = payloadConstructor.buildPayload(context);
-				context.addPayload(monitorID, result);
-				if (logger.isDebugEnabled()) {
-					logger.logDebug(methodLine + " has initialized the payload."); 
-				}
-			}
 			return result;
 		}
 	}
@@ -184,41 +156,71 @@ public class ReactiveContextManager {
 		Object result = null;
 		
 		synchronized(bindToken) {
-			ReactiveContext context = globalContextMap.get(contextID);
+			ReactiveContext context = getOrCreateGlobalContext(contextID, false, methodLine);
 			if (context != null) {
-				String threadNameForContext = buildThreadNameForContext(context);
-				
 				result = context.removePayload(monitorID);
-				if (logger.isDebugEnabled()) {
-					logger.logDebug(methodLine + " has removed payload for context."); 
-				}				
-				// If the context does not contain any additional
-				// payloads remove it.
-				if (context.isEmpty()) {
-					// Remove from the global Map
-					globalContextMap.remove(contextID);
-					activeContextFlag.set(globalContextMap.size());
-
-					ReactiveContextManager activeOwner = context.getActiveOwner();
-					activeOwner.managerContextMap.remove(contextID);
-					context.setActiveOwner(null);
-
-					if (logger.isDebugEnabled()) {
-						logger.logDebug(methodLine + " has removed context."); 
-					}
-				} else if (!this.equals(context.getActiveOwner())){
-					// Since the context has remaining payloads
-					// transfer ownership to the calling thread
-					moveContextToCurrentThread(contextID, context);
-					if (logger.isDebugEnabled()) {
-						logger.logDebug(methodLine + " has moved context from " + threadNameForContext); 
-					}
-				}
-			} else {
-				// Context not found.  Nothing to do.
+				moveOrRemoveContextAfterDataChange(context, methodLine);
 			}
 		}
 		return result;
+	}
+	
+	
+	/**
+	 * This method is called after we remove data 
+	 * (either a payload element or a triggerValidator) from
+	 * the context.
+	 * 
+	 * If the context is now empty - we will remove it.
+	 * If the context is not empty we will implicitly reassign it to the current
+	 * thread.
+	 */
+	private void moveOrRemoveContextAfterDataChange(ReactiveContext context, String methodLine) {
+		synchronized(bindToken) {
+			// If the context does not contain any additional
+			// data elements remove it
+			if (context.isEmpty()) {
+				String contextID = context.getContextID();
+				// Remove from the global Map
+				globalContextMap.remove(contextID);
+				activeContextFlag.set(globalContextMap.size());
+
+				ReactiveContextManager activeOwner = context.getActiveOwner();
+				activeOwner.managerContextMap.remove(contextID);
+				context.setActiveOwner(null);
+
+				if (logger.isDebugEnabled()) {
+					logger.logDebug(methodLine + " has removed context."); 
+				}
+			} else if (!this.equals(context.getActiveOwner())){
+				// Since the context is still holding meaningful data,
+				// transfer ownership to the calling thread
+				moveContextToCurrentThread(context);
+				if (logger.isDebugEnabled()) {
+					logger.logDebug(methodLine + " has moved context from " + buildThreadNameForContext(context)); 
+				}
+			}
+		}
+	}
+	
+	private static ReactiveContext getOrCreateGlobalContext(String contextID, boolean allowCreate, String methodLine) {
+		ReactiveContext context = null;
+		synchronized(bindToken) {
+			context = globalContextMap.get(contextID);
+			if (context == null && allowCreate) {
+				// For some reason the context does not exist... We will create it.
+				context = new ReactiveContext(contextID);
+
+				// Associate with the global MAP
+				globalContextMap.put(contextID, context);
+				activeContextFlag.set(globalContextMap.size());
+				
+				if (logger.isDebugEnabled()) {
+					logger.logDebug(methodLine + " is initializing global context.");
+				}
+			}
+		}
+		return context;
 	}
 	
 	/**
@@ -238,9 +240,9 @@ public class ReactiveContextManager {
 					logger.logWarn(methodLine +  "Context not found, unable to move to Thread.");
 				} else {
 					if (!this.equals(context.getActiveOwner())) {
-						String threadNameForContext = buildThreadNameForContext(context);
-						moveContextToCurrentThread(contextID, context);
+						moveContextToCurrentThread(context);
 						if (logger.isDebugEnabled()) {
+							String threadNameForContext = buildThreadNameForContext(context);
 							logger.logDebug(methodLine + " has moved context from " + threadNameForContext); 
 						}
 					}
@@ -256,7 +258,7 @@ public class ReactiveContextManager {
 					new Object[] {contextID});
 			
 			synchronized(bindToken) {
-				ReactiveContext context = globalContextMap.get(contextID);
+				ReactiveContext context = getOrCreateGlobalContext(contextID, false, methodLine);
 				if (context != null && this.equals(context.getActiveOwner())) {
 					// Owned by the current thread.  We will orphan
 					// the context (It will still be available and
@@ -317,10 +319,12 @@ public class ReactiveContextManager {
 	 * @param contextID
 	 * @param context
 	 */
-	private void moveContextToCurrentThread(String contextID, ReactiveContext context) {
+	private void moveContextToCurrentThread(ReactiveContext context) {
 		synchronized (bindToken) {
 			ReactiveContextManager currentOwner = context.getActiveOwner();
 			if (!this.equals(currentOwner)) {
+				String contextID = context.getContextID();
+
 				if (currentOwner != null) {
 					currentOwner.managerContextMap.remove(contextID);
 					currentOwner.cachedContexts = null;
@@ -373,28 +377,28 @@ public class ReactiveContextManager {
 		}
 	}
 	
-	
-	public static void pushValidator(ThreadTraceConfig.TriggerValidator validator,  String reactiveContextID) {
-		ReactiveContext context = null;
-		synchronized (bindToken) {
-			context = globalContextMap.get(reactiveContextID);
-		}
-		if (context != null) {
-			context.pushTriggerValidator(validator);
-		} else {
-			logger.logWarn("Warning attempt to push TriggerValidator on non-existant reactiveContextID: " + reactiveContextID);
-		}
+	public void pushValidator(ThreadTraceConfig.TriggerValidator validator,  String contextID) {
+		String methodLine = buildMethodCallDebugLine("pushValidator", 
+				new String[] {"contextID"}, 
+				new Object[] {contextID});
+		
+		ReactiveContext context = getOrCreateGlobalContext(contextID, true, methodLine);
+		context.pushTriggerValidator(validator);
+		moveContextToCurrentThread(context);
 	}
 	
-	public static void popValidator(String reactiveContextID) {
-		ReactiveContext context = null;
-		synchronized (bindToken) {
-			context = globalContextMap.get(reactiveContextID);
-		}
+	public void popValidator(String contextID) {
+		String methodLine = buildMethodCallDebugLine("popValidator", 
+				new String[] {"contextID"}, 
+				new Object[] {contextID});
+		
+		
+		ReactiveContext context = getOrCreateGlobalContext(contextID, false, methodLine);
 		if (context != null) {
 			context.popTriggerValidator();
+			moveOrRemoveContextAfterDataChange(context, methodLine);
 		} else {
-			logger.logWarn("Warning attempt to pop TriggerValidator off a non-existant reactiveContextID: " + reactiveContextID);
+			logger.logWarn("Warning attempt to pop TriggerValidator off a non-existant context: " + methodLine);
 		}
 	}
 	

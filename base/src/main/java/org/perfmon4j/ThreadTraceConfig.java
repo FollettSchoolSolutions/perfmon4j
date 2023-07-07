@@ -269,7 +269,7 @@ public class ThreadTraceConfig {
 	
 	public static void pushValidator(TriggerValidator validator, String reactiveContextID) {
 		if (reactiveContextID != null) {	
-			ReactiveContextManager.pushValidator(validator, reactiveContextID);
+			ReactiveContextManager.getContextManagerForThread().pushValidator(validator, reactiveContextID);
 		} else {
 			validatorsOnThread.get().push(validator);
 		}
@@ -281,7 +281,7 @@ public class ThreadTraceConfig {
 	
 	public static void popValidator(String reactiveContextID) {
 		if (reactiveContextID != null) {	
-			ReactiveContextManager.popValidator(reactiveContextID);
+			ReactiveContextManager.getContextManagerForThread().popValidator(reactiveContextID);
 		} else {
 			validatorsOnThread.get().pop();
 		}
