@@ -156,9 +156,6 @@ public abstract class GenericFilter {
 			this.parent = parent;
 			this.reactiveContext = reactiveContext;
 			this.request = request;
-			timer = startTimerForRequest(request, reactiveContext);
-			localStartTime = outputRequestAndDuration ? Long.valueOf(System.currentTimeMillis()) : null;
-    		localSQLStartTime = outputRequestAndDuration && SQLTime.isEnabled() ?  Long.valueOf(SQLTime.getSQLTime()) : null;
 
     		/*			
 			if (pushNDC) {
@@ -191,6 +188,10 @@ public abstract class GenericFilter {
         	} else {
         		pushedCookieValidator = false;
         	}
+
+			timer = startTimerForRequest(request, reactiveContext);
+			localStartTime = outputRequestAndDuration ? Long.valueOf(System.currentTimeMillis()) : null;
+    		localSQLStartTime = outputRequestAndDuration && SQLTime.isEnabled() ?  Long.valueOf(SQLTime.getSQLTime()) : null;
 		}
 
 		public void finishRequest(HttpResponse response) {
@@ -487,7 +488,7 @@ TODO: Log this better.
 			return false;
 		}
 		
-		private static final Pattern extractKeyPattern = Pattern.compile("[^\\:]+([^\\=]+).*");
+		private static final Pattern extractKeyPattern = Pattern.compile("[^\\:]+\\:([^\\=]+).*");
 		private String extractKey(String triggerString) {
 			String result = null;
 			
