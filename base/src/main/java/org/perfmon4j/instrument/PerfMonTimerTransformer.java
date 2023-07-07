@@ -733,14 +733,16 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     			reader = new FileReader(configFile);
     			bootConfiguration = XMLBootParser.parseXML(reader);
 			} catch (FileNotFoundException e) {
-				logger.logError("Perfmon4j unable to load boot configuration -- using default", e);
+				logger.logError("Perfmon4j unable to load boot configuration, using default. File: " + safeGetCanonicalPathForFile(new File(configFile)));
 			} finally {
 				if (reader != null) {
 					try {reader.close();} catch (Exception ex) {}
 				}
 			}
-    		ConfiguredSettings.setBootConfigSettings(bootConfiguration.exportAsProperties());
+    	} else {
+    		logger.logWarn("Perfmonconfig.xml file not specified.  Loading default boot configuration.");
     	}
+		ConfiguredSettings.setBootConfigSettings(bootConfiguration.exportAsProperties());
         
         if (t.params.isInstallServletValve()) {
         	BootConfiguration.ServletValveConfig valveConfig = bootConfiguration.getServletValveConfig();
