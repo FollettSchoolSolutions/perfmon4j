@@ -742,7 +742,7 @@ System.out.println(appenderString);
         final String MONITOR_KEY = "testMinDurationToCapture";
         
         ThreadTraceConfig config = new ThreadTraceConfig();
-        config.setMinDurationToCapture(20);
+        config.setMinDurationToCapture(30);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);

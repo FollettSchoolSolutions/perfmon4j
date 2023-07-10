@@ -129,7 +129,7 @@ public class TransformerParamsTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testBlackList() {
-        TransformerParams params = new TransformerParams("-eorg.apache,-ecom.follett");
+        TransformerParams params = new TransformerParams("-eorg.apache,-ecom.follett,-eio.smallrye");
         
         assertEquals("log4j is blacklisted... Should not allow any logging regardless of the parameters", 
         		TransformerParams.MODE_NONE, 
@@ -146,6 +146,15 @@ public class TransformerParamsTest extends PerfMonTestCase {
         assertEquals("Jboss's weld creates class files that include the pattern $Proxy$_$$.  When attempting to" +
         		"instrument these classes we get a Verify error - Inconsistent stack height 1 != 0.",
         		TransformerParams.MODE_NONE, params.getTransformMode("com.follett.yukon.util.HibernateHelper$Proxy$_$$_WeldClientProxy"));
+
+        assertEquals("This smallrye class should be instrumented",
+        		TransformerParams.MODE_EXTREME, params.getTransformMode("io.smallrye.reactive.messaging.impl.ConfiguredChannelFactory"));
+        
+        assertEquals("Don't include any classes that end with '_SubClass' - we have had validation issues on these generated classes when io.smallrye is instrumented",
+        		TransformerParams.MODE_NONE, params.getTransformMode("com.follett.fss.vdabav.OurClass_Subclass"));
+        
+        assertEquals("Don't include io.smallrye.metrics implementations",
+        		TransformerParams.MODE_NONE, params.getTransformMode("io.smallrye.metrics.AnyClass"));
     }
 
 
