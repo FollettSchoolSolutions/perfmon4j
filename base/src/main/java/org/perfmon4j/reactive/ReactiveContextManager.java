@@ -237,7 +237,8 @@ public class ReactiveContextManager {
 			synchronized(bindToken) {
 				ReactiveContext context = globalContextMap.get(contextID);
 				if (context == null) {
-					logger.logWarn(methodLine +  "Context not found, unable to move to Thread.");
+					// This might not be a problem.  The context may have simply been completed.
+					logger.logDebug(methodLine +  "Context not found, unable to move to Thread.");
 				} else {
 					if (!this.equals(context.getActiveOwner())) {
 						moveContextToCurrentThread(context);
