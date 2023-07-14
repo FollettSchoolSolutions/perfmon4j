@@ -64,7 +64,9 @@ class LoggerWrapper implements Logger {
 		String tmp = System.getProperty("PerfMon4j.preferredLogger");
 
 		
-		if (tmp == null && "org.jboss.logmanager.LogManager".equals( System.getProperty("java.util.logging.manager"))) {
+		if (tmp == null
+				&& MiscHelper.isRunningInJBossAppServer() 
+				&& "org.jboss.logmanager.LogManager".equals( System.getProperty("java.util.logging.manager"))) {
 			tmp = PREFERRED_LOGGER_LOG4J;
 		}
 		
@@ -78,7 +80,8 @@ class LoggerWrapper implements Logger {
 		}
 
 		if (tmp == null
-				&& System.getProperty("java.util.logging.manager") != null) {
+				&& System.getProperty("java.util.logging.manager") != null
+				&& !"org.jboss.logmanager.LogManager".equals( System.getProperty("java.util.logging.manager"))) {
 			tmp = PREFERRED_LOGGER_JAVA_LOGGING;
 			if (tmp != null) {
 				System.err
