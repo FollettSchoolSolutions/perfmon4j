@@ -148,15 +148,9 @@ class LoggerWrapper implements Logger {
 							category, forceEnableInfo, forceEnableDebug);
 				}
 			} else if (mode == AUTO_LOGGING) {
-				System.err.println("!!!! Resolving AUTO_LOGGING !!!!");
 				result = getDelegate(LOG4J_LOGGING);
 				if (result == null) {
 					result = getDelegate(JAVA_LOGGING);
-					if (result != null) {
-						System.err.println("!!!! Found java logging !!!!");
-					}
-				} else {
-					System.err.println("!!!! found log4j logging !!!!");
 				}
 			}
 		}
