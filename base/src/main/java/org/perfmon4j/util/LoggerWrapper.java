@@ -80,8 +80,7 @@ class LoggerWrapper implements Logger {
 		}
 
 		if (tmp == null
-				&& System.getProperty("java.util.logging.manager") != null
-				&& !"org.jboss.logmanager.LogManager".equals( System.getProperty("java.util.logging.manager"))) {
+				&& System.getProperty("java.util.logging.manager") != null) {
 			tmp = PREFERRED_LOGGER_JAVA_LOGGING;
 			if (tmp != null) {
 				System.err
@@ -149,9 +148,15 @@ class LoggerWrapper implements Logger {
 							category, forceEnableInfo, forceEnableDebug);
 				}
 			} else if (mode == AUTO_LOGGING) {
+				System.err.println("!!!! Resolving AUTO_LOGGING !!!!");
 				result = getDelegate(LOG4J_LOGGING);
 				if (result == null) {
 					result = getDelegate(JAVA_LOGGING);
+					if (result != null) {
+						System.err.println("!!!! Found java logging !!!!");
+					}
+				} else {
+					System.err.println("!!!! found log4j logging !!!!");
 				}
 			}
 		}
