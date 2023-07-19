@@ -241,6 +241,83 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	}
     }
 	
+	public static class AgentAPIPerfMonTimerStartReactiveTest implements Runnable {
+		
+		public void validateTimersAreReactive(api.org.perfmon4j.agent.PerfMon apiPerfMon, 
+				api.org.perfmon4j.agent.PerfMonTimer timer1,
+				api.org.perfmon4j.agent.PerfMonTimer timer2,
+				api.org.perfmon4j.agent.PerfMonTimer timer3) {
+			
+			api.org.perfmon4j.agent.PerfMonTimer.stop(timer3);
+			api.org.perfmon4j.agent.PerfMonTimer.stop(timer2);
+			api.org.perfmon4j.agent.PerfMonTimer.stop(timer1);
+			
+			PerfMon nativePerfMon = ((PerfMonAgentApiWrapper)apiPerfMon).getNativeObject();
+			if (nativePerfMon.getTotalHits() != 3) {
+				System.out.println("**FAIL: expected 3 hits");
+			}
+			if (nativePerfMon.getTotalCompletions() != 3) {
+				System.out.println("**FAIL: still should have 3 completions");
+			}
+		}
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorRootName = "test123";
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorRootName);
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToMonitor(monitorRootName, appenderName, "./*");
+				PerfMon.configure(config);
+				
+				
+				/* Test start with passing in an agent and abort */
+				// When starting in reactive mode, a single thread must be able to 
+				// start the same monitor multiple times.
+				// In non-reactive mode, a new start will not occur on the thread, unless the previous one is stopped.
+
+				
+				// Try perfMonTimer.startReactive(PerfMon) overload
+				String monitorName = monitorRootName + ".1";
+				api.org.perfmon4j.agent.PerfMon apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor(monitorName);
+				
+				api.org.perfmon4j.agent.PerfMonTimer timer1 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
+				api.org.perfmon4j.agent.PerfMonTimer timer2 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
+				api.org.perfmon4j.agent.PerfMonTimer timer3 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
+
+				validateTimersAreReactive(apiPerfMon, timer1, timer2, timer3);
+				
+				
+				// Try perfMonTimer.startReactive(String) overload
+				monitorName = monitorRootName + ".2";
+				apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor(monitorName);
+				
+				timer1 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(monitorName);
+				timer2 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(monitorName);
+				timer3 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(monitorName);
+
+				validateTimersAreReactive(apiPerfMon, timer1, timer2, timer3);
+			} catch (Exception ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAttachedPerfMonTimerAPIStartReactive() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(AgentAPIPerfMonTimerStartReactiveTest.class, perfmon4jJar));
+//System.out.println(output);    	
+    	String failures = extractFailures(output);
+    	
+    	if (!failures.isEmpty()) {
+    		fail("One or more failures: " + failures);
+    	}
+    }    
+    
     
 	public static class AgentAPISQLTimeInstTest implements Runnable {
 		public void run() {

@@ -1343,6 +1343,14 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         replaceMethodIfExists(clazz, "start", src, PERFMON_API_CLASSNAME);
 
+//    	public static PerfMonTimer startReactive(PerfMon mon) {
+        src = "{ "
+        		+ "org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();\r\n"
+        		+ "return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.startReactive(nativePerfMon));"
+        		+ "}";
+        replaceMethodIfExists(clazz, "startReactive", src, PERFMON_API_CLASSNAME);
+        
+        
 //    	public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
         src = "{ "
         		+ "org.perfmon4j.PerfMon nativePerfMon = ((org.perfmon4j.instrument.PerfMonAgentApiWrapper)$1).getNativeObject();\r\n"
@@ -1363,6 +1371,12 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         replaceMethodIfExists(clazz, "start", src, String.class.getName(), CtClass.booleanType.getName());
 
+//        public static PerfMonTimer startReactive(String key, boolean isDynamicKey)
+        src = "{ "
+        		+ " return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.startReactive($1, $2));"
+        		+ "}";
+        replaceMethodIfExists(clazz, "startReactive", src, String.class.getName(), CtClass.booleanType.getName());
+        
 //      public static PerfMonTimer start(String key, boolean isDynamicKey, String reactiveContextID) {
         src = "{ "
         		+ " return new api.org.perfmon4j.agent.PerfMonTimer(org.perfmon4j.PerfMonTimer.start($1, $2, $3));"

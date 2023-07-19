@@ -22,6 +22,7 @@ package org.perfmon4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.perfmon4j.PerfMon.ReferenceCount;
 import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
@@ -33,6 +34,8 @@ import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
 public class PerfMonTimer {
+	private final static AtomicLong nextReactiveContextID = new AtomicLong(0);
+	
     // Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(PerfMonTimer.class);
     
@@ -55,6 +58,10 @@ public class PerfMonTimer {
     	return start(mon, null);
     }
 
+    public static PerfMonTimer startReactive(PerfMon mon) {
+    	return start(mon, getNextReactiveID());
+    }
+    
     public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
         if (!PerfMon.isConfigured() && !ExternalAppender.isActive()) {
             return NULL_TIMER;
@@ -130,6 +137,10 @@ public class PerfMonTimer {
     	return start(key, false, null);
     }
 
+    public static PerfMonTimer startReactive(String key) {
+    	return start(key, false, getNextReactiveID());
+    }
+    
     /**
      * Pass in true if this is a dynamically generated key (i.e. not a method
      * name or some know value.  This prevents monitors from being created
@@ -144,6 +155,11 @@ public class PerfMonTimer {
     public static PerfMonTimer start(String key, boolean isDynamicKey) {
     	return start(key, isDynamicKey, null);
     }
+
+    public static PerfMonTimer startReactive(String key, boolean isDynamicKey) {
+    	return start(key, isDynamicKey, getNextReactiveID());
+    }
+    
     
     /**
      * Pass in true if this is a dynamically generated key (i.e. not a method
@@ -411,5 +427,9 @@ public class PerfMonTimer {
     
     static private void setLastFullyQualifiedStartNameForThread(String key) {
     	last.get().setFullName(key);
+    }
+    
+    static private String getNextReactiveID() {
+    	return "TimerCTX:" + nextReactiveContextID.incrementAndGet();
     }
 }
