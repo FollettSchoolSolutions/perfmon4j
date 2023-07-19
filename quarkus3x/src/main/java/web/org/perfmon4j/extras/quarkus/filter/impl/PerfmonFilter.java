@@ -2,6 +2,9 @@ package web.org.perfmon4j.extras.quarkus.filter.impl;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.container.ContainerResponseContext;
@@ -16,6 +19,7 @@ import web.org.perfmon4j.extras.quarkus.filter.impl.container.Response;
 //@PreMatching
 //@Priority(Priorities.USER)
 public class PerfmonFilter implements ContainerRequestFilter, ContainerResponseFilter {
+	private static final Logger logger = LoggerFactory.getLogger(PerfmonFilter.class);
 	private final QuarkusFilterLoader loader;
 
 	public PerfmonFilter() {
@@ -40,6 +44,11 @@ public class PerfmonFilter implements ContainerRequestFilter, ContainerResponseF
 	@Override
 	public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext)
 			throws IOException {
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("responseContext.class=" + responseContext.getClass());
+		}
+		
 		GenericFilter.AsyncFinishRequestCallback callback = (AsyncFinishRequestCallback)requestContext.getProperty(ASYNC_CALLBACK_PROPERTY);
 		if (callback != null) {
 			Response response = new Response(responseContext);
