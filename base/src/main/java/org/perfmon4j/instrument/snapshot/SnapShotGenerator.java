@@ -9,6 +9,7 @@ public abstract class SnapShotGenerator {
 	public abstract Class<?> generateSnapShotDataImpl(Class<?> dataProvider) throws GenerateSnapShotException;
 	public abstract Bundle generateBundle(Class<?> provider) throws GenerateSnapShotException;
 	public abstract Bundle generateBundle(Class<?> provider, String instanceName) throws GenerateSnapShotException;
+	public abstract Bundle generateBundleForPOJO(Object pojoInstance) throws GenerateSnapShotException;
 	public abstract MonitorKeyWithFields[] generateExternalMonitorKeys (Class<?> clazz);
 
 	
@@ -19,6 +20,11 @@ public abstract class SnapShotGenerator {
     	
     	public void init(Object data, long timeStamp);
     	public void takeSnapShot(Object dataProvider, long timesStamp);
+    }
+    
+    static public interface SnapShotPOJOLifecycle extends SnapShotLifecycle {
+    	public void setInstanceName(String instanceName);
+    	public String getInstanceName();
     }
     
 	static public class Bundle {

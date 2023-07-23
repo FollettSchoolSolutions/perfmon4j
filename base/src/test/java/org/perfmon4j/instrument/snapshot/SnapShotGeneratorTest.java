@@ -27,10 +27,6 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Set;
 
-import junit.framework.AssertionFailedError;
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -41,23 +37,32 @@ import org.perfmon4j.PerfMonObservableDatumTest;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SnapShotData;
+import org.perfmon4j.SnapShotProviderWrapper;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.InstrumentationMonitor;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.SnapShotCounter;
+import org.perfmon4j.instrument.SnapShotCounter.Display;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotInstanceDefinition;
+import org.perfmon4j.instrument.SnapShotPOJO;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
 import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.SnapShotStringFormatter;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator.Bundle;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator.SnapShotLifecycle;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator.SnapShotPOJOLifecycle;
 import org.perfmon4j.java.management.JVMSnapShot;
 import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.MiscHelper;
+
+import junit.framework.AssertionFailedError;
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class SnapShotGeneratorTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -1159,7 +1164,46 @@ System.out.println(appenderString);
 		// Should just return the delta between start and end.
 		validateObservation(observations, "countC", "5");
     }
+
+    @SnapShotPOJO
+    public static final class MyPOJO {
+    	private long x = 0;
+    	
+    	@SnapShotCounter(preferredDisplay = Display.DELTA_PER_MIN)
+    	public long getCounter() {
+    		return x++;
+    	}
+    	
+    }
     
+
+    
+    
+    public void testGenerateBundlePOJO() throws Exception {
+    	Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(new MyPOJO());
+    	SnapShotProviderWrapper wrapper = new SnapShotProviderWrapper("dave", bundle);
+    	
+    	SnapShotData data = wrapper.initSnapShot(0);
+    	data = wrapper.takeSnapShot(data, 1000 * 60);
+    	
+    	assertTrue("Should implement SnapShotPOJOLifecyle", data instanceof SnapShotPOJOLifecycle);
+    	assertTrue("Should implement PerfMonObservableData", data instanceof PerfMonObservableData);
+    	
+    	String appenderStringWithoutInstanceName = data.toAppenderString();
+    	assertFalse("Since we didn't set instanceName it should not appear in list of data elements", appenderStringWithoutInstanceName.contains("instanceName"));
+  
+    	Set<PerfMonObservableDatum<?>> observations = ((PerfMonObservableData)data).getObservations();
+    	assertNull("Should not include an instanceName element since we didn't set it", PerfMonObservableDatum.findObservationByFieldName("instanceName", observations));
+    	
+    	((SnapShotPOJOLifecycle)data).setInstanceName("myInstanceName");
+    	String appenderStringWithInstanceName = data.toAppenderString();
+    	assertTrue("Since we set instanceName it should be in list of data elements", appenderStringWithInstanceName.contains("instanceName"));
+    	
+    	
+    	observations = ((PerfMonObservableData)data).getObservations();
+    	assertNotNull("We Should include an instanceName element since we set it", PerfMonObservableDatum.findObservationByFieldName("instanceName", observations));
+    	validateObservation(observations, "instanceName", "myInstanceName");
+    }
     
  	void validateObservation(Set<PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
  		PerfMonObservableDatumTest.validateObservation(observations, label, expectedValue);

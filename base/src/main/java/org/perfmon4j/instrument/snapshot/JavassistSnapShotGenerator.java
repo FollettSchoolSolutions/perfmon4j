@@ -38,6 +38,7 @@ import org.perfmon4j.SnapShotSQLWriterWithDatabaseVersion;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotInstanceDefinition;
+import org.perfmon4j.instrument.SnapShotPOJO;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
@@ -285,21 +286,31 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 
 	private Class<?> generateSnapShotDataImpl(Class<?> dataProvider, JavassistJMXSnapShotProxyFactory.Config jmxConfig, ClassPool classPool) throws GenerateSnapShotException {
 		final boolean useJMXConfig = jmxConfig != null;
+		boolean isPOJOData = false;
 		boolean isStatic = false;
 		Class<?> dataInterface = null;
 		Class<?> sqlWriter = null;
 		boolean writerIncludesDatabaseVersion = false;
-		
-		SnapShotProvider provider =  transformer.findAnotation(SnapShotProvider.class, dataProvider);
-		if (provider == null && !useJMXConfig) {
-			throw new GenerateSnapShotException("Provider class must include a SnapShotProvider annotation");
-		}
 
 		if (!useJMXConfig) {
-			isStatic = SnapShotProvider.Type.STATIC.equals(provider.type());
+			SnapShotProvider provider =  transformer.findAnotation(SnapShotProvider.class, dataProvider);
+			SnapShotPOJO pojo = transformer.findAnotation(SnapShotPOJO.class, dataProvider);
+			if (provider != null) {
+				dataInterface =  provider.dataInterface();
+				sqlWriter = provider.sqlWriter();
+				isStatic = SnapShotProvider.Type.STATIC.equals(provider.type());
+			} else if (pojo != null) {
+				dataInterface = pojo.dataInterface(); 
+				isPOJOData = true;
+				sqlWriter = null; // The entire SQL interface will be deprecated in future versions.  Don't bother supporting it for POJO Providers.
+			} else {
+				throw new GenerateSnapShotException("Provider class must include a SnapShotProvider or SnapShotPOJO annotation"); 
+			}
+		}
 		
-			dataInterface =  provider.dataInterface();
-			sqlWriter = provider.sqlWriter();
+		
+
+		if (!useJMXConfig) {
 			if (sqlWriter != null) {
 				if (SnapShotSQLWriter.class.equals(sqlWriter)) {
 					sqlWriter = null;
@@ -347,7 +358,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 				ctClass.addInterface(ctSqlWriteableIntf);
 			}
 			
-			CtClass lifeCycle = classPool.get(SnapShotLifecycle.class.getName());
+			CtClass lifeCycle = classPool.get(isPOJOData ? SnapShotPOJOLifecycle.class.getName() : SnapShotLifecycle.class.getName());
 			ctClass.addInterface(lifeCycle);
 			
 			CtConstructor constructor = new CtConstructor(new CtClass[]{}, ctClass);
@@ -395,7 +406,17 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 				.append(" java.util.Set result = new java.util.HashSet();\r\n");
 			
 			
-
+			if (isPOJOData) {
+				ctClass.addField(CtField.make("private String instanceName = null;", ctClass));
+				addMethod(ctClass, "public String getInstanceName() {return instanceName;}");
+				addMethod(ctClass, "public void setInstanceName(String instanceName) {this.instanceName = instanceName;}");
+				
+				String appendToGetObservations = "if (instanceName != null) {"
+						+ "  result.add(org.perfmon4j.PerfMonObservableDatum.newDatum(\"instanceName\", instanceName));\r\n"
+						+ "}";
+				getObservationsBody.append(appendToGetObservations);	
+			}
+			
 			StringBuffer initBody = new StringBuffer();
 			initBody.append("public void init(Object d, long timeStamp) {\r\n")
 				.append(dataProvider.getName() +  " provider = (" + dataProvider.getName() + ")d;\r\n")
@@ -413,8 +434,16 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 				.append(" org.perfmon4j.instrument.SnapShotStringFormatter stringFormatter = null;\r\n")
 				.append(" org.perfmon4j.instrument.snapshot.Delta delta;\r\n")
 				.append(" String result = \"\\r\\n********************************************************************************\\r\\n\";\r\n")
-				.append(" result += getName() + \"\\r\\n\";\r\n")
-				.append(" result += " + MiscHelper.class.getName() + ".formatTimeAsString(startTime) + \" -> \" + " + MiscHelper.class.getName() + ".formatTimeAsString(endTime) + \"\\r\\n\";\r\n");
+				.append(" result += getName() + \"\\r\\n\";\r\n");
+			
+			if (isPOJOData) {
+				String appendToAppenderString = "if (instanceName != null) {\r\n"
+						+ " stringFormatter = new org.perfmon4j.instrument.SnapShotStringFormatter();\r\n" 
+						+ " result += stringFormatter.format(25, \"instanceName\", instanceName);\r\n"
+						+ "}\r\n";
+				toAppenderStringBody.append(appendToAppenderString);	
+			}
+			toAppenderStringBody.append(" result += " + MiscHelper.class.getName() + ".formatTimeAsString(startTime) + \" -> \" + " + MiscHelper.class.getName() + ".formatTimeAsString(endTime) + \"\\r\\n\";\r\n");
 			
 
 			StringBuffer objectToStringBody = new StringBuffer();
@@ -542,6 +571,19 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 	
 	public Bundle generateBundle(Class<?> provider, String instanceName) throws GenerateSnapShotException {
 		return generateBundle(provider, instanceName, null, null);
+	}
+
+	public Bundle generateBundleForPOJO(Object pojo) throws GenerateSnapShotException {
+		ClassPool classPool = new ClassPool(true);
+		Class<?> providerClass = pojo.getClass();
+		
+		SnapShotPOJO pojoAnnotation = transformer.findAnotation(SnapShotPOJO.class, providerClass);
+		if (pojoAnnotation == null) {
+			throw new GenerateSnapShotException("Provider class must include a SnapShotPOJO annotation");
+		}
+		
+		Class<?> dataClass = generateSnapShotDataImpl(providerClass, null, classPool); 
+		return new Bundle(dataClass, pojo, pojoAnnotation.usePriorityTimer());
 	}
 	
 	private Bundle generateBundle(Class<?> provider, String instanceName, JavassistJMXSnapShotProxyFactory.JMXSnapShotImpl jmxWrapper, ClassPool classPool) throws GenerateSnapShotException {

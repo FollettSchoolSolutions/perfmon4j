@@ -6,12 +6,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
+import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator.Bundle;
+
 public class SnapShotPOJORegistry {
 	private static final SnapShotPOJORegistry singleton = new SnapShotPOJORegistry();
 	
 	private final Object entriesLockToken = new Object();
 	private final Map<String, RegistryEntry> entries = new HashMap<String, SnapShotPOJORegistry.RegistryEntry>(); 
 	private static final POJOInstance[] EMPTY_INSTANCES = new POJOInstance[] {};
+	private static final SnapShotGenerator generator = new JavassistSnapShotGenerator();
 	
 	public static SnapShotPOJORegistry getSingleton() {
 		return singleton;
@@ -20,11 +26,15 @@ public class SnapShotPOJORegistry {
 	SnapShotPOJORegistry() {
 	}
 
-	public void register(Object snapShotPOJO) {
+	public void register(Object snapShotPOJO) throws GenerateSnapShotException {
 		register(snapShotPOJO, true);
 	}
 
-	public void register(Object snapShotPOJO, boolean weakReference) {
+	public void register(Object snapShotPOJO, boolean weakReference) throws GenerateSnapShotException {
+		Bundle bundle = generator.generateBundle(snapShotPOJO.getClass());
+	
+		
+		
 		synchronized(entriesLockToken) {
 			final String className = snapShotPOJO.getClass().getName();
 			
