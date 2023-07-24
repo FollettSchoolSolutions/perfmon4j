@@ -52,12 +52,16 @@ public class POJOSnapShotRegistry {
 	}
 	
 	public void deRegister(Object snapShotPOJO) {
+		deRegister(snapShotPOJO, null);
+	}
+	
+	public void deRegister(Object snapShotPOJO, String instanceName) {
 		synchronized(entriesLockToken) {
 			final String className = snapShotPOJO.getClass().getName();
 			
 			RegistryEntry entry = entries.get(className);
 			if (entry != null) {
-				if (entry.removeInstance(snapShotPOJO)) {
+				if (entry.removeInstance(snapShotPOJO, instanceName)) {
 					entries.remove(className);
 				}
 			}
@@ -67,7 +71,7 @@ public class POJOSnapShotRegistry {
 	public static class RegistryEntry {
 		private final String className;
 		private final Object instancesLockToken = new Object();
-		private final Map<Object, Object> instances = new HashMap<Object, Object>();
+		private final Map<POJOInstanceKey, Object> instances = new HashMap<POJOInstanceKey, Object>();
 		private final Bundle snapShotBundle;
 		
 		RegistryEntry(String className, Bundle snapShotBundle) {
@@ -81,14 +85,14 @@ public class POJOSnapShotRegistry {
 		
 		void addOrUpdateInstance(Object pojo, String instanceName, boolean weakReference) {
 			synchronized (instancesLockToken) {
-				instances.put(pojo, weakReference ? new WeakPOJOInstance(instanceName, snapShotBundle, pojo) 
+				instances.put(new POJOInstanceKey(pojo, instanceName), weakReference ? new WeakPOJOInstance(instanceName, snapShotBundle, pojo) 
 						: new StrongPOJOInstance(instanceName, snapShotBundle, pojo));
 			}
 		}
 		
-		boolean removeInstance(Object pojo) {
+		boolean removeInstance(Object pojo, String instanceName) {
 			synchronized (instancesLockToken) {
-				instances.remove(pojo);
+				instances.remove(new POJOInstanceKey(pojo, instanceName));
 				return instances.isEmpty();
 			}
 		}
@@ -181,6 +185,31 @@ public class POJOSnapShotRegistry {
 
 		public Object getPOJO() {
 			return pojoReference.get();
+		}
+	}
+	
+	static class POJOInstanceKey {
+		private final String key;
+		
+		POJOInstanceKey(Object pojo, String instanceName) {
+			key = pojo.getClass().getName() + (instanceName == null ? "" : ("$$." + instanceName));
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(key);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			POJOInstanceKey other = (POJOInstanceKey) obj;
+			return Objects.equals(key, other.key);
 		}
 	}
 }
