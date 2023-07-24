@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SQLWriteableWithDatabaseVersion;
@@ -558,7 +557,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 			addMethod(ctClass, toAppenderStringBody.toString());
 			addMethod(ctClass, getObservationsBody.toString());
 			
-			return ctClass.toClass(PerfMon.getClassLoader());
+			return ctClass.toClass(/* passing in a neighbor of the class that is being created */ dataProvider);
 		} catch (Exception ex) {
 			throw new GenerateSnapShotException("Error generating SnapShotDataImpl", ex);
 		}

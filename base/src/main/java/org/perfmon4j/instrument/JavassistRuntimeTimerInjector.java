@@ -34,6 +34,7 @@ import java.util.Set;
 import javax.management.ObjectName;
 
 import org.perfmon4j.ExceptionTracker;
+import org.perfmon4j.PerfMon;
 import org.perfmon4j.hystrix.CommandStatsProvider;
 import org.perfmon4j.hystrix.ThreadPoolStatsProvider;
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
@@ -180,7 +181,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "	}\r\n";
         bridgeClass.addMethod(CtMethod.make(registerMethodSrc, bridgeClass));
 
-        bridgeClass.toClass(loader, protectionDomain);
+        bridgeClass.toClass(/* neighbor class */ org.perfmon4j.ExceptionTracker.class);
         bridgeClass.detach();
     }
     
@@ -426,12 +427,12 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
                             String timerArray = "static final public org.perfmon4j.PerfMon[] pm$MonitorArray" + 
     	                            " = new org.perfmon4j.PerfMon[" + numTimers + "];";
                     		ClassPool pool = clazz.getClassPool();
-                    		String className = clazz.getName() + "_P4J_" + Integer.toHexString(serialNumber++); 
+                    		String className = "org.perfmon4j." + clazz.getSimpleName() + "_P4J_" + Integer.toHexString(serialNumber++); 
                     		CtClass tmpClass = pool.makeClass(className);
                     		
 	                        CtField field = CtField.make(timerArray, tmpClass);
 	                        tmpClass.addField(field);
-	                        externalClazzForMonitors = tmpClass.toClass(loader, protectionDomain);
+	                        externalClazzForMonitors = tmpClass.toClass(/* neighbor class */ PerfMon.class);
                     	}
                     } else {
                         // When a class is being redefined we are unable to add any data members to it.
@@ -1289,7 +1290,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	clazzTriggerWrapper.addMethod(CtMethod.make("public boolean isValid(org.perfmon4j.ThreadTraceConfig.Trigger trigger) {\r\n"
         		+ "	return this.delegate.isValid(trigger.getTriggerString());\r\n"
         		+ "	}\r\n", clazzTriggerWrapper));
-    	clazzTriggerWrapper.toClass(loader, protectionDomain);
+    	clazzTriggerWrapper.toClass(Class.forName("api.org.perfmon4j.agent.PerfMon"));
     	
         updateIsAttachedToAgent(clazz);
         
