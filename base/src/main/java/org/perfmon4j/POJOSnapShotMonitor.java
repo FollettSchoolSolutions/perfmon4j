@@ -21,8 +21,14 @@
 package org.perfmon4j;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.perfmon4j.POJOSnapShotMonitor.POJODataSnapShot;
 import org.perfmon4j.POJOSnapShotRegistry.POJOInstance;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator.Bundle;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator.SnapShotPOJOLifecycle;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
@@ -31,7 +37,6 @@ public class POJOSnapShotMonitor extends SnapShotMonitorBase<POJODataSnapShot[]>
 
     private final String pojoClassName;
     private final POJOSnapShotRegistry registry;
-    
 
 /*----------------------------------------------------------------------------*/    
     public POJOSnapShotMonitor(String name, boolean usePriorityTimer, String pojoClassName, POJOSnapShotRegistry registry) {
@@ -42,27 +47,52 @@ public class POJOSnapShotMonitor extends SnapShotMonitorBase<POJODataSnapShot[]>
 
 	@Override
 	public POJODataSnapShot[] initSnapShot(long currentTimeMillis) {
-//		List<POJODataSnapShot> result = new ArrayList<POJODataSnapShot>();
-//		
-//		for (registry.getInstances(class))
-//		
+		List<POJODataSnapShot> result = new ArrayList<POJODataSnapShot>();
 		
-		// TODO Auto-generated method stub
-		return super.initSnapShot(currentTimeMillis);
+		for (POJOInstance instance : registry.getInstances(pojoClassName)) {
+			Object pojo = instance.getPOJO();
+			if (pojo != null) {
+				Bundle snapShotBundle = instance.getSnapShotBundle();
+				
+				SnapShotData data = snapShotBundle.newSnapShotData();
+				((SnapShotGenerator.SnapShotLifecycle)data).init(pojo, currentTimeMillis);
+				
+				result.add(new POJODataSnapShot(data, instance));
+			}
+		}
+		
+		if (logger.isDebugEnabled() && result.isEmpty()) {
+			logger.logDebug("POJOSnapShotMonitor (" + this.getName() + ") does not have any active SnapShot Providers");
+		}
+		
+		return result.toArray(new POJODataSnapShot[] {});
 	}
 
 	@Override
-	public POJODataSnapShot[] takeSnapShot(POJODataSnapShot[] data, long currentTimeMillis) {
-		// TODO Auto-generated method stub
-		return null;
+	public POJODataSnapShot[] takeSnapShot(POJODataSnapShot[] dataArray, long currentTimeMillis) {
+		List<POJODataSnapShot> result = new ArrayList<POJODataSnapShot>();
+		
+		for (POJODataSnapShot data : dataArray) {
+			POJOInstance instance = data.getPojoInstance();
+			Object pojo = instance.getPOJO();
+			if (pojo != null) {
+				((SnapShotGenerator.SnapShotLifecycle)data.getSnapShotData()).takeSnapShot(pojo, currentTimeMillis);
+				result.add(data);
+			}
+		}
+		return result.toArray(new POJODataSnapShot[] {});
 	}
 
 	@Override
 	protected void appendData(Appender appender, POJODataSnapShot[] dataArray) {
-		for (POJODataSnapShot pojoData : dataArray) {
-			SnapShotData data = pojoData.getSnapShotData();
-			data.setName(getName());
-			appender.appendData(data);
+		for (POJODataSnapShot data : dataArray) {
+			SnapShotData snapShotData = data.getSnapShotData();
+			snapShotData.setName(getName());
+			String instanceName = data.getPojoInstance().getInstanceName();
+			if (instanceName != null) {
+				((SnapShotPOJOLifecycle)snapShotData).setInstanceName(instanceName);
+			}
+			appender.appendData(snapShotData);
 		}
 	}
 
@@ -83,5 +113,4 @@ public class POJOSnapShotMonitor extends SnapShotMonitorBase<POJODataSnapShot[]>
 			return pojoInstance;
 		}
     }
-
 }

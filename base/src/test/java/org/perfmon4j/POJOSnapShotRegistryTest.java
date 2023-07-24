@@ -1,8 +1,7 @@
 package org.perfmon4j;
 
 import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.perfmon4j.POJOSnapShotRegistry.POJOInstance;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotPOJO;
 
@@ -21,11 +20,10 @@ public class POJOSnapShotRegistryTest extends TestCase {
 	}
 	
 	public void testWeakReferenceRegistration() throws Exception {
-		/*
-		SnapShotPOJORegistry registry = new SnapShotPOJORegistry();
+		POJOSnapShotRegistry registry = new POJOSnapShotRegistry();
 		final String pojoClassName = POJO.class.getName(); 
 		
-		SnapShotPOJORegistry.POJOInstance[] pojoInstances = registry.getInstances(pojoClassName);
+		POJOSnapShotRegistry.POJOInstance[] pojoInstances = registry.getInstances(pojoClassName);
 		assertNotNull(pojoInstances);
 		assertEquals("pojoInstances.length", 0, pojoInstances.length);
 		
@@ -42,18 +40,16 @@ public class POJOSnapShotRegistryTest extends TestCase {
 		System.gc();
 		
 		assertFalse("Should no longer be active once it is dreferenced", instance.isActive());
-		*/
 	}
 	
 	public void testStrongReferenceRegistration() throws Exception {
-		/*
-		SnapShotPOJORegistry registry = new SnapShotPOJORegistry();
+		POJOSnapShotRegistry registry = new POJOSnapShotRegistry();
 		final String pojoClassName = POJO.class.getName(); 
 		
 		POJO pojo = new POJO();
 		registry.register(pojo, false);
 		
-		SnapShotPOJORegistry.POJOInstance[] pojoInstances = registry.getInstances(pojoClassName);
+		POJOSnapShotRegistry.POJOInstance[] pojoInstances = registry.getInstances(pojoClassName);
 		assertEquals("pojoInstances.length", 1, pojoInstances.length);
 		
 		POJOInstance instance = pojoInstances[0];
@@ -63,16 +59,15 @@ public class POJOSnapShotRegistryTest extends TestCase {
 		System.gc();
 		
 		assertTrue("Since it was not registered as a weak reference, registry should maintain a strong reference", instance.isActive());
-		*/
 	}
 	
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
-        String[] testCaseName = {SnapShotManagerTest.class.getName()};
+        String[] testCaseName = {POJOSnapShotRegistryTest.class.getName()};
         
         BasicConfigurator.configure();
-        Logger.getLogger(POJOSnapShotRegistryTest.class.getPackage().getName()).setLevel(Level.DEBUG);
+//        Logger.getLogger(POJOSnapShotRegistryTest.class.getPackage().getName()).setLevel(Level.DEBUG);
         
         
         TestRunner.main(testCaseName);

@@ -30,20 +30,16 @@ public class POJOSnapShotRegistry {
 		register(snapShotPOJO, true);
 	}
 
-	public void register(Object snapShotPOJO, boolean weakReference) throws GenerateSnapShotException {
-		Bundle bundle = generator.generateBundle(snapShotPOJO.getClass());
-	
-		
-		
+	public void register(Object snapShotPOJO, boolean useWeakReference) throws GenerateSnapShotException {
 		synchronized(entriesLockToken) {
 			final String className = snapShotPOJO.getClass().getName();
 			
 			RegistryEntry entry = entries.get(className);
 			if (entry == null) {
-				entry = new RegistryEntry(className);
+				entry = new RegistryEntry(className, generator.generateBundleForPOJO(snapShotPOJO.getClass()));
 				entries.put(className, entry);
 			}
-			entry.addOrUpdateInstance(snapShotPOJO, weakReference);
+			entry.addOrUpdateInstance(snapShotPOJO, useWeakReference);
 		}
 	}
 	
@@ -60,14 +56,15 @@ public class POJOSnapShotRegistry {
 		}
 	}
 	
-	
 	public static class RegistryEntry {
 		private final String className;
 		private final Object instancesLockToken = new Object();
-		private final Map<String, Object> instances = new HashMap<String, Object>(); 
+		private final Map<String, Object> instances = new HashMap<String, Object>();
+		private final Bundle snapShotBundle;
 		
-		RegistryEntry(String className) {
+		RegistryEntry(String className, Bundle snapShotBundle) {
 			this.className = className;
+			this.snapShotBundle = snapShotBundle;
 		}
 
 		public String getClassName() {
@@ -77,7 +74,8 @@ public class POJOSnapShotRegistry {
 		void addOrUpdateInstance(Object pojo, boolean weakReference) {
 			final String instanceName = "bogus"; // = pojo.getInstanceName();
 			synchronized (instancesLockToken) {
-				instances.put(instanceName, weakReference ? new WeakPOJOInstance(instanceName, pojo) : new StrongPOJOInstance(instanceName, pojo));
+				instances.put(instanceName, weakReference ? new WeakPOJOInstance(instanceName, snapShotBundle, pojo) 
+						: new StrongPOJOInstance(instanceName, snapShotBundle, pojo));
 			}
 		}
 		
@@ -111,9 +109,11 @@ public class POJOSnapShotRegistry {
 		
 		private final long pojoID = nextPojoID.incrementAndGet(); 
 		private final String instanceName;
+		private final Bundle snapShotBundle;
 		
-		protected POJOInstance(String instanceName) {
+		protected POJOInstance(String instanceName, Bundle snapShotBundle) {
 			this.instanceName = instanceName;
+			this.snapShotBundle = snapShotBundle;
 		}
 		
 		public String getInstanceName() {
@@ -129,22 +129,10 @@ public class POJOSnapShotRegistry {
 		public long getPojoID() {
 			return pojoID;
 		}
-
-	    public SnapShotData initSnapShot(long currentTimeMillis) {
-	    	return null;
-	    }
-	    
-	    
-	/*----------------------------------------------------------------------------*/    
-	    /**
-	     * @param data - Returns SnapShotData returned by initSnapShot() or
-	     * null if initSnapShot() did not return a SnapShotData.
-	     * @param currentTimeMillis - Current System Time
-	     * @return - Return a SnapShotData instance that will be passed to the appender.
-	     */
-	    public SnapShotData takeSnapShot(SnapShotData data, long currentTimeMillis) {
-	    	return null;
-	    }
+		
+	    public Bundle getSnapShotBundle() {
+			return snapShotBundle;
+		}
 		
 		@Override
 		public int hashCode() {
@@ -167,8 +155,8 @@ public class POJOSnapShotRegistry {
 	private static class StrongPOJOInstance extends POJOInstance {
 		private final Object pojo;
 		
-		StrongPOJOInstance(String instanceName, Object pojo) {
-			super(instanceName);
+		StrongPOJOInstance(String instanceName, Bundle snapShotBundle, Object pojo) {
+			super(instanceName, snapShotBundle);
 			this.pojo = pojo;
 		}
 
@@ -180,8 +168,8 @@ public class POJOSnapShotRegistry {
 	private static class WeakPOJOInstance extends POJOInstance {
 		private final WeakReference<Object> pojoReference;
 		
-		WeakPOJOInstance(String instanceName, Object pojo) {
-			super(instanceName);
+		WeakPOJOInstance(String instanceName, Bundle snapShotBundle, Object pojo) {
+			super(instanceName, snapShotBundle);
 			this.pojoReference = new WeakReference<Object>(pojo);
 		}
 
@@ -189,65 +177,4 @@ public class POJOSnapShotRegistry {
 			return pojoReference.get();
 		}
 	}
-	
-	
-//    private static class MultiMonitorTimerTask extends FailSafeTimerTask {
-//    	private final Map<SnapShotManager, V>
-//    	private final WeakReference<RegistryEntry> entry;
-//        private final AppenderID appenderID;
-//        private final long intervalMillis;
-//        private final boolean usePriorityTimer;
-//        
-//        MultiMonitorTimerTask(RegistryEntry entry, AppenderID appenderID, boolean usePriorityTimer) throws InvalidConfigException {
-//            this.entry = new WeakReference(entry);
-//            this.appenderID = appenderID;
-//            this.usePriorityTimer = usePriorityTimer;
-//            intervalMillis = appenderID.getIntervalMillis();
-//            Timer timerToUse = usePriorityTimer ? PerfMon.getPriorityTimer() : PerfMon.getUtilityTimer();
-//            long now = MiscHelper.currentTimeWithMilliResolution();
-//            timerToUse.schedule(this, PerfMon.roundInterval(now, intervalMillis));
-//        }
-//        
-//        public void failSafeRun() {
-//            Appender appender = Appender.getAppender(appenderID);
-//            SnapShotMonitor monitor = (SnapShotMonitor)monitorReference.get();
-//
-//            boolean cancelTask = true;
-//            if (monitor != null && monitor.isActive() && PerfMon.isConfigured()) {
-//                try {
-//                    data = monitor.takeSnapShot(data, MiscHelper.currentTimeWithMilliResolution());
-//                } catch (Exception ex) {
-//                    data = null;
-//                    logger.logError("Error taking snap shot for monitor: " + monitor.getName(), ex);
-//                }
-//                if (appender != null) {
-//                    cancelTask = false;
-//                    if (data != null) {
-//                        data.setName(monitor.getName());
-//                        try {
-//                            appender.appendData(data);
-//                        } catch (Exception ex) {
-//                            logger.logError("Error appending snapshot data for monitor: " + monitor.getName(), ex);
-//                        }
-//                    }
-//                    try {
-//                    	// Reschedule task
-//                        new MonitorTimerTask(monitor, appenderID,  usePriorityTimer);
-//                    } catch (Exception ex) {
-//                        data = null;
-//                        logger.logError("Error in initSnapShot for monitor: " + monitor.getName(), ex);
-//                    }
-//                }
-//            } 
-//            
-//            if (cancelTask) {
-//                if (monitor != null) {
-//                    synchronized(monitor.lockToken) {
-//                        monitor.map.remove(appenderID);
-//                    }
-//                }
-//            }
-//        }
-//    }
-	
 }
