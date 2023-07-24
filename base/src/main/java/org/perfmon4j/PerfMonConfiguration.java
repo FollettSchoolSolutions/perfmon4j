@@ -33,7 +33,7 @@ import java.util.Set;
 import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
-import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
+import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;

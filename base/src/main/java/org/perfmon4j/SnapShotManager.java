@@ -28,7 +28,7 @@ import java.util.Properties;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
-import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
+import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;

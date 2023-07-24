@@ -11,19 +11,19 @@ import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator.Bundle;
 
-public class SnapShotPOJORegistry {
-	private static final SnapShotPOJORegistry singleton = new SnapShotPOJORegistry();
+public class POJOSnapShotRegistry {
+	private static final POJOSnapShotRegistry singleton = new POJOSnapShotRegistry();
 	
 	private final Object entriesLockToken = new Object();
-	private final Map<String, RegistryEntry> entries = new HashMap<String, SnapShotPOJORegistry.RegistryEntry>(); 
+	private final Map<String, RegistryEntry> entries = new HashMap<String, POJOSnapShotRegistry.RegistryEntry>(); 
 	private static final POJOInstance[] EMPTY_INSTANCES = new POJOInstance[] {};
 	private static final SnapShotGenerator generator = new JavassistSnapShotGenerator();
 	
-	public static SnapShotPOJORegistry getSingleton() {
+	public static POJOSnapShotRegistry getSingleton() {
 		return singleton;
 	}
 
-	SnapShotPOJORegistry() {
+	POJOSnapShotRegistry() {
 	}
 
 	public void register(Object snapShotPOJO) throws GenerateSnapShotException {

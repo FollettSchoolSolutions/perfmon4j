@@ -9,7 +9,7 @@ public abstract class SnapShotGenerator {
 	public abstract Class<?> generateSnapShotDataImpl(Class<?> dataProvider) throws GenerateSnapShotException;
 	public abstract Bundle generateBundle(Class<?> provider) throws GenerateSnapShotException;
 	public abstract Bundle generateBundle(Class<?> provider, String instanceName) throws GenerateSnapShotException;
-	public abstract Bundle generateBundleForPOJO(Object pojoInstance) throws GenerateSnapShotException;
+	public abstract Bundle generateBundleForPOJO(Class<?> provider) throws GenerateSnapShotException;
 	public abstract MonitorKeyWithFields[] generateExternalMonitorKeys (Class<?> clazz);
 
 	
@@ -26,15 +26,13 @@ public abstract class SnapShotGenerator {
     	public void setInstanceName(String instanceName);
     	public String getInstanceName();
     }
-    
-	static public class Bundle {
-	    private final Class<?> dataClass;
-	    private final Object providerInstance;
+
+	static public class POJOBundle {
+	    protected final Class<?> dataClass;
 	    private final boolean usePriorityTimer;
 	    
-	    public Bundle(Class<?> dataClass, Object providerInstance, boolean usePriorityTimer) {
+	    public POJOBundle(Class<?> dataClass, boolean usePriorityTimer) {
 	    	this.dataClass = dataClass;
-	    	this.providerInstance = providerInstance;
 	    	this.usePriorityTimer = usePriorityTimer;
 	    }
 	    
@@ -48,13 +46,22 @@ public abstract class SnapShotGenerator {
 			}
 	    }
 	    
-	    public Object getProviderInstance() {
-	    	return providerInstance;
-	    }
-	    
 	    public boolean isUsePriorityTimer() {
 	    	return usePriorityTimer;
 	    }
 	}
-   
+    
+	static public class Bundle extends POJOBundle {
+	    private final Object providerInstance;
+	    
+	    public Bundle(Class<?> dataClass, Object providerInstance, boolean usePriorityTimer) {
+	    	super(dataClass, usePriorityTimer);
+	    	this.providerInstance = providerInstance;
+	    }
+	    
+	    public Object getProviderInstance() {
+	    	return providerInstance;
+	    }
+	}
+
 }

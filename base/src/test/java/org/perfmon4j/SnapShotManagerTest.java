@@ -25,14 +25,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
-import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
+import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class SnapShotManagerTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";

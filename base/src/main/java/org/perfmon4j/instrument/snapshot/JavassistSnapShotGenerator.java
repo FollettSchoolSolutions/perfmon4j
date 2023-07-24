@@ -572,9 +572,8 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		return generateBundle(provider, instanceName, null, null);
 	}
 
-	public Bundle generateBundleForPOJO(Object pojo) throws GenerateSnapShotException {
+	public Bundle generateBundleForPOJO(Class<?> providerClass) throws GenerateSnapShotException {
 		ClassPool classPool = new ClassPool(true);
-		Class<?> providerClass = pojo.getClass();
 		
 		SnapShotPOJO pojoAnnotation = transformer.findAnotation(SnapShotPOJO.class, providerClass);
 		if (pojoAnnotation == null) {
@@ -582,7 +581,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		}
 		
 		Class<?> dataClass = generateSnapShotDataImpl(providerClass, null, classPool); 
-		return new Bundle(dataClass, pojo, pojoAnnotation.usePriorityTimer());
+		return new Bundle(dataClass, null, pojoAnnotation.usePriorityTimer());
 	}
 	
 	private Bundle generateBundle(Class<?> provider, String instanceName, JavassistJMXSnapShotProxyFactory.JMXSnapShotImpl jmxWrapper, ClassPool classPool) throws GenerateSnapShotException {

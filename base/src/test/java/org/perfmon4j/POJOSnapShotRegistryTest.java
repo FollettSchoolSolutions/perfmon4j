@@ -10,7 +10,7 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-public class SnapShotPOJORegistryTest extends TestCase {
+public class POJOSnapShotRegistryTest extends TestCase {
 	
 	@SnapShotPOJO
 	public static class POJO {
@@ -72,7 +72,7 @@ public class SnapShotPOJORegistryTest extends TestCase {
         String[] testCaseName = {SnapShotManagerTest.class.getName()};
         
         BasicConfigurator.configure();
-        Logger.getLogger(SnapShotPOJORegistryTest.class.getPackage().getName()).setLevel(Level.DEBUG);
+        Logger.getLogger(POJOSnapShotRegistryTest.class.getPackage().getName()).setLevel(Level.DEBUG);
         
         
         TestRunner.main(testCaseName);
@@ -93,7 +93,7 @@ public class SnapShotPOJORegistryTest extends TestCase {
         // be set) or if no test cases were added to the test suite above, then
         // we run the full suite of tests.
         if (testType != null || newSuite == null || (newSuite.countTestCases() < 1)) {
-            newSuite = new TestSuite(SnapShotPOJORegistryTest.class);
+            newSuite = new TestSuite(POJOSnapShotRegistryTest.class);
         }
 
         return(newSuite);
