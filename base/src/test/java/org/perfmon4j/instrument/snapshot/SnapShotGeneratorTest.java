@@ -37,7 +37,6 @@ import org.perfmon4j.PerfMonObservableDatumTest;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.SQLWriteable;
 import org.perfmon4j.SnapShotData;
-import org.perfmon4j.SnapShotProviderWrapper;
 import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.InstrumentationMonitor;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
@@ -1173,18 +1172,28 @@ System.out.println(appenderString);
     	public long getCounter() {
     		return x++;
     	}
+    }
+
+    @Deprecated
+    private SnapShotData initSnapShot(Bundle bundle, Object pojo, long currentTimeMillis) {
+    	SnapShotData result =  bundle.newSnapShotData();
+    	((SnapShotGenerator.SnapShotLifecycle)result).init(pojo, currentTimeMillis);
     	
+    	return result;
+    }
+
+    @Deprecated
+     public SnapShotData takeSnapShot(Object pojo, SnapShotData data, long currentTimeMillis) {
+    	((SnapShotGenerator.SnapShotLifecycle)data).takeSnapShot(pojo, currentTimeMillis);
+    	return data;
     }
     
-
-    
-    
     public void testGenerateBundlePOJO() throws Exception {
-    	Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(new MyPOJO());
-    	SnapShotProviderWrapper wrapper = new SnapShotProviderWrapper("dave", bundle);
+    	MyPOJO pojo = new MyPOJO();
+    	Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(MyPOJO.class);
     	
-    	SnapShotData data = wrapper.initSnapShot(0);
-    	data = wrapper.takeSnapShot(data, 1000 * 60);
+    	SnapShotData data = initSnapShot(bundle, pojo, 0);
+    	data = takeSnapShot(pojo, data, 1000 * 60);
     	
     	assertTrue("Should implement SnapShotPOJOLifecyle", data instanceof SnapShotPOJOLifecycle);
     	assertTrue("Should implement PerfMonObservableData", data instanceof PerfMonObservableData);
