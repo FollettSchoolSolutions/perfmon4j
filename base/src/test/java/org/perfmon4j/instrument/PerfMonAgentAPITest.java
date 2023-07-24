@@ -43,7 +43,6 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
-	private File javassistJar = null;
 	
 /*----------------------------------------------------------------------------*/
     public PerfMonAgentAPITest(String name) {
@@ -89,14 +88,9 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void tearDown() throws Exception {
     	File folder = perfmon4jJar.getParentFile();
         perfmon4jJar.delete();
-        if (javassistJar != null) {
-        	javassistJar.delete();
-        }
         folder.delete();
         
         perfmon4jJar = null;
-        javassistJar = null;
-        
     	super.tearDown();
     }
 

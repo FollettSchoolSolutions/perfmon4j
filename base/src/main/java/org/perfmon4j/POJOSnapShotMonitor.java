@@ -40,7 +40,7 @@ public class POJOSnapShotMonitor extends SnapShotMonitorBase<POJODataSnapShot[]>
 
 /*----------------------------------------------------------------------------*/    
     public POJOSnapShotMonitor(String name, boolean usePriorityTimer, String pojoClassName, POJOSnapShotRegistry registry) {
-        super(name, false);
+        super(name, usePriorityTimer);
         this.registry = registry;
         this.pojoClassName = pojoClassName;
     }

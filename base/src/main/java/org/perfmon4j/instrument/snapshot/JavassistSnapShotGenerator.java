@@ -435,6 +435,8 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 				.append(" String result = \"\\r\\n********************************************************************************\\r\\n\";\r\n")
 				.append(" result += getName() + \"\\r\\n\";\r\n");
 			
+
+			toAppenderStringBody.append(" result += " + MiscHelper.class.getName() + ".formatTimeAsString(startTime) + \" -> \" + " + MiscHelper.class.getName() + ".formatTimeAsString(endTime) + \"\\r\\n\";\r\n");
 			if (isPOJOData) {
 				String appendToAppenderString = "if (instanceName != null) {\r\n"
 						+ " stringFormatter = new org.perfmon4j.instrument.SnapShotStringFormatter();\r\n" 
@@ -442,8 +444,6 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 						+ "}\r\n";
 				toAppenderStringBody.append(appendToAppenderString);	
 			}
-			toAppenderStringBody.append(" result += " + MiscHelper.class.getName() + ".formatTimeAsString(startTime) + \" -> \" + " + MiscHelper.class.getName() + ".formatTimeAsString(endTime) + \"\\r\\n\";\r\n");
-			
 
 			StringBuffer objectToStringBody = new StringBuffer();
 			objectToStringBody.append("private String objectToStringSnapShotGenerator(Object obj, String fieldName, int prefLableLength) {\r\n")

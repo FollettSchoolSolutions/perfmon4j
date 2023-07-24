@@ -63,7 +63,6 @@ public class PerfMonTimerTransformerTest extends PerfMonTestCase {
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
-	private File javassistJar = null;
 	
 /*----------------------------------------------------------------------------*/
     public PerfMonTimerTransformerTest(String name) {
@@ -106,13 +105,9 @@ public class PerfMonTimerTransformerTest extends PerfMonTestCase {
     public void tearDown() throws Exception {
     	File folder = perfmon4jJar.getParentFile();
         perfmon4jJar.delete();
-        if (javassistJar != null) {
-        	javassistJar.delete();
-        }
         folder.delete();
         
         perfmon4jJar = null;
-        javassistJar = null;
         
     	super.tearDown();
     }
@@ -667,7 +662,7 @@ System.out.println(output);
 	
     public void testInterfacesAreInstrumented() throws Exception {
     	String output = LaunchRunnableInVM.loadClassAndPrintMethods(DoSomethingElseTest.class, "-vtrue,-eorg.perfmon4j", perfmon4jJar);
-    	
+System.out.println(output);    	
     	assertTrue("Should have instrumented method declared in iterface",
     			output.contains("Adding extreme monitor: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DoSomethingElseTest.doSomething"));
     }
@@ -675,7 +670,6 @@ System.out.println(output);
     
     public void testVarArgsMethodIsInstrumented() throws Exception {
     	String output = LaunchRunnableInVM.loadClassAndPrintMethods(DoSomethingElseTest.class, "-vtrue,-eorg.perfmon4j", perfmon4jJar);
-//System.out.println(output);    	
 
 //		CtClass clazz = ClassPool.getDefault().getCtClass(DoSomethingElseTest.class.getName());
 //		RuntimeTimerInjector.injectPerfMonTimers(clazz, false);

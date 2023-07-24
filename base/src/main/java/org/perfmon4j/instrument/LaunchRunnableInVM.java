@@ -79,7 +79,7 @@ public class LaunchRunnableInVM {
 		private String programArguments = null;
 		private String perfmonConfigXML = null;
 		
-		Params(Class<?> classToLoad, File perfmon4j) {
+		public Params(Class<?> classToLoad, File perfmon4j) {
 			this.classToLoad = classToLoad;
 			this.perfmon4j = perfmon4j;
 		}

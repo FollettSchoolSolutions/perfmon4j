@@ -6,8 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
-import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator.Bundle;
 
@@ -17,7 +17,7 @@ public class POJOSnapShotRegistry {
 	private final Object entriesLockToken = new Object();
 	private final Map<String, RegistryEntry> entries = new HashMap<String, POJOSnapShotRegistry.RegistryEntry>(); 
 	private static final POJOInstance[] EMPTY_INSTANCES = new POJOInstance[] {};
-	private static final SnapShotGenerator generator = new JavassistSnapShotGenerator();
+	private static final SnapShotGenerator generator = PerfMonTimerTransformer.snapShotGenerator;
 	
 	public static POJOSnapShotRegistry getSingleton() {
 		return singleton;
@@ -27,10 +27,18 @@ public class POJOSnapShotRegistry {
 	}
 
 	public void register(Object snapShotPOJO) throws GenerateSnapShotException {
-		register(snapShotPOJO, true);
+		register(snapShotPOJO, null, true);
+	}
+	
+	public void register(Object snapShotPOJO, boolean useWeakReference) throws GenerateSnapShotException {
+		register(snapShotPOJO, null, useWeakReference);
+	}
+	
+	public void register(Object snapShotPOJO, String instanceName) throws GenerateSnapShotException {
+		register(snapShotPOJO, instanceName, true);
 	}
 
-	public void register(Object snapShotPOJO, boolean useWeakReference) throws GenerateSnapShotException {
+	public void register(Object snapShotPOJO, String instanceName, boolean useWeakReference) throws GenerateSnapShotException {
 		synchronized(entriesLockToken) {
 			final String className = snapShotPOJO.getClass().getName();
 			
@@ -39,7 +47,7 @@ public class POJOSnapShotRegistry {
 				entry = new RegistryEntry(className, generator.generateBundleForPOJO(snapShotPOJO.getClass()));
 				entries.put(className, entry);
 			}
-			entry.addOrUpdateInstance(snapShotPOJO, useWeakReference);
+			entry.addOrUpdateInstance(snapShotPOJO, instanceName, useWeakReference);
 		}
 	}
 	
@@ -59,7 +67,7 @@ public class POJOSnapShotRegistry {
 	public static class RegistryEntry {
 		private final String className;
 		private final Object instancesLockToken = new Object();
-		private final Map<String, Object> instances = new HashMap<String, Object>();
+		private final Map<Object, Object> instances = new HashMap<Object, Object>();
 		private final Bundle snapShotBundle;
 		
 		RegistryEntry(String className, Bundle snapShotBundle) {
@@ -71,18 +79,16 @@ public class POJOSnapShotRegistry {
 			return className;
 		}
 		
-		void addOrUpdateInstance(Object pojo, boolean weakReference) {
-			final String instanceName = "bogus"; // = pojo.getInstanceName();
+		void addOrUpdateInstance(Object pojo, String instanceName, boolean weakReference) {
 			synchronized (instancesLockToken) {
-				instances.put(instanceName, weakReference ? new WeakPOJOInstance(instanceName, snapShotBundle, pojo) 
+				instances.put(pojo, weakReference ? new WeakPOJOInstance(instanceName, snapShotBundle, pojo) 
 						: new StrongPOJOInstance(instanceName, snapShotBundle, pojo));
 			}
 		}
 		
 		boolean removeInstance(Object pojo) {
-			String instanceName = "bogus";
 			synchronized (instancesLockToken) {
-				instances.remove(instanceName);
+				instances.remove(pojo);
 				return instances.isEmpty();
 			}
 		}
