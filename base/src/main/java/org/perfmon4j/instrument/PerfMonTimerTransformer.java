@@ -576,6 +576,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to attach ThreadTraceConfig API class to agent", ex);
 	            }
+	        } else if ("api/org/perfmon4j/agent/POJOSnapShotRegistry".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToPOJOSnapShotRegistryAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached POJOSnapShotRegistry API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach POJOSnapShotRegistry API class to agent", ex);
+	            }
 	        }
 
 			return result;

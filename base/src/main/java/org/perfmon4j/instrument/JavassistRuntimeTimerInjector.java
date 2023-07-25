@@ -66,6 +66,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     private static final String PERFMON_TIMER_API_CLASSNAME = "api.org.perfmon4j.agent.PerfMonTimer";
     private static final String PERFMON_SQL_TIME_API_CLASSNAME = "api.org.perfmon4j.agent.SQLTime";
     private static final String PERFMON_THREAD_TRACE_CONFIG_API_CLASSNAME = "api.org.perfmon4j.agent.ThreadTraceConfig";
+    private static final String PERFMON_POJO_SNAPSHOT_REGISTRY_API_CLASSNAME = "api.org.perfmon4j.agent.POJOSnapShotRegistry";
     
     /* (non-Javadoc)
 	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#injectPerfMonTimers(javassist.CtClass, boolean)
@@ -1442,6 +1443,42 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         
         return clazz.toBytecode();
 	}
+
+	@Override
+	/**
+	 * Unit tests for this code can be found in: org.perfmon4j.instrument.PerfMonAgentAPITest
+	 */
+	public byte[] attachAgentToPOJOSnapShotRegistryAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+		
+    	logger.logInfo("Instrumenting agent class " + PERFMON_POJO_SNAPSHOT_REGISTRY_API_CLASSNAME + ". " );
+
+		ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+    	
+       	updateIsAttachedToAgent(clazz);
+
+//    	public static void register(Object snapShotPOJO, String instanceName, boolean useWeakReference) 
+        String src = "{\r\n"
+        		+ "  try {\r\n"
+        		+ "    org.perfmon4j.POJOSnapShotRegistry.getSingleton().register($1,$2,$3);\r\n"
+        		+ "  } catch (org.perfmon4j.instrument.snapshot.GenerateSnapShotException ex) {\r\n"
+        		+ "    throw new java.lang.RuntimeException(ex);\r\n"  	
+        		+ "  }\r\n"
+        		+ "}";
+        replaceMethodIfExists(clazz, "register", src, Object.class.getName(), String.class.getName(), boolean.class.getName());
+
+//        public static void deRegister(Object snapShotPOJO, String instanceName)
+        src = "{\r\n"
+        		+ "  org.perfmon4j.POJOSnapShotRegistry.getSingleton().deRegister($1,$2);\r\n"
+        		+ "}";
+        replaceMethodIfExists(clazz, "deRegister", src, Object.class.getName(), String.class.getName());
+        
+    	logger.logDebug("Completed instrumenting agent class " + PERFMON_POJO_SNAPSHOT_REGISTRY_API_CLASSNAME + ". " );
+        
+        return clazz.toBytecode();
+	}
+	
 	
 	private void updateIsAttachedToAgent(CtClass clazz) throws Exception {
     	String methodDescription = buildMethodDescription(clazz, "isAttachedToAgent"); 

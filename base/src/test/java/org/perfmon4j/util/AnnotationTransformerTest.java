@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotInstanceDefinition;
+import org.perfmon4j.instrument.SnapShotPOJO;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
@@ -227,5 +228,28 @@ public class AnnotationTransformerTest extends TestCase {
 		assertEquals("null should just return the default", AGENT_ENUM.valueA, value);
 		
 	}
-	
+
+	private final api.org.perfmon4j.agent.instrument.SnapShotPOJO snapShotPOJO = new api.org.perfmon4j.agent.instrument.SnapShotPOJO() {
+
+		public Class<? extends Annotation> annotationType() {
+			return api.org.perfmon4j.agent.instrument.SnapShotPOJO.class;
+		}
+
+		@Override
+		public Class<?> dataInterface() {
+			return void.class;
+		}
+
+		@Override
+		public boolean usePriorityTimer() {
+			return true;
+		}
+	};
+
+	public void testSnapShotPOJO() {
+		SnapShotPOJO impl = t.transform(SnapShotPOJO.class, snapShotPOJO); 
+		assertNotNull(impl);
+		assertTrue("usePriorityTime", impl.usePriorityTimer());
+		assertEquals(void.class, impl.dataInterface());
+	}
 }

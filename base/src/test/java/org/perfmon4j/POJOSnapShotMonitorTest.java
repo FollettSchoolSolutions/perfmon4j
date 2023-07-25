@@ -121,7 +121,7 @@ public class POJOSnapShotMonitorTest extends TestCase {
 				
 				Thread.sleep(1500);
 				Appender.flushAllAppenders();
-			} catch (Exception ex) {
+			} catch (Throwable ex) {
 				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
@@ -133,9 +133,9 @@ public class POJOSnapShotMonitorTest extends TestCase {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(TestRunSnapShotPOJO.class, perfmon4jJar));
 //System.out.println(output);
+    	TestHelper.validateNoFailuresInOutput(output);
 		// Should not include instance name when POJO is registered without an instance name
 		assertTrue("Expected appender output not found", output.contains("AppenderOutput: counter(1)"));
-    	
     }    
     
 	/*----------------------------------------------------------------------------*/
@@ -144,6 +144,7 @@ public class POJOSnapShotMonitorTest extends TestCase {
         		new LaunchRunnableInVM.Params(TestRunSnapShotPOJO.class, perfmon4jJar)
         		.setProgramArguments("myInstanceName"));
 //System.out.println(output);
+    	TestHelper.validateNoFailuresInOutput(output);
 		// Check to see if the appender output included the instanceName:
 		assertTrue("Expected appender output not found", output.contains("AppenderOutput: instanceName(myInstanceName),counter(1)"));
     }
@@ -154,6 +155,8 @@ public class POJOSnapShotMonitorTest extends TestCase {
         		new LaunchRunnableInVM.Params(TestRunSnapShotPOJO.class, perfmon4jJar)
         		.setProgramArguments(TestRunSnapShotPOJO.MULTI_PARAM));
 //System.out.println(output);
+    	TestHelper.validateNoFailuresInOutput(output);
+    	
 		// Check to make sure all 5 instances reported.:
 		assertTrue("Expected appender output not found", output.contains("AppenderOutput: instanceName(Instance1),counter(1)"));
 		assertTrue("Expected appender output not found", output.contains("AppenderOutput: instanceName(Instance2),counter(2)"));
@@ -189,22 +192,23 @@ public class POJOSnapShotMonitorTest extends TestCase {
 				
 				Thread.sleep(1500);
 				Appender.flushAllAppenders();
-			} catch (Exception ex) {
+			} catch (Throwable ex) {
 				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
 	}
-	
-	
     
 	/*----------------------------------------------------------------------------*/
     public void testPriorityTimer() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(TestSpyOnCallingThread.class, perfmon4jJar));
 //System.out.println(output);
+    	TestHelper.validateNoFailuresInOutput(output);
+    	
     	// Verify the snapshot was called by the priority Timer.
 		assertTrue("Expected the snapshot to use the priority timer", output.contains("AppenderOutput: callingThreadName(PerfMon.priorityTimer)"));
+	
     }
     
     

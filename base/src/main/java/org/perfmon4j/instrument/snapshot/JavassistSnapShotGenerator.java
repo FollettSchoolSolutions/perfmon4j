@@ -577,7 +577,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		
 		SnapShotPOJO pojoAnnotation = transformer.findAnotation(SnapShotPOJO.class, providerClass);
 		if (pojoAnnotation == null) {
-			throw new GenerateSnapShotException("Provider class must include a SnapShotPOJO annotation");
+			throw new GenerateSnapShotException("POJO class must include a @SnapShotPOJO annotation");
 		}
 		
 		Class<?> dataClass = generateSnapShotDataImpl(providerClass, null, classPool); 
