@@ -21,12 +21,16 @@
 
 package org.perfmon4j;
 
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.reactive.ReactiveContextManager;
+import org.perfmon4j.util.MiscHelper;
+
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 public class ThreadTraceMonitorTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
@@ -60,6 +64,26 @@ public class ThreadTraceMonitorTest extends PerfMonTestCase {
             PerfMonTimer.stop(timer);
         }
     }
+
+    private void doStartStopMonitorOnNewThread(PerfMon mon, String reactiveContextID) throws InterruptedException {
+    	CountDownLatch latch = new CountDownLatch(1);
+    	
+    	(new Thread(() -> {
+    		if (reactiveContextID != null) {
+    			ReactiveContextManager.getContextManagerForThread().moveContext(reactiveContextID);
+    		}
+    		doStartStopMonitor(mon);
+    		latch.countDown();
+    	})).start();
+    	
+    	latch.await();
+    	
+		if (reactiveContextID != null) {
+			ReactiveContextManager.getContextManagerForThread().moveContext(reactiveContextID);
+		}
+    }
+
+    
     
     public void testSamplingBasedThreadName() throws Exception {
         final String MONITOR_KEY = "testThreadBasedTrigger";
@@ -126,6 +150,58 @@ public class ThreadTraceMonitorTest extends PerfMonTestCase {
         }
     }
     
+    public void testSamplingBasedOnThreadProperty_OnReactiveContext() throws Exception {
+        final String MONITOR_KEY = "testSamplingBasedOnThreadProperty_OnReactiveContext";
+        final String OUTER_KEY = "OUTER" + MONITOR_KEY;
+
+        PerfMonConfiguration config = new PerfMonConfiguration();
+        config.defineMonitor(OUTER_KEY);
+        config.defineAppender("appender", TestAppender.getAppenderID());
+        config.attachAppenderToMonitor(OUTER_KEY, "appender");
+        
+        ThreadTraceConfig ttConfig = new ThreadTraceConfig();
+        ttConfig.addAppender(TestAppender.getAppenderID());
+        ThreadTraceConfig.Trigger trigger = new ThreadTraceConfig.ThreadPropertytTrigger("jobID", "156");
+        ttConfig.setTriggers(new ThreadTraceConfig.Trigger[]{trigger});
+        config.addThreadTraceConfig(MONITOR_KEY, ttConfig);
+        
+        PerfMon.configure(config);
+
+        PerfMon mon = PerfMon.getMonitor(MONITOR_KEY);
+        
+        final String reactiveContextID = MiscHelper.generateOauthKey(); // Create a random context.
+        PerfMonTimer outerWithReactiveContext = PerfMonTimer.start(OUTER_KEY, false, reactiveContextID);
+        try {
+        	// Push property on the current context.
+        	ThreadTraceConfig.pushThreadProperty("jobID", "156", reactiveContextID);
+        	
+        	// Run once on this thread... it should count.
+        	doStartStopMonitor(mon);
+            int outputCount = TestAppender.getOutputCount();
+            assertEquals("Thread is associated with reactiveContextID - should trigger a trace", 
+            		1, outputCount);
+            TestAppender.clearResult();
+        	
+        	// Run monitor once on a thread that has NOT been assigned to the reactive context.
+        	// This should not trigger a thread trace.
+        	doStartStopMonitorOnNewThread(mon, null);
+            outputCount = TestAppender.getOutputCount();
+            assertEquals("Thread is not associated with reactiveContextID - should not trigger a trace", 
+            		0, outputCount);
+            TestAppender.clearResult();
+            
+            // Now run monitor on a thread that HAS been assigned to the ractive context. 
+        	// This should not trigger a thread.
+        	doStartStopMonitorOnNewThread(mon, reactiveContextID);
+            outputCount = TestAppender.getOutputCount();
+            assertEquals("Thread IS associated with reactiveContextID - should trigger a trace", 
+            		1, outputCount);
+            TestAppender.clearResult();
+        } finally {
+        	ThreadTraceConfig.popThreadProperty(reactiveContextID);
+        	PerfMonTimer.stop(outerWithReactiveContext);
+        }
+    }
     
     public void testRandomSampling() throws Exception {
         final String MONITOR_KEY = "testRandomSampling";
@@ -517,9 +593,7 @@ System.out.println("outputCount: " + outputCount);
 //System.out.println(appenderString);
 		
 		// Remove times/durations and line feeds for easy compare.
-		appenderString = appenderString.replaceAll("\\d+", "X");
-		appenderString = appenderString.replaceAll("\r", "");
-		appenderString = appenderString.replaceAll("\n", "");
+		appenderString = normalizeTraceOutput(appenderString);
 		
 		final String expectedOutput = "********************************************************************************" +
 				"+-X:X:X:X (X) testSimpleDiscovery" +
@@ -668,7 +742,7 @@ System.out.println(appenderString);
         final String MONITOR_KEY = "testMinDurationToCapture";
         
         ThreadTraceConfig config = new ThreadTraceConfig();
-        config.setMinDurationToCapture(20);
+        config.setMinDurationToCapture(30);
         config.addAppender(TestAppender.getAppenderID());
         
         PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
@@ -801,8 +875,10 @@ System.out.println(appenderString);
 				}
         		
         	}
-            outputCount++;
-            lastResult = (ThreadTraceData)data;
+        	if (data instanceof ThreadTraceData) {
+        		outputCount++;
+        		lastResult = (ThreadTraceData)data;
+        	}
         }
     }    
 
@@ -831,6 +907,85 @@ System.out.println(appenderString);
         assertNotNull("Output should have been written by asynch thread", TestAppender.getOutputCount());
     }
     
+    public void testTraceOnReactiveMonitor() throws Exception {
+    	final String REACTIVE_CONTEXT = "ctx-ReactiveTrace";
+        final String MONITOR_KEY = "ReactiveTrace";
+
+        // Main Thread.
+        
+        ThreadTraceConfig config = new ThreadTraceConfig();
+        config.addAppender(TestAppender.getAppenderID());
+        
+        PerfMon traceMonitor = PerfMon.getMonitor(MONITOR_KEY);
+        traceMonitor.setInternalThreadTraceConfig(config);
+        
+        
+        final PerfMonTimer reactiveTimer = PerfMonTimer.start(MONITOR_KEY + ".SubCategory", false, REACTIVE_CONTEXT );
+        PerfMonTimer traceNestedOnStartedThread = PerfMonTimer.start("traceNestedOnStartedThread");
+        
+        new Thread(() -> {
+        	// 2nd Thread
+        	ReactiveContextManager.getContextManagerForThread().moveContext(REACTIVE_CONTEXT);
+        	PerfMonTimer traceNestedOnStoppingThread = PerfMonTimer.start("traceNestedOnSecondThread");
+            PerfMonTimer.stop(traceNestedOnStoppingThread);
+        	ReactiveContextManager.getContextManagerForThread().dissociateContextFromThread(REACTIVE_CONTEXT);
+        }).start();
+
+        Thread.sleep(250); // Give thread time to complete.
+
+        // Since the context has not been restored to this thread, this timer
+        // must not be part of this trace.
+        PerfMonTimer timerNotInReactiveContext = PerfMonTimer.start("timerNotInReactiveContext");
+        PerfMonTimer.stop(timerNotInReactiveContext);
+
+        // Move the context back to the main thread
+    	ReactiveContextManager.getContextManagerForThread().moveContext(REACTIVE_CONTEXT);
+        
+        PerfMonTimer.stop(traceNestedOnStartedThread);
+        
+        // Finally stop the timer asssociated with the reactive Context on a 3rd thread
+        
+        new Thread(() -> {
+        	// 3nd Thread
+        	// This time we'll cheat and not explicitly move the reactiveContext
+        	// to the thread.  We can get away with that here because we are
+        	// stopping the reactive timer and passing in the matching 
+        	// reactive context.
+        	PerfMonTimer.stop(reactiveTimer);
+        }).start();
+
+        Thread.sleep(250); // Give thread time to complete.
+    	
+        ThreadTraceData trace = TestAppender.getLastResult();
+        String appenderString = trace.toAppenderString();
+//System.out.println(appenderString);
+        
+		
+		appenderString = normalizeTraceOutput(appenderString);
+//System.out.println(appenderString);
+		
+		final String expectedOutput = 
+				"********************************************************************************"
+				+ "+-X:X:X:X (X) ReactiveTrace.SubCategory"
+				+ "|	+-X:X:X:X (X) traceNestedOnStartedThread"
+				+ "|	|	+-X:X:X:X (X) traceNestedOnSecondThread"
+				+ "|	|	+-X:X:X:X traceNestedOnSecondThread"
+				+ "|	+-X:X:X:X traceNestedOnStartedThread"
+				+ "+-X:X:X:X ReactiveTrace.SubCategory"
+				+ "********************************************************************************";
+		assertEquals("Expected output should contain timers across threads within the same context"
+			, expectedOutput, appenderString);
+    }
+    
+    
+	// Remove times/durations and line feeds from thread trace appender output for easy compare.
+    private String normalizeTraceOutput(String appenderString) {
+		appenderString = appenderString.replaceAll("\\d+", "X");
+		appenderString = appenderString.replaceAll("\r", "");
+		appenderString = appenderString.replaceAll("\n", "");
+
+		return appenderString;
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

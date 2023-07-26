@@ -24,6 +24,9 @@ package api.org.perfmon4j.agent;
  * 		execute the code declared within this source file.  Essentially it will be running in a non-operative state.
  * 	Attached - When this class is loaded in a JVM that was booted with the Perfmon4j instrumentation agent, The agent  will
  * 		re-write this class and it will be in an operating state.
+ * 
+ *  The code is instrumented in method JavassistRuntimeTimerInjector.attachAgentToPerfMonTimerAPIClass(). 
+ * 
  */
 public class PerfMonTimer {
 	private static final PerfMonTimer noOpTimer = new PerfMonTimer();
@@ -35,9 +38,32 @@ public class PerfMonTimer {
 		return noOpTimer;
 	}
 
+	public static PerfMonTimer startReactive(PerfMon mon) {
+		return noOpTimer;
+	}
+	
+	/**
+	 * @param mon
+	 * @param reactiveContextID - used when working with a reactive model
+	 * where you want the timer to span across multiple threads in a reactive
+	 * model.
+	 * 
+	 * IMPORTANT you must be using a programming framework (i.e. Quarkus)
+	 * that supports tracing across threads.
+	 * 
+	 * @return
+	 */
+	public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
+		return noOpTimer;
+	}
+	
     public static PerfMonTimer start(String key) {
     	return start(key, false);
     }
+
+	public static PerfMonTimer startReactive(String key) {
+		return startReactive(key, false);
+	}
     
     /**
      * Pass in true if this is a dynamically generated key (i.e. not a method
@@ -54,10 +80,43 @@ public class PerfMonTimer {
     	return noOpTimer;
     }
 
-    public static void abort(PerfMonTimer timer) {
+    /**
+     * Use the startReactive method when you are starting a timer in a reactive model,
+     * where the timer might be started and stopped across different threads.
+     * 
+     * @param key
+     * @param isDynamicKey
+     * @return
+     */
+    public static PerfMonTimer startReactive(String key, boolean isDynamicKey) {
+    	return noOpTimer;
     }
     
+    /**
+     * 
+     * @param key
+     * @param isDynamicKey
+	 * @param reactiveContextID - used when working with a reactive model
+	 * where you want the timer to span across multiple threads in a reactive
+	 * model.
+	 * 
+	 * IMPORTANT you must be using a programming framework (i.e. Quarkus)
+	 * that supports tracing across threads.
+	 * 
+     * @return
+     */
+    public static PerfMonTimer start(String key, boolean isDynamicKey, String reactiveContextID) {
+    	return noOpTimer;
+    }
+
+    public static void abort(PerfMonTimer timer) {
+    }
+
     public static void stop(PerfMonTimer timer) {
+    }
+
+    public static PerfMonTimer getNullTimer() {
+    	return noOpTimer;
     }
     
     /**

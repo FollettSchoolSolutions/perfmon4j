@@ -23,13 +23,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      DO_RELEASE: | 
+      DO_PUBLISH: | 
           ${{
-          ((github.event_name == 'push') && 
+          (
+          !contains(github.event.head_commit.message, '[skip deploy]') &&
+          !contains(github.event.head_commit.message, '#skip deploy#') &&
+          (github.event_name == 'push') && 
           (endsWith(github.ref, '/develop') 
           || endsWith(github.ref, '/master')
           || startsWith(github.ref, 'refs/heads/hotfix/')
-          || contains(github.event.head_commit.message, 'force deploy')))
+          || contains(github.event.head_commit.message, '[deploy]')
+          || contains(github.event.head_commit.message, '[publish]')
+          || contains(github.event.head_commit.message, '#force deploy#')
+          ))
           }}
 
     steps:
@@ -53,18 +59,18 @@ jobs:
         run: mvn -B test --file pom.xml
 
       - name: Assemble release artifacts
-        if: ${{ fromJSON(env.DO_RELEASE) }}
+        if: ${{ fromJSON(env.DO_PUBLISH) }}
         run: mvn -B assembly:assembly -DskipTests
 
       - name: Publish release artifacts
-        if:  ${{ fromJSON(env.DO_RELEASE) }}
+        if:  ${{ fromJSON(env.DO_PUBLISH) }}
         uses: actions/upload-artifact@v2
         with:
           name: "Assembled-binary-and-source-zip-files"
           path: "./target/perfmon4j*.zip"
           
       - name: Publish to Maven Central
-        if: ${{ fromJSON(env.DO_RELEASE) }}
+        if: ${{ fromJSON(env.DO_PUBLISH) }}
         run: mvn -B deploy --file pom.xml -P release,mvnCentral -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
@@ -72,7 +78,7 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
           
       - name: Setting up Java for publish to Github packages
-        if: ${{ fromJSON(env.DO_RELEASE) }}
+        if: ${{ fromJSON(env.DO_PUBLISH) }}
         uses: actions/setup-java@v2
         with:
           java-version: '11'
@@ -82,7 +88,7 @@ jobs:
           server-password: PACKAGES_GITHUB_TOKEN
           
       - name: Publish to Github Packages
-        if: ${{ fromJSON(env.DO_RELEASE) }}
+        if: ${{ fromJSON(env.DO_PUBLISH) }}
         run: mvn -B deploy --file pom.xml -P release,github -DskipTests  -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
         env:
           PACKAGES_GITHUB_USERNAME: ${{ secrets.PACKAGES_GITHUB_USERNAME }}

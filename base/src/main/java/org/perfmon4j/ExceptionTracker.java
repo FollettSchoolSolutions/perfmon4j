@@ -35,7 +35,7 @@ import org.perfmon4j.util.LoggerFactory;
 
 public class ExceptionTracker extends SnapShotMonitor {
 	private static final Logger logger = LoggerFactory.initLogger(ExceptionTracker.class);
-	public static final String BRIDGE_CLASS_NAME = "generated.perfmon4j.ExceptionBridge";
+	public static final String BRIDGE_CLASS_NAME =  ExceptionTracker.class.getPackageName() + ".ExceptionBridge";
 	private static boolean enabled = false;
 	private static BootConfiguration.ExceptionTrackerConfig config = null;
 	

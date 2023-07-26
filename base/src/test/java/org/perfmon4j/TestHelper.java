@@ -2,6 +2,8 @@ package org.perfmon4j;
 
 import java.util.GregorianCalendar;
 
+import junit.framework.Assert;
+
 public class TestHelper {
     public final static long SECOND = 1000;
     public final static long MINUTE = SECOND * 60;
@@ -25,4 +27,23 @@ public class TestHelper {
 	public static long addSeconds(long time, int numSeconds) {
 		return time + (numSeconds * SECOND);
 	}
+
+    public static String extractFailures(String output) {
+    	StringBuilder failures = new StringBuilder();
+    	
+    	for (String line : output.split(System.lineSeparator())) {
+    		if (line.contains("**FAIL:")) {
+    			failures.append(System.lineSeparator())
+    				.append(line);
+    		}
+    	}
+    	return failures.toString();
+    }
+
+    public static void validateNoFailuresInOutput(String output) {
+    	String failures = extractFailures(output);
+		if (!failures.isEmpty()) {
+			Assert.fail("One or more exceptions thrown: " + failures);
+		}
+    }
 }

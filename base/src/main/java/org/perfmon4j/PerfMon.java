@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Timer;
 import java.util.WeakHashMap;
@@ -42,6 +43,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.MonitorThreadTracker.Tracker;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
+import org.perfmon4j.reactive.ReactiveContext;
+import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.util.ActiveThreadMonitor;
@@ -405,34 +408,57 @@ public class PerfMon {
         return result;
     }
     
-/*----------------------------------------------------------------------------*/ 
+    /*----------------------------------------------------------------------------*/ 
     /**
      * Package level...
      * Applications should use PerfMonTimer.start() to start a timer
      * using this monitor!
      */
-    void start(long systemTime, PerfMonTimer startingTimer) {
-        ReferenceCount count = getThreadLocalReferenceCount();
+    void start(long systemTime, PerfMonTimer startingTimer, String reactiveContextID) {
+    	ReferenceCount count = getMonitorReferenceCount(reactiveContextID); 
         if (count.inc(systemTime) == 1) {
-        	// Save off the starting timer so that it can
-        	// stop this instance even if it has moved to another thread.
-        	startingTimer.storeReferenceCountForOffThreadStop(count);
+        	if (reactiveContextID == null) { // No need to save of reference for reactiveContext aware 
+        									 // timer since they are already designed to handle multiple threads.	
+            	// Save off the starting timer so that it can
+            	// stop this instance even if it has moved to another thread.
+        		startingTimer.storeReferenceCountForOffThreadStop(count);
+        	}
         	
         	if (externalThreadTraceQueue.hasPendingElements()) {
         		ExternalThreadTraceConfig externalConfig = externalThreadTraceQueue.assignToThread();
 	        	if (externalConfig != null) {
+	        		long sqlTime = 0;
 	        		count.hasExternalThreadTrace = true;
-	                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
-	                tOnStack.start(getName(), externalConfig.getMaxDepth(), externalConfig.getMinDurationToCapture(), systemTime);
-	                tOnStack.setExternalConfig(externalConfig);
+	        		
+	        		ThreadTracesBase trace;
+	        		if (count.reactiveRequest) {
+	        			ReactiveContext context = count.getOwningContext();
+	        			sqlTime = context.getSQLTime();
+	        			trace = context.getExternalMonitorsOnContext();
+	        		} else {
+	        			sqlTime = SQLTime.getSQLTime();
+	        			trace = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+	        		}
+	        		trace.start(getName(), externalConfig.getMaxDepth(), externalConfig.getMinDurationToCapture(), systemTime, sqlTime);
+	        		trace.setExternalConfig(externalConfig);
 	        	}
         	}
         	
             ThreadTraceConfig internalConfig = internalThreadTraceConfig;
             if (internalConfig != null && internalConfig.shouldTrace()) {
+        		long sqlTime = 0;
                 count.hasInternalThreadTrace = true;
-                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
-                tOnStack.start(getName(), internalConfig.getMaxDepth(), internalConfig.getMinDurationToCapture(), systemTime);
+                
+        		ThreadTracesBase trace;
+        		if (count.reactiveRequest) {
+        			ReactiveContext context = count.getOwningContext();
+        			sqlTime = context.getSQLTime();
+        			trace = context.getInternalMonitorsOnContext();
+        		} else {
+        			sqlTime = SQLTime.getSQLTime();
+        			trace = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+        		}
+                trace.start(getName(), internalConfig.getMaxDepth(), internalConfig.getMinDurationToCapture(), systemTime, sqlTime);
             }
             
             startStopWriteLock.lock();
@@ -467,18 +493,30 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-    void stop(long systemTime, boolean abort, PerfMonTimer initiatingTimer) {
+    void stop(long systemTime, boolean abort, PerfMonTimer initiatingTimer, String reactiveContextID) {
         ReferenceCount count = initiatingTimer.getReferenceCount();
         if (count == null) {
-        	count = getThreadLocalReferenceCount();
+        	count = getMonitorReferenceCount(reactiveContextID);
         }
-        
         if (count.dec() == 0) {
+        	if (reactiveContextID != null) {
+        		ReactiveContextManager.getContextManagerForThread().deletePayload(reactiveContextID, 
+					monitorID);
+        	}
             if (count.hasExternalThreadTrace) {
-                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
-                ThreadTraceData data = tOnStack.stop(getName());
+            	long sqlTime = 0;
+        		ThreadTracesBase trace;
+        		if (count.reactiveRequest) {
+        			ReactiveContext context = count.getOwningContext();
+        			sqlTime = context.getSQLTime();
+        			trace = context.getExternalMonitorsOnContext();
+        		} else {
+        			sqlTime = SQLTime.getSQLTime();
+        			trace = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+        		}
+                ThreadTraceData data = trace.stop(getName(), systemTime, sqlTime);
                 count.hasExternalThreadTrace = false;
-                ExternalThreadTraceConfig externalConfig = tOnStack.popExternalConfig();
+                ExternalThreadTraceConfig externalConfig = trace.popExternalConfig();
                 if (data != null && externalConfig != null) {
                 	externalConfig.outputData(data);
                 	if (!externalThreadTraceQueue.hasPendingElements()) {
@@ -487,8 +525,17 @@ public class PerfMon {
                 }
             }
             if (count.hasInternalThreadTrace) {
-                ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
-                ThreadTraceData data = tOnStack.stop(getName());
+            	long sqlTime = 0;
+        		ThreadTracesBase trace;
+        		if (count.reactiveRequest) {
+        			ReactiveContext context = count.getOwningContext();
+        			sqlTime = context.getSQLTime();
+        			trace = context.getInternalMonitorsOnContext();
+        		} else {
+        			sqlTime = SQLTime.getSQLTime();
+        			trace = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+        		}
+                ThreadTraceData data = trace.stop(getName(), systemTime, sqlTime);
                 count.hasInternalThreadTrace = false;
                 if (data != null && internalThreadTraceConfig != null) {
                     AppenderID appenders[] = internalThreadTraceConfig.getAppenders();
@@ -533,7 +580,7 @@ public class PerfMon {
                     long durationSquared = (duration * duration);
                 	if (sqlTimeEnabled) {
                     	/** We have SQL logging enabled... Monitor the SQLDurations. **/
-                    	sqlDuration = SQLTime.getSQLTime() - count.getSQLStartMillis();
+                    	sqlDuration = count.getCurrentSQLMillis() - count.getSQLStartMillis();
                     	if (sqlDuration < 0) {
                     		sqlDuration = 0;
                     	}
@@ -611,15 +658,21 @@ public class PerfMon {
     }
     
 /*----------------------------------------------------------------------------*/    
-	private ReferenceCount getThreadLocalReferenceCount() {
-        Map<Long, ReferenceCount> map = activeMonitors.get();
-        // No need to synchronize here since this is a thread local object...
-        ReferenceCount count = map.get(monitorID);
-        if (count == null) {
-            count = new ReferenceCount(Thread.currentThread());
-            map.put(monitorID, count);
-        }
-        return count;
+	private ReferenceCount getMonitorReferenceCount(String reactiveContextID) {
+		ReferenceCount result = null;
+		if (reactiveContextID != null) {
+			result = (ReferenceCount)ReactiveContextManager.getContextManagerForThread().getPayload(reactiveContextID, 
+					monitorID, (reactiveContext) -> new ReferenceCount(this, reactiveContext));
+		} else {
+	        Map<Long, ReferenceCount> map = activeMonitors.get();
+	        // No need to synchronize here since this is a thread local object...
+	       result = map.get(monitorID);
+	        if (result == null) {
+	            result = new ReferenceCount(Thread.currentThread());
+	            map.put(monitorID, result);
+	        }
+		}
+        return result;
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -664,22 +717,35 @@ public class PerfMon {
     MonitorThreadTracker getActiveThreadList() {
 		return activeThreadList;
 	}
-    
+  
 /*----------------------------------------------------------------------------*/    
     static class ReferenceCount implements MonitorThreadTracker.Tracker {
     	/** Store as a weak reference in case owningThread is aborted and Garbage Collected **/
     	private final WeakReference<Thread> owningThread;
+    	private final ReactiveContext owningContext;
+    	private final String reactiveCategoryName;
     	
         private AtomicInteger refCount = new AtomicInteger(0);
         private long startTime;
         private long sqlStartMillis = 0;
         boolean hasInternalThreadTrace = false;
         boolean hasExternalThreadTrace = false;
+        final boolean reactiveRequest;
 		private ReferenceCount previous = null;
 		private ReferenceCount next = null;
-        
+	
         ReferenceCount(Thread owningThread) {
         	this.owningThread = new WeakReference<Thread>(owningThread);
+        	this.owningContext = null;
+        	this.reactiveCategoryName = null;
+        	this.reactiveRequest = false;
+        }
+        
+        ReferenceCount(PerfMon reactiveMonitor, ReactiveContext context) {
+        	this.owningThread = null;
+        	this.reactiveCategoryName = context.getContextID() + "("  + reactiveMonitor.getName() + ")";
+        	this.owningContext = context;
+        	this.reactiveRequest = true;
         }
         
         /**
@@ -688,7 +754,7 @@ public class PerfMon {
         private int inc(long startTime) {
             if (refCount.get() == 0) {
                 this.startTime = startTime;
-                this.sqlStartMillis = SQLTime.getSQLTime(); // Will always be 0 of SQLtime is NOT enabled.
+                this.sqlStartMillis = getCurrentSQLMillis();
             }
             return refCount.incrementAndGet();
         }
@@ -716,8 +782,6 @@ public class PerfMon {
         	return dec() == 0;
         }
         
-        
-        
        private long getSQLStartMillis() {
     	   return sqlStartMillis;
        }
@@ -729,7 +793,7 @@ public class PerfMon {
 		 * be prepared for this method to return null.
 		 */
 		public Thread getThread() {
-			return owningThread.get();
+			return owningThread == null ? null : owningThread.get();
 		}
 		
 		@Override
@@ -756,7 +820,33 @@ public class PerfMon {
 		public long getStartTime() {
 			return startTime;
 		}
-       
+
+		@Override
+		public String getReactiveCategoryName() {
+			return reactiveCategoryName;
+		}
+		
+		@Override
+		public ReactiveContext getOwningContext() {
+			return owningContext;
+		}
+
+		@Override
+		public boolean isReactiveRequest() {
+			return reactiveRequest;
+		}
+		
+		@Override
+		public long getCurrentSQLMillis() {
+			if (SQLTime.isEnabled()) {
+				if (owningContext != null) {
+					return owningContext.getSQLTime();
+				} else {
+					return SQLTime.getSQLTime();
+				}
+			}
+			return 0;
+		}
     }
 
 /*----------------------------------------------------------------------------*/    
@@ -1541,7 +1631,7 @@ public class PerfMon {
     public static String buildHTMLString() {
         return buildHTMLString(PerfMon.getRootMonitor());
     }
-
+    
 
     public static ClassLoader getClassLoader() {
         return classLoader;
@@ -1605,5 +1695,26 @@ public class PerfMon {
 		}
 		
 		return version;
+	}
+	
+	public static void moveReactiveContextToCurrentThread(String contextID) {
+		ReactiveContextManager.getContextManagerForThread().moveContext(contextID);
+	}
+	
+	public static void dissociateReactiveContextFromCurrentThread(String contextID) {
+		ReactiveContextManager.getContextManagerForThread().dissociateContextFromThread(contextID);
+	}
+	
+	/**
+	 * 
+	 * @return A copy of the current settings.  This copy is simply a reference
+	 * to give the caller access to many (but not all) of Perfmon4j's current
+	 * running configuration.  
+	 *
+	 * Making changes to the copy of properties received has NO impact. 
+	 * 
+	 */
+	public static Properties getConfiguredSettings() {
+		return ConfiguredSettings.getConfiguredSettings();
 	}
 }

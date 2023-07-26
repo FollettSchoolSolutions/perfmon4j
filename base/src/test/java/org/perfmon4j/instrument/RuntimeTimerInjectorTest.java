@@ -25,13 +25,6 @@ import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 
-import javassist.CannotCompileException;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.NotFoundException;
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -40,6 +33,13 @@ import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
+
+import javassist.CannotCompileException;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.NotFoundException;
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
 
 
 public class RuntimeTimerInjectorTest extends PerfMonTestCase {
@@ -438,7 +438,7 @@ public class RuntimeTimerInjectorTest extends PerfMonTestCase {
     }
 
     private static void invokeMethodOnCtClass(CtClass clazz, String methodName) throws Exception {
-        Method method = clazz.toClass().getMethod(methodName, new Class[]{});
+        Method method = clazz.toClass(TestAnnotation.class).getMethod(methodName, new Class[]{});
         method.invoke(null, new Object[]{});
     }
     

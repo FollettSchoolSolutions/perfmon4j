@@ -6,6 +6,7 @@ import java.util.List;
 import org.mockito.Mockito;
 import org.perfmon4j.MonitorThreadTracker.Tracker;
 import org.perfmon4j.MonitorThreadTracker.TrackerValue;
+import org.perfmon4j.reactive.ReactiveContext;
 
 /*
  *	Copyright 2021 Follett School Solutions, LLC 
@@ -287,6 +288,26 @@ public class MonitorThreadTrackerTest extends PerfMonTestCase {
 		@Override
 		public long getStartTime() {
 			return startTime;
+		}
+
+		@Override
+		public boolean isReactiveRequest() {
+			return false;
+		}
+
+		@Override
+		public String getReactiveCategoryName() {
+			return null;
+		}
+
+		@Override
+		public ReactiveContext getOwningContext() {
+			return null;
+		}
+
+		@Override
+		public long getCurrentSQLMillis() {
+			return 0;
 		}
     }
     	

@@ -18,14 +18,23 @@
 package org.perfmon4j.instrument;
 
 import java.io.File;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.perfmon4j.Appender;
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonConfiguration;
+import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTestCase;
+import org.perfmon4j.TestHelper;
+import org.perfmon4j.TextAppender;
+import org.perfmon4j.ThreadTraceConfig;
+import org.perfmon4j.ThreadTraceConfig.Trigger;
 import org.perfmon4j.instrument.PerfMonTimerTransformerTest.SQLStatementTester.BogusAppender;
 import org.perfmon4j.util.MiscHelper;
 
@@ -37,7 +46,6 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
-	private File javassistJar = null;
 	
 /*----------------------------------------------------------------------------*/
     public PerfMonAgentAPITest(String name) {
@@ -83,14 +91,9 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void tearDown() throws Exception {
     	File folder = perfmon4jJar.getParentFile();
         perfmon4jJar.delete();
-        if (javassistJar != null) {
-        	javassistJar.delete();
-        }
         folder.delete();
         
         perfmon4jJar = null;
-        javassistJar = null;
-        
     	super.tearDown();
     }
 
@@ -111,6 +114,11 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 			} else {
 				System.err.println("Agent API for SQLTime class has NOT been instrumented");
 			}
+			if (api.org.perfmon4j.agent.POJOSnapShotRegistry.isAttachedToAgent()) {
+				System.err.println("Agent API for POJOSnapShotRegistry class has been instrumented");
+			} else {
+				System.err.println("Agent API for POJOSnapShotRegistry class has NOT been instrumented");
+			}
 		}
 	}
 
@@ -118,10 +126,12 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	String output = LaunchRunnableInVM.run(
     		new LaunchRunnableInVM.Params(AgentAPIUsageTest.class, perfmon4jJar));
 //System.out.println("org.perfmon4j.instrument.PerfMonAgentAPITest#testObjectsAreAttached\r\n" +output);   	
+    	TestHelper.validateNoFailuresInOutput(output);
     	
     	assertTrue("PerfMon API class was not attached to agent", output.contains("Agent API for PerfMon class has been instrumented"));
     	assertTrue("PerfMonTimer API class was not attached to agent", output.contains("Agent API for PerfMonTimer class has been instrumented"));
     	assertTrue("SQLTime API class was not attached to agent", output.contains("Agent API for SQLTime class has been instrumented"));
+    	assertTrue("POJOSnapShotRegistry API class was not attached to agent", output.contains("Agent API for POJOSnapShotRegistry class has been instrumented"));
     }
 	
 	
@@ -135,7 +145,16 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				config.defineMonitor(monitorName);
 				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
 				config.attachAppenderToMonitor(monitorName, appenderName, "./*");
+				
+				if (api.org.perfmon4j.agent.PerfMon.isConfigured()) {
+					System.out.println("**FAIL: PerfMon agent incorrectly showing as configured prior to configuration");
+				}
+				
 				PerfMon.configure(config);
+
+				if (!api.org.perfmon4j.agent.PerfMon.isConfigured()) {
+					System.out.println("**FAIL: PerfMon agent incorrectly showing as NOT configured after configuration");
+				}
 				
 				api.org.perfmon4j.agent.PerfMon apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor("not.active");
 				if (apiPerfMon.isActive()) {
@@ -150,7 +169,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				if (!apiPerfMon.isActive()) {
 					System.out.println("**FAIL: 'test.category' is configured to be monitored/active");
 				}
-			} catch (Exception ex) {
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -159,12 +179,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void testAttachedPerfMonAPI() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(AgentAPIPerfMonInstTest.class, perfmon4jJar));
-//System.out.println(output);    	
-    	String failures = extractFailures(output);
-    	
-    	if (!failures.isEmpty()) {
-    		fail("One or more failures: " + failures);
-    	}
+    	TestHelper.validateNoFailuresInOutput(output);
     }
 
 	public static class AgentAPIPerfMonTimerInstTest implements Runnable {
@@ -204,7 +219,12 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 					System.out.println("**FAIL: still should have 1 completion, we aborted first time but passed the second");
 				}
 				
-			} catch (Exception ex) {
+				// Make sure a nullTimer functions as expected for stop and abort
+				api.org.perfmon4j.agent.PerfMonTimer.stop(api.org.perfmon4j.agent.PerfMonTimer.getNullTimer());
+				api.org.perfmon4j.agent.PerfMonTimer.abort(api.org.perfmon4j.agent.PerfMonTimer.getNullTimer());
+				
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -214,14 +234,81 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void testAttachedPerfMonTimerAPI() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(AgentAPIPerfMonTimerInstTest.class, perfmon4jJar));
-//System.out.println(output);    	
-    	String failures = extractFailures(output);
-    	
-    	if (!failures.isEmpty()) {
-    		fail("One or more failures: " + failures);
-    	}
+    	TestHelper.validateNoFailuresInOutput(output);
     }
 	
+	public static class AgentAPIPerfMonTimerStartReactiveTest implements Runnable {
+		
+		public void validateTimersAreReactive(api.org.perfmon4j.agent.PerfMon apiPerfMon, 
+				api.org.perfmon4j.agent.PerfMonTimer timer1,
+				api.org.perfmon4j.agent.PerfMonTimer timer2,
+				api.org.perfmon4j.agent.PerfMonTimer timer3) {
+			
+			api.org.perfmon4j.agent.PerfMonTimer.stop(timer3);
+			api.org.perfmon4j.agent.PerfMonTimer.stop(timer2);
+			api.org.perfmon4j.agent.PerfMonTimer.stop(timer1);
+			
+			PerfMon nativePerfMon = ((PerfMonAgentApiWrapper)apiPerfMon).getNativeObject();
+			if (nativePerfMon.getTotalHits() != 3) {
+				System.out.println("**FAIL: expected 3 hits");
+			}
+			if (nativePerfMon.getTotalCompletions() != 3) {
+				System.out.println("**FAIL: still should have 3 completions");
+			}
+		}
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorRootName = "test123";
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorRootName);
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToMonitor(monitorRootName, appenderName, "./*");
+				PerfMon.configure(config);
+				
+				
+				/* Test start with passing in an agent and abort */
+				// When starting in reactive mode, a single thread must be able to 
+				// start the same monitor multiple times.
+				// In non-reactive mode, a new start will not occur on the thread, unless the previous one is stopped.
+
+				
+				// Try perfMonTimer.startReactive(PerfMon) overload
+				String monitorName = monitorRootName + ".1";
+				api.org.perfmon4j.agent.PerfMon apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor(monitorName);
+				
+				api.org.perfmon4j.agent.PerfMonTimer timer1 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
+				api.org.perfmon4j.agent.PerfMonTimer timer2 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
+				api.org.perfmon4j.agent.PerfMonTimer timer3 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
+
+				validateTimersAreReactive(apiPerfMon, timer1, timer2, timer3);
+				
+				
+				// Try perfMonTimer.startReactive(String) overload
+				monitorName = monitorRootName + ".2";
+				apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor(monitorName);
+				
+				timer1 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(monitorName);
+				timer2 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(monitorName);
+				timer3 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(monitorName);
+
+				validateTimersAreReactive(apiPerfMon, timer1, timer2, timer3);
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	
+    public void testAttachedPerfMonTimerAPIStartReactive() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(AgentAPIPerfMonTimerStartReactiveTest.class, perfmon4jJar));
+    	TestHelper.validateNoFailuresInOutput(output);
+    }    
+    
     
 	public static class AgentAPISQLTimeInstTest implements Runnable {
 		public void run() {
@@ -244,7 +331,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				if (sqlDuration < 10) {
 					System.out.println("**FAIL: Should have at least 10 millis SQLTime on this thread");
 				}
-			} catch (Exception ex) {
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -254,12 +342,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void testAttachedSQLTimeAPI() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(AgentAPISQLTimeInstTest.class, perfmon4jJar));
-//System.out.println(output);    	
-    	String failures = extractFailures(output);
-    	
-    	if (!failures.isEmpty()) {
-    		fail("One or more failures: " + failures);
-    	}
+    	TestHelper.validateNoFailuresInOutput(output);
     }
 
 	public static class AgentDeclarePerfMonTimerInstTest implements Runnable {
@@ -288,7 +371,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 					System.out.println("**FAIL: expected 1 hit from the annotation");
 				}
 				
-			} catch (Exception ex) {
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -300,28 +384,9 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
         		new LaunchRunnableInVM.Params(AgentDeclarePerfMonTimerInstTest.class, perfmon4jJar)
         		.setJavaAgentParams( "-a" + AgentDeclarePerfMonTimerInstTest.class.getName()));
 //System.out.println("org.perfmon4j.instrument.PerfMonAgentAPITest#testAttachedDeclarePerfmonTimerAPI\r\n" + output);    	 
-    	String failures = extractFailures(output); 
-    	 
-    	if (!failures.isEmpty()) { 
-    		fail("One or more failures: " + failures); 
-    	} 
+    	TestHelper.validateNoFailuresInOutput(output);
     } 
      	
-    
-    
-    private String extractFailures(String output) {
-    	StringBuilder failures = new StringBuilder();
-    	
-    	for (String line : output.split(System.lineSeparator())) {
-    		if (line.contains("**FAIL:")) {
-    			failures.append(System.lineSeparator())
-    				.append(line);
-    		}
-    	}
-    	return failures.toString();
-    }
-    
-
 	public static class SnapShotMonitorWithAPIAnnotationTest implements Runnable {
 		
 		@api.org.perfmon4j.agent.instrument.SnapShotProvider
@@ -359,7 +424,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				Thread.sleep(2000);
 				Appender.flushAllAppenders();
 				
-			} catch (Exception ex) {
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -369,8 +435,9 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void testAPISnapShotAnnotations() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(SnapShotMonitorWithAPIAnnotationTest.class, perfmon4jJar));
-    	
+   
 //System.out.println("org.perfmon4j.instrument.PerfMonAgentAPITest#testAPISnapShotAnnotations\r\n" + output);    	
+    	TestHelper.validateNoFailuresInOutput(output);
     	
     	assertTrue("Should have the counter value in text output", output.contains("counter.................. 1/per duration"));
     	assertTrue("Should have the gauge value in text output", output.contains("gauge.................... 1"));
@@ -414,7 +481,8 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				Thread.sleep(2000);
 				Appender.flushAllAppenders();
 				
-			} catch (Exception ex) {
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -425,16 +493,232 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(SnapShotMonitorWithAPIRatiosTest.class, perfmon4jJar));
 //System.out.println("org.perfmon4j.instrument.PerfMonAgentAPITest#testAPISnapShotRatiosAnnotations\r\n" + output);    	
+    	TestHelper.validateNoFailuresInOutput(output);
     	
     	assertTrue("Should have the cacheHitRate value in text output", output.contains("cacheHitRate............. 25.000%"));
     }
+
+	public static class AgentGetConfiguredSettings implements Runnable {
+		public void run() {
+			try {
+				for (Map.Entry<Object, Object> entry : api.org.perfmon4j.agent.PerfMon.getConfiguredSettings().entrySet()) {
+					System.out.println(entry.getKey() + "=" + entry.getValue());
+				}
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+    public void testGetConfiguredSettings() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(AgentGetConfiguredSettings.class, perfmon4jJar));
+//System.out.println(output);    	
+		assertTrue("should find property for perfmon4j agent version (even though it might be null)",
+				output.contains("perfmon4j.javaagent.version="));
+    	TestHelper.validateNoFailuresInOutput(output);
+    }
+
+    private static ThreadTraceConfig createThreadTraceConfig(AppenderID appenderID, Trigger... triggers) {
+    	ThreadTraceConfig config = new ThreadTraceConfig();
+    	
+    	config.addAppender(appenderID);
+    	config.setTriggers(triggers);
+    	
+    	return config;
+    }
     
+    
+	public static class HasTriggers implements Runnable {
+		protected void configurePerfmon4j() throws Exception {
+			final String monitorName = "WebRequest";
+			final String appenderName = "textAppender";
+			PerfMonConfiguration config = new PerfMonConfiguration();
+			
+			config.defineAppender(appenderName, TextAppender.class.getName(), "1 minute", null);
+			final AppenderID appenderID = config.getAppenderForName(appenderName);
+			
+			config.defineMonitor(monitorName);
+			config.attachAppenderToMonitor(monitorName, appenderName);
+
+			config.addThreadTraceConfig(monitorName, createThreadTraceConfig(appenderID,
+				new Trigger[] {
+						new ThreadTraceConfig.HTTPRequestTrigger("name", "dave"),
+						new ThreadTraceConfig.HTTPSessionTrigger("userName", "dave"),
+						new ThreadTraceConfig.HTTPCookieTrigger("jsessionid", "1234")
+				}));
+			PerfMon.configure(config);
+		}
+		
+		
+		public void run() {
+			try {
+				assertFalse("Should NOT have a request based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpRequestBasedThreadTraceTriggers());
+				assertFalse("Should NOT have a session based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpSessionBasedThreadTraceTriggers());
+				assertFalse("Should NOT have a cookie based trigger before config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+				
+
+				configurePerfmon4j();
+				
+				assertTrue("Should have a request based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpRequestBasedThreadTraceTriggers());
+				assertTrue("Should have a session based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpSessionBasedThreadTraceTriggers());
+				assertTrue("Should have a cookie based trigger after config", 
+						api.org.perfmon4j.agent.PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+
+	
+	
+	
+	
+    public void testHasTriggers() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(HasTriggers.class, perfmon4jJar));
+//System.out.println(output);    	
+    	TestHelper.validateNoFailuresInOutput(output);
+    }
+
+	public static class InstallAgentValidator extends HasTriggers {
+		static final String AFTER_POPVALIDATOR = "***After PopValidator***"; 
+		
+		public void run() {
+			try {
+				configurePerfmon4j();
+
+				// Our validator should be invoked for each trigger.
+				api.org.perfmon4j.agent.ThreadTraceConfig.pushValidator(new api.org.perfmon4j.agent.SimpleTriggerValidator() {
+					@Override
+					public boolean isValid(String triggerString) {
+						System.out.println("[" + triggerString + "]");
+						return false;
+					}
+				});
+				try {
+					api.org.perfmon4j.agent.PerfMonTimer requestTimer = api.org.perfmon4j.agent.PerfMonTimer.start("WebRequest");
+					api.org.perfmon4j.agent.PerfMonTimer.stop(requestTimer);
+				} finally {
+					api.org.perfmon4j.agent.ThreadTraceConfig.popValidator();
+				}
+	
+				System.out.println(AFTER_POPVALIDATOR);
+	
+				// Since we removed our validator it should no longer be called.
+				api.org.perfmon4j.agent.PerfMonTimer requestTimer = api.org.perfmon4j.agent.PerfMonTimer.start("WebRequest");
+				api.org.perfmon4j.agent.PerfMonTimer.stop(requestTimer);
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+    
+    public void testInstallAgentValidator() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(InstallAgentValidator.class, perfmon4jJar));
+    	
+    	String[] split = output.split(Pattern.quote(InstallAgentValidator.AFTER_POPVALIDATOR));
+    	String withValidatorsInstalled = split[0];
+    	String withValidatorsRemoved = split[1];
+    	
+    	assertTrue("Should have indication our validator was invoked", withValidatorsInstalled.contains("[HTTP:name=dave]"));
+    	assertFalse("Validator should not be accessed after the popValidator was called", withValidatorsRemoved.contains("[HTTP:name=dave]"));
+    	
+    	TestHelper.validateNoFailuresInOutput(output);
+    }
+
+    public static class CaptureLastAppender extends Appender {
+    	public CaptureLastAppender(AppenderID id) {
+			super(id);
+		}
+
+		public static final AtomicReference<String> lastAppenderString = new AtomicReference<String>();
+
+		@Override
+		public void outputData(PerfMonData data) {
+			lastAppenderString.set(data.toAppenderString());
+		}
+    }
+    
+	public static class POJOSnapShotRegistryExample implements Runnable {
+		@api.org.perfmon4j.agent.instrument.SnapShotPOJO
+		public static class MySnapShotPOJO {
+			private long counter = 0;
+
+			@api.org.perfmon4j.agent.instrument.SnapShotCounter
+			public long getCounter() {
+				return ++counter;
+			}
+		}
+		
+		protected void configurePerfmon4j() throws Exception {
+			final String monitorName = "MySnapShot";
+			final String appenderName = "textAppender";
+			PerfMonConfiguration config = new PerfMonConfiguration();
+			
+			config.defineAppender(appenderName, CaptureLastAppender.class.getName(), "50 millis", null);
+			
+			config.defineSnapShotMonitor(monitorName, MySnapShotPOJO.class.getName());
+			config.attachAppenderToSnapShotMonitor(monitorName, appenderName);
+
+			PerfMon.configure(config);
+		}
+		
+		public void run() {
+			try {
+				MySnapShotPOJO pojo = new MySnapShotPOJO();
+				api.org.perfmon4j.agent.POJOSnapShotRegistry.register(pojo);
+				configurePerfmon4j();
+				
+				Thread.sleep(100);
+				Appender.flushAllAppenders();
+				
+				String lastAppenderString = CaptureLastAppender.lastAppenderString.get();
+				assertNotNull("Should have appender output", lastAppenderString);
+				assertTrue("Should have output counter value to appender", lastAppenderString.contains("counter.................. 1/per duration"));
+				
+				// DeRegister our pojo 
+				api.org.perfmon4j.agent.POJOSnapShotRegistry.deRegister(pojo);
+				
+				// Clear out lastAppender output.
+				Thread.sleep(100);
+				Appender.flushAllAppenders();
+				CaptureLastAppender.lastAppenderString.set(null);
+				
+				// Wait for another chance for the output..
+				Thread.sleep(100);
+				Appender.flushAllAppenders();
+				
+				lastAppenderString = CaptureLastAppender.lastAppenderString.get();
+				assertNull("Should no longer be outputing data to the appender", lastAppenderString);
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+    
+    public void testPOJOSnapShotRegistry() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(POJOSnapShotRegistryExample.class, perfmon4jJar));
+//System.out.println(output);    	
+    	TestHelper.validateNoFailuresInOutput(output);
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
-        System.setProperty("Perfmon4j.debugEnabled", "true");
-		System.setProperty("JAVASSIST_JAR",  "G:\\projects\\perfmon4j\\.repository\\javassist\\javassist\\3.20.0-GA\\javassist-3.20.0-GA.jar");
+//        System.setProperty("Perfmon4j.debugEnabled", "true");
+//		System.setProperty("JAVASSIST_JAR",  "G:\\projects\\perfmon4j\\.repository\\javassist\\javassist\\3.20.0-GA\\javassist-3.20.0-GA.jar");
 		
         org.apache.log4j.Logger.getLogger(PerfMonAgentAPITest.class.getPackage().getName()).setLevel(Level.INFO);
         String[] testCaseName = {PerfMonAgentAPITest.class.getName()};

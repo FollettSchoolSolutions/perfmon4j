@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotCounter.Display;
 import org.perfmon4j.instrument.SnapShotProvider;
+import org.perfmon4j.reactive.ReactiveContext;
 import org.perfmon4j.util.MiscHelper;
 
 /**
@@ -221,6 +222,10 @@ public class MonitorThreadTracker {
 	}
 
 	static interface Tracker {
+		public String getReactiveCategoryName();
+		public boolean isReactiveRequest();
+		public ReactiveContext getOwningContext();
+
 		public Thread getThread();  
 		
 		public void setPrevious(Tracker previous);
@@ -230,6 +235,22 @@ public class MonitorThreadTracker {
 		public Tracker getNext();
 		
 		public long getStartTime();
+
+		/**
+		 * If SQL Time tracking is not enabled, this should
+		 * always return 0;
+		 * 
+		 * If the Tracker is associated with a thread (default)
+		 * it will return the current accumulated SQL duration on the thread,
+		 * using SQLTime.getCurrentSQLMillis.
+		 * 
+		 * If the Tracker is associated with a reactiveContext
+		 * it will return the accumulated SQL duration on the
+		 * context.
+		 * 
+		 * @return
+		 */
+		public long getCurrentSQLMillis();
 	}
 
 	public static class TrackerValue {
@@ -239,7 +260,12 @@ public class MonitorThreadTracker {
 		
 		private TrackerValue(Tracker tracker) {
 			this.thread = tracker.getThread();
-			this.threadName = this.thread != null ?  thread.getName() : MonitorThreadTracker.REMOVED_THREAD;
+			String reactiveCategoryName = tracker.getReactiveCategoryName();
+			if (reactiveCategoryName != null) {
+				this.threadName = reactiveCategoryName;
+			} else {
+				this.threadName = this.thread != null ?  thread.getName() : MonitorThreadTracker.REMOVED_THREAD;
+			}
 			this.startTime = tracker.getStartTime(); 
 		}
 		/**

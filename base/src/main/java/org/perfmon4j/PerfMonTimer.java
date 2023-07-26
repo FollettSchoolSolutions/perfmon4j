@@ -20,14 +20,22 @@
 */
 package org.perfmon4j;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.perfmon4j.PerfMon.ReferenceCount;
-import org.perfmon4j.ThreadTraceMonitor.UniqueThreadTraceTimerKey;
+import org.perfmon4j.ThreadTracesBase.UniqueThreadTraceTimerKey;
+import org.perfmon4j.reactive.ReactiveContext;
+import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
 public class PerfMonTimer {
+	private final static AtomicLong nextReactiveContextID = new AtomicLong(0);
+	
     // Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(PerfMonTimer.class);
     
@@ -45,41 +53,74 @@ public class PerfMonTimer {
         this.perfMon = perfMon;
         this.next = next;
     }
-
+    
     public static PerfMonTimer start(PerfMon mon) {
+    	return start(mon, null);
+    }
+
+    public static PerfMonTimer startReactive(PerfMon mon) {
+    	return start(mon, getNextReactiveID());
+    }
+    
+    public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
         if (!PerfMon.isConfigured() && !ExternalAppender.isActive()) {
             return NULL_TIMER;
         }
         PerfMonTimer result = mon.getPerfMonTimer();
+        final boolean isReactiveTimer = reactiveContextID != null;
     	final boolean haveActiveTimer = (NULL_TIMER != result);  // It is OK to do an object compare here.
-    	final boolean haveActiveThreadTrace = ThreadTraceMonitor.activeThreadTraceFlag.get().isActive(); 
+    	final boolean haveActiveThreadTrace = 
+    			!isReactiveTimer // Reactive timers do not get tracked within thread traces.
+    			&& (ThreadTraceMonitor.activeThreadTraceFlag.get().isActive()
+    				|| ReactiveContext.isActiveThreadTracesOnContext()); 
     	
+    	List<ExitCheckpoint> exitMethods = null;
         if (haveActiveTimer || haveActiveThreadTrace) {
         	String monitorName = "";
-	        UniqueThreadTraceTimerKey wrapperInternalKey = null;
-	        UniqueThreadTraceTimerKey wrapperExternalKey = null;
 	        try {
 	        	long startTime = MiscHelper.currentTimeWithMilliResolution(); 
 	            monitorName = mon.getName();
 	            if (haveActiveThreadTrace) {
-	                ThreadTraceMonitor.ThreadTracesOnStack tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
-	                ThreadTraceMonitor.ThreadTracesOnStack tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
+		        	long sqlStartTime = SQLTime.getSQLTime(); 
+	            	exitMethods = new ArrayList<ExitCheckpoint>();
+	            	
+	                ThreadTracesBase tInternalOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
+	                ThreadTracesBase tExternalOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
 
 	            	final boolean haveActiveInternalThreadTrace = tInternalOnStack.isActive();
 	            	final boolean haveActiveExternalThreadTrace = tExternalOnStack.isActive();
 	            
 		            if (haveActiveInternalThreadTrace) {
-		            	wrapperInternalKey = tInternalOnStack.enterCheckpoint(monitorName, startTime);
+		            	final UniqueThreadTraceTimerKey key = tInternalOnStack.enterCheckpoint(monitorName, startTime, sqlStartTime);
+		            	exitMethods.add((S, S1) -> tInternalOnStack.exitCheckpoint(key, S, S1));
 		            }
 		            if (haveActiveExternalThreadTrace) {
-		            	wrapperExternalKey = tExternalOnStack.enterCheckpoint(monitorName, startTime);
+		            	final UniqueThreadTraceTimerKey key = tExternalOnStack.enterCheckpoint(monitorName, startTime, sqlStartTime);
+		            	exitMethods.add((S, S1) -> tExternalOnStack.exitCheckpoint(key, S, S1));
+		            }
+
+		            if (ReactiveContext.isActiveThreadTracesOnContext()) {
+		            	for (ReactiveContext context : ReactiveContextManager.getContextManagerForThread().getActiveContexts()) {
+		            		final ThreadTracesBase tExternal =  context.getExternalMonitorsOnContext();
+		            		if (tExternal != null && tExternal.isActive()) {
+		            			final UniqueThreadTraceTimerKey key = tExternal.enterCheckpoint(monitorName, startTime, sqlStartTime); 
+				            	exitMethods.add((S, S1) -> tExternal.exitCheckpoint(key, S, S1));
+		            		}
+		            		final ThreadTracesBase tInternal =  context.getInternalMonitorsOnContext();
+		            		if (tInternal != null && tInternal.isActive()) {
+		            			final UniqueThreadTraceTimerKey key = tInternal.enterCheckpoint(monitorName, startTime, sqlStartTime);
+				            	exitMethods.add((S, S1) -> tInternal.exitCheckpoint(key, S, S1));
+		            		}
+		            	}
 		            }
 	            }
-	            if (haveActiveTimer || haveActiveThreadTrace) {
+	            if (haveActiveTimer) {
 		            // To keep track of the checkpoints for thread tracing we 
 		            // must be able to identify the timer passed to PerfMonTimer.stop()
-		            result = new TimerWrapper(result, wrapperInternalKey, wrapperExternalKey);
-	            	result.start(startTime);
+		            result = new TimerWrapper(result, reactiveContextID, exitMethods);
+	            	result.start(startTime, reactiveContextID);
+	            } else if (reactiveContextID != null || (exitMethods != null && !exitMethods.isEmpty())) {
+	            	result = new TimerWrapper(result, reactiveContextID, exitMethods);
 	            }
 	        } catch (ThreadDeath th) {
 	            throw th;   // Always rethrow this error
@@ -93,7 +134,11 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer start(String key) {
-    	return start(key, false);
+    	return start(key, false, null);
+    }
+
+    public static PerfMonTimer startReactive(String key) {
+    	return start(key, false, getNextReactiveID());
     }
     
     /**
@@ -108,6 +153,26 @@ public class PerfMonTimer {
      * 	   }
      */
     public static PerfMonTimer start(String key, boolean isDynamicKey) {
+    	return start(key, isDynamicKey, null);
+    }
+
+    public static PerfMonTimer startReactive(String key, boolean isDynamicKey) {
+    	return start(key, isDynamicKey, getNextReactiveID());
+    }
+    
+    
+    /**
+     * Pass in true if this is a dynamically generated key (i.e. not a method
+     * name or some know value.  This prevents monitors from being created
+     * that are not actively attached to appenders.
+     * 
+     * for example:
+     * 	   private void lookupUser(String userName) {
+     * 		    PerfMonTimer.start("lookupUser." + userName, true); 
+     * 			...
+     * 	   }
+     */
+    public static PerfMonTimer start(String key, boolean isDynamicKey, String reactiveContextID) {
         PerfMonTimer result = NULL_TIMER;
         
         try {
@@ -116,7 +181,7 @@ public class PerfMonTimer {
             		setLastFullyQualifiedStartNameForThread(key);
             	}
             	try {
-                    result = start(PerfMon.getMonitor(key, isDynamicKey));
+                    result = start(PerfMon.getMonitor(key, isDynamicKey), reactiveContextID);
             	} finally {
             		// Always clear the lastFullyQualifiedName.
             		if (!isDynamicKey) {
@@ -133,43 +198,33 @@ public class PerfMonTimer {
         
         return result;
     }
-
     
-    private void start(long now) {
+    private void start(long now, String reactiveContextID) {
         if (perfMon != null) {
-            perfMon.start(now, this);
-            next.start(now);
+            perfMon.start(now, this, reactiveContextID);
+            next.start(now, reactiveContextID);
         }
     }
     
     private static void stop(PerfMonTimer timer, boolean abort) {
-        if (timer != NULL_TIMER && timer != null && !timer.hasBeenStopped()) {
-	        try {
-                UniqueThreadTraceTimerKey keyInternal = timer.getUniqueInternalTimerKey();
-                if (keyInternal != null) {
-                	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getInternalThreadTracesOnStack();
-                    tOnStack.exitCheckpoint(keyInternal);
-                }
-                UniqueThreadTraceTimerKey keyExternal = timer.getUniqueExternalTimerKey();
-                if (keyExternal != null) {
-                	ThreadTraceMonitor.ThreadTracesOnStack tOnStack = ThreadTraceMonitor.getExternalThreadTracesOnStack();
-                    tOnStack.exitCheckpoint(keyExternal);
-                }
+        try {
+            if (timer != null && timer != NULL_TIMER && !timer.hasBeenStopped()) {
+            	timer.exitAllCheckpoints();
                 timer.stop(MiscHelper.currentTimeWithMilliResolution(), abort);
-	        } catch (ThreadDeath th) {
-	            throw th;   // Always rethrow this error
-	        } catch (Throwable th) {
-	            logger.logError("Error stopping timer", th);
-	        } finally {
-	        	timer.flagStopped();
-	        }
-    	}
-	}
+            }
+        } catch (ThreadDeath th) {
+            throw th;   // Always rethrow this error
+        } catch (Throwable th) {
+            logger.logError("Error stopping timer", th);
+        } finally {
+        	timer.flagStopped();
+        }
+    }
 
     public static void abort(PerfMonTimer timer) {
         stop(timer, true);
     }
-    
+
     public static void stop(PerfMonTimer timer) {
         stop(timer, false);
     }
@@ -177,7 +232,7 @@ public class PerfMonTimer {
     private void stop(long now, boolean abort) {
         if (perfMon != null) {
             next.stop(now, abort);
-            perfMon.stop(now, abort, this);
+            perfMon.stop(now, abort, this, getReactiveContextID());
         }
     }
     
@@ -185,22 +240,19 @@ public class PerfMonTimer {
         return NULL_TIMER;
     }
     
-    /**
-     * Used for the ThreadTraceTimers...
-     * Implemented in TimerWrapper class
-     * @return
-     */
-    protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
-        return null;
+    protected void exitAllCheckpoints() {
+    	// Do Nothing - Functionality will be provided by TimerWrapper
     }
-
-    /**
-     * Used for the ThreadTraceTimers...
-     * Implemented in TimerWrapper class
-     * @return
-     */
-    protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
-        return null;
+    
+    protected String getReactiveContextID() {
+    	// Do Nothing (except return null)- Functionality will be provided by TimerWrapper
+    	return null;
+    }
+    
+    
+    @FunctionalInterface
+    private static interface ExitCheckpoint {
+    	public void exit(long stopTime, long sqlStopTime);
     }
     
     /**
@@ -272,26 +324,17 @@ public class PerfMonTimer {
 		return null;
 	}
 	
-	
-    /**
-     * This class is only used when we return a Timer that is part of
-     * a thread trace.
-     */
-    private static class TimerWrapper extends PerfMonTimer {
+	private static class TimerWrapper extends PerfMonTimer {
+    	final private String reactiveContextID;
+    	final private List<ExitCheckpoint> exitCheckpoints; 
     	private boolean hasBeenStopped = false;
-        final private UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey;
-        final private UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey;
         private ReferenceCount referenceCount = null;
         private final String effectiveCategory;
         
-        private TimerWrapper(PerfMonTimer timer, 
-            UniqueThreadTraceTimerKey uniqueInternalThreadTraceTimerKey,
-            UniqueThreadTraceTimerKey uniqueExternalThreadTraceTimerKey) {
-            
-        	super(timer.perfMon, wrapIfNeeded(timer.next)); 
-            this.uniqueInternalThreadTraceTimerKey = uniqueInternalThreadTraceTimerKey;
-            this.uniqueExternalThreadTraceTimerKey = uniqueExternalThreadTraceTimerKey;
-            
+        TimerWrapper(PerfMonTimer timer, String reactiveContextID, List<ExitCheckpoint> exitCheckpoints) {
+            super(timer.perfMon, wrapIfNeeded(timer.next, reactiveContextID)); 
+            this.reactiveContextID = reactiveContextID;
+            this.exitCheckpoints = exitCheckpoints;
             if (timer.perfMon != null) {
             	effectiveCategory = timer.perfMon.getName();	
             } else {
@@ -299,24 +342,34 @@ public class PerfMonTimer {
             }
         }
 
-		public static PerfMonTimer wrapIfNeeded(PerfMonTimer timer) {
+		public static PerfMonTimer wrapIfNeeded(PerfMonTimer timer, String reactiveContextID) {
 			PerfMonTimer result = timer;
 			
 			if (result != null
-				&& !result.isMutable() 
-				&& result != NULL_TIMER) {
-				return new TimerWrapper(timer, null, null);
+				&& result != NULL_TIMER	
+				&& !result.isMutable()) {
+				return new TimerWrapper(timer, reactiveContextID, null);
 			}
 			return result;
 		}
         
-        protected UniqueThreadTraceTimerKey getUniqueInternalTimerKey() {
-            return uniqueInternalThreadTraceTimerKey;
+        @Override
+        protected String getReactiveContextID() {
+        	return reactiveContextID;
+        }        
+        
+        @Override
+        protected void exitAllCheckpoints() {
+        	if (exitCheckpoints != null) {
+        		long stopTime = MiscHelper.currentTimeWithMilliResolution();
+        		long sqlStopTime = SQLTime.getSQLTime();
+        		
+	        	for (ExitCheckpoint exitCheckpoint : exitCheckpoints) {
+        			exitCheckpoint.exit(stopTime, sqlStopTime);
+	        	}
+        	}
         }
-        protected UniqueThreadTraceTimerKey getUniqueExternalTimerKey() {
-            return uniqueExternalThreadTraceTimerKey;
-        }
-
+        
 		@Override
 		protected boolean hasBeenStopped() {
 			return hasBeenStopped;
@@ -345,22 +398,23 @@ public class PerfMonTimer {
 		@Override
 		boolean isMutable() {
 			return true;
-		}
+		}        
     }
     
-    private static class FullyQualifiedTimerStartName {
-    	private String fullName;
 
-		public String getFullName() {
-			return fullName;
-		}
-
-		public void setFullName(String fullName) {
-			this.fullName = fullName;
-		}
-    }
+    private static class FullyQualifiedTimerStartName { 
+    	private String fullName; 
+ 
+		public String getFullName() { 
+			return fullName; 
+		} 
+ 
+		public void setFullName(String fullName) { 
+			this.fullName = fullName; 
+		} 
+    } 
     
-    static private final ThreadLocal<FullyQualifiedTimerStartName> last = new ThreadLocal<PerfMonTimer.FullyQualifiedTimerStartName>() {
+    static private final ThreadLocal<PerfMonTimer.FullyQualifiedTimerStartName> last = new ThreadLocal<PerfMonTimer.FullyQualifiedTimerStartName>() {
         protected FullyQualifiedTimerStartName initialValue() {
             return new FullyQualifiedTimerStartName();
         }
@@ -373,5 +427,9 @@ public class PerfMonTimer {
     
     static private void setLastFullyQualifiedStartNameForThread(String key) {
     	last.get().setFullName(key);
+    }
+    
+    static private String getNextReactiveID() {
+    	return "TimerCTX:" + nextReactiveContextID.incrementAndGet();
     }
 }

@@ -1,0 +1,79 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	
+	<parent>
+		<groupId>org.perfmon4j</groupId>
+		<artifactId>perfmon4j-project</artifactId>
+		<version>2.0.0-BETA1</version>
+	</parent>
+  
+	<artifactId>perfmon4j-quarkus3x</artifactId>
+	<packaging>jar</packaging>
+	<name>Perfmon4j Quarkus Extras</name>
+	<build>
+	  <plugins>
+    <plugin>
+      <groupId>io.smallrye</groupId>
+      <artifactId>jandex-maven-plugin</artifactId>
+      <version>3.1.1</version>
+      <executions>
+        <execution>
+          <id>make-index</id>
+          <goals>
+            <goal>jandex</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+	</build>
+	
+	
+ 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.quarkus.platform</groupId>
+        <artifactId>quarkus-bom</artifactId>
+        <version>3.1.0.Final</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  
+<dependencies>
+	<dependency>
+		<groupId>${project.groupId}</groupId>
+		<version>${project.version}</version>
+		<artifactId>perfmon4j-generic-filter</artifactId>
+	</dependency>
+
+<!--  
+     <dependency>
+        <groupId>io.quarkus.http</groupId>
+        <artifactId>quarkus-http-core</artifactId>
+        <scope>provided</scope>
+      </dependency>
+-->
+      <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-smallrye-opentracing</artifactId>
+        <scope>provided</scope>
+      </dependency>      
+
+      <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-vertx-http</artifactId>
+        <scope>provided</scope>
+      </dependency>      
+
+	<dependency>
+		<groupId>org.mockito</groupId>
+		<artifactId>mockito-all</artifactId>
+		<version>1.8.0</version>
+		<scope>test</scope>
+	</dependency>	
+
+</dependencies>
+ </project>

@@ -23,13 +23,14 @@ package org.perfmon4j;
 
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
 public class SnapShotProviderWrapper extends SnapShotMonitor {
     final private static Logger logger = LoggerFactory.initLogger(SnapShotProviderWrapper.class);
 
-    final private JavassistSnapShotGenerator.Bundle bundle;
+    final private SnapShotGenerator.Bundle bundle;
     
 /*----------------------------------------------------------------------------*/    
     public SnapShotProviderWrapper(String name, JavassistSnapShotGenerator.Bundle bundle) throws GenerateSnapShotException {
@@ -40,13 +41,13 @@ public class SnapShotProviderWrapper extends SnapShotMonitor {
 
     public SnapShotData initSnapShot(long currentTimeMillis) {
     	SnapShotData result =  bundle.newSnapShotData();
-    	((JavassistSnapShotGenerator.SnapShotLifecycle)result).init(bundle.getProviderInstance(), currentTimeMillis);
+    	((SnapShotGenerator.SnapShotLifecycle)result).init(bundle.getProviderInstance(), currentTimeMillis);
     	
     	return result;
     }
 
     public SnapShotData takeSnapShot(SnapShotData data, long currentTimeMillis) {
-    	((JavassistSnapShotGenerator.SnapShotLifecycle)data).takeSnapShot(bundle.getProviderInstance(), currentTimeMillis);
+    	((SnapShotGenerator.SnapShotLifecycle)data).takeSnapShot(bundle.getProviderInstance(), currentTimeMillis);
     	return data;
     }
 }

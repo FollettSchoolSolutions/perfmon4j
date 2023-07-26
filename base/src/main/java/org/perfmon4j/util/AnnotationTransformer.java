@@ -29,6 +29,7 @@ import org.perfmon4j.SnapShotSQLWriter;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotInstanceDefinition;
+import org.perfmon4j.instrument.SnapShotPOJO;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.instrument.SnapShotRatios;
@@ -48,6 +49,7 @@ public class AnnotationTransformer {
     private static final String API_SNAP_SHOT_RATIO = "api.org.perfmon4j.agent.instrument.SnapShotRatio";
     private static final String API_SNAP_SHOT_RATIOS = "api.org.perfmon4j.agent.instrument.SnapShotRatios";
     private static final String API_SNAP_SHOT_INSTANCE_DEFINITION = "api.org.perfmon4j.agent.instrument.SnapShotInstanceDefinition";
+    private static final String API_SNAP_SHOT_POJO_DEFINITION = "api.org.perfmon4j.agent.instrument.SnapShotPOJO";
     
     
     public AnnotationTransformer() {
@@ -58,6 +60,7 @@ public class AnnotationTransformer {
     	workers.put(SnapShotRatio.class, new RatioWorker());
     	workers.put(SnapShotRatios.class, new RatiosWorker());
     	workers.put(SnapShotInstanceDefinition.class, new InstanceDefinitionWorker());
+    	workers.put(SnapShotPOJO.class, new SnapShotPOJOWorker());
     }
 
     public <T extends Annotation> T transform(Class<T> annotationClass, Annotation an) {
@@ -358,5 +361,27 @@ public class AnnotationTransformer {
 		}
     }
     
-    
+    private static class SnapShotPOJOWorker implements Worker<SnapShotPOJO> {
+		public SnapShotPOJO transform(Annotation an) {
+	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_POJO_DEFINITION)) {
+	    		return new SnapShotPOJO() {
+
+					public Class<? extends Annotation> annotationType() {
+						return SnapShotPOJO.class;
+					}
+
+					@Override
+					public Class<?> dataInterface() {
+						return getNamedProperty(an, "dataInterface", void.class);
+					}
+
+					@Override
+					public boolean usePriorityTimer() {
+						return getNamedProperty(an, "usePriorityTimer", Boolean.FALSE).booleanValue();
+					}
+				};
+	    	}
+	    	return null;
+		}
+    }
 } 

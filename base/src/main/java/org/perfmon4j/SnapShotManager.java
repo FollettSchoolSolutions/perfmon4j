@@ -28,10 +28,11 @@ import java.util.Properties;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
-import org.perfmon4j.SnapShotMonitor.SnapShotMonitorID;
+import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
-import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
+import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
+import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.Logger;
@@ -45,7 +46,7 @@ public class SnapShotManager {
     // Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(SnapShotManager.class);
     
-    private static final Map<SnapShotMonitorID, SnapShotMonitor> monitorMap = new HashMap();
+    private static final Map<SnapShotMonitorID, SnapShotMonitorBase<?>> monitorMap = new HashMap<SnapShotMonitorID, SnapShotMonitorBase<?>>();
 
     private SnapShotManager() {
     }
@@ -55,22 +56,22 @@ public class SnapShotManager {
     }
     
     public static synchronized void deInit() {
-        Iterator<SnapShotMonitor> itr = monitorMap.values().iterator();
+        Iterator<SnapShotMonitorBase<?>> itr = monitorMap.values().iterator();
         while (itr.hasNext()) {
             itr.next().deInit();
         }
         monitorMap.clear();
     }
     
-    public static synchronized SnapShotMonitor getMonitor(SnapShotMonitorID monitorID) {
+    public static synchronized SnapShotMonitorBase<?> getMonitor(SnapShotMonitorID monitorID) {
         return monitorMap.get(monitorID);
     }
     
-    public static synchronized SnapShotMonitor getOrCreateMonitor(SnapShotMonitorID monitorID) throws ClassNotFoundException {
-        SnapShotMonitor result = monitorMap.get(monitorID);
+    public static synchronized SnapShotMonitorBase<?> getOrCreateMonitor(SnapShotMonitorID monitorID) throws ClassNotFoundException {
+    	SnapShotMonitorBase<?> result = monitorMap.get(monitorID);
         if (result == null) {
             try {
-                Class clazz = null;
+                Class<?> clazz = null;
                 if (PerfMon.getClassLoader() != null) {
                     clazz = PerfMon.getClassLoader().loadClass(monitorID.getClassName());
                 } else {
@@ -100,10 +101,17 @@ public class SnapShotManager {
 	                    }
 	                }                
                 } else {
-                	// Must be a generated Snap Shot class.
-                	JavassistSnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
-                	result = new SnapShotProviderWrapper(monitorID.getName(), bundle);
-                	
+                	try {
+                		// First see if this is a new style POJO Monitor.
+                		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(clazz);
+                    	result = new POJOSnapShotMonitor(monitorID.getName(), bundle.isUsePriorityTimer(), clazz.getName(), POJOSnapShotRegistry.getSingleton());
+                    	logger.logDebug("Found POJO based SnapShotMonitor for class: " + clazz.getName());
+                	} catch(GenerateSnapShotException ex) {
+                		// Try legacy monitor.
+                    	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
+                    	result = new SnapShotProviderWrapper(monitorID.getName(), bundle);
+                    	logger.logDebug("Found Legacy based SnapShotMonitor for class: " + clazz.getName());
+                	}
                 	ExternalAppender.registerSnapShotClass(clazz.getName());
                 }
                 monitorMap.put(monitorID, result);
@@ -135,7 +143,7 @@ public class SnapShotManager {
          for (int i = 0; i < currentIDs.length; i++) {
              SnapShotMonitorID id = currentIDs[i];
              if (!monitorIsInConfig(id, snapShotMonitors)) {
-                 SnapShotMonitor m = monitorMap.get(id);
+            	 SnapShotMonitorBase m = monitorMap.get(id);
                  if (m != null) {
                      m.deInit();
                      monitorMap.remove(id);
@@ -145,7 +153,7 @@ public class SnapShotManager {
         
         for (int i = 0; i < snapShotMonitors.length; i++) {
             SnapShotMonitorConfig cfg = snapShotMonitors[i];
-            SnapShotMonitor monitor = null;
+            SnapShotMonitorBase monitor = null;
             try {
             	monitor = SnapShotManager.getOrCreateMonitor(cfg.getMonitorID());
             } catch (NoClassDefFoundError nfe) {

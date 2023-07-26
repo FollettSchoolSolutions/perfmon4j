@@ -4,7 +4,7 @@
   
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>1.6.2</version>
+	<version>2.0.0-BETA1</version>
 	<packaging>pom</packaging>
 
 	<name>org.perfmon4j:perfmon4j-project</name>
@@ -34,6 +34,7 @@
 		<module>agent-api</module>
 		<module>dbupgrader</module>
 		<module>base</module>
+		<module>genericfilter</module>
 		<module>servlet</module>
 		<module>tomcat7</module>
 		<module>tomcat55</module>
@@ -43,6 +44,8 @@
 		<module>utils</module>
 		<module>webapp</module>
 		<module>wildfly8</module>
+		<module>quarkus2x</module>
+		<module>quarkus3x</module>
  	</modules>
 
 	<profiles>
@@ -204,7 +207,7 @@
 	</build>
 
 	<properties>
-		<javassist.version>3.27.0-GA</javassist.version>
+		<javassist.version>3.29.0-GA</javassist.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<DERBY_VERSION>10.10.2.0</DERBY_VERSION>
 		<LOG4J_VERSION>1.2.14</LOG4J_VERSION>
@@ -232,12 +235,14 @@
 			<scope>provided</scope>
 		</dependency>
 		
+<!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<version>1.8.5</version>
-			<scope>test</scope>
+		    <groupId>org.mockito</groupId>
+		    <artifactId>mockito-core</artifactId>
+		    <version>5.3.0</version>
+		    <scope>test</scope>
 		</dependency>
+
 	</dependencies>
 
 </project>

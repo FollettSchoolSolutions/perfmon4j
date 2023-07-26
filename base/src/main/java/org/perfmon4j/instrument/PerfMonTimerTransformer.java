@@ -44,6 +44,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
@@ -52,6 +53,7 @@ import java.util.regex.Pattern;
 import org.perfmon4j.BootConfiguration;
 import org.perfmon4j.BootConfiguration.ExceptionElement;
 import org.perfmon4j.BootConfiguration.ExceptionTrackerConfig;
+import org.perfmon4j.ConfiguredSettings;
 import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
@@ -567,6 +569,20 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to attach SQLTime API class to agent", ex);
 	            }
+	        } else if ("api/org/perfmon4j/agent/ThreadTraceConfig".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToThreadTraceConfigAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached ThreadTraceConfig API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach ThreadTraceConfig API class to agent", ex);
+	            }
+	        } else if ("api/org/perfmon4j/agent/POJOSnapShotRegistry".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToPOJOSnapShotRegistryAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached POJOSnapShotRegistry API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach POJOSnapShotRegistry API class to agent", ex);
+	            }
 	        }
 
 			return result;
@@ -670,11 +686,17 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	    	logger.logInfo("                                              |__/ ");
 	    	logger.logInfo("To hide banner add \"-D" + hideBannerProperty + "=true\" to your command line");
     	}
-    	logger.logInfo("Perfmon4j Instrumentation Agent v." + PerfMonTimerTransformer.class.getPackage().getImplementationVersion() + " installed. (http://perfmon4j.org)");
+        Properties agentProperties = t.params.exportAsProperties();
+
+    	String perfmon4jVersion = PerfMonTimerTransformer.class.getPackage().getImplementationVersion();
+    	logger.logInfo("Perfmon4j Instrumentation Agent v." + perfmon4jVersion + " installed. (http://perfmon4j.org)");
+        agentProperties.setProperty("perfmon4j.javaagent.version", perfmon4jVersion == null ? "unknown" : perfmon4jVersion);
     	
         if (javassistVersion != null) {
         	logger.logInfo("Perfmon4j found Javassist bytcode instrumentation library version: " + javassistVersion);
+            agentProperties.setProperty("javassist.version", javassistVersion);
         }
+        ConfiguredSettings.setJavaAgentSettings(agentProperties);
         
     	logger.logInfo(MiscHelper.getHighResolutionTimerEnabledDisabledMessage());
     	 
@@ -682,6 +704,8 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         if (t.params.isExtremeInstrumentationEnabled() && !t.params.isVerboseInstrumentationEnabled()) {
         	logger.logInfo("Perfmon4j verbose instrumentation logging disabled.  Add -vtrue to javaAgent parameters to enable.");
         }
+		logger.logInfo("Perfmon4j javaagent current working directory: " + safeGetCanonicalPathForFile(new File(".")));
+
         SystemGCDisabler disabler = null;
         
         if (DISABLE_CLASS_INSTRUMENTATION) {
@@ -712,16 +736,20 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	if (configFile != null) {
     		FileReader reader = null;
     		try {
+    			logger.logInfo("Loading boot configuration from: " + safeGetCanonicalPathForFile(new File(configFile)));
     			reader = new FileReader(configFile);
     			bootConfiguration = XMLBootParser.parseXML(reader);
 			} catch (FileNotFoundException e) {
-				logger.logError("Perfmon4j unable to load boot configuration -- using default", e);
+				logger.logError("Perfmon4j unable to load boot configuration, using default. File: " + safeGetCanonicalPathForFile(new File(configFile)));
 			} finally {
 				if (reader != null) {
 					try {reader.close();} catch (Exception ex) {}
 				}
 			}
+    	} else {
+    		logger.logWarn("Perfmonconfig.xml file not specified.  Loading default boot configuration.");
     	}
+		ConfiguredSettings.setBootConfigSettings(bootConfiguration.exportAsProperties());
         
         if (t.params.isInstallServletValve()) {
         	BootConfiguration.ServletValveConfig valveConfig = bootConfiguration.getServletValveConfig();
@@ -965,6 +993,21 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		} catch (IOException e) {
 			// Nothing todo...  Just return the absolute path
 		}
+    	
+    	return result;
+    }
+
+    private static String safeGetCanonicalPathForFile(File file) {
+    	String result = "";
+    	if (file != null) {
+    		try {
+				result = file.getCanonicalPath();
+			} catch (IOException e) {
+				result = file.getAbsolutePath();
+			}
+    	} else {
+    		result = "File reference is null";
+    	}
     	
     	return result;
     }

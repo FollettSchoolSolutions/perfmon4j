@@ -21,6 +21,7 @@
 
 package org.perfmon4j;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
@@ -28,6 +29,7 @@ import java.util.Set;
 import java.util.Stack;
 
 import org.perfmon4j.Appender.AppenderID;
+import org.perfmon4j.reactive.ReactiveContextManager;
 
 public class ThreadTraceConfig {
     private int maxDepth = 0;
@@ -88,6 +90,7 @@ public class ThreadTraceConfig {
     	boolean result = true;
     	
     	if (triggers != null) {
+    		TriggerValidator reactiveContextValidators[] = null;
     		result = false;
     		for (int i = 0; i < triggers.length && !result; i++) {
     			Trigger t = triggers[i]; 
@@ -97,6 +100,18 @@ public class ThreadTraceConfig {
     				Iterator<TriggerValidator> itr = validatorsOnThread.get().iterator();
     				while (itr.hasNext() && !result) {
     					result = itr.next().isValid(t);
+    				}
+    				if (!result && ReactiveContextManager.areReactiveContextsActiveInJVM()) {
+    					if (reactiveContextValidators == null) {
+    						reactiveContextValidators = ReactiveContextManager
+    								.getContextManagerForThread().getActiveContextTriggerValidatorsOnThread();
+    					}
+    					for (TriggerValidator validator : reactiveContextValidators) {
+    						result = validator.isValid(t);
+    						if (result) {
+    							break;
+    						}
+    					}
     				}
     			}
 			}
@@ -236,20 +251,67 @@ public class ThreadTraceConfig {
 		pushValidator(new ThreadPropertyValidator(propertyName, value));
 	}
 
+	public static void pushThreadProperty(String propertyName, String value, String reactiveContextID) {
+		pushValidator(new ThreadPropertyValidator(propertyName, value), reactiveContextID);
+	}
+
 	public static void popThreadProperty() {
 		popValidator();
 	}
+
+	public static void popThreadProperty(String reactiveContextID) {
+		popValidator(reactiveContextID);
+	}
 	
 	public static void pushValidator(TriggerValidator validator) {
-		validatorsOnThread.get().push(validator);
+		pushValidator(validator, null);
+	}
+	
+	public static void pushValidator(TriggerValidator validator, String reactiveContextID) {
+		if (reactiveContextID != null) {	
+			ReactiveContextManager.getContextManagerForThread().pushValidator(validator, reactiveContextID);
+		} else {
+			validatorsOnThread.get().push(validator);
+		}
 	}
 	
 	public static void popValidator() {
-		validatorsOnThread.get().pop();
+		popValidator(null);
+	}
+	
+	public static void popValidator(String reactiveContextID) {
+		if (reactiveContextID != null) {	
+			ReactiveContextManager.getContextManagerForThread().popValidator(reactiveContextID);
+		} else {
+			validatorsOnThread.get().pop();
+		}
 	}
 	
 	public static TriggerValidator[] getValidatorsOnThread() {
+		TriggerValidator validatorsFromContext[] = null;
+		
+		if (ReactiveContextManager.areReactiveContextsActiveInJVM()) {
+			validatorsFromContext = ReactiveContextManager.getContextManagerForThread().getActiveContextTriggerValidatorsOnThread();
+		}
+
 		Stack<TriggerValidator> v = validatorsOnThread.get();
-		return v.toArray(new TriggerValidator[v.size()]);
+		if (validatorsFromContext != null && validatorsFromContext.length > 0) {
+			if (!v.isEmpty()) {
+				// We have both validators associated with the thread, and with one
+				// or more active reactiveContexts associated with the thread.  Must
+				// merge list and return both.
+				Set<TriggerValidator> combindedValidators = new HashSet<ThreadTraceConfig.TriggerValidator>();
+				combindedValidators.addAll(v);
+				combindedValidators.addAll(Arrays.asList(validatorsFromContext));
+			
+				return combindedValidators.toArray(new TriggerValidator[] {});
+			} else {
+				return validatorsFromContext;
+			}
+		} else {
+			// No validators on any context associated with thread.  Simply need to return 
+			// validators directly on thread (if any).
+			return v.toArray(new TriggerValidator[] {});
+		}
 	}
 }

@@ -18,6 +18,10 @@ public abstract class RuntimeTimerInjector {
 	public abstract byte[] attachAgentToPerfMonAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] attachAgentToPerfMonTimerAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] attachAgentToSQLTimeAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	public abstract byte[] attachAgentToThreadTraceConfigAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
+	public abstract byte[] attachAgentToPOJOSnapShotRegistryAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception;
+	
 	
     private ThreadLocal<Boolean> singnalThreadInTimer = new ThreadLocal<Boolean>() {
         public Boolean initialValue() {

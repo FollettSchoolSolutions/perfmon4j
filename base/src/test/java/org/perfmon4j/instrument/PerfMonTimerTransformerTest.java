@@ -45,9 +45,11 @@ import org.perfmon4j.PerfMonConfiguration;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.SQLTime;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.instrument.LaunchRunnableInVM.Params;
+import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -61,7 +63,6 @@ public class PerfMonTimerTransformerTest extends PerfMonTestCase {
 	public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
 	private File perfmon4jJar = null;
-	private File javassistJar = null;
 	
 /*----------------------------------------------------------------------------*/
     public PerfMonTimerTransformerTest(String name) {
@@ -104,13 +105,9 @@ public class PerfMonTimerTransformerTest extends PerfMonTestCase {
     public void tearDown() throws Exception {
     	File folder = perfmon4jJar.getParentFile();
         perfmon4jJar.delete();
-        if (javassistJar != null) {
-        	javassistJar.delete();
-        }
         folder.delete();
         
         perfmon4jJar = null;
-        javassistJar = null;
         
     	super.tearDown();
     }
@@ -665,7 +662,7 @@ System.out.println(output);
 	
     public void testInterfacesAreInstrumented() throws Exception {
     	String output = LaunchRunnableInVM.loadClassAndPrintMethods(DoSomethingElseTest.class, "-vtrue,-eorg.perfmon4j", perfmon4jJar);
-    	
+System.out.println(output);    	
     	assertTrue("Should have instrumented method declared in iterface",
     			output.contains("Adding extreme monitor: org.perfmon4j.instrument.PerfMonTimerTransformerTest$DoSomethingElseTest.doSomething"));
     }
@@ -673,7 +670,6 @@ System.out.println(output);
     
     public void testVarArgsMethodIsInstrumented() throws Exception {
     	String output = LaunchRunnableInVM.loadClassAndPrintMethods(DoSomethingElseTest.class, "-vtrue,-eorg.perfmon4j", perfmon4jJar);
-//System.out.println(output);    	
 
 //		CtClass clazz = ClassPool.getDefault().getCtClass(DoSomethingElseTest.class.getName());
 //		RuntimeTimerInjector.injectPerfMonTimers(clazz, false);
@@ -1178,6 +1174,92 @@ System.out.println(output);
     	
     	assertTrue("Should not display the startMonitor method", !output.contains(".startMonitor"));
     }
+    
+    
+	public static class SQLTimeInReactiveContext implements Runnable {
+		
+		public static final class BogusAppender extends Appender {
+			public BogusAppender(AppenderID id) {
+				super(id);
+			}
+			
+			@Override
+			public void outputData(PerfMonData data) {
+				if (data instanceof IntervalData) {
+					IntervalData d = (IntervalData)data;
+					System.out.println("Monitor: " + d.getOwner().getName() 
+							+ " SQLTotalDuration:" + d.getTotalSQLDuration()
+							+ " TotalCompletions:" + d.getTotalCompletions());
+				} else {
+					System.out.println(data.toAppenderString());
+				}
+			}
+		}
+		
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorName = "WebRequest";
+				final String reactiveContextID = "ctx-01";
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorName);
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToMonitor(monitorName, appenderName, ".");
+				
+				PerfMon.configure(config);
+
+				PerfMonTimer reactiveTimer = PerfMonTimer.start(monitorName, true, reactiveContextID);
+				
+				// Increment SQL Time in a different thread, that has been joined to the
+				// the reactiveContext
+				new Thread(() -> {
+					ReactiveContextManager.getContextManagerForThread().moveContext(reactiveContextID);
+					
+					org.perfmon4j.SQLTime.startTimerForThread();
+					try {
+						Thread.sleep(75);
+					} catch (InterruptedException e) {
+						// Ignore
+					}
+					org.perfmon4j.SQLTime.stopTimerForThread();
+					
+					ReactiveContextManager.getContextManagerForThread().dissociateContextFromThread(reactiveContextID);
+				}).start();
+				
+				Thread.sleep(150); // Wait for Thread to complete.
+				// Bring the context back to the main thread.
+				ReactiveContextManager.getContextManagerForThread().moveContext(reactiveContextID);
+				
+				SQLTime.startTimerForThread();
+				Thread.sleep(75);
+				SQLTime.stopTimerForThread();
+				
+				PerfMonTimer.stop(reactiveTimer);
+				
+				Thread.sleep(1500);
+
+				Appender.flushAllAppenders();
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+    public void testSQLTimeInReactiveContext() throws Exception {
+    	final String findPattern = "\\[STDOUT\\] Monitor\\: WebRequest SQLTotalDuration\\:(\\d+) TotalCompletions\\:1";
+    	final Pattern findSQLDurationTotal = Pattern.compile(findPattern);
+    	String output = LaunchRunnableInVM.run(SQLTimeInReactiveContext.class, "-dtrue,-eSQL", "", perfmon4jJar);
+//System.out.println(output);   	
+		Matcher m = findSQLDurationTotal.matcher(output);
+		if (m.find()) {
+			int sqlDuration = Integer.valueOf(m.group(1)).intValue();
+			assertTrue("Expected at least 150ms of SQLTime, but was: " + sqlDuration, sqlDuration >= 150);
+		} else {
+			fail("Did not find SQLTotalDuration in output using findPattern: " + findPattern);
+		}
+//    	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
+    }    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

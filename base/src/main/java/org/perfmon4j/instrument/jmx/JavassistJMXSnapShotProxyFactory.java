@@ -23,12 +23,6 @@ package org.perfmon4j.instrument.jmx;
 
 import java.util.Iterator;
 
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.CtNewConstructor;
-
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
@@ -42,6 +36,12 @@ import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.NumberFormatter;
+
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtConstructor;
+import javassist.CtMethod;
+import javassist.CtNewConstructor;
 
 public class JavassistJMXSnapShotProxyFactory  extends JMXSnapShotProxyFactory {
 	public static long SERIAL_NUMBER = 0; 
@@ -81,7 +81,7 @@ public class JavassistJMXSnapShotProxyFactory  extends JMXSnapShotProxyFactory {
 	private Class<?> generateDerivedJMXClass(Config config, ClassPool classPool) throws Exception {
 		classPool.appendSystemPath();
 
-		String className = "JMXSnapShot_" + (++SERIAL_NUMBER);
+		String className = "org.perfmon4j.JMXSnapShot_" + (++SERIAL_NUMBER);
 		CtClass superClass = classPool.get(JavassistJMXSnapShotProxyFactory.JMXSnapShotImpl.class.getName());
 		CtClass configClass = classPool.get(JavassistJMXSnapShotProxyFactory.Config.class.getName());
 		CtClass ctClass = classPool.makeClass(className, superClass);
@@ -161,7 +161,7 @@ public class JavassistJMXSnapShotProxyFactory  extends JMXSnapShotProxyFactory {
 			ctClass.addMethod(method);
 		}
 		
-		return ctClass.toClass(PerfMon.getClassLoader());
+		return ctClass.toClass(/* neighbor class */ PerfMon.class);
 	}
 	
 }
