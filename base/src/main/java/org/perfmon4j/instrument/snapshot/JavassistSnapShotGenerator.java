@@ -573,14 +573,12 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 	}
 
 	public Bundle generateBundleForPOJO(Class<?> providerClass) throws GenerateSnapShotException {
-		ClassPool classPool = new ClassPool(true);
-		
 		SnapShotPOJO pojoAnnotation = transformer.findAnotation(SnapShotPOJO.class, providerClass);
 		if (pojoAnnotation == null) {
 			throw new GenerateSnapShotException("POJO class must include a @SnapShotPOJO annotation");
 		}
 		
-		Class<?> dataClass = generateSnapShotDataImpl(providerClass, null, classPool); 
+		Class<?> dataClass = generateSnapShotDataImpl(providerClass, null, null); 
 		return new Bundle(dataClass, null, pojoAnnotation.usePriorityTimer());
 	}
 	
