@@ -16,6 +16,8 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 2.0.0 - TBD
+
 ** 2.0.0-BETA1 - 2023-07-26
 - Added support for the Quarkus platorm.  Additions
   include a ServletFilter and the ability to track Restful
