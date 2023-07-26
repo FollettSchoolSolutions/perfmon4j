@@ -16,7 +16,7 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
-** 2.0.0-BETA1-SNAPSHOT - 2023-TBD
+** 2.0.0-BETA1 - 2023-07-26
 - Added support for the Quarkus platorm.  Additions
   include a ServletFilter and the ability to track Restful
   requests across multiple theads.
@@ -34,8 +34,6 @@ Changes
 	other than the thread they were started on.
 	- Calling PerfMonTimer.stop() more than once will
 	no longer have a negative side effect.
-
-** 1.6.2 - TBD
 
 ** 1.6.1 - 2022-04-16
 - The InfluxAppender and LogAnalytics appender have the ability
