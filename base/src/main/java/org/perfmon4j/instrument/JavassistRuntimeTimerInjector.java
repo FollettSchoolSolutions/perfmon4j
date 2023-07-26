@@ -1291,7 +1291,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     	clazzTriggerWrapper.addMethod(CtMethod.make("public boolean isValid(org.perfmon4j.ThreadTraceConfig.Trigger trigger) {\r\n"
         		+ "	return this.delegate.isValid(trigger.getTriggerString());\r\n"
         		+ "	}\r\n", clazzTriggerWrapper));
-    	clazzTriggerWrapper.toClass(Class.forName("api.org.perfmon4j.agent.PerfMon"));
+    	clazzTriggerWrapper.toClass(/* neighbor class */ loader.loadClass("api.org.perfmon4j.agent.SimpleTriggerValidator"));
     	
         updateIsAttachedToAgent(clazz);
         
