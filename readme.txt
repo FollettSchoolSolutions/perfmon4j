@@ -16,10 +16,16 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
-** 1.7.0-SNAPSHOT - 2023-TBD
+** 2.0.0-BETA1-SNAPSHOT - 2023-TBD
 - Added support for the Quarkus platorm.  Additions
   include a ServletFilter and the ability to track Restful
   requests across multiple theads.
+- Added suport for creating Perfmon4j snapshots using
+  POJO objects.
+- Added PerfMonTimer.startReactive().  Use this method
+  when you are starting a manual timer on one thread 
+  and stoping it on another.
+- Fixed an issue when generating classes under Java 17  
 
 Changes
 ** 1.6.2 - 2023-07-05
