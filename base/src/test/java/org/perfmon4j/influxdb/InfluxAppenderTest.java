@@ -52,6 +52,7 @@ public class InfluxAppenderTest extends TestCase {
 	
 		Set<PerfMonObservableDatum<?>> set = new HashSet<PerfMonObservableDatum<?>>();
  		set.add(PerfMonObservableDatum.newDatum("throughput", 25));
+ 		set.add(PerfMonObservableDatum.newDatum("instanceName", "DataCache"));
  		
  		Mockito.when(mockData.getObservations()).thenReturn(set);
 	}
@@ -115,9 +116,21 @@ public class InfluxAppenderTest extends TestCase {
 		
 		Mockito.when(mockData.getDataCategory()).thenReturn("My, \\=Category");  //Comma and space should be escaped, but not the equals sign,
 
-		assertEquals("My\\,\\ \\\\=Category,system=MySystemName,group=My\\ \\=\\\\Group throughput=25i 1",
+		assertEquals("My\\,\\ \\\\=Category,system=MySystemName,group=My\\ \\=\\\\Group throughput=25i,instanceName=\"DataCache\" 1",
 			appender.buildPostDataLine(mockData));
 	}
+	
+	public void testBuildDataLineWithDefinedTagField() {
+		appender.setSystemNameBody("MySystemName");
+		appender.setGroups("My =\\Group"); //Comma (Perfmon4j does not allow comma in group name), space AND the equals sign should be escaped
+		appender.setTagFields("instanceName");
+		
+		Mockito.when(mockData.getDataCategory()).thenReturn("My, \\=Category");  //Comma and space should be escaped, but not the equals sign,
+
+		assertEquals("My\\,\\ \\\\=Category,system=MySystemName,group=My\\ \\=\\\\Group,instanceName=DataCache throughput=25i 1",
+			appender.buildPostDataLine(mockData));
+	}
+
 
 	public void testBuildDataLine_NoData() {
 		appender.setSystemNameBody("MySystemName");
@@ -145,7 +158,6 @@ public class InfluxAppenderTest extends TestCase {
 		assertNull("There are no data elements to report so should return null", appender.buildPostDataLine(mockData));
 	}
 	
-	
 	public void testBuildDataLine_OnlyNonNumericData() {
 		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("MyGroup");
@@ -164,7 +176,7 @@ public class InfluxAppenderTest extends TestCase {
 	public void testBuildDataLineNoGroup() {
 		appender.setSystemNameBody("MySystemName");
 		
-		assertEquals("MyCategory,system=MySystemName throughput=25i 1",
+		assertEquals("MyCategory,system=MySystemName throughput=25i,instanceName=\"DataCache\" 1",
 			appender.buildPostDataLine(mockData));
 	}
 	
@@ -229,7 +241,7 @@ public class InfluxAppenderTest extends TestCase {
 		
 		Mockito.when(mockData.getDataCategory()).thenReturn("DistrictResource.dist_1234");
 
-		assertEquals("DistrictResource,system=MySystemName,group=MyGroup,subCategory=dist_1234 throughput=25i 1",
+		assertEquals("DistrictResource,system=MySystemName,group=MyGroup,subCategory=dist_1234 throughput=25i,instanceName=\"DataCache\" 1",
 			appender.buildPostDataLine(mockData));
 	}
 	
@@ -270,5 +282,4 @@ public class InfluxAppenderTest extends TestCase {
 		assertEquals("Content-Type header","text/plain; charset=utf-8", headers.get("Content-Type"));
 		assertEquals("Accept header","application/json", headers.get("Accept"));
 	}
-	
 }

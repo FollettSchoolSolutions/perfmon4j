@@ -16,7 +16,11 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
-** 2.0.0 - TBD
+** 2.0.0-BETA2 - TBD
+- Added the ability to indicate data fields that should be treated
+  as tags when using the influx appender.  Using tag fields
+  is defined here: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/Perfmon4j-Influx-Appender
+  and here: https://github.com/FollettSchoolSolutions/perfmon4j/wiki/appenderTagFields
 
 ** 2.0.0-BETA1 - 2023-07-26
 - Added support for the Quarkus platorm.  Additions
