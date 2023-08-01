@@ -199,7 +199,8 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	}
 	
 	/* package level for testing */ String buildPostDataLine(PerfMonObservableData data) {
-		StringBuilder postLine = new StringBuilder();
+		StringBuilder tags = new StringBuilder();
+		StringBuilder fields = new StringBuilder();
 		String category = data.getDataCategory();
 		String subCategory = null;
 		
@@ -209,40 +210,49 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 			subCategory = split.getSubCategory();
 		}
 		
-		postLine.append(decorateMeasurementForInflux(category))
+		tags.append(decorateMeasurementForInflux(category))
 			.append(",system=")
 			.append(decorateTagKeyTagValueFieldKeyForInflux(this.getSystemName()));
 		
 		String[] groups = getGroupsAsArray();
 		if (groups.length > 0) {
-			postLine.append(",group=")
+			tags.append(",group=")
 				.append(decorateTagKeyTagValueFieldKeyForInflux(groups[0]));
 		}
 		
 		if (subCategory != null) {
-			postLine.append(",subCategory=")
+			tags.append(",subCategory=")
 				.append(decorateTagKeyTagValueFieldKeyForInflux(subCategory));
 		}
-		
-		postLine.append(" ");
 		
 		boolean first = true;
 		int numDataElements = 0;
 		for(PerfMonObservableDatum<?> datum : ((PerfMonObservableData) data).getObservations()) {
-			if (!datum.getInputValueWasNull() && (!numericOnly || datum.isNumeric())) {
+			String fieldName = datum.getFieldName();
+			if (TagField.isTagField(category, fieldName, getTagFields())) {
+				tags.append(",")
+					.append(decorateMeasurementForInflux(fieldName))
+					.append("=")
+					.append(decorateTagKeyTagValueFieldKeyForInflux(datum.toString()));
+			} else 	if (!datum.getInputValueWasNull() && (!numericOnly || datum.isNumeric())) {
 				if (first) {
 					first = false;
 				} else {
-					postLine.append(",");
+					fields.append(",");
 				}
 				numDataElements++;
-				postLine.append(decorateTagKeyTagValueFieldKeyForInflux(datum.getDefaultDisplayName()))
+				fields.append(decorateTagKeyTagValueFieldKeyForInflux(datum.getDefaultDisplayName()))
 					.append("=")
 					.append(decorateDatumForInflux(datum));
 			}
 		}
-		postLine.append(" ");
-		postLine.append(Long.toString(data.getTimestamp() / 1000));
+		
+		StringBuilder postLine = new StringBuilder();
+		postLine.append(tags)
+			.append(" ")
+			.append(fields)
+			.append(" ")
+			.append(Long.toString(data.getTimestamp() / 1000));
 		
 		return numDataElements > 0 ? postLine.toString() : null;
 	}
