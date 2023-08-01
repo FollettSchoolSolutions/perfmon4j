@@ -106,6 +106,8 @@ public class SnapShotManager {
                 		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(clazz);
                     	result = new POJOSnapShotMonitor(monitorID.getName(), bundle.isUsePriorityTimer(), clazz.getName(), POJOSnapShotRegistry.getSingleton());
                     	logger.logDebug("Found POJO based SnapShotMonitor for class: " + clazz.getName());
+                    	// Try to initialize the class
+                		Class.forName(clazz.getName(), true, clazz.getClassLoader());
                 	} catch(GenerateSnapShotException ex) {
                 		// Try legacy monitor.
                     	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
