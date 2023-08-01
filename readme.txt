@@ -16,6 +16,8 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 2.0.0-BETA3 - TBD
+
 ** 2.0.0-BETA2 - 7/31/23
 - Added the ability to indicate data fields that should be treated
   as tags when using the influx appender.  Using tag fields
