@@ -21,17 +21,21 @@
 package org.perfmon4j;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.perfmon4j.util.MiscHelper;
 
 public abstract class SystemNameAndGroupsAppender extends Appender {
+	private static final TagField[] DEFAULT_TAG_FIELDS = new TagField[] {new TagField("instanceName")}; 
+	
 	private String systemNamePrefix = null;
 	private String systemNameBody = null;
 	private String systemNameSuffix = null;
 	private boolean excludeCWDHashFromSystemName = false;
 	private String[] groups = new String[]{};
 	private TagField[] tagFields = new TagField[] {};
+	private boolean useDefaultTagFields = true;
 	
 	public SystemNameAndGroupsAppender(AppenderID id) {
 		super(id);
@@ -109,11 +113,32 @@ public abstract class SystemNameAndGroupsAppender extends Appender {
 	}
 
 	public TagField[] getTagFields() {
-		return tagFields;
+		if (useDefaultTagFields) {
+			List<TagField> allTagFields = new ArrayList<TagField>();
+			
+			allTagFields.addAll(Arrays.asList(DEFAULT_TAG_FIELDS));
+			allTagFields.addAll(Arrays.asList(tagFields));
+			
+			return allTagFields.toArray(new TagField[]{});
+		} else {
+			return tagFields;
+		}
 	}
 
 	public void setTagFields(String tagFields) {
 		this.tagFields = TagField.parseTagFields(tagFields);
+	}
+	
+	public boolean isUseDefaultTagFields() {
+		return useDefaultTagFields;
+	}
+
+	public void setUseDefaultTagFields(String useDefaultTagFields) {
+		setUseDefaultTagFields(Boolean.parseBoolean(useDefaultTagFields));
+	}
+	
+	public void setUseDefaultTagFields(boolean useDefaultTagFields) {
+		this.useDefaultTagFields = useDefaultTagFields;
 	}
 
 	/**

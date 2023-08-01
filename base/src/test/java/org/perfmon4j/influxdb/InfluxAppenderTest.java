@@ -113,10 +113,24 @@ public class InfluxAppenderTest extends TestCase {
 	public void testBuildDataLine() {
 		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("My =\\Group"); //Comma (Perfmon4j does not allow comma in group name), space AND the equals sign should be escaped
+		appender.setUseDefaultTagFields("false");
 		
 		Mockito.when(mockData.getDataCategory()).thenReturn("My, \\=Category");  //Comma and space should be escaped, but not the equals sign,
 
 		assertEquals("My\\,\\ \\\\=Category,system=MySystemName,group=My\\ \\=\\\\Group throughput=25i,instanceName=\"DataCache\" 1",
+			appender.buildPostDataLine(mockData));
+	}
+
+	/**
+	 * By default instanceName will be considered a tag (unless you set useDefaultTagFields=false
+	 */
+	public void testBuildDataLineWithDefaultTagFieldName() {
+		appender.setSystemNameBody("MySystemName");
+		appender.setGroups("My =\\Group"); //Comma (Perfmon4j does not allow comma in group name), space AND the equals sign should be escaped
+		
+		Mockito.when(mockData.getDataCategory()).thenReturn("My, \\=Category");  //Comma and space should be escaped, but not the equals sign,
+
+		assertEquals("My\\,\\ \\\\=Category,system=MySystemName,group=My\\ \\=\\\\Group,instanceName=DataCache throughput=25i 1",
 			appender.buildPostDataLine(mockData));
 	}
 	
@@ -124,6 +138,7 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("My =\\Group"); //Comma (Perfmon4j does not allow comma in group name), space AND the equals sign should be escaped
 		appender.setTagFields("instanceName");
+		appender.setUseDefaultTagFields(false);
 		
 		Mockito.when(mockData.getDataCategory()).thenReturn("My, \\=Category");  //Comma and space should be escaped, but not the equals sign,
 
@@ -175,6 +190,7 @@ public class InfluxAppenderTest extends TestCase {
 	
 	public void testBuildDataLineNoGroup() {
 		appender.setSystemNameBody("MySystemName");
+		appender.setUseDefaultTagFields(false);
 		
 		assertEquals("MyCategory,system=MySystemName throughput=25i,instanceName=\"DataCache\" 1",
 			appender.buildPostDataLine(mockData));
@@ -238,6 +254,7 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("MyGroup");
 		appender.setSubCategorySplitter(new SubCategorySplitter("DistrictResource\\.(.*)"));
+		appender.setUseDefaultTagFields(false);
 		
 		Mockito.when(mockData.getDataCategory()).thenReturn("DistrictResource.dist_1234");
 
