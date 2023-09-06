@@ -34,6 +34,7 @@ import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
 public class PerfMonTimer {
+	final static String ATTACH_TO_EXISTING_REACTIVE_CONTEXT = "{<|ATTACH_TO_EXISTING_REACTIVE_CONTEXT|>}";
 	private final static AtomicLong nextReactiveContextID = new AtomicLong(0);
 	
     // Dont use log4j here... The class may not have been loaded
@@ -59,8 +60,12 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer startReactive(PerfMon mon) {
-    	return start(mon, getNextReactiveID());
+    	return start(mon, ATTACH_TO_EXISTING_REACTIVE_CONTEXT);
     }
+    
+	public static PerfMonTimer startReactive(PerfMon mon, boolean attachToExistingReactiveContext) {
+    	return start(mon, attachToExistingReactiveContext ? ATTACH_TO_EXISTING_REACTIVE_CONTEXT : getNextReactiveID());
+	}
     
     public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
         if (!PerfMon.isConfigured() && !ExternalAppender.isActive()) {
@@ -138,7 +143,7 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer startReactive(String key) {
-    	return start(key, false, getNextReactiveID());
+    	return start(key, false, ATTACH_TO_EXISTING_REACTIVE_CONTEXT);
     }
     
     /**
@@ -157,9 +162,12 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer startReactive(String key, boolean isDynamicKey) {
-    	return start(key, isDynamicKey, getNextReactiveID());
+    	return start(key, isDynamicKey, ATTACH_TO_EXISTING_REACTIVE_CONTEXT);
     }
     
+    public static PerfMonTimer startReactive(String key, boolean isDynamicKey, boolean attachToExistingReactiveContext) {
+    	return start(key, isDynamicKey, attachToExistingReactiveContext ? ATTACH_TO_EXISTING_REACTIVE_CONTEXT :  getNextReactiveID());
+    }
     
     /**
      * Pass in true if this is a dynamically generated key (i.e. not a method

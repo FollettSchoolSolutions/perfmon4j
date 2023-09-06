@@ -279,12 +279,11 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				String monitorName = monitorRootName + ".1";
 				api.org.perfmon4j.agent.PerfMon apiPerfMon = api.org.perfmon4j.agent.PerfMon.getMonitor(monitorName);
 				
-				api.org.perfmon4j.agent.PerfMonTimer timer1 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
-				api.org.perfmon4j.agent.PerfMonTimer timer2 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
-				api.org.perfmon4j.agent.PerfMonTimer timer3 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon);
+				api.org.perfmon4j.agent.PerfMonTimer timer1 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon, false);
+				api.org.perfmon4j.agent.PerfMonTimer timer2 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon, false);
+				api.org.perfmon4j.agent.PerfMonTimer timer3 = api.org.perfmon4j.agent.PerfMonTimer.startReactive(apiPerfMon, false);
 
 				validateTimersAreReactive(apiPerfMon, timer1, timer2, timer3);
-				
 				
 				// Try perfMonTimer.startReactive(String) overload
 				monitorName = monitorRootName + ".2";
@@ -306,6 +305,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void testAttachedPerfMonTimerAPIStartReactive() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(AgentAPIPerfMonTimerStartReactiveTest.class, perfmon4jJar));
+System.out.println(output);    	
     	TestHelper.validateNoFailuresInOutput(output);
     }    
     

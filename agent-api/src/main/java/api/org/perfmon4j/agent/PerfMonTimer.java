@@ -38,7 +38,33 @@ public class PerfMonTimer {
 		return noOpTimer;
 	}
 
+	/**
+	 * By default, if there is a current reactive context,
+	 * this timer will be attached to that context. If there
+	 * is no existing context a new reactive context will be
+	 * created. 
+	 * 
+	 * If there is more than one active context, associated with 
+	 * the thread it will attach to the most recently created context.
+	 * 
+	 * @param mon
+	 * @return
+	 */
 	public static PerfMonTimer startReactive(PerfMon mon) {
+		return noOpTimer;
+	}
+	
+	/**
+	 * 
+	 * @param mon
+	 * @param attachToExistingReactiveContext - If this value is false, a new
+     * reactive context will be created, even if a context is already associated
+     * with this thread.  If true, we will attach to an active context if one (or more)
+     * exist.  If not reactive context are found on the current thread, a new reactive
+     * context will be created.
+	 * @return
+	 */
+	public static PerfMonTimer startReactive(PerfMon mon, boolean attachToExistingReactiveContext) {
 		return noOpTimer;
 	}
 	
@@ -61,7 +87,19 @@ public class PerfMonTimer {
     	return start(key, false);
     }
 
-	public static PerfMonTimer startReactive(String key) {
+	/**
+	 * If there is an active reactive context associated with this thread,
+	 * this timer will be attached to that context. If there
+	 * is no existing context a new reactive context will be
+	 * created. 
+	 * 
+	 * If there is more than one active context, associated with 
+	 * the thread it will attach to the most recently created context.
+
+	 * @param key
+	 * @return
+	 */
+    public static PerfMonTimer startReactive(String key) {
 		return startReactive(key, false);
 	}
     
@@ -84,6 +122,14 @@ public class PerfMonTimer {
      * Use the startReactive method when you are starting a timer in a reactive model,
      * where the timer might be started and stopped across different threads.
      * 
+     * If there is an active reactive context associated with this thread,
+	 * this timer will be attached to that context. If there
+	 * is no existing context a new reactive context will be
+	 * created. 
+	 * 
+	 * If there is more than one active context, associated with 
+	 * the thread it will attach to the most recently created context.
+	 * 
      * @param key
      * @param isDynamicKey
      * @return
@@ -108,7 +154,25 @@ public class PerfMonTimer {
     public static PerfMonTimer start(String key, boolean isDynamicKey, String reactiveContextID) {
     	return noOpTimer;
     }
-
+    
+    /**
+     * Use the startReactive method when you are starting a timer in a reactive model,
+     * where the timer might be started and stopped across different threads.
+     * 
+     * @param key
+     * @param isDynamicKey
+     * @param attachToExistingReactiveContext - If this value is false, a new
+     * reactive context will be created, even if a context is already associated
+     * with this thread.  If true, we will attach to an active context if one (or more)
+     * exist.  If not reactive context are found on the current thread, a new reactive
+     * context will be created.
+     * 
+     * @return
+     */
+    public static PerfMonTimer startReactive(String key, boolean isDynamicKey, boolean attachToExistingReactiveContext) {
+    	return noOpTimer;
+    }
+    
     public static void abort(PerfMonTimer timer) {
     }
 
