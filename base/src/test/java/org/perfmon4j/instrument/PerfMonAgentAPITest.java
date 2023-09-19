@@ -20,6 +20,7 @@ package org.perfmon4j.instrument;
 import java.io.File;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -269,6 +270,11 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				PerfMon.configure(config);
 				
 				
+				
+				
+				
+				
+				
 				/* Test start with passing in an agent and abort */
 				// When starting in reactive mode, a single thread must be able to 
 				// start the same monitor multiple times.
@@ -305,7 +311,96 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     public void testAttachedPerfMonTimerAPIStartReactive() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(AgentAPIPerfMonTimerStartReactiveTest.class, perfmon4jJar));
-System.out.println(output);    	
+//System.out.println(output);    	
+    	TestHelper.validateNoFailuresInOutput(output);
+    }    
+    
+    private static class NestedTimerRunable implements Runnable {
+    	private final String reactiveContextID;
+    	private final CountDownLatch callersLatch;
+    	private final String operationTimerKey;
+    	private final int nestedDepth;
+    	
+    	NestedTimerRunable(String reactiveContextID, CountDownLatch callersLatch, String operationTimerKey, int nestedDepth) {
+    		this.reactiveContextID = reactiveContextID;
+    		this.callersLatch = callersLatch;
+    		this.operationTimerKey = operationTimerKey;
+    		this.nestedDepth = nestedDepth;
+    	}
+
+		@Override
+		public void run() {
+			api.org.perfmon4j.agent.PerfMon.moveReactiveContextToCurrentThread(reactiveContextID);
+			api.org.perfmon4j.agent.PerfMonTimer operationTimer = api.org.perfmon4j.agent.PerfMonTimer.startReactive(operationTimerKey, false, true);
+			try {
+				if (nestedDepth > 1) {
+					CountDownLatch latch = new CountDownLatch(1);
+					(new Thread(new NestedTimerRunable(reactiveContextID, latch, operationTimerKey, nestedDepth-1))).start();
+					try {
+						latch.await();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					api.org.perfmon4j.agent.PerfMon.moveReactiveContextToCurrentThread(reactiveContextID);
+				}
+			} finally {
+				api.org.perfmon4j.agent.PerfMonTimer.stop(operationTimer);
+				api.org.perfmon4j.agent.PerfMon.dissociateReactiveContextFromCurrentThread(reactiveContextID);
+				callersLatch.countDown();
+			}
+		}
+    }
+    
+	public static class TestStartReactiveWithMasterReactiveContext implements Runnable {
+		public void run() {
+			try {
+				final String monitorWebRequest = "WebRequest";
+				final String monitorOperation = "Operation";
+				final String appenderName = "bogus";
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				
+				config.defineMonitor(monitorWebRequest);
+				config.defineMonitor(monitorOperation);
+				
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "1 second");
+				config.attachAppenderToMonitor(monitorWebRequest, appenderName, ".");
+				config.attachAppenderToMonitor(monitorOperation, appenderName, ".");
+				
+				PerfMon.configure(config);
+				
+				final String webReactiveContext = "CTX_1";
+
+				// Simulate an HttpRequest monitor that starts a reactive context
+				api.org.perfmon4j.agent.PerfMonTimer requestTimer = api.org.perfmon4j.agent.PerfMonTimer.start(monitorWebRequest, false, webReactiveContext); 
+				try {
+					CountDownLatch latch = new CountDownLatch(1);
+
+					NestedTimerRunable runner = new NestedTimerRunable(webReactiveContext, latch, monitorOperation, 5);
+					(new Thread(runner)).start();
+					
+					latch.await();
+				} finally {
+					api.org.perfmon4j.agent.PerfMonTimer.stop(requestTimer);
+				}
+				
+				PerfMon webRequestMonitor = PerfMon.getMonitor(monitorWebRequest);
+				PerfMon operationMonitor = PerfMon.getMonitor(monitorOperation);
+				
+				assertEquals("Should have 1 webRequest completion", 1, webRequestMonitor.getTotalCompletions());
+				assertEquals("Should have 1 operation completion", 1, operationMonitor.getTotalCompletions());
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+			
+		}
+	}
+
+    public void testStartReactiveWithMasterReactiveContext() throws Exception {
+    	/** !!!! TODO:  Test more modes:  1) Don't start parent context 2) Specify attachToParent==false on startReactiveCalls **/ 
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(TestStartReactiveWithMasterReactiveContext.class, perfmon4jJar));
+//System.out.println(output);    	
     	TestHelper.validateNoFailuresInOutput(output);
     }    
     
