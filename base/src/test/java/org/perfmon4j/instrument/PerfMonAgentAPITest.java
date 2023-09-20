@@ -36,10 +36,10 @@ import org.perfmon4j.TestHelper;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
-import org.perfmon4j.instrument.PerfMonAgentAPITest.TestStartReactiveBase.Mode;
 import org.perfmon4j.instrument.PerfMonTimerTransformerTest.SQLStatementTester.BogusAppender;
 import org.perfmon4j.util.MiscHelper;
 
+import api.org.perfmon4j.agent.PerfMonTimer;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -316,46 +316,6 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
     	TestHelper.validateNoFailuresInOutput(output);
     }    
     
-    private static class NestedTimerRunable implements Runnable {
-    	private final String reactiveContextID;
-    	private final CountDownLatch callersLatch;
-    	private final String operationTimerKey;
-    	private final int nestedDepth;
-    	private final Mode mode;
-    	
-    	NestedTimerRunable(String reactiveContextID, CountDownLatch callersLatch, String operationTimerKey, int nestedDepth, Mode mode) {
-    		this.reactiveContextID = reactiveContextID;
-    		this.callersLatch = callersLatch;
-    		this.operationTimerKey = operationTimerKey;
-    		this.nestedDepth = nestedDepth;
-    		this.mode = mode;
-    	}
-
-		@Override
-		public void run() {
-			api.org.perfmon4j.agent.PerfMon.moveReactiveContextToCurrentThread(reactiveContextID);
-			
-			final boolean attachToExplicitReactiveContext = !mode.equals(Mode.EXPLICIT_OUTER_NO_ATTACH_INNER); 
-			api.org.perfmon4j.agent.PerfMonTimer operationTimer = api.org.perfmon4j.agent.PerfMonTimer.startReactive(operationTimerKey, false, 
-					attachToExplicitReactiveContext);
-			try {
-				if (nestedDepth > 1) {
-					CountDownLatch latch = new CountDownLatch(1);
-					(new Thread(new NestedTimerRunable(reactiveContextID, latch, operationTimerKey, nestedDepth-1, mode))).start();
-					try {
-						latch.await();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-					api.org.perfmon4j.agent.PerfMon.moveReactiveContextToCurrentThread(reactiveContextID);
-				}
-			} finally {
-				api.org.perfmon4j.agent.PerfMonTimer.stop(operationTimer);
-				api.org.perfmon4j.agent.PerfMon.dissociateReactiveContextFromCurrentThread(reactiveContextID);
-				callersLatch.countDown();
-			}
-		}
-    }
 	public static class TestStartReactiveBase implements Runnable {
 		public static enum Mode {
 			EXPLICIT_OUTER_WITH_ATTACH_INNER,
@@ -368,6 +328,7 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 		public TestStartReactiveBase(Mode mode) {
 			this.mode = mode;
 		}
+		
 		public void run() {
 			try {
 				final String monitorWebRequest = "WebRequest";
@@ -393,18 +354,15 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				if (!mode.equals(Mode.NO_OUTER_REACTIVE_WITH_ATTACH_INNER)) {
 					// Start an implicit reactive context
 					requestTimer = api.org.perfmon4j.agent.PerfMonTimer.start(monitorWebRequest, false, webReactiveContext);
+					System.out.println("!!! - Simulating Quarkus and starting an explicit reactive context around the entire request - !!!");
 				} else {
 					// No implicit reactive context
 					requestTimer = api.org.perfmon4j.agent.PerfMonTimer.start(monitorWebRequest, false);
+					System.out.println("!!! - No implicit reactive context is being created - !!!");
 				}
 				
 				try {
-					CountDownLatch latch = new CountDownLatch(1);
-
-					NestedTimerRunable runner = new NestedTimerRunable(webReactiveContext, latch, monitorOperation, 5, mode);
-					(new Thread(runner)).start();
-					
-					latch.await();
+					runNestedOperations(monitorOperation, 5);
 				} finally {
 					api.org.perfmon4j.agent.PerfMonTimer.stop(requestTimer);
 				}
@@ -416,17 +374,55 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 				
 				if (mode.equals(Mode.EXPLICIT_OUTER_WITH_ATTACH_INNER)) {
 					// Everything should roll up under the explicit context.
+					System.out.println("!!! By default we roll up if there is an explicit reactive context. We expect all of the operations within that context to rollup, "
+							+ "just like they would in a traditional stack based java application.");
+					System.out.println("!!! Expecting only 1 invocation of the operation.");
 					assertEquals("Should have 1 operation completion", 1, operationMonitor.getTotalCompletions());
 				} else {
 					// Each should run in its own, or the default stack based, context
+					if (mode.equals(Mode.EXPLICIT_OUTER_NO_ATTACH_INNER)) {
+						System.out.println("!!! Since we did not request startReactive to attach to explicit context, we do not expect a rollup.");
+					} else {
+						System.out.println("!!! Since we did not start an explicit context startReactive would not rollup.");
+					}
+					System.out.println("!!! Expecting 5 individual invocations of the operation.");
 					assertEquals("Should have 5 operation completion", 5, operationMonitor.getTotalCompletions());
 				}
 			} catch (Throwable ex) {
 				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
 				ex.printStackTrace();
 			}
-			
 		}
+		
+	    private void stopTimerInSeparateThread(PerfMonTimer timer) {
+	    	final CountDownLatch latch = new CountDownLatch(1);
+	    	
+	    	(new Thread(() -> {
+	    		PerfMonTimer.stop(timer);
+	    		latch.countDown();
+	    	})).start();
+	    	
+	    	try {
+				latch.await();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+	    }
+
+		private void runNestedOperations(String operationTimerKey, int nestedDepth) {
+			final boolean attachToExplicitReactiveContext = !mode.equals(Mode.EXPLICIT_OUTER_NO_ATTACH_INNER);
+			
+			PerfMonTimer operationTimer = PerfMonTimer.startReactive(operationTimerKey, false, 
+					attachToExplicitReactiveContext);
+			try {
+				if (nestedDepth > 1) {
+					runNestedOperations(operationTimerKey, nestedDepth-1);
+				}
+			} finally {
+				stopTimerInSeparateThread(operationTimer);
+			}
+		}
+
 	}
 	
 	private static class TestStartReactiveWithExplicitReactiveContext extends TestStartReactiveBase {
@@ -449,10 +445,9 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 	}
     
     public void testStartReactiveWithExplicitReactiveContextNoAttachInner() throws Exception {
-    	/** !!!! TODO:  Test more modes:  1) Don't start parent context 2) Specify attachToParent==false on startReactiveCalls **/ 
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(TestStartReactiveWithExplicitReactiveContextNoAttachInner.class, perfmon4jJar));
-System.out.println(output);    	
+//System.out.println(output);    	
     	TestHelper.validateNoFailuresInOutput(output);
     }    
 
@@ -472,7 +467,7 @@ System.out.println(output);
     public void testStartReactiveWithNoExplicitContextAndAttachInner() throws Exception {
     	String output = LaunchRunnableInVM.run(
         		new LaunchRunnableInVM.Params(TestStartReactiveWithNoExplicitContextAndAttachInner.class, perfmon4jJar));
-System.out.println(output);    	
+//System.out.println(output);    	
     	TestHelper.validateNoFailuresInOutput(output);
     }    
     
