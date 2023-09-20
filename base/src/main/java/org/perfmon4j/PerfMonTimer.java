@@ -35,6 +35,7 @@ import org.perfmon4j.util.MiscHelper;
 
 public class PerfMonTimer {
 	private final static AtomicLong nextReactiveContextID = new AtomicLong(0);
+    public static final String IMPLICIT_REACTIVE_CONTEXT_PREFIX = "$ImplicitCTX:"; 
 	
     // Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(PerfMonTimer.class);
@@ -436,19 +437,14 @@ public class PerfMonTimer {
     	last.get().setFullName(key);
     }
     
-    static private final String REACTIVE_CONTEXT_PREFIX = "TimerCTX:"; 
-    
     static private String getNextReactiveID(boolean attachToExistingReactiveContext) {
     	if (attachToExistingReactiveContext) {
-    		ReactiveContext[] contexts = ReactiveContextManager.getContextManagerForThread().getActiveContexts();
-    		for (ReactiveContext context : contexts) {
-    			String contextID = context.getContextID();
-    			if (!contextID.startsWith(REACTIVE_CONTEXT_PREFIX)) {
-System.err.println("!!!Attaching to context: " + contextID);
-    				return contextID;
-    			}
+    		String explicitReactiveContextID = ReactiveContextManager.getContextManagerForThread().getExplicitReactiveContextID();
+    		if (explicitReactiveContextID != null) {
+				logger.logDebug("Attaching timer to outer explicitReactiveContext: " + explicitReactiveContextID);
+				return explicitReactiveContextID;
     		}
     	} 
-    	return REACTIVE_CONTEXT_PREFIX + nextReactiveContextID.incrementAndGet();
+    	return IMPLICIT_REACTIVE_CONTEXT_PREFIX + nextReactiveContextID.incrementAndGet();
     }
 }
