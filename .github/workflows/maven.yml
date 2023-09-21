@@ -37,6 +37,15 @@ jobs:
           || contains(github.event.head_commit.message, '#force deploy#')
           ))
           }}
+      DO_TESTS: | 
+          ${{
+          (
+          !contains(github.event.head_commit.message, '[skip test]') &&
+          !contains(github.event.head_commit.message, '#skip test#') &&
+          !contains(github.event.head_commit.message, '[skip tests]') &&
+          !contains(github.event.head_commit.message, '#skip tests#') 
+          )
+          }}
 
     steps:
       - name: Checking out the code
@@ -56,6 +65,7 @@ jobs:
         run: mvn -B compile --file pom.xml
 
       - name: Run Maven Test
+        if: ${{ fromJSON(env.DO_TESTS) }}
         run: mvn -B test --file pom.xml
 
       - name: Assemble release artifacts
