@@ -17,6 +17,12 @@ Follett School Solutions, LLC
 McHenry, IL 60050
 
 ** 2.0.0-BETA3 - TBD
+- PerfMonTimer.startReactive() will now attach to an existing explicit reactive context,
+   when one is available.  An explicit reactive context is created by passing a reactiveContextID
+   to PerfMonTimer.start().  
+   This feature is primarily useful when using PerfMon4j's Quarkus Library.  This ensures that
+   each incoming web request is associated with an explicit reactive context, that follows 
+   the request process across multiple threads.
 
 ** 2.0.0-BETA2 - 7/31/23
 - Added the ability to indicate data fields that should be treated
