@@ -14,8 +14,8 @@ import java.util.Map;
 
 public class HttpHelper {
 	private String userAgent = "PerfMon4j";
-	private int connectTimeoutMillis = 2500;
-	private int readTimeoutMillis = 2500;
+	private int connectTimeoutMillis = Integer.getInteger(HttpHelper.class.getName() + ".defaultConnectTimeoutMillis",  5000).intValue();
+	private int readTimeoutMillis = Integer.getInteger(HttpHelper.class.getName() + ".defaultReadTimeoutMillis",  5000).intValue();
 	private static final String UTF_8_CHARSET = StandardCharsets.UTF_8.toString(); 
 	
 	public String getUserAgent() {

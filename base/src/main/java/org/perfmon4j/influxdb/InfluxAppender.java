@@ -71,8 +71,10 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	
 	private int batchSeconds = 5; // How long to delay before sending a batch of measurements out.
 	private int maxMeasurementsPerBatch = 1000;  // Max number of measurements to send per post.
-	private final HttpHelper helper = new HttpHelper();
+	private final HttpHelper helper;
 	private final AtomicInteger batchWritersPending = new AtomicInteger(0);
+	private boolean resubmitMeasurementsOnFailedPost = true;
+	private int maxRetrysPerMeasurement = 5;
 	
 	private static String ESCAPED_DOUBLE_QUOTE = "\\\\\"";
 	private static final Pattern DOUBLE_QUOTE_PATTERN = Pattern.compile("\"");
@@ -86,7 +88,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	private static final Pattern EQUALS_PATTERN = Pattern.compile("\\=");
 	
 	private final Object writeQueueLockTokan = new Object();
-	private final List<String> writeQueue = new ArrayList<String>();
+	private final List<DataLine> writeQueue = new ArrayList<DataLine>();
 	
 	private static final Object dedicatedTimerThreadLockTocken = new Object();
 	private static Timer dedicatedTimerThread = null;
@@ -98,8 +100,13 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	private final int maxWriteQueueSize = Integer.getInteger(InfluxAppender.class.getName() + ".maxQueueWriteSize" ,1000000).intValue();
 	
 	public InfluxAppender(AppenderID id) {
+		this(id, new HttpHelper());
+	}
+
+	/* package level for testing */ InfluxAppender(AppenderID id, HttpHelper helper) {
 		super(id, false);
 		this.setExcludeCWDHashFromSystemName(true);
+		this.helper = helper;
 	}
 	
 	/* package level for testing */ 
@@ -257,12 +264,17 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		return numDataElements > 0 ? postLine.toString() : null;
 	}
 	
-	private void appendDataLine(String line) {
+	private void appendDataLines(DataLine... lines) {
 		synchronized (writeQueueLockTokan) {
-			if (writeQueue.size() < maxWriteQueueSize) {
-				writeQueue.add(line);
-			} else {
-				logger.logWarn("InfluxAppender execeeded maxWriteQueueSize.  Measurement is being dropped");
+			for (DataLine line : lines) {
+				if (writeQueue.size() < maxWriteQueueSize) {
+					if (line.getRetryCount() <= maxRetrysPerMeasurement) {
+						writeQueue.add(line);
+					}
+				} else {
+					logger.logWarn("InfluxAppender execeeded maxWriteQueueSize.  Measurement(s) are being dropped");
+					break;
+				}
 			}
 		}
 		if (batchWritersPending.intValue() <= 0) {
@@ -275,11 +287,11 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		}
 	}
 	
-	private Deque<String> getBatch() {
-		Deque<String> result = null;
+	private Deque<DataLine> getBatch() {
+		Deque<DataLine> result = null;
 		synchronized (writeQueueLockTokan) {
 			if (!writeQueue.isEmpty()) {
-				result = new LinkedList<String>();
+				result = new LinkedList<DataLine>();
 				result.addAll(writeQueue);
 				writeQueue.clear();
 			}
@@ -290,9 +302,9 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	@Override
 	public void outputData(PerfMonData data) {
 		if (data instanceof PerfMonObservableData) {
-			String dataLine = buildPostDataLine((PerfMonObservableData)data);
-			if (dataLine != null) {
-				appendDataLine(dataLine);
+			String line = buildPostDataLine((PerfMonObservableData)data);
+			if (line != null) {
+				appendDataLines(new DataLine(line));
 			} else {
 				String numeric = numericOnly ? "numeric " : "";
 				logger.logWarn("No " + numeric + "observable data elements found.  Skipping output of data: " + 
@@ -428,6 +440,22 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		return helper.getReadTimeoutMillis();
 	}
 
+	public boolean isResubmitMeasurementsOnFailedPost() {
+		return resubmitMeasurementsOnFailedPost;
+	}
+
+	public void setResubmitMeasurementsOnFailedPost(boolean resubmitMeasurementsOnFailedPost) {
+		this.resubmitMeasurementsOnFailedPost = resubmitMeasurementsOnFailedPost;
+	}
+	
+	public int getMaxRetrysPerMeasurement() {
+		return maxRetrysPerMeasurement;
+	}
+
+	public void setMaxRetrysPerMeasurement(int maxRetrysPerMeasurement) {
+		this.maxRetrysPerMeasurement = maxRetrysPerMeasurement;
+	}
+
 	private class BatchWriter extends TimerTask {
 		BatchWriter() {
 			batchWritersPending.incrementAndGet();
@@ -436,19 +464,30 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		@Override
 		public void run() {
 			batchWritersPending.decrementAndGet();
+			List<DataLine> resubmitMeasurementsOnFail = null; 
+			Deque<DataLine> batch = getBatch();
 			
-			Deque<String> batch = getBatch();
 			while (batch != null && !batch.isEmpty()) {
+				if (isResubmitMeasurementsOnFailedPost()) {
+					// Store off the batch, if the post fails we will
+					// resubmit the measurements for inclusion in 
+					// the next batch.
+					resubmitMeasurementsOnFail = new ArrayList<DataLine>();
+				}
+				
 				int batchSize = 0;
 				StringBuilder postBody = null;
 				for (;batchSize < maxMeasurementsPerBatch && !batch.isEmpty(); batchSize++) {
-					String line = batch.remove();
+					DataLine dataLine = batch.remove();
+					if (resubmitMeasurementsOnFail != null) {
+						resubmitMeasurementsOnFail.add(dataLine.incRetryCount());
+					} 
 					if (postBody == null) {
 						postBody = new StringBuilder();
 					} else {
 						postBody.append("\n");
 					}
-					postBody.append(line);
+					postBody.append(dataLine.getLine());
 				}
 				HttpHelper helper = getHelper();
 				PostUrlAndHeaders postURL = buildPostURL();
@@ -463,12 +502,15 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 						logger.logDebug("Measurements written to influxDb: " + debugOutput);
 					}
 				} catch (IOException e) {
-					String message = "Exception writing to InfluxDb: " + debugOutput;
+					String message = "Exception writing to InfluxDb"+ (resubmitMeasurementsOnFail != null ? " (Measurements will be retried on next post)" : "") + ": " + debugOutput;
 					if (logger.isDebugEnabled()) {
 						logger.logWarn(message, e);
 					} else {
 						message += " Exception(" + e.getClass().getName() + "): " + e.getMessage();
 						logger.logWarn(message);
+					}
+					if (resubmitMeasurementsOnFail != null) {
+						appendDataLines(resubmitMeasurementsOnFail.toArray(new DataLine[]{}));
 					}
 				}
 			}
@@ -505,4 +547,36 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 			}
 		}
 	}
+	
+	
+	private final class DataLine {
+		private final String line;
+		private int retryCount = 0;
+		
+		DataLine(String line) {
+			this.line = line;
+		}
+		
+		DataLine incRetryCount() {
+			retryCount++;
+			return this;
+		}
+
+		public String getLine() {
+			return line;
+		}
+		
+		public int getRetryCount() {
+			return retryCount;
+		}
+
+		@Override
+		public String toString() {
+			return line;
+		}
+		
+		
+		
+	}
+	
 }
