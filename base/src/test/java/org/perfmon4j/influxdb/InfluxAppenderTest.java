@@ -50,6 +50,7 @@ public class InfluxAppenderTest extends TestCase {
 		mockHttpHelper = new MockHttpHelper();
 		appender = new InfluxAppender(AppenderID.getAppenderID(InfluxAppender.class.getName()), mockHttpHelper);
 		appender.setUnitTestMode(true);
+		appender.setSystemNameBody("test-run");
 		
 		mockData = Mockito.mock(PerfMonObservableData.class);
 		Mockito.when(mockData.getDataCategory()).thenReturn("MyCategory");  //Comma, space should be escaped, but not the equals sign,
@@ -313,9 +314,9 @@ public class InfluxAppenderTest extends TestCase {
 		appender.setToken("ABCDE");
 		appender.setMaxRetrysPerMeasurement(1);
 		
-		final String firstExpectedMeasurement = "MyCategory,system=pop-os,instanceName=DataCache throughput=25i 1";
-		final String secondExpectedMeasurement = "MySecondCategory,system=pop-os,instanceName=DataCache throughput=25i 1";
-		final String thirdExpectedMeasurement = "MyThirdCategory,system=pop-os,instanceName=DataCache throughput=25i 1";
+		final String firstExpectedMeasurement = "MyCategory,system=test-run,instanceName=DataCache throughput=25i 1";
+		final String secondExpectedMeasurement = "MySecondCategory,system=test-run,instanceName=DataCache throughput=25i 1";
+		final String thirdExpectedMeasurement = "MyThirdCategory,system=test-run,instanceName=DataCache throughput=25i 1";
 		
 		appender.outputData(mockData);
 		mockHttpHelper.setExceptionToThrow(new IOException());
@@ -358,8 +359,8 @@ public class InfluxAppenderTest extends TestCase {
 		
 		appender.setResubmitMeasurementsOnFailedPost(false);
 	
-		final String firstExpectedMeasurement = "MyCategory,system=pop-os,instanceName=DataCache throughput=25i 1";
-		final String secondExpectedMeasurement = "MySecondCategory,system=pop-os,instanceName=DataCache throughput=25i 1";
+		final String firstExpectedMeasurement = "MyCategory,system=test-run,instanceName=DataCache throughput=25i 1";
+		final String secondExpectedMeasurement = "MySecondCategory,system=test-run,instanceName=DataCache throughput=25i 1";
 		
 		appender.outputData(mockData);
 		mockHttpHelper.setExceptionToThrow(new IOException());
