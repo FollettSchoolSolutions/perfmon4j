@@ -23,6 +23,8 @@ McHenry, IL 60050
    This feature is primarily useful when using PerfMon4j's Quarkus Library.  This ensures that
    each incoming web request is associated with an explicit reactive context, that follows 
    the request process across multiple threads.
+- Added retry logic to the influx appender to reduce data loss due
+  to temporary network connectivity issues with the InfluxDb.
 
 ** 2.0.0-BETA2 - 7/31/23
 - Added the ability to indicate data fields that should be treated

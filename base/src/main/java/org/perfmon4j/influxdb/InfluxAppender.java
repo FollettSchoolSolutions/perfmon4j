@@ -92,6 +92,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 	
 	private static final Object dedicatedTimerThreadLockTocken = new Object();
 	private static Timer dedicatedTimerThread = null;
+	private boolean unitTestMode = false;
 	
 	private final String precision = "s";
 
@@ -277,7 +278,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 				}
 			}
 		}
-		if (batchWritersPending.intValue() <= 0) {
+		if (!unitTestMode && (batchWritersPending.intValue() <= 0)) {
 			synchronized (dedicatedTimerThreadLockTocken) {
 				if (dedicatedTimerThread == null) {
 					dedicatedTimerThread = new Timer("PerfMon4J.InfluxAppenderHttpWriteThread", true);
@@ -285,6 +286,11 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 			}
 			dedicatedTimerThread.schedule(new BatchWriter(), getBatchSeconds() * 1000);
 		}
+	}
+	
+	
+	void directRunBatchWriterForTest() {
+		new BatchWriter().run();
 	}
 	
 	private Deque<DataLine> getBatch() {
@@ -454,6 +460,14 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 
 	public void setMaxRetrysPerMeasurement(int maxRetrysPerMeasurement) {
 		this.maxRetrysPerMeasurement = maxRetrysPerMeasurement;
+	}
+	
+	boolean isUnitTestMode() {
+		return unitTestMode;
+	}
+
+	void setUnitTestMode(boolean unitTestMode) {
+		this.unitTestMode = unitTestMode;
 	}
 
 	private class BatchWriter extends TimerTask {

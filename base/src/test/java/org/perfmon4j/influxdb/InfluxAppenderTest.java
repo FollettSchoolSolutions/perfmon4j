@@ -24,9 +24,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.mockito.Mockito;
 import org.perfmon4j.Appender.AppenderID;
@@ -52,6 +49,7 @@ public class InfluxAppenderTest extends TestCase {
 		super.setUp();
 		mockHttpHelper = new MockHttpHelper();
 		appender = new InfluxAppender(AppenderID.getAppenderID(InfluxAppender.class.getName()), mockHttpHelper);
+		appender.setUnitTestMode(true);
 		
 		mockData = Mockito.mock(PerfMonObservableData.class);
 		Mockito.when(mockData.getDataCategory()).thenReturn("MyCategory");  //Comma, space should be escaped, but not the equals sign,
@@ -320,22 +318,31 @@ public class InfluxAppenderTest extends TestCase {
 		final String thirdExpectedMeasurement = "MyThirdCategory,system=pop-os,instanceName=DataCache throughput=25i 1";
 		
 		appender.outputData(mockData);
-		String post = mockHttpHelper.waitForNextPost(6000, new IOException());
+		mockHttpHelper.setExceptionToThrow(new IOException());
+		appender.directRunBatchWriterForTest();
+		
+		
+		String post = mockHttpHelper.getLastPostBody();
+//System.out.println(post);
 		
 		assertTrue("Should have tried posting firstExpectedMeasurement=" + firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
 		
 		Mockito.when(mockData.getDataCategory()).thenReturn("MySecondCategory");
 		appender.outputData(mockData);
+		mockHttpHelper.setExceptionToThrow(new IOException());
+		appender.directRunBatchWriterForTest();
 		
-		post = mockHttpHelper.waitForNextPost(6000, new IOException());
+		post = mockHttpHelper.getLastPostBody();
 //System.out.println(post);
 		assertTrue("Should have tried posted secondExpectedMeasurement=" + secondExpectedMeasurement, post.contains(secondExpectedMeasurement));
 		assertTrue("Should have re-tried posting firstExpectedMeasurement=" + firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
 	
 		Mockito.when(mockData.getDataCategory()).thenReturn("MyThirdCategory");
 		appender.outputData(mockData);
+
+		appender.directRunBatchWriterForTest();
 		
-		post = mockHttpHelper.waitForNextPost(6000, null);
+		post = mockHttpHelper.getLastPostBody();
 //System.out.println(post);
 		assertTrue("Should have posted thirdExpectedMeasurement=" + secondExpectedMeasurement, post.contains(thirdExpectedMeasurement));
 		assertTrue("Should have re posting secondExpectedMeasurement=" + secondExpectedMeasurement, post.contains(secondExpectedMeasurement));
@@ -355,55 +362,50 @@ public class InfluxAppenderTest extends TestCase {
 		final String secondExpectedMeasurement = "MySecondCategory,system=pop-os,instanceName=DataCache throughput=25i 1";
 		
 		appender.outputData(mockData);
-		String post = mockHttpHelper.waitForNextPost(6000, new IOException());
+		mockHttpHelper.setExceptionToThrow(new IOException());
+		appender.directRunBatchWriterForTest();
+		
+		String post = mockHttpHelper.getLastPostBody();
 		
 		assertTrue("Should have tried posting firstExpectedMeasurement=" + firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
 		
 		Mockito.when(mockData.getDataCategory()).thenReturn("MySecondCategory");
 		appender.outputData(mockData);
+		appender.directRunBatchWriterForTest();
 		
-		post = mockHttpHelper.waitForNextPost(6000, null);
+		post = mockHttpHelper.getLastPostBody();
 //System.out.println(post);
 		assertTrue("Should have posted secondExpectedMeasurement=" + secondExpectedMeasurement, post.contains(secondExpectedMeasurement));
 		assertFalse("Should NOT have re-tried posting firstExpectedMeasurement=" + firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
 	}
 	
 	private static class MockHttpHelper extends HttpHelper {
-		private final AtomicReference<CountDownLatch> postLatch = new AtomicReference<CountDownLatch>(null);
-		private final AtomicReference<IOException> exceptionToThrowOnPost = new AtomicReference<IOException>(null);
-		private final AtomicReference<String> lastPostBody = new AtomicReference<String>(null);
+		private IOException exceptionToThrow = null;
+		private String lastPostBody = null;
 		
-		public String waitForNextPost(int maxMillisToWait, IOException exceptionToThrow) throws InterruptedException {
-			CountDownLatch latch = new CountDownLatch(1);
-			
-			exceptionToThrowOnPost.set(exceptionToThrow);
-			postLatch.set(latch);
-			
-			latch.await(maxMillisToWait, TimeUnit.MILLISECONDS);
-			return lastPostBody.getAndSet(null);
-		}
 
 		@Override
 		public Response doPost(String urlparam, String body, Map<String, String> requestHeaders) throws IOException {
-			lastPostBody.set(body);
+			lastPostBody = body;
 
-			CountDownLatch latch = postLatch.getAndSet(null);
-			IOException ex = exceptionToThrowOnPost.getAndSet(null);
-			if (latch != null) {
-				latch.countDown();
-			}
-			
-			try {
-				Thread.sleep(500);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			
-			if (ex != null) {
+			if (exceptionToThrow != null) {
+				IOException ex = exceptionToThrow;
+				exceptionToThrow = null;
 				throw ex;
 			}
 			return new Response(200, "OK", "OK");
 		}
+
+		void setExceptionToThrow(IOException exceptionToThrow) {
+			this.exceptionToThrow = exceptionToThrow;
+		}
+
+
+		String getLastPostBody() {
+			return lastPostBody;
+		}
 	}
+	
+	
 	
 }
