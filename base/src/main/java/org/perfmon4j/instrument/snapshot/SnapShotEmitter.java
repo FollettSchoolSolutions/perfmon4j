@@ -1,5 +1,6 @@
 package org.perfmon4j.instrument.snapshot;
 
+import org.perfmon4j.snapshot.emitter.EmitterData;
 import org.perfmon4j.util.MiscHelper;
 
 public class SnapShotEmitter {
@@ -12,7 +13,7 @@ public class SnapShotEmitter {
 	}
 	
 	public final EmitterData initData(long timestamp) {
-		return new EmitterData("", "", timestamp);
+		return null;
 	}
 	
 	public boolean isAppenderAttached() {
