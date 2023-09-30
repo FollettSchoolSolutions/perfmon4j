@@ -9,7 +9,7 @@ public class EmitterDataTest extends TestCase {
 	private final String nowString = MiscHelper.formatDateTimeAsString(now, true); 
 	
 	public void testToAppenderStringWithInstanceName() {
-		EmitterData data = new EmitterData("MyCategory", "MyInstance", now);
+		EmitterDataImpl data = new EmitterDataImpl("MyCategory", "MyInstance", now);
 	
 		final String expected = "\r\n********************************************************************************\r\n" 
 				+ "MyCategory\r\n"
@@ -21,7 +21,7 @@ public class EmitterDataTest extends TestCase {
 	}
 
 	public void testToAppenderNullInstanceName() {
-		EmitterData data = new EmitterData("MyCategory", null, now);
+		EmitterDataImpl data = new EmitterDataImpl("MyCategory", null, now);
 		data.addData("myFloat", 10.0 / 3.0);
 	
 		final String expected = "\r\n********************************************************************************\r\n" 

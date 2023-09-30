@@ -27,7 +27,9 @@ import org.perfmon4j.PerfMonTestCase;
 public class SnapShotEmitterTest extends PerfMonTestCase {
 	
 
-	
+	public void testPlaceHolder() {
+		// Add tests
+	}
 	
 
 	

@@ -1,30 +1,52 @@
 package org.perfmon4j.snapshot.emitter;
 
+import org.perfmon4j.GenericItemRegistry;
+import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 
-public class SnapShotEmitterRegistry {
-	
-	public static void register(SnapShotEmitter snapShotEmitter) {
-		register(snapShotEmitter, null, true);
-	}
-	
-	public static void register(SnapShotEmitter snapShotEmitter, boolean useWeakReference) {
-		register(snapShotEmitter, null, useWeakReference);
-	}
-	
-	public static void register(SnapShotEmitter snapShotEmitter, String instanceName) {
-		register(snapShotEmitter, instanceName, true);
-	}
+public class SnapShotEmitterRegistry extends GenericItemRegistry<SnapShotEmitter> {
+	private static final SnapShotEmitterRegistry singleton = new SnapShotEmitterRegistry();
 
-	public static void register(SnapShotEmitter snapShotEmitter, String instanceName, boolean useWeakReference) {
-		// Will be implemented when the Perfmon4j Javaagent is installed. 
+	public static SnapShotEmitterRegistry getSingleton() {
+		return singleton;
 	}
 	
-	public static void deRegister(SnapShotEmitter snapShotEmitter) {
-		deRegister(snapShotEmitter, null);
+	private SnapShotEmitterRegistry() {
 	}
 	
-	public static void deRegister(SnapShotEmitter snapShotPOJO, String instanceName) {
-		// Will be implemented when the Perfmon4j Javaagent is installed. 
+	@Override
+	public EmitterRegistryEntry buildRegistryEntry(SnapShotEmitter item) throws GenerateSnapShotException {
+		return new EmitterRegistryEntry(item.getClass().getName());
 	}
 
+	@Override
+	public ItemInstance<SnapShotEmitter>[] getInstances(String className) {
+		EmitterRegistryEntry entry = (EmitterRegistryEntry)lookupItemRegistry(className);
+		return entry != null ? entry.getInstances() : new EmitterInstance[]{};		
+	}
+	
+	public static class EmitterRegistryEntry extends GenericItemRegistry.ItemRegistry<SnapShotEmitter> {
+		EmitterRegistryEntry(String className) {
+			super(className);
+		}
+
+		@Override
+		protected EmitterInstance buildItemInstance(SnapShotEmitter item, String instanceName,
+				boolean weakReference) {
+			return new EmitterInstance(item, instanceName, weakReference);
+		}
+
+		@Override
+		public EmitterInstance[] getInstances() {
+			synchronized (instancesLockToken) {
+				return instances.values().toArray(new EmitterInstance[]{});
+			}		
+		}
+	}
+	
+	public static class EmitterInstance extends GenericItemRegistry.ItemInstance<SnapShotEmitter>{
+
+		protected EmitterInstance(SnapShotEmitter item, String instanceName, boolean weakReference) {
+			super(item, instanceName, weakReference);
+		}
+	}
 }

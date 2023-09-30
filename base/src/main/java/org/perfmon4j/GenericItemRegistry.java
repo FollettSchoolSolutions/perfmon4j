@@ -10,11 +10,9 @@ import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 
 public abstract class GenericItemRegistry <T>{
 	private final Object entriesLockToken = new Object();
-	private final Map<String, ItemRegistry<T>> entries = new HashMap<String, ItemRegistry<T>>(); 
+	private final Map<String, ItemRegistry<T>> entries = new HashMap<String, ItemRegistry<T>>();
 	
-	protected GenericItemRegistry() {
-	}
-
+	
 	public void register(T item) throws GenerateSnapShotException {
 		register(item, null, true);
 	}
@@ -40,8 +38,6 @@ public abstract class GenericItemRegistry <T>{
 		}
 	}
 	
-	public abstract ItemRegistry<T> buildRegistryEntry(T item);
-//				entry = new RegistryEntry(className, generator.generateBundleForPOJO(item.getClass()));
 	
 	public void deRegister(T item) {
 		deRegister(item, null);
@@ -60,12 +56,27 @@ public abstract class GenericItemRegistry <T>{
 		}
 	}
 	
+	protected ItemRegistry<T> lookupItemRegistry(String className) {
+		ItemRegistry<T> entry = null;
+		
+		synchronized (entriesLockToken) {
+			entry = entries.get(className);
+		}
+		
+		return entry;
+	}
+	
+	public abstract ItemRegistry<T> buildRegistryEntry(T item) throws GenerateSnapShotException;
+
+	public abstract ItemInstance<T>[] getInstances(String className);
+
+	
 	public abstract static class ItemRegistry<T> {
 		private final String className;
-		private final Object instancesLockToken = new Object();
-		private final Map<ItemInstanceKey, ItemInstance<T>> instances = new HashMap<ItemInstanceKey, ItemInstance<T>>();
+		protected final Object instancesLockToken = new Object();
+		protected final Map<ItemInstanceKey, ItemInstance<T>> instances = new HashMap<ItemInstanceKey, ItemInstance<T>>();
 		
-		ItemRegistry(String className /*, Bundle snapShotBundle*/) {
+		protected ItemRegistry(String className /*, Bundle snapShotBundle*/) {
 			this.className = className;
 		}
 
@@ -75,36 +86,20 @@ public abstract class GenericItemRegistry <T>{
 		
 		void addOrUpdateInstance(T pojo, String instanceName, boolean weakReference) {
 			synchronized (instancesLockToken) {
-				instances.put(new ItemInstanceKey(pojo, instanceName), buildPOJOInstance(pojo, instanceName, weakReference)) ;
+				instances.put(new ItemInstanceKey(pojo, instanceName), buildItemInstance(pojo, instanceName, weakReference)) ;
 			}
 		}
 		
-		abstract protected ItemInstance<T> buildPOJOInstance(T pojo, String instanceName, boolean weakReference);
+		protected abstract ItemInstance<T> buildItemInstance(T item, String instanceName, boolean weakReference);
 		
-		boolean removeInstance(Object pojo, String instanceName) {
+		boolean removeInstance(Object item, String instanceName) {
 			synchronized (instancesLockToken) {
-				instances.remove(new ItemInstanceKey(pojo, instanceName));
+				instances.remove(new ItemInstanceKey(item, instanceName));
 				return instances.isEmpty();
 			}
 		}
 		
-		@SuppressWarnings("unchecked")
-		public ItemInstance<T>[] getInstances() {
-			synchronized (instancesLockToken) {
-				return instances.values().toArray((ItemInstance<T>[])new ItemInstance<?>[]{});
-			}
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	public ItemInstance<T>[] getInstances(String className) {
-		ItemRegistry<T> entry = null;
-		
-		synchronized (entriesLockToken) {
-			entry = entries.get(className);
-		}
-		
-		return entry != null ? entry.getInstances() : (ItemInstance<T>[])new ItemInstance<?>[]{};
+		public abstract ItemInstance<T>[] getInstances();
 	}
 	
 	public static class ItemInstance<T> {
@@ -115,7 +110,7 @@ public abstract class GenericItemRegistry <T>{
 		private final long itemID = nextItemID.incrementAndGet(); 
 		private final String instanceName;
 		
-		protected ItemInstance(String instanceName, T item, boolean weakReference) {
+		protected ItemInstance(T item, String instanceName, boolean weakReference) {
 			this.instanceName = instanceName;
 			if (weakReference) {
 				itemWeakReference = new WeakReference<T>(item);
