@@ -1,4 +1,4 @@
-package org.perfmon4j.instrument.snapshot;
+package org.perfmon4j.snapshot.emitter;
 
 
 public class SnapShotEmitterRegistry {

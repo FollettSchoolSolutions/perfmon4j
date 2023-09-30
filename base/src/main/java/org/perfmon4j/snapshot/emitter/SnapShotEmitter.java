@@ -1,6 +1,5 @@
-package org.perfmon4j.instrument.snapshot;
+package org.perfmon4j.snapshot.emitter;
 
-import org.perfmon4j.snapshot.emitter.EmitterData;
 import org.perfmon4j.util.MiscHelper;
 
 public class SnapShotEmitter {
