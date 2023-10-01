@@ -27,7 +27,7 @@ import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 
-public class SnapShotProviderWrapper extends SnapShotMonitor {
+public class SnapShotProviderWrapper extends SnapShotMonitor implements SnapShotMonitorLifecycle {
     final private static Logger logger = LoggerFactory.initLogger(SnapShotProviderWrapper.class);
 
     final private SnapShotGenerator.Bundle bundle;

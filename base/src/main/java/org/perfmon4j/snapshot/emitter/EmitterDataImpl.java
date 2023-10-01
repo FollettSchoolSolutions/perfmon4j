@@ -12,14 +12,13 @@ import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.util.MiscHelper;
 
 public class EmitterDataImpl implements EmitterData, PerfMonObservableData {
-	private final String dataCategory;
+	private final String name;
 	private final long timestamp;
 	private final String instanceName;
 	private final Set<PerfMonObservableDatum<?>> observations = new HashSet<PerfMonObservableDatum<?>>();
 	
-	EmitterDataImpl(String dataCategory, String instanceName, long timestamp) {
-		super();
-		this.dataCategory = dataCategory;
+	EmitterDataImpl(String name, String instanceName, long timestamp) {
+		this.name = name;
 		this.timestamp = timestamp;
 		this.instanceName = instanceName;
 		if (instanceName != null) {
@@ -99,7 +98,7 @@ public class EmitterDataImpl implements EmitterData, PerfMonObservableData {
 
 	@Override
 	public String getDataCategory() {
-		return dataCategory;
+		return name;
 	}
 
 	@Override
@@ -112,4 +111,6 @@ public class EmitterDataImpl implements EmitterData, PerfMonObservableData {
 	public String getInstanceName() {
 		return instanceName;
 	}
+	
+	
 }
