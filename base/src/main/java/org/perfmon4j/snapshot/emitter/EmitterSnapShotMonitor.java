@@ -19,7 +19,6 @@ public class EmitterSnapShotMonitor implements SnapShotMonitorLifecycle, Emitter
 
 	private final Object appendersLockToken = new Object();
 	private final Set<AppenderID> appenders = new HashSet<Appender.AppenderID>();
-	private boolean appenderAttached = false;
 	
 	public EmitterSnapShotMonitor(String className, String name) {
 		this.name = name;
@@ -42,11 +41,10 @@ public class EmitterSnapShotMonitor implements SnapShotMonitorLifecycle, Emitter
 	public void addAppender(AppenderID appenderID) throws InvalidConfigException {
         synchronized(appendersLockToken) {
         	appenders.add(appenderID);
-        	appenderAttached = !appenders.isEmpty();
         }	
 	}
 	
-	public static EmitterSnapShotMonitor getMonitor(String className) {
+	static EmitterController lookUpEmitterMonitor(String className) {
 		WeakReference<EmitterSnapShotMonitor> monitorRef = null;
 		
 		synchronized (monitorsMapLockToken) {
@@ -56,7 +54,6 @@ public class EmitterSnapShotMonitor implements SnapShotMonitorLifecycle, Emitter
 		if (monitorRef != null) {
 			EmitterSnapShotMonitor monitor = monitorRef.get();
 			return (monitor != null && monitor.isActive()) ? monitor : null;
-			
 		} else {
 			return null;
 		}
@@ -95,11 +92,6 @@ public class EmitterSnapShotMonitor implements SnapShotMonitorLifecycle, Emitter
 
 	@Override
 	public EmitterData initData(String instanceName, long timestamp) {
-		return active && appenderAttached ? new EmitterDataImpl(name, instanceName, timestamp) : null;
-	}
-
-	@Override
-	public boolean isAppenderAttached() {
-		return appenderAttached;
+		return new EmitterDataImpl(name, instanceName, timestamp);
 	}
 }

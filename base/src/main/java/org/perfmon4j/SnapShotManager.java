@@ -34,6 +34,8 @@ import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.ExternalAppender;
+import org.perfmon4j.snapshot.emitter.EmitterSnapShotMonitor;
+import org.perfmon4j.snapshot.emitter.SnapShotEmitter;
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -102,10 +104,17 @@ public class SnapShotManager {
 	                }                
                 } else {
                 	try {
-                		// First see if this is a new style POJO Monitor.
-                		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(clazz);
-                    	result = new POJOSnapShotMonitor(monitorID.getName(), bundle.isUsePriorityTimer(), clazz.getName(), POJOSnapShotRegistry.getSingleton());
-                    	logger.logDebug("Found POJO based SnapShotMonitor for class: " + clazz.getName());
+System.err.println("!!!!!!!!!!!!!!!!!!!!! CLASS TYPE: " + clazz.getName());
+System.err.println("!!!!!!!!!!!!!!!!!!!!! IsAssignable: " + SnapShotEmitter.class.isAssignableFrom(clazz));
+                		if (SnapShotEmitter.class.isAssignableFrom(clazz)) {
+                			result = new EmitterSnapShotMonitor(clazz.getName(), monitorID.getName());
+	                    	logger.logDebug("Found SnapShotEmitter for class: " + clazz.getName());
+                		} else {
+	                		// First see if this is a new style POJO Monitor.
+	                		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(clazz);
+	                    	result = new POJOSnapShotMonitor(monitorID.getName(), bundle.isUsePriorityTimer(), clazz.getName(), POJOSnapShotRegistry.getSingleton());
+	                    	logger.logDebug("Found POJO based SnapShotMonitor for class: " + clazz.getName());
+                		}
                     	// Try to initialize the class
                 		Class.forName(clazz.getName(), true, clazz.getClassLoader());
                 	} catch(GenerateSnapShotException ex) {
