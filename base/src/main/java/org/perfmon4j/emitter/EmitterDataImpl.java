@@ -1,4 +1,4 @@
-package org.perfmon4j.snapshot.emitter;
+package org.perfmon4j.emitter;
 
 import java.util.Collections;
 import java.util.HashSet;

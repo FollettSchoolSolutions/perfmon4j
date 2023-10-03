@@ -1,4 +1,4 @@
-package org.perfmon4j.snapshot.emitter;
+package org.perfmon4j.emitter;
 
 public interface EmitterData {
 	public void addData(String fieldName, long value);

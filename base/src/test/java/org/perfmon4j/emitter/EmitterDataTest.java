@@ -1,5 +1,6 @@
-package org.perfmon4j.snapshot.emitter;
+package org.perfmon4j.emitter;
 
+import org.perfmon4j.emitter.EmitterDataImpl;
 import org.perfmon4j.util.MiscHelper;
 
 import junit.framework.TestCase;

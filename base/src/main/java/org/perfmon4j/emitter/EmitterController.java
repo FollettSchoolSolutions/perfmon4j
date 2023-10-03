@@ -1,4 +1,4 @@
-package org.perfmon4j.snapshot.emitter;
+package org.perfmon4j.emitter;
 
 public interface EmitterController {
 	public void emit(EmitterData data);

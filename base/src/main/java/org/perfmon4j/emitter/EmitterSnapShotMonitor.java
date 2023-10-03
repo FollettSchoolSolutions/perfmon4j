@@ -1,4 +1,4 @@
-package org.perfmon4j.snapshot.emitter;
+package org.perfmon4j.emitter;
 
 import java.lang.ref.WeakReference;
 import java.util.HashMap;

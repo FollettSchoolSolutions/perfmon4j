@@ -29,13 +29,13 @@ import java.util.Properties;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
 import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
+import org.perfmon4j.emitter.EmitterSnapShotMonitor;
+import org.perfmon4j.emitter.Emitter;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.ExternalAppender;
-import org.perfmon4j.snapshot.emitter.EmitterSnapShotMonitor;
-import org.perfmon4j.snapshot.emitter.SnapShotEmitter;
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -105,8 +105,8 @@ public class SnapShotManager {
                 } else {
                 	try {
 System.err.println("!!!!!!!!!!!!!!!!!!!!! CLASS TYPE: " + clazz.getName());
-System.err.println("!!!!!!!!!!!!!!!!!!!!! IsAssignable: " + SnapShotEmitter.class.isAssignableFrom(clazz));
-                		if (SnapShotEmitter.class.isAssignableFrom(clazz)) {
+System.err.println("!!!!!!!!!!!!!!!!!!!!! IsAssignable: " + Emitter.class.isAssignableFrom(clazz));
+                		if (Emitter.class.isAssignableFrom(clazz)) {
                 			result = new EmitterSnapShotMonitor(clazz.getName(), monitorID.getName());
 	                    	logger.logDebug("Found SnapShotEmitter for class: " + clazz.getName());
                 		} else {

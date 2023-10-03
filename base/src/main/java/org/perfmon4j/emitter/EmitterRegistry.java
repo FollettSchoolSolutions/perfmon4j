@@ -1,30 +1,30 @@
-package org.perfmon4j.snapshot.emitter;
+package org.perfmon4j.emitter;
 
 import org.perfmon4j.GenericItemRegistry;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 
-public class SnapShotEmitterRegistry extends GenericItemRegistry<SnapShotEmitter> {
-	private static final SnapShotEmitterRegistry singleton = new SnapShotEmitterRegistry();
+public class EmitterRegistry extends GenericItemRegistry<Emitter> {
+	private static final EmitterRegistry singleton = new EmitterRegistry();
 	
-	public static SnapShotEmitterRegistry getSingleton() {
+	public static EmitterRegistry getSingleton() {
 		return singleton;
 	}
 	
-	private SnapShotEmitterRegistry() {
+	private EmitterRegistry() {
 	}
 	
 	@Override
-	public EmitterRegistryEntry buildRegistryEntry(SnapShotEmitter item) throws GenerateSnapShotException {
+	public EmitterRegistryEntry buildRegistryEntry(Emitter item) throws GenerateSnapShotException {
 		return new EmitterRegistryEntry(item.getClass().getName());
 	}
 
 	@Override
-	public ItemInstance<SnapShotEmitter>[] getInstances(String className) {
+	public ItemInstance<Emitter>[] getInstances(String className) {
 		EmitterRegistryEntry entry = (EmitterRegistryEntry)lookupItemRegistry(className);
 		return entry != null ? entry.getInstances() : new EmitterInstance[]{};		
 	}
 
-	public static class EmitterRegistryEntry extends GenericItemRegistry.ItemRegistry<SnapShotEmitter> {
+	public static class EmitterRegistryEntry extends GenericItemRegistry.ItemRegistry<Emitter> {
 		private final EmitterBridge bridge; 
 		
 		EmitterRegistryEntry(String className) {
@@ -33,7 +33,7 @@ public class SnapShotEmitterRegistry extends GenericItemRegistry<SnapShotEmitter
 		}
 
 		@Override
-		protected EmitterInstance buildItemInstance(SnapShotEmitter item, String instanceName,
+		protected EmitterInstance buildItemInstance(Emitter item, String instanceName,
 				boolean weakReference) {
 			item.acceptController(bridge);
 			return new EmitterInstance(item, instanceName, weakReference);
@@ -47,8 +47,8 @@ public class SnapShotEmitterRegistry extends GenericItemRegistry<SnapShotEmitter
 		}
 	}
 	
-	public static class EmitterInstance extends GenericItemRegistry.ItemInstance<SnapShotEmitter>{
-		protected EmitterInstance(SnapShotEmitter item, String instanceName, boolean weakReference) {
+	public static class EmitterInstance extends GenericItemRegistry.ItemInstance<Emitter>{
+		protected EmitterInstance(Emitter item, String instanceName, boolean weakReference) {
 			super(item, instanceName, weakReference);
 		}
 	}

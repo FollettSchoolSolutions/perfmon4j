@@ -6,11 +6,11 @@ import java.util.Properties;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.perfmon4j.emitter.EmitterController;
+import org.perfmon4j.emitter.EmitterData;
+import org.perfmon4j.emitter.Emitter;
+import org.perfmon4j.emitter.EmitterRegistry;
 import org.perfmon4j.instrument.LaunchRunnableInVM;
-import org.perfmon4j.snapshot.emitter.EmitterController;
-import org.perfmon4j.snapshot.emitter.EmitterData;
-import org.perfmon4j.snapshot.emitter.SnapShotEmitter;
-import org.perfmon4j.snapshot.emitter.SnapShotEmitterRegistry;
 import org.perfmon4j.util.MiscHelper;
 
 import junit.framework.TestCase;
@@ -66,7 +66,7 @@ public class EmitterSnapShotMonitorTest extends TestCase {
     	super.tearDown();
     }
 
-	public static class MySnapShotEmitter implements SnapShotEmitter {
+	public static class MySnapShotEmitter implements Emitter {
 		private EmitterController controller = null;
 		private int counter = 0;
 		
@@ -95,7 +95,7 @@ public class EmitterSnapShotMonitorTest extends TestCase {
 		@Override
 		public void run() {
 			try {
-				SnapShotEmitterRegistry registry = SnapShotEmitterRegistry.getSingleton();
+				EmitterRegistry registry = EmitterRegistry.getSingleton();
 				MySnapShotEmitter myEmitter = new MySnapShotEmitter();
 				
 				registry.register(myEmitter);
