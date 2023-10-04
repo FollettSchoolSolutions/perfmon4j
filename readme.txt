@@ -16,6 +16,11 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
+
+TODO:
+	Clean up EmitterMonitor tests -
+	Improve XMLConfiguration Parser.
+
 ** 2.0.0-BETA3 - TBD
 - PerfMonTimer.startReactive() will now attach to an existing explicit reactive context,
    when one is available.  An explicit reactive context is created by passing a reactiveContextID
