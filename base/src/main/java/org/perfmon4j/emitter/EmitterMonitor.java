@@ -11,19 +11,19 @@ import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.InvalidConfigException;
 import org.perfmon4j.SnapShotMonitorLifecycle;
 
-public class EmitterSnapShotMonitor implements SnapShotMonitorLifecycle, EmitterController {
+public class EmitterMonitor implements SnapShotMonitorLifecycle, EmitterController {
 	private final String name;
 	private boolean active = true;
 	private static final Object monitorsMapLockToken = new Object();
-	private static final Map<String, WeakReference<EmitterSnapShotMonitor>> monitorsMap = new HashMap<String, WeakReference<EmitterSnapShotMonitor>>();
+	private static final Map<String, WeakReference<EmitterMonitor>> monitorsMap = new HashMap<String, WeakReference<EmitterMonitor>>();
 
 	private final Object appendersLockToken = new Object();
 	private final Set<AppenderID> appenders = new HashSet<Appender.AppenderID>();
 	
-	public EmitterSnapShotMonitor(String className, String name) {
+	public EmitterMonitor(String className, String name) {
 		this.name = name;
 		synchronized (monitorsMapLockToken) {
-			monitorsMap.put(className, new WeakReference<EmitterSnapShotMonitor>(this));
+			monitorsMap.put(className, new WeakReference<EmitterMonitor>(this));
 		}
 	}
 	
@@ -45,14 +45,14 @@ public class EmitterSnapShotMonitor implements SnapShotMonitorLifecycle, Emitter
 	}
 	
 	static EmitterController lookUpEmitterMonitor(String className) {
-		WeakReference<EmitterSnapShotMonitor> monitorRef = null;
+		WeakReference<EmitterMonitor> monitorRef = null;
 		
 		synchronized (monitorsMapLockToken) {
 			monitorRef = monitorsMap.get(className);
 		}
 		
 		if (monitorRef != null) {
-			EmitterSnapShotMonitor monitor = monitorRef.get();
+			EmitterMonitor monitor = monitorRef.get();
 			return (monitor != null && monitor.isActive()) ? monitor : null;
 		} else {
 			return null;

@@ -1,10 +1,20 @@
 package org.perfmon4j.emitter;
 
+import java.util.Timer;
+
 import org.perfmon4j.GenericItemRegistry;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
+import org.perfmon4j.util.FailSafeTimerTask;
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
+import org.perfmon4j.util.MiscHelper;
 
 public class EmitterRegistry extends GenericItemRegistry<Emitter> {
+	private static final Logger logger = LoggerFactory.initLogger(EmitterRegistry.class);
+	
 	private static final EmitterRegistry singleton = new EmitterRegistry();
+	private long defaultTimerIntervalMillis = 1000 * 60;
+	private static final Timer runTimer = new Timer("PerfMon4j.EmitterThread", true);
 	
 	public static EmitterRegistry getSingleton() {
 		return singleton;
@@ -13,9 +23,17 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 	private EmitterRegistry() {
 	}
 	
+	/* package level for testing */ long getDefaultTimerIntervalMillis() {
+		return defaultTimerIntervalMillis;
+	}
+	
+	/* package level for testing */ void setDefaultTimerIntervalMillis(long defaultTimerIntervalMillis) {
+		this.defaultTimerIntervalMillis = defaultTimerIntervalMillis; 
+	}
+	
 	@Override
 	public EmitterRegistryEntry buildRegistryEntry(Emitter item) throws GenerateSnapShotException {
-		return new EmitterRegistryEntry(item.getClass().getName());
+		return new EmitterRegistryEntry(this, item.getClass().getName());
 	}
 
 	@Override
@@ -25,18 +43,21 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 	}
 
 	public static class EmitterRegistryEntry extends GenericItemRegistry.ItemRegistry<Emitter> {
+		private final EmitterRegistry registry;
 		private final EmitterBridge bridge; 
 		
-		EmitterRegistryEntry(String className) {
+		EmitterRegistryEntry(EmitterRegistry registry, String className) {
 			super(className);
-			bridge = new EmitterBridge(className);
+			this.bridge = new EmitterBridge(className);
+			this.registry = registry;
+			
+			logger.logDebug("Created registryEntry: " + this);
 		}
 
 		@Override
 		protected EmitterInstance buildItemInstance(Emitter item, String instanceName,
 				boolean weakReference) {
-			item.acceptController(bridge);
-			return new EmitterInstance(item, instanceName, weakReference);
+			return new EmitterInstance(registry, item, instanceName, weakReference, bridge);
 		}
 
 		@Override
@@ -47,9 +68,59 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 		}
 	}
 	
-	public static class EmitterInstance extends GenericItemRegistry.ItemInstance<Emitter>{
-		protected EmitterInstance(Emitter item, String instanceName, boolean weakReference) {
+	public static class EmitterInstance extends GenericItemRegistry.ItemInstance<Emitter> implements Runnable {
+		private final Emitter item;
+		private final EmitterController itemController;
+		private final FailSafeTimerTask timerTask;
+		
+		protected EmitterInstance(EmitterRegistry registry, Emitter item, String instanceName, boolean weakReference, EmitterController controller) {
 			super(item, instanceName, weakReference);
+			this.item = item;
+			this.itemController = controller;
+
+			logger.logDebug("Creating itemInstance: " + this);
+			item.acceptController(controller);
+			
+			if (item instanceof Runnable) {
+				timerTask = new InstanceFailSafeTimerTask(this);
+				long intervalMillis = registry.getDefaultTimerIntervalMillis();
+				EmitterRegistry.runTimer.schedule(timerTask, intervalMillis, intervalMillis);
+					logger.logDebug("Scheduled timer for: " + this + " (interval=" + MiscHelper.getMillisDisplayable(intervalMillis) + ")");
+			} else {
+				timerTask = null;
+			}
+		}
+
+		@Override
+		public void run() {
+			if (itemController.isActive()) {
+				logger.logVerbose("Invoking run for: " + this);
+				((Runnable)item).run();
+			} else {
+				logger.logVerbose("Skipping run for: " + this + " (No active appender)");
+			}
+		}
+
+		@Override
+		protected void deInit() {
+			if (timerTask != null) {
+				timerTask.cancel();
+				logger.logDebug("Cancelled timer for: " + this);
+			}
+			super.deInit();
+		}
+	}
+	
+	private static final class InstanceFailSafeTimerTask extends FailSafeTimerTask {
+		private final EmitterInstance owner;
+
+		InstanceFailSafeTimerTask(EmitterInstance owner) {
+			this.owner = owner;
+		}
+		
+		@Override
+		public void failSafeRun() {
+			owner.run();
 		}
 	}
 	
@@ -91,7 +162,7 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 		}
 		
 		public EmitterController getControllerImpl() {
-			EmitterController monitor = EmitterSnapShotMonitor.lookUpEmitterMonitor(className);
+			EmitterController monitor = EmitterMonitor.lookUpEmitterMonitor(className);
 			return monitor != null ? monitor : EmitterController.NO_OP_CONTROLLER;
 		}
 	}

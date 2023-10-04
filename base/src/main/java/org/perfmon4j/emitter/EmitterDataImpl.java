@@ -73,10 +73,10 @@ public class EmitterDataImpl implements EmitterData, PerfMonObservableData {
 		
 		String result = "\r\n" + sep;
 		result += "\r\n" + getDataCategory();
-		result += "\r\n" + MiscHelper.formatDateTimeAsString(getTimestamp(), true);
+		result += "\r\n" + MiscHelper.formatDateTimeAsString(getTimestamp(), true) + "\r\n";
 		
 		for (PerfMonObservableDatum<?> datum : getObservations()) {
-			result += "\r\n"+ formatter.format(25, datum.getDefaultDisplayName(), datum.isNumeric() ? datum.getValue() : datum.getComplexObject());
+			result += formatter.format(25, datum.getDefaultDisplayName(), datum.isNumeric() ? datum.getValue() : datum.getComplexObject());
 		}
 		result += sep;
 		

@@ -1,4 +1,4 @@
-package org.perfmon4j;
+package org.perfmon4j.emitter;
 
 import java.io.File;
 import java.util.Properties;
@@ -8,6 +8,15 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.perfmon4j.emitter.EmitterController;
 import org.perfmon4j.emitter.EmitterData;
+import org.perfmon4j.Appender;
+import org.perfmon4j.PerfMon;
+import org.perfmon4j.PerfMonConfiguration;
+import org.perfmon4j.PerfMonData;
+import org.perfmon4j.PerfMonObservableData;
+import org.perfmon4j.PerfMonObservableDatum;
+import org.perfmon4j.TestHelper;
+import org.perfmon4j.TextAppender;
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.emitter.Emitter;
 import org.perfmon4j.emitter.EmitterRegistry;
 import org.perfmon4j.instrument.LaunchRunnableInVM;
@@ -17,7 +26,7 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-public class EmitterSnapShotMonitorTest extends TestCase {
+public class EmitterMonitorTest extends TestCase {
 	private File perfmon4jJar = null;
 	
 	/*----------------------------------------------------------------------------*/
@@ -160,10 +169,10 @@ System.out.println(output);
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
-        String[] testCaseName = {EmitterSnapShotMonitorTest.class.getName()};
+        String[] testCaseName = {EmitterMonitorTest.class.getName()};
         
         BasicConfigurator.configure();
-        Logger.getLogger(EmitterSnapShotMonitorTest.class.getPackage().getName()).setLevel(Level.DEBUG);
+        Logger.getLogger(EmitterMonitorTest.class.getPackage().getName()).setLevel(Level.DEBUG);
         
         
         TestRunner.main(testCaseName);
@@ -184,7 +193,7 @@ System.out.println(output);
         // be set) or if no test cases were added to the test suite above, then
         // we run the full suite of tests.
         if (testType != null || newSuite == null || (newSuite.countTestCases() < 1)) {
-            newSuite = new TestSuite(EmitterSnapShotMonitorTest.class);
+            newSuite = new TestSuite(EmitterMonitorTest.class);
         }
 
         return(newSuite);

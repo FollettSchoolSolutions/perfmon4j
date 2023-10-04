@@ -9,9 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 
 public abstract class GenericItemRegistry <T>{
-	private final Object entriesLockToken = new Object();
-	private final Map<String, ItemRegistry<T>> entries = new HashMap<String, ItemRegistry<T>>();
-	
+	protected final Object entriesLockToken = new Object();
+	protected final Map<String, ItemRegistry<T>> entries = new HashMap<String, ItemRegistry<T>>();
 	
 	public void register(T item) throws GenerateSnapShotException {
 		register(item, null, true);
@@ -54,6 +53,7 @@ public abstract class GenericItemRegistry <T>{
 				}
 			}
 		}
+	
 	}
 	
 	protected ItemRegistry<T> lookupItemRegistry(String className) {
@@ -86,20 +86,34 @@ public abstract class GenericItemRegistry <T>{
 		
 		void addOrUpdateInstance(T pojo, String instanceName, boolean weakReference) {
 			synchronized (instancesLockToken) {
-				instances.put(new ItemInstanceKey(pojo, instanceName), buildItemInstance(pojo, instanceName, weakReference)) ;
+				ItemInstance<T> itemInstance = buildItemInstance(pojo, instanceName, weakReference);
+				instances.put(itemInstance.getKey(), itemInstance) ;
 			}
 		}
 		
 		protected abstract ItemInstance<T> buildItemInstance(T item, String instanceName, boolean weakReference);
 		
 		boolean removeInstance(Object item, String instanceName) {
+			boolean isEmpty = false;
+			ItemInstance<T> removedItemInstance = null;
 			synchronized (instancesLockToken) {
-				instances.remove(new ItemInstanceKey(item, instanceName));
-				return instances.isEmpty();
+				removedItemInstance = instances.remove(new ItemInstanceKey(item, instanceName));
+				isEmpty = instances.isEmpty();
 			}
+			
+			if (removedItemInstance != null) {
+				removedItemInstance.deInit();
+			}
+			
+			return isEmpty;
 		}
 		
 		public abstract ItemInstance<T>[] getInstances();
+
+		@Override
+		public String toString() {
+			return this.getClass().getSimpleName() + " [className=" + className + "]";
+		}
 	}
 	
 	public static class ItemInstance<T> {
@@ -109,9 +123,11 @@ public abstract class GenericItemRegistry <T>{
 		private final T itemStrongReference;
 		private final long itemID = nextItemID.incrementAndGet(); 
 		private final String instanceName;
+		private final ItemInstanceKey key;
 		
 		protected ItemInstance(T item, String instanceName, boolean weakReference) {
 			this.instanceName = instanceName;
+			this.key = new ItemInstanceKey(item, instanceName);
 			if (weakReference) {
 				itemWeakReference = new WeakReference<T>(item);
 				itemStrongReference = null;
@@ -142,6 +158,13 @@ public abstract class GenericItemRegistry <T>{
 			return Objects.hash(instanceName, Long.valueOf(itemID));
 		}
 
+		protected void deInit() {
+		}
+		
+		public ItemInstanceKey getKey() {
+			return key;
+		}
+
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -153,6 +176,11 @@ public abstract class GenericItemRegistry <T>{
 			ItemInstance<?> other = (ItemInstance<?>) obj;
 			return Objects.equals(instanceName, other.instanceName) && itemID == other.itemID;
 		}
+
+		@Override
+		public String toString() {
+			return this.getClass().getSimpleName() + " [key=" + key + "]";
+		}
 	}
 	
 	
@@ -161,6 +189,7 @@ public abstract class GenericItemRegistry <T>{
 		
 		ItemInstanceKey(Object item, String instanceName) {
 			key = item.getClass().getName() + (instanceName == null ? "" : ("$$." + instanceName));
+System.out.println("key=" + key);
 		}
 
 		@Override
@@ -178,6 +207,11 @@ public abstract class GenericItemRegistry <T>{
 				return false;
 			ItemInstanceKey other = (ItemInstanceKey) obj;
 			return Objects.equals(key, other.key);
+		}
+
+		@Override
+		public String toString() {
+			return this.getClass().getSimpleName() + " [key=" + key + "]";
 		}
 	}
 }

@@ -29,8 +29,8 @@ import java.util.Properties;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
 import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
-import org.perfmon4j.emitter.EmitterSnapShotMonitor;
 import org.perfmon4j.emitter.Emitter;
+import org.perfmon4j.emitter.EmitterMonitor;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
@@ -104,10 +104,8 @@ public class SnapShotManager {
 	                }                
                 } else {
                 	try {
-System.err.println("!!!!!!!!!!!!!!!!!!!!! CLASS TYPE: " + clazz.getName());
-System.err.println("!!!!!!!!!!!!!!!!!!!!! IsAssignable: " + Emitter.class.isAssignableFrom(clazz));
                 		if (Emitter.class.isAssignableFrom(clazz)) {
-                			result = new EmitterSnapShotMonitor(clazz.getName(), monitorID.getName());
+                			result = new EmitterMonitor(clazz.getName(), monitorID.getName());
 	                    	logger.logDebug("Found SnapShotEmitter for class: " + clazz.getName());
                 		} else {
 	                		// First see if this is a new style POJO Monitor.
