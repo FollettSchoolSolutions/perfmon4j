@@ -21,6 +21,7 @@
 
 package org.perfmon4j;
 
+import java.io.StringReader;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1296,6 +1297,11 @@ public class PerfMon {
     }
     
     private static AppenderToMonitorMapper mapper = (new AppenderToMonitorMapper.Builder()).build();
+    
+    
+    public static void configureFromStringXML(String stringXML) throws InvalidConfigException {
+    	configure(XMLConfigurationParser.parseXML(new StringReader(stringXML)));
+    }
     
 /*----------------------------------------------------------------------------*/    
     public static void configure(PerfMonConfiguration config) throws InvalidConfigException {
