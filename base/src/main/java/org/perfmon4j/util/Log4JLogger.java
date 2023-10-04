@@ -291,4 +291,14 @@ class Log4JLogger implements Logger {
 			handleReflectionException(ex);
 		}
 	}
+
+	@Override
+	public void logVerbose(String msg) {
+		logDebug(msg);
+	}
+
+	@Override
+	public void logVerbose(String msg, Throwable th) {
+		logDebug(msg, th);
+	}
 }

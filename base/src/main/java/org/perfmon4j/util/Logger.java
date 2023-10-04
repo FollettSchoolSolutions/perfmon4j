@@ -34,9 +34,11 @@ public interface Logger {
     public void logWarn(String msg);
     public void logInfo(String msg);
     public void logDebug(String msg);
+    public void logVerbose(String msg);
     
     public void logError(String msg, Throwable th);
     public void logWarn(String msg, Throwable th);
     public void logInfo(String msg, Throwable th);
     public void logDebug(String msg, Throwable th);
+    public void logVerbose(String msg, Throwable th);
 }

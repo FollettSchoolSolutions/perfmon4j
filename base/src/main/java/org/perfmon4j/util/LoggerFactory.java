@@ -22,8 +22,8 @@
 package org.perfmon4j.util;
 
 public class LoggerFactory {
-	private static boolean defaultDebugEnabled = Boolean.getBoolean("PerfMon4j.debugEnabled");
-	private static boolean verboseInstrumentationEnabled = Boolean.getBoolean("PerfMon4j.debugEnabled");
+	private static boolean verboseInstrumentationEnabled = Boolean.getBoolean("PerfMon4j.verboseEnabled");
+	private static boolean defaultDebugEnabled = verboseInstrumentationEnabled || Boolean.getBoolean("PerfMon4j.debugEnabled");
 	private static Logger verboseInstrumentationLogger = null;
 	
 	
