@@ -513,7 +513,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 							"\" Response: " + response.toString();
 						logger.logWarn(message);
 					} else if (logger.isDebugEnabled()) {
-						logger.logDebug("Measurements written to influxDb: " + debugOutput);
+						logger.logDebug("Measurements written to influxDb: " + buildVerboseDebugOutput(debugOutput, postBody.toString()));
 					}
 				} catch (IOException e) {
 					String message = "Exception writing to InfluxDb"+ (resubmitMeasurementsOnFail != null ? " (Measurements will be retried on next post)" : "") + ": " + debugOutput;
@@ -528,6 +528,17 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 					}
 				}
 			}
+		}
+		
+		private final String buildVerboseDebugOutput(String debugOutput, String postBody) {
+			String result = debugOutput;
+			if (LoggerFactory.isVerboseInstrumentationEnabled()) {
+				String lineSeparator = System.lineSeparator();
+				result = debugOutput + lineSeparator
+						+ "--POST BODY--" +
+						(postBody != null ? lineSeparator + postBody.replaceAll("\\n", lineSeparator) : "");
+			}
+			return result;
 		}
 	}
 	
@@ -588,9 +599,5 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		public String toString() {
 			return line;
 		}
-		
-		
-		
 	}
-	
 }
