@@ -11,8 +11,10 @@ public class MyDemoEmitter implements Emitter, Runnable {
 		// When emitter is attached to a controller this method
 		// will be called every minute.
 		
-		EmitterData data = controller.initData();
+		EmitterData data = controller.initData("MyInstanceName");
 		data.addData("iops", ++value);
+		data.addData("myString", "bogus");
+		data.addData("myFloatingPoint", 10.0/value);
 		controller.emit(data);
 	}
 
@@ -26,13 +28,24 @@ public class MyDemoEmitter implements Emitter, Runnable {
 		System.setProperty("PerfMon4j.verboseEnabled", "true");
 		
         final String PERFMON_CONFIG =
-                "<Perfmon4JConfig enabled='true'>" +
-                "   <appender name='5 minute' className='org.perfmon4j.TextAppender' interval='5 min'/>" +
-                "   <emitterMonitor name='MyDemo' className='org.perfmon4j.emitter.MyDemoEmitter'>" +
-                "       <appender name='5 minute'/>" +
-                "   </emitterMonitor>" +
+                "<Perfmon4JConfig enabled='true'>\r\n" +
+                "   <appender name='5 minute' className='org.perfmon4j.TextAppender' interval='5 min'/>\r\n" +
+//        		"	<appender name='influx-appender' className='org.perfmon4j.influxdb.InfluxAppender' interval='1 minute'>\r\n" +
+//        		"		<attribute name='baseURL'>http://localhost:8888/influxdb</attribute>\r\n" +
+//        		"		<attribute name='database'>perfmon4j</attribute>\r\n" +
+//        		"		<attribute name='groups'>perfmon4j-demo</attribute>\r\n" +
+//        		"		<attribute name='retentionPolicy'>one_week</attribute>\r\n" +
+//        		"		<attribute name='userName'>influxUser</attribute>\r\n" +
+//        		"		<attribute name='password'>pw4influxUser</attribute>\r\n" +
+//        		"	</appender>\r\n" +
+                "   <emitterMonitor name='MyDemo' className='org.perfmon4j.emitter.MyDemoEmitter'>\r\n" +
+                "       <appender name='5 minute'/>\r\n" +
+//                "       <appender name='influx-appender'/>\r\n" +
+                "   </emitterMonitor>\r\n" +
                 "</Perfmon4JConfig>";
 
+System.out.println(PERFMON_CONFIG);
+        
         PerfMon.configureFromStringXML(PERFMON_CONFIG);
 
 		EmitterRegistry emitterRegistry = EmitterRegistry.getSingleton();
