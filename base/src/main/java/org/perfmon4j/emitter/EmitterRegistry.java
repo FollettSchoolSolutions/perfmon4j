@@ -23,11 +23,11 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 	private EmitterRegistry() {
 	}
 	
-	/* package level for testing */ long getDefaultTimerIntervalMillis() {
+	public long getDefaultTimerIntervalMillis() {
 		return defaultTimerIntervalMillis;
 	}
 	
-	/* package level for testing */ void setDefaultTimerIntervalMillis(long defaultTimerIntervalMillis) {
+	public void setDefaultTimerIntervalMillis(long defaultTimerIntervalMillis) {
 		this.defaultTimerIntervalMillis = defaultTimerIntervalMillis; 
 	}
 	
@@ -81,11 +81,11 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 			logger.logDebug("Creating itemInstance: " + this);
 			item.acceptController(controller);
 			
-			if (item instanceof Runnable) {
+			if (itemIsRunnable(item)) {
 				timerTask = new InstanceFailSafeTimerTask(this);
 				long intervalMillis = registry.getDefaultTimerIntervalMillis();
 				EmitterRegistry.runTimer.schedule(timerTask, intervalMillis, intervalMillis);
-					logger.logDebug("Scheduled timer for: " + this + " (interval=" + MiscHelper.getMillisDisplayable(intervalMillis) + ")");
+				logger.logDebug("Scheduled timer for: " + this + " (interval=" + MiscHelper.getMillisDisplayable(intervalMillis) + ")");
 			} else {
 				timerTask = null;
 			}
@@ -108,6 +108,15 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 				logger.logDebug("Cancelled timer for: " + this);
 			}
 			super.deInit();
+		}
+		
+		private boolean itemIsRunnable(Emitter item) {
+			boolean result = item instanceof Runnable;
+			
+			if (item instanceof ConditionalRunnable) {
+				result = ((ConditionalRunnable)item).delegatedEmitterImplementsRunnable();
+			}
+			return result;
 		}
 	}
 	
@@ -165,5 +174,9 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 			EmitterController monitor = EmitterMonitor.lookUpEmitterMonitor(className);
 			return monitor != null ? monitor : EmitterController.NO_OP_CONTROLLER;
 		}
+	}
+	
+	public static interface ConditionalRunnable extends Runnable {
+		boolean delegatedEmitterImplementsRunnable();
 	}
 }

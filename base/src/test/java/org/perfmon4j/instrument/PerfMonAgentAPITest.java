@@ -36,6 +36,7 @@ import org.perfmon4j.TestHelper;
 import org.perfmon4j.TextAppender;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
+import org.perfmon4j.emitter.EmitterRegistry;
 import org.perfmon4j.instrument.PerfMonTimerTransformerTest.SQLStatementTester.BogusAppender;
 import org.perfmon4j.util.MiscHelper;
 
@@ -878,7 +879,7 @@ System.out.println(output);
     
     
 	public static class TestEmitterRegistryEmitterAPI implements Runnable {
-		public static class MySnapShotEmitter implements api.org.perfmon4j.agent.Emitter {
+		public static class MySnapShotEmitter implements api.org.perfmon4j.agent.Emitter, Runnable {
 			private api.org.perfmon4j.agent.EmitterController controller = null;
 			private int counter = 0;
 			
@@ -894,7 +895,7 @@ System.out.println(output);
 				return controller;
 			}
 			
-			public void emitData() {
+			public void run() {
 				api.org.perfmon4j.agent.EmitterData data = controller.initData(System.currentTimeMillis() - (60 * 1000 * 60));
 				data.addData("myCounter", counter++);
 				data.addData("myString", "Dave" + Long.toString(System.currentTimeMillis()));
@@ -907,6 +908,8 @@ System.out.println(output);
 		@Override
 		public void run() {
 			try {
+				EmitterRegistry.getSingleton().setDefaultTimerIntervalMillis(500);
+				
 				assertTrue("EmitterRegistry should be attached to the agent", api.org.perfmon4j.agent.EmitterRegistry.isAttachedToAgent());
 				
 				MySnapShotEmitter myEmitter = new MySnapShotEmitter();
@@ -921,11 +924,6 @@ System.out.println(output);
 				config.attachAppenderToSnapShotMonitor(monitorName, appenderName);
 				
 				PerfMon.configure(config);
-
-				myEmitter.emitData();
-				myEmitter.emitData();
-				myEmitter.emitData();
-				myEmitter.emitData();
 				
 				Thread.sleep(1500);
 				Appender.flushAllAppenders();
@@ -939,7 +937,7 @@ System.out.println(output);
 	/*----------------------------------------------------------------------------*/
     public void testEmitterRegistryAPI() throws Exception {
     	String output = LaunchRunnableInVM.run(TestEmitterRegistryEmitterAPI.class,"-vtrue", "", perfmon4jJar);
-//System.out.println(output);
+System.out.println(output);
     	TestHelper.validateNoFailuresInOutput(output);
 		// Should not include instance name when POJO is registered without an instance name
 		assertTrue("Expected appender output not found", output.contains("myCounter................ 0"));

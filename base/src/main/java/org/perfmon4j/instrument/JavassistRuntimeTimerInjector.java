@@ -37,6 +37,7 @@ import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.GenericItemRegistry.OverrideClassNameForWrappedObject;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.emitter.Emitter;
+import org.perfmon4j.emitter.EmitterRegistry.ConditionalRunnable;
 import org.perfmon4j.hystrix.CommandStatsProvider;
 import org.perfmon4j.hystrix.ThreadPoolStatsProvider;
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
@@ -1567,12 +1568,22 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "}";
         clazz.addMethod(CtMethod.make(src, clazz));       	
         
-      
+        // Add an interface to tell us if the delegate emitter implements the Runnable interface
+       	clazz.addInterface(classPool.get(ConditionalRunnable.class.getName()));
+        src = 
+        		"public void run() {\r\n"
+        		+ "	if (getDelegate() instanceof Runnable) {\r\n"
+        		+ "		((Runnable)getDelegate()).run();\r\n"
+        		+ "	}\r\n"
+        		+ "}";
+        clazz.addMethod(CtMethod.make(src, clazz));       	
         
-//    	public static interface OverrideClassNameForWrappedObject {
-//    		public String getEffectiveClassName();
-//    	}        
-	    
+        src = 
+        		"public boolean delegatedEmitterImplementsRunnable() {\r\n"
+        		+ "	return getDelegate() instanceof Runnable;\r\n"
+        		+ "}";
+        clazz.addMethod(CtMethod.make(src, clazz));       	
+        
 	    logger.logDebug("Completed instrumenting agent class " + PERFMON_EMITTER_WRAPPER_CLASSNAME + ". " );
 		
 		return clazz.toBytecode();
