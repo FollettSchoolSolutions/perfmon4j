@@ -104,7 +104,7 @@ public class SnapShotManager {
 	                }                
                 } else {
                 	try {
-                		if (Emitter.class.isAssignableFrom(clazz)) {
+                		if (isEmitterClass(clazz)) {
                 			result = new EmitterMonitor(clazz.getName(), monitorID.getName());
 	                    	logger.logDebug("Found SnapShotEmitter for class: " + clazz.getName());
                 		} else {
@@ -133,6 +133,21 @@ public class SnapShotManager {
         
         return result;
     }
+    
+    static private boolean isEmitterClass(Class<?> clazz) {
+    	boolean result = Emitter.class.isAssignableFrom(clazz);
+    	
+    	if (!result) {
+    		try {
+    			Class<?> apiEmitterInterface = PerfMon.getClassLoader().loadClass("api.org.perfmon4j.agent.Emitter");
+    			result = apiEmitterInterface.isAssignableFrom(clazz);
+    		} catch (ClassNotFoundException cnfe) {
+    			// Ignore.
+    		}
+    	}
+    	return result;
+    }
+    
 
     private static boolean monitorIsInConfig(SnapShotMonitorID id, SnapShotMonitorConfig monitors[]) {
         boolean result = false;

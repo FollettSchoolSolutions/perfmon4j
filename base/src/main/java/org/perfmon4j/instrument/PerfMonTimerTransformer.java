@@ -583,7 +583,29 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to attach POJOSnapShotRegistry API class to agent", ex);
 	            }
-	        }
+	        } else if ("api/org/perfmon4j/agent/EmitterRegistry".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToEmitterRegistryAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached EmitterRegistry API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach EmitterRegistry API class to agent", ex);
+	            }
+	        } else if (className.startsWith("api/org/perfmon4j/agent/impl/EmitterInstrumentationHelper$")) {
+	            try {
+	            	if (className.endsWith("APIEmitterWrapper")) {
+			            result = runtimeTimerInjector.attachAgentToAPIEmitterWrapperClass(classfileBuffer, loader, protectionDomain);
+			            logger.logInfo("Attached APIEmitterWrapper API class to agent");
+	            	} else if (className.endsWith("EmitterControllerWrapper")) {
+			            result = runtimeTimerInjector.attachAgentToAPIEmitterControllerWrapperClass(classfileBuffer, loader, protectionDomain);
+			            logger.logInfo("Attached APIEmitterControllerWrapper API class to agent");
+	            	} else if (className.endsWith("EmitterDataWrapper")) {
+			            result = runtimeTimerInjector.attachAgentToAPIEmitterDataWrapperClass(classfileBuffer, loader, protectionDomain);
+			            logger.logInfo("Attached APIEmitterDataWrapper API class to agent");
+	            	} 
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach API class: " + className, ex);
+	            }
+	        } 
 
 			return result;
 		}

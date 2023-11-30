@@ -33,7 +33,7 @@ public class EmitterRegistry extends GenericItemRegistry<Emitter> {
 	
 	@Override
 	public EmitterRegistryEntry buildRegistryEntry(Emitter item) throws GenerateSnapShotException {
-		return new EmitterRegistryEntry(this, item.getClass().getName());
+		return new EmitterRegistryEntry(this, getEffectiveClassName(item));
 	}
 
 	@Override

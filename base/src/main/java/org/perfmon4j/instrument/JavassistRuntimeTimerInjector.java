@@ -34,7 +34,9 @@ import java.util.Set;
 import javax.management.ObjectName;
 
 import org.perfmon4j.ExceptionTracker;
+import org.perfmon4j.GenericItemRegistry.OverrideClassNameForWrappedObject;
 import org.perfmon4j.PerfMon;
+import org.perfmon4j.emitter.Emitter;
 import org.perfmon4j.hystrix.CommandStatsProvider;
 import org.perfmon4j.hystrix.ThreadPoolStatsProvider;
 import org.perfmon4j.instrument.javassist.SerialVersionUIDHelper;
@@ -67,6 +69,11 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     private static final String PERFMON_SQL_TIME_API_CLASSNAME = "api.org.perfmon4j.agent.SQLTime";
     private static final String PERFMON_THREAD_TRACE_CONFIG_API_CLASSNAME = "api.org.perfmon4j.agent.ThreadTraceConfig";
     private static final String PERFMON_POJO_SNAPSHOT_REGISTRY_API_CLASSNAME = "api.org.perfmon4j.agent.POJOSnapShotRegistry";
+    private static final String PERFMON_EMITTER_REGISTRY_API_CLASSNAME = "api.org.perfmon4j.agent.EmitterRegistry";
+
+    private static final String PERFMON_EMITTER_WRAPPER_CLASSNAME = "api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.APIEmitterWrapper";
+    private static final String PERFMON_EMITTER_DATA_WRAPPER_CLASSNAME = "api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.EmitterDataWrapper";
+    private static final String PERFMON_EMITTER_CONTROLLER_WRAPPER_CLASSNAME = "api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.EmitterControllerWrapper";
     
     /* (non-Javadoc)
 	 * @see org.perfmon4j.instrument.RuntimeTimerInjectorInterface#injectPerfMonTimers(javassist.CtClass, boolean)
@@ -1492,6 +1499,167 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         return clazz.toBytecode();
 	}
 	
+	@Override
+	/**
+	 * Unit tests for this code can be found in: org.perfmon4j.instrument.PerfMonAgentAPITest
+	 */
+	public byte[] attachAgentToEmitterRegistryAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+
+		final String API_EMITTER_INTERFACENAME = "api.org.perfmon4j.agent.Emitter";
+		
+    	logger.logInfo("Instrumenting agent class " + PERFMON_EMITTER_REGISTRY_API_CLASSNAME + ". " );
+
+		ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+    	
+       	updateIsAttachedToAgent(clazz);
+
+//    	public static void register(Object snapShotPOJO, String instanceName, boolean useWeakReference) 
+        String src = "{\r\n"
+        		+ "  try {\r\n"
+        		+ "    org.perfmon4j.emitter.Emitter emitter = api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.wrapAPIEmitterWithAgentEmitter($1);\r\n"
+        		+ "    org.perfmon4j.emitter.EmitterRegistry.getSingleton().register(emitter,$2,$3);\r\n"
+        		+ "  } catch (org.perfmon4j.instrument.snapshot.GenerateSnapShotException ex) {\r\n"
+        		+ "    throw new java.lang.RuntimeException(ex);\r\n"  	
+        		+ "  }\r\n"
+        		+ "}";
+        replaceMethodIfExists(clazz, "register", src, API_EMITTER_INTERFACENAME, String.class.getName(), boolean.class.getName());
+
+//        public static void deRegister(Object snapShotPOJO, String instanceName)
+        src = "{\r\n"
+        		+ "  org.perfmon4j.emitter.Emitter emitter = api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.wrapAPIEmitterWithAgentEmitter($1);\r\n"
+        		+ "  org.perfmon4j.POJOSnapShotRegistry.getSingleton().deRegister(emitter,$2);\r\n"
+        		+ "}";
+        replaceMethodIfExists(clazz, "deRegister", src, API_EMITTER_INTERFACENAME, String.class.getName());
+        
+    	logger.logDebug("Completed instrumenting agent class " + PERFMON_EMITTER_REGISTRY_API_CLASSNAME + ". " );
+        
+        return clazz.toBytecode();
+	}
+
+	@Override
+	public byte[] attachAgentToAPIEmitterWrapperClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+		
+	    logger.logInfo("Instrumenting agent class " + PERFMON_EMITTER_WRAPPER_CLASSNAME + ". " );
+
+		ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+	    
+       	updateIsAttachedToAgent(clazz);
+       	
+       	clazz.addInterface(classPool.get(Emitter.class.getName()));
+        String src = 
+        		"public void acceptController(org.perfmon4j.emitter.EmitterController controller) {\r\n"
+//                + "	System.err.println(\"!!!!! Accept called controller:\" + controller);\r\n"
+        		+ "	getDelegate().acceptController(api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.wrapAgentEmitterControllerWithAPIEmitterController(controller));\r\n"
+        		+ "}";
+        clazz.addMethod(CtMethod.make(src, clazz));       	
+        
+        // When we register the Emitter we want to use the name of the delegete class
+        // not the wrapper class.
+        
+       	clazz.addInterface(classPool.get(OverrideClassNameForWrappedObject.class.getName()));
+        src = 
+        		"public String getEffectiveClassName() {\r\n"
+        		+ "	return getDelegate().getClass().getName();\r\n"
+        		+ "}";
+        clazz.addMethod(CtMethod.make(src, clazz));       	
+        
+      
+        
+//    	public static interface OverrideClassNameForWrappedObject {
+//    		public String getEffectiveClassName();
+//    	}        
+	    
+	    logger.logDebug("Completed instrumenting agent class " + PERFMON_EMITTER_WRAPPER_CLASSNAME + ". " );
+		
+		return clazz.toBytecode();
+	}
+
+	@Override
+	public byte[] attachAgentToAPIEmitterControllerWrapperClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+
+	    logger.logInfo("Instrumenting agent class " + PERFMON_EMITTER_CONTROLLER_WRAPPER_CLASSNAME + ". " );
+	    final String API_EMITTER_DATA_CLASSNAME = "api.org.perfmon4j.agent.EmitterData";
+	   
+		ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+    	
+       	updateIsAttachedToAgent(clazz);
+
+       	String src = "{\r\n"
+        		+ "	org.perfmon4j.emitter.EmitterData delegateData = (org.perfmon4j.emitter.EmitterData)api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.getDelegateFromAPIEmitterData($1);\r\n"
+        		+ "	((org.perfmon4j.emitter.EmitterController)getDelegate()).emit(delegateData);\r\n"
+        		+ "}";
+       	// public void emit(EmitterData data)
+        replaceMethodIfExists(clazz, "emit", src, API_EMITTER_DATA_CLASSNAME);       	
+        
+        src = "{\r\n"
+        		+ "  return api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.wrapAgentEmitterDataWithAPIEmitterData(((org.perfmon4j.emitter.EmitterController)getDelegate()).initData());\r\n"
+        		+ "}";
+        // public EmitterData initData()
+        replaceMethodIfExists(clazz, "initData", src);       
+        
+        src = "{\r\n"
+        		+ "  return api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.wrapAgentEmitterDataWithAPIEmitterData(((org.perfmon4j.emitter.EmitterController)getDelegate()).initData($1));\r\n"
+        		+ "}";
+        // public EmitterData initData(String instanceName)
+        replaceMethodIfExists(clazz, "initData", src, String.class.getName());
+        // public EmitterData initData(long timestamp)
+        replaceMethodIfExists(clazz, "initData", src, long.class.getName());       	
+
+        src = "{\r\n"
+        		+ "  return api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.wrapAgentEmitterDataWithAPIEmitterData(((org.perfmon4j.emitter.EmitterController)getDelegate()).initData($1, $2));\r\n"
+        		+ "}";
+        // public EmitterData initData(String instanceName, long timeStamp)
+        replaceMethodIfExists(clazz, "initData", src, String.class.getName(), long.class.getName());       	
+        
+        src = "{\r\n"
+        		+ "  return ((org.perfmon4j.emitter.EmitterController)getDelegate()).isActive();\r\n"
+        		+ "}";
+        // public boolean isActive()
+        replaceMethodIfExists(clazz, "isActive", src);       	
+	    
+	    logger.logDebug("Completed instrumenting agent class " + PERFMON_EMITTER_CONTROLLER_WRAPPER_CLASSNAME + ". " );
+	    
+		return clazz.toBytecode();
+	}
+
+	@Override
+	public byte[] attachAgentToAPIEmitterDataWrapperClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+
+	    logger.logInfo("Instrumenting agent class " + PERFMON_EMITTER_DATA_WRAPPER_CLASSNAME + ". " );
+
+		ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
+    	
+       	updateIsAttachedToAgent(clazz);
+	   
+       	String src = "{\r\n"
+        		+ "  ((org.perfmon4j.emitter.EmitterData)getDelegate()).addData($1, $2);\r\n"
+        		+ "}";
+		// public void addData(String fieldName, long value)
+        replaceMethodIfExists(clazz, "addData", src, String.class.getName(), long.class.getName());       	
+		// public void addData(String fieldName, int value)
+        replaceMethodIfExists(clazz, "addData", src, String.class.getName(), int.class.getName());       	
+		// public void addData(String fieldName, double value)
+        replaceMethodIfExists(clazz, "addData", src, String.class.getName(), double.class.getName());       	
+		// public void addData(String fieldName, float value)
+        replaceMethodIfExists(clazz, "addData", src, String.class.getName(), float.class.getName());       	
+		// public void addData(String fieldName, boolean value)
+        replaceMethodIfExists(clazz, "addData", src, String.class.getName(), boolean.class.getName());       	
+		// public void addData(String fieldName, String value)
+        replaceMethodIfExists(clazz, "addData", src, String.class.getName(), String.class.getName());       	
+       	
+       	
+	    logger.logDebug("Completed instrumenting agent class " + PERFMON_EMITTER_DATA_WRAPPER_CLASSNAME + ". " );
+	    
+		return clazz.toBytecode();
+	}
 	
 	private void updateIsAttachedToAgent(CtClass clazz) throws Exception {
     	String methodDescription = buildMethodDescription(clazz, "isAttachedToAgent"); 

@@ -26,7 +26,7 @@ public abstract class GenericItemRegistry <T>{
 
 	public void register(T item, String instanceName, boolean useWeakReference) throws GenerateSnapShotException {
 		synchronized(entriesLockToken) {
-			final String className = item.getClass().getName();
+			final String className = getEffectiveClassName(item);
 			
 			ItemRegistry<T> entry = entries.get(className);
 			if (entry == null) {
@@ -37,14 +37,13 @@ public abstract class GenericItemRegistry <T>{
 		}
 	}
 	
-	
 	public void deRegister(T item) {
 		deRegister(item, null);
 	}
 	
 	public void deRegister(T item, String instanceName) {
 		synchronized(entriesLockToken) {
-			final String className = item.getClass().getName();
+			final String className = getEffectiveClassName(item);
 			
 			ItemRegistry<T> entry = entries.get(className);
 			if (entry != null) {
@@ -188,8 +187,8 @@ public abstract class GenericItemRegistry <T>{
 		private final String key;
 		
 		ItemInstanceKey(Object item, String instanceName) {
-			key = item.getClass().getName() + (instanceName == null ? "" : ("$$." + instanceName));
-System.out.println("key=" + key);
+			key =  getEffectiveClassName(item) + (instanceName == null ? "" : ("$$." + instanceName));
+//System.out.println("key=" + key);
 		}
 
 		@Override
@@ -213,5 +212,21 @@ System.out.println("key=" + key);
 		public String toString() {
 			return this.getClass().getSimpleName() + " [key=" + key + "]";
 		}
+	}
+	
+	public static interface OverrideClassNameForWrappedObject {
+		public String getEffectiveClassName();
+	}
+	
+	public static String getEffectiveClassName(Object item) {
+		String result = null;
+		
+		if (item instanceof OverrideClassNameForWrappedObject) {
+			result = ((OverrideClassNameForWrappedObject)item).getEffectiveClassName();
+		} else {
+			result = item.getClass().getName();
+		}
+		
+		return result;
 	}
 }
