@@ -16,10 +16,8 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
+** NEXT Version - TBD
 
-TODO:
-	Clean up EmitterMonitor tests -
-	Improve XMLConfiguration Parser.
 
 ** 2.0.0 - 12/15/23
 - Added a new option for collecting and writing arbitrary metrics to appenders, an Emitter.
