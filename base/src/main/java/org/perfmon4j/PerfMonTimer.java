@@ -35,6 +35,7 @@ import org.perfmon4j.util.MiscHelper;
 
 public class PerfMonTimer {
 	private final static AtomicLong nextReactiveContextID = new AtomicLong(0);
+    public static final String IMPLICIT_REACTIVE_CONTEXT_PREFIX = "$ImplicitCTX:"; 
 	
     // Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(PerfMonTimer.class);
@@ -59,8 +60,12 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer startReactive(PerfMon mon) {
-    	return start(mon, getNextReactiveID());
+    	return startReactive(mon, true);
     }
+    
+	public static PerfMonTimer startReactive(PerfMon mon, boolean attachToExistingReactiveContext) {
+    	return start(mon, getNextReactiveID(attachToExistingReactiveContext));
+	}
     
     public static PerfMonTimer start(PerfMon mon, String reactiveContextID) {
         if (!PerfMon.isConfigured() && !ExternalAppender.isActive()) {
@@ -138,7 +143,7 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer startReactive(String key) {
-    	return start(key, false, getNextReactiveID());
+    	return startReactive(key, false, true);
     }
     
     /**
@@ -157,9 +162,12 @@ public class PerfMonTimer {
     }
 
     public static PerfMonTimer startReactive(String key, boolean isDynamicKey) {
-    	return start(key, isDynamicKey, getNextReactiveID());
+    	return startReactive(key, isDynamicKey, true);
     }
     
+    public static PerfMonTimer startReactive(String key, boolean isDynamicKey, boolean attachToExistingReactiveContext) {
+    	return start(key, isDynamicKey, getNextReactiveID(attachToExistingReactiveContext));
+    }
     
     /**
      * Pass in true if this is a dynamically generated key (i.e. not a method
@@ -429,7 +437,14 @@ public class PerfMonTimer {
     	last.get().setFullName(key);
     }
     
-    static private String getNextReactiveID() {
-    	return "TimerCTX:" + nextReactiveContextID.incrementAndGet();
+    static private String getNextReactiveID(boolean attachToExistingReactiveContext) {
+    	if (attachToExistingReactiveContext) {
+    		String explicitReactiveContextID = ReactiveContextManager.getContextManagerForThread().getExplicitReactiveContextID();
+    		if (explicitReactiveContextID != null) {
+				logger.logDebug("Attaching timer to outer explicitReactiveContext: " + explicitReactiveContextID);
+				return explicitReactiveContextID;
+    		}
+    	} 
+    	return IMPLICIT_REACTIVE_CONTEXT_PREFIX + nextReactiveContextID.incrementAndGet();
     }
 }

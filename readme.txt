@@ -16,6 +16,27 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
+
+TODO:
+	Clean up EmitterMonitor tests -
+	Improve XMLConfiguration Parser.
+
+** 2.0.0 - 12/15/23
+- Added a new option for collecting and writing arbitrary metrics to appenders, an Emitter.
+   An Emitter is similar to a SnapShot Monitor, however it is more flexible.  It can be used 
+   to output arbitrary data to an appender on arbitrary intervals.
+   See: The test source file org.perfmon4j.emitter.MyDemoEmitter in the Perfmon4j base project
+   for a usage example. 
+
+- PerfMonTimer.startReactive() will now attach to an existing explicit reactive context,
+   when one is available.  An explicit reactive context is created by passing a reactiveContextID
+   to PerfMonTimer.start().  
+   This feature is primarily useful when using PerfMon4j's Quarkus Library.  This ensures that
+   each incoming web request is associated with an explicit reactive context, that follows 
+   the request process across multiple threads.
+- Added retry logic to the influx appender to reduce data loss due
+  to temporary network connectivity issues with the InfluxDb.
+
 ** 2.0.0-BETA2 - 7/31/23
 - Added the ability to indicate data fields that should be treated
   as tags when using the influx appender.  Using tag fields
@@ -26,14 +47,14 @@ McHenry, IL 60050
    influx appender.   
 
 ** 2.0.0-BETA1 - 2023-07-26
-- Added support for the Quarkus platorm.  Additions
+- Added support for the Quarkus platform.  Additions
   include a ServletFilter and the ability to track Restful
-  requests across multiple theads.
-- Added suport for creating Perfmon4j snapshots using
+  requests across multiple threads.
+- Added support for creating Perfmon4j snapshots using
   POJO objects.
 - Added PerfMonTimer.startReactive().  Use this method
   when you are starting a manual timer on one thread 
-  and stoping it on another.
+  and stopping it on another.
 - Fixed an issue when generating classes under Java 17  
 
 Changes

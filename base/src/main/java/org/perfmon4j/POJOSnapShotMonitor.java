@@ -50,7 +50,7 @@ public class POJOSnapShotMonitor extends SnapShotMonitorBase<POJODataSnapShot[]>
 		List<POJODataSnapShot> result = new ArrayList<POJODataSnapShot>();
 		
 		for (POJOInstance instance : registry.getInstances(pojoClassName)) {
-			Object pojo = instance.getPOJO();
+			Object pojo = instance.getItem();
 			if (pojo != null) {
 				Bundle snapShotBundle = instance.getSnapShotBundle();
 				
@@ -74,7 +74,7 @@ public class POJOSnapShotMonitor extends SnapShotMonitorBase<POJODataSnapShot[]>
 		
 		for (POJODataSnapShot data : dataArray) {
 			POJOInstance instance = data.getPojoInstance();
-			Object pojo = instance.getPOJO();
+			Object pojo = instance.getItem();
 			if (pojo != null) {
 				((SnapShotGenerator.SnapShotLifecycle)data.getSnapShotData()).takeSnapShot(pojo, currentTimeMillis);
 				result.add(data);

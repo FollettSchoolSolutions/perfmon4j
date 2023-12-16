@@ -20,6 +20,7 @@
  */
 package org.perfmon4j.influxdb;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +29,7 @@ import org.mockito.Mockito;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonObservableData;
 import org.perfmon4j.PerfMonObservableDatum;
+import org.perfmon4j.util.HttpHelper;
 import org.perfmon4j.util.SubCategorySplitter;
 
 import junit.framework.TestCase;
@@ -40,11 +42,15 @@ public class InfluxAppenderTest extends TestCase {
 
 	InfluxAppender appender = null;
 	PerfMonObservableData mockData = null;
+	MockHttpHelper mockHttpHelper = null;
 	
 	@SuppressWarnings("boxing")
 	protected void setUp() throws Exception {
 		super.setUp();
-		appender = new InfluxAppender(AppenderID.getAppenderID(InfluxAppender.class.getName()));
+		mockHttpHelper = new MockHttpHelper();
+		appender = new InfluxAppender(AppenderID.getAppenderID(InfluxAppender.class.getName()), mockHttpHelper);
+		appender.setUnitTestMode(true);
+		appender.setSystemNameBody("test-run");
 		
 		mockData = Mockito.mock(PerfMonObservableData.class);
 		Mockito.when(mockData.getDataCategory()).thenReturn("MyCategory");  //Comma, space should be escaped, but not the equals sign,
@@ -58,6 +64,7 @@ public class InfluxAppenderTest extends TestCase {
 	}
 
 	protected void tearDown() throws Exception {
+		appender.deInit();
 		super.tearDown();
 	}
 	
@@ -299,4 +306,107 @@ public class InfluxAppenderTest extends TestCase {
 		assertEquals("Content-Type header","text/plain; charset=utf-8", headers.get("Content-Type"));
 		assertEquals("Accept header","application/json", headers.get("Accept"));
 	}
+	
+	public void testResubmitMeasurementsOnFailedPost() throws Exception {
+		appender.setBaseURL("http://localhost:8086/");
+		appender.setBucket("perfmon4j/one_week");
+		appender.setOrg("My Organization");
+		appender.setToken("ABCDE");
+		appender.setMaxRetrysPerMeasurement(1);
+		
+		final String firstExpectedMeasurement = "MyCategory,system=test-run,instanceName=DataCache throughput=25i 1";
+		final String secondExpectedMeasurement = "MySecondCategory,system=test-run,instanceName=DataCache throughput=25i 1";
+		final String thirdExpectedMeasurement = "MyThirdCategory,system=test-run,instanceName=DataCache throughput=25i 1";
+		
+		appender.outputData(mockData);
+		mockHttpHelper.setExceptionToThrow(new IOException());
+		appender.directRunBatchWriterForTest();
+		
+		
+		String post = mockHttpHelper.getLastPostBody();
+//System.out.println(post);
+		
+		assertTrue("Should have tried posting firstExpectedMeasurement=" + firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
+		
+		Mockito.when(mockData.getDataCategory()).thenReturn("MySecondCategory");
+		appender.outputData(mockData);
+		mockHttpHelper.setExceptionToThrow(new IOException());
+		appender.directRunBatchWriterForTest();
+		
+		post = mockHttpHelper.getLastPostBody();
+//System.out.println(post);
+		assertTrue("Should have tried posted secondExpectedMeasurement=" + secondExpectedMeasurement, post.contains(secondExpectedMeasurement));
+		assertTrue("Should have re-tried posting firstExpectedMeasurement=" + firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
+	
+		Mockito.when(mockData.getDataCategory()).thenReturn("MyThirdCategory");
+		appender.outputData(mockData);
+
+		appender.directRunBatchWriterForTest();
+		
+		post = mockHttpHelper.getLastPostBody();
+//System.out.println(post);
+		assertTrue("Should have posted thirdExpectedMeasurement=" + secondExpectedMeasurement, post.contains(thirdExpectedMeasurement));
+		assertTrue("Should have re posting secondExpectedMeasurement=" + secondExpectedMeasurement, post.contains(secondExpectedMeasurement));
+		assertFalse("Since we exceeded number of retries we should no longer have retried firstExpectedMeasurement=" 
+				+ firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
+	}
+	
+	public void testResubmitMeasurementsOnFailedPostDisabled() throws Exception {
+		appender.setBaseURL("http://localhost:8086/");
+		appender.setBucket("perfmon4j/one_week");
+		appender.setOrg("My Organization");
+		appender.setToken("ABCDE");
+		
+		appender.setResubmitMeasurementsOnFailedPost(false);
+	
+		final String firstExpectedMeasurement = "MyCategory,system=test-run,instanceName=DataCache throughput=25i 1";
+		final String secondExpectedMeasurement = "MySecondCategory,system=test-run,instanceName=DataCache throughput=25i 1";
+		
+		appender.outputData(mockData);
+		mockHttpHelper.setExceptionToThrow(new IOException());
+		appender.directRunBatchWriterForTest();
+		
+		String post = mockHttpHelper.getLastPostBody();
+		
+		assertTrue("Should have tried posting firstExpectedMeasurement=" + firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
+		
+		Mockito.when(mockData.getDataCategory()).thenReturn("MySecondCategory");
+		appender.outputData(mockData);
+		appender.directRunBatchWriterForTest();
+		
+		post = mockHttpHelper.getLastPostBody();
+//System.out.println(post);
+		assertTrue("Should have posted secondExpectedMeasurement=" + secondExpectedMeasurement, post.contains(secondExpectedMeasurement));
+		assertFalse("Should NOT have re-tried posting firstExpectedMeasurement=" + firstExpectedMeasurement, post.contains(firstExpectedMeasurement));
+	}
+	
+	private static class MockHttpHelper extends HttpHelper {
+		private IOException exceptionToThrow = null;
+		private String lastPostBody = null;
+		
+
+		@Override
+		public Response doPost(String urlparam, String body, Map<String, String> requestHeaders) throws IOException {
+			lastPostBody = body;
+
+			if (exceptionToThrow != null) {
+				IOException ex = exceptionToThrow;
+				exceptionToThrow = null;
+				throw ex;
+			}
+			return new Response(200, "OK", "OK");
+		}
+
+		void setExceptionToThrow(IOException exceptionToThrow) {
+			this.exceptionToThrow = exceptionToThrow;
+		}
+
+
+		String getLastPostBody() {
+			return lastPostBody;
+		}
+	}
+	
+	
+	
 }

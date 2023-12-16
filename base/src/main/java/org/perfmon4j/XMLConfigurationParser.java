@@ -103,6 +103,7 @@ class XMLConfigurationParser extends DefaultHandler {
     private final static String ALIAS_NAME = "alias";
     private final static String ATTRIBUTE_NAME = "attribute";
     private final static String SNAP_SHOT_MONITOR_NAME = "snapShotMonitor";
+    private final static String EMITTER_MONITOR_NAME = "emitterMonitor";
     private final static String THREAD_TRACE_NAME = "threadTrace";
     private final static String THREAD_TRACE_TRIGGERS_NAME = "Triggers";
     private final static String HTTP_REQUEST_TRIGGER_NAME = "HttpRequestTrigger";
@@ -186,12 +187,12 @@ class XMLConfigurationParser extends DefaultHandler {
                     currentState = STATE_IN_MONITOR;
                 } else if (ALIAS_NAME.equalsIgnoreCase(name)) {
                     logger.logDebug("Alias names are no longer supported in perfmon4j");
-                } else if (SNAP_SHOT_MONITOR_NAME.equalsIgnoreCase(name)) {
+                } else if (SNAP_SHOT_MONITOR_NAME.equalsIgnoreCase(name) || EMITTER_MONITOR_NAME.equalsIgnoreCase(name)) {
                     String nameAttr = atts.getValue("name");
                     String classNameAttr = atts.getValue("className");
 
-                    validateArg(SNAP_SHOT_MONITOR_NAME, "name", nameAttr);
-                    validateArg(SNAP_SHOT_MONITOR_NAME, "className", classNameAttr);
+                    validateArg(name, "name", nameAttr);
+                    validateArg(name, "className", classNameAttr);
  
                     currentSnapShotMonitor = new SnapShotMonitorVO(nameAttr, classNameAttr);
                     currentState = STATE_IN_SNAP_SHOT_MONITOR;
@@ -379,7 +380,7 @@ class XMLConfigurationParser extends DefaultHandler {
         	currentState = STATE_IN_THREAD_TRACE;
         }
         
-        if (SNAP_SHOT_MONITOR_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_SNAP_SHOT_MONITOR) {
+        if ((SNAP_SHOT_MONITOR_NAME.equalsIgnoreCase(name) || EMITTER_MONITOR_NAME.equalsIgnoreCase(name)) && currentState == STATE_IN_SNAP_SHOT_MONITOR) {
             if (currentSnapShotMonitor.attributes.size() > 0) {
                 config.defineSnapShotMonitor(currentSnapShotMonitor.name, currentSnapShotMonitor.className,
                     currentSnapShotMonitor.attributes);

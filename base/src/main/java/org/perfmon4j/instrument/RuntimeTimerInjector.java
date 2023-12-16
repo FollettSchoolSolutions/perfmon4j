@@ -21,7 +21,14 @@ public abstract class RuntimeTimerInjector {
 	public abstract byte[] attachAgentToThreadTraceConfigAPIClass(byte[] classfileBuffer, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception;
 	public abstract byte[] attachAgentToPOJOSnapShotRegistryAPIClass(byte[] classfileBuffer, ClassLoader loader,
 			ProtectionDomain protectionDomain) throws Exception;
-	
+	public abstract byte[] attachAgentToEmitterRegistryAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception; 
+	public abstract byte[] attachAgentToAPIEmitterWrapperClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception; 
+	public abstract byte[] attachAgentToAPIEmitterControllerWrapperClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception; 
+	public abstract byte[] attachAgentToAPIEmitterDataWrapperClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception; 
 	
     private ThreadLocal<Boolean> singnalThreadInTimer = new ThreadLocal<Boolean>() {
         public Boolean initialValue() {

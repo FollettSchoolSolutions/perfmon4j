@@ -33,7 +33,7 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
-abstract class SnapShotMonitorBase<T extends Object> {
+abstract class SnapShotMonitorBase<T extends Object> implements SnapShotMonitorLifecycle {
     final private static Logger logger = LoggerFactory.initLogger(SnapShotMonitorBase.class);
     
     final private String name;

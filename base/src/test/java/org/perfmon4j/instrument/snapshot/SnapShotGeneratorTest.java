@@ -1172,6 +1172,7 @@ System.out.println(appenderString);
     	public long getCounter() {
     		return x++;
     	}
+    	
     }
 
     @Deprecated

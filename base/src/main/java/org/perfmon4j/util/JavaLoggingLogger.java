@@ -116,4 +116,14 @@ class JavaLoggingLogger implements Logger {
 	public void logWarn(String msg, Throwable th) {
 		javaLogger.log(java.util.logging.Level.WARNING, msg, th);
 	}
+
+	@Override
+	public void logVerbose(String msg) {
+		logDebug(msg);
+	}
+
+	@Override
+	public void logVerbose(String msg, Throwable th) {
+		logDebug(msg, th);
+	}
 }

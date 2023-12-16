@@ -356,4 +356,18 @@ class LoggerWrapper implements Logger {
 			th.printStackTrace();
 		}
 	}
+
+	@Override
+	public void logVerbose(String msg) {
+		if (LoggerFactory.isVerboseInstrumentationEnabled()) {
+			logDebug(msg);
+		}
+	}
+
+	@Override
+	public void logVerbose(String msg, Throwable th) {
+		if (LoggerFactory.isVerboseInstrumentationEnabled()) {
+			logDebug(msg, th);
+		}
+	}
 }

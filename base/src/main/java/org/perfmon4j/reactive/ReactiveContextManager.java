@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -16,6 +17,7 @@ import org.perfmon4j.util.LoggerFactory;
 public class ReactiveContextManager {
 	private static final Logger logger = LoggerFactory.initLogger(ReactiveContextManager.class);
 	private static final ReactiveContext[] EMPTY_CONTEXT_ARRAY = new ReactiveContext[] {};
+	private static final ReactiveContextsVO EMPTY_CONTEXTS_VO = new ReactiveContextsVO(EMPTY_CONTEXT_ARRAY);
 	
 	/** GLOBAL Members - Start **/
 	private static final Serializable bindToken = new Serializable() {
@@ -32,7 +34,7 @@ public class ReactiveContextManager {
 	/** Thread Specific Members - Start **/
 	private final ReactiveContextManagerIdentifier managerID;
 	
-	private volatile ReactiveContext[] cachedContexts = null; 
+	private volatile ReactiveContextsVO cachedContexts = null; 
 	
 	private final Map<String, ReactiveContext> managerContextMap = new HashMap<String, ReactiveContext>();
 	
@@ -294,19 +296,27 @@ public class ReactiveContextManager {
 	 * @return
 	 */
 	public ReactiveContext[] getActiveContexts() {
+		return getContextsVO().getContexts();
+	}
+
+	public String getExplicitReactiveContextID() {
+		return getContextsVO().getExplicitContextID();
+	}
+	
+	private ReactiveContextsVO getContextsVO() {
 		if (!areReactiveContextsActiveInJVM()) {
-			return EMPTY_CONTEXT_ARRAY; 
+			return EMPTY_CONTEXTS_VO; 
 		} else {
-			ReactiveContext[] result = cachedContexts;
+			ReactiveContextsVO result = cachedContexts;
 		
 			if (result == null) {
 				synchronized (bindToken) {
-					result = cachedContexts = managerContextMap.values().toArray(EMPTY_CONTEXT_ARRAY); 
+					result = cachedContexts = new ReactiveContextsVO(managerContextMap.values().toArray(EMPTY_CONTEXT_ARRAY)); 
 				}
 			}
 			return result;
 		}
-	}
+	}	
 
 	@FunctionalInterface
 	public static interface ContextPayloadConstructor {
@@ -433,4 +443,29 @@ public class ReactiveContextManager {
 		return result;
 	}
 	
+	private static final class ReactiveContextsVO {
+		private final ReactiveContext[] contexts;
+		private final String explicitContextID;
+		
+		public ReactiveContextsVO(ReactiveContext[] contexts) {
+			this.contexts = contexts;
+			String newExplicitContextID = null;
+			for (ReactiveContext context : contexts) {
+				String contextID = context.getContextID();
+				if (!contextID.startsWith(PerfMonTimer.IMPLICIT_REACTIVE_CONTEXT_PREFIX)) {
+					newExplicitContextID = contextID;
+					break;
+				}
+			}
+			this.explicitContextID = newExplicitContextID;
+		}
+
+		public ReactiveContext[] getContexts() {
+			return contexts;
+		}
+
+		public String getExplicitContextID() {
+			return explicitContextID;
+		}
+	}
 }

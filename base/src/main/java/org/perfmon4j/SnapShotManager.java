@@ -29,6 +29,8 @@ import java.util.Properties;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
 import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
+import org.perfmon4j.emitter.Emitter;
+import org.perfmon4j.emitter.EmitterMonitor;
 import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
@@ -46,7 +48,7 @@ public class SnapShotManager {
     // Dont use log4j here... The class may not have been loaded
     private static final Logger logger = LoggerFactory.initLogger(SnapShotManager.class);
     
-    private static final Map<SnapShotMonitorID, SnapShotMonitorBase<?>> monitorMap = new HashMap<SnapShotMonitorID, SnapShotMonitorBase<?>>();
+    private static final Map<SnapShotMonitorID, SnapShotMonitorLifecycle> monitorMap = new HashMap<SnapShotMonitorID, SnapShotMonitorLifecycle>();
 
     private SnapShotManager() {
     }
@@ -56,19 +58,19 @@ public class SnapShotManager {
     }
     
     public static synchronized void deInit() {
-        Iterator<SnapShotMonitorBase<?>> itr = monitorMap.values().iterator();
+        Iterator<SnapShotMonitorLifecycle> itr = monitorMap.values().iterator();
         while (itr.hasNext()) {
             itr.next().deInit();
         }
         monitorMap.clear();
     }
     
-    public static synchronized SnapShotMonitorBase<?> getMonitor(SnapShotMonitorID monitorID) {
+    public static synchronized SnapShotMonitorLifecycle getMonitor(SnapShotMonitorID monitorID) {
         return monitorMap.get(monitorID);
     }
     
-    public static synchronized SnapShotMonitorBase<?> getOrCreateMonitor(SnapShotMonitorID monitorID) throws ClassNotFoundException {
-    	SnapShotMonitorBase<?> result = monitorMap.get(monitorID);
+    public static synchronized SnapShotMonitorLifecycle getOrCreateMonitor(SnapShotMonitorID monitorID) throws ClassNotFoundException {
+    	SnapShotMonitorLifecycle result = monitorMap.get(monitorID);
         if (result == null) {
             try {
                 Class<?> clazz = null;
@@ -102,10 +104,15 @@ public class SnapShotManager {
 	                }                
                 } else {
                 	try {
-                		// First see if this is a new style POJO Monitor.
-                		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(clazz);
-                    	result = new POJOSnapShotMonitor(monitorID.getName(), bundle.isUsePriorityTimer(), clazz.getName(), POJOSnapShotRegistry.getSingleton());
-                    	logger.logDebug("Found POJO based SnapShotMonitor for class: " + clazz.getName());
+                		if (isEmitterClass(clazz)) {
+                			result = new EmitterMonitor(clazz.getName(), monitorID.getName());
+	                    	logger.logDebug("Found SnapShotEmitter for class: " + clazz.getName());
+                		} else {
+	                		// First see if this is a new style POJO Monitor.
+	                		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(clazz);
+	                    	result = new POJOSnapShotMonitor(monitorID.getName(), bundle.isUsePriorityTimer(), clazz.getName(), POJOSnapShotRegistry.getSingleton());
+	                    	logger.logDebug("Found POJO based SnapShotMonitor for class: " + clazz.getName());
+                		}
                     	// Try to initialize the class
                 		Class.forName(clazz.getName(), true, clazz.getClassLoader());
                 	} catch(GenerateSnapShotException ex) {
@@ -126,6 +133,21 @@ public class SnapShotManager {
         
         return result;
     }
+    
+    static private boolean isEmitterClass(Class<?> clazz) {
+    	boolean result = Emitter.class.isAssignableFrom(clazz);
+    	
+    	if (!result) {
+    		try {
+    			Class<?> apiEmitterInterface = PerfMon.getClassLoader().loadClass("api.org.perfmon4j.agent.Emitter");
+    			result = apiEmitterInterface.isAssignableFrom(clazz);
+    		} catch (ClassNotFoundException cnfe) {
+    			// Ignore.
+    		}
+    	}
+    	return result;
+    }
+    
 
     private static boolean monitorIsInConfig(SnapShotMonitorID id, SnapShotMonitorConfig monitors[]) {
         boolean result = false;
@@ -145,7 +167,7 @@ public class SnapShotManager {
          for (int i = 0; i < currentIDs.length; i++) {
              SnapShotMonitorID id = currentIDs[i];
              if (!monitorIsInConfig(id, snapShotMonitors)) {
-            	 SnapShotMonitorBase m = monitorMap.get(id);
+            	 SnapShotMonitorLifecycle m = monitorMap.get(id);
                  if (m != null) {
                      m.deInit();
                      monitorMap.remove(id);
@@ -155,7 +177,7 @@ public class SnapShotManager {
         
         for (int i = 0; i < snapShotMonitors.length; i++) {
             SnapShotMonitorConfig cfg = snapShotMonitors[i];
-            SnapShotMonitorBase monitor = null;
+            SnapShotMonitorLifecycle monitor = null;
             try {
             	monitor = SnapShotManager.getOrCreateMonitor(cfg.getMonitorID());
             } catch (NoClassDefFoundError nfe) {
