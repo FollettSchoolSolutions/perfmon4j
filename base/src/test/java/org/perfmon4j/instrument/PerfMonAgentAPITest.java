@@ -942,6 +942,63 @@ System.out.println(output);
 		// Should not include instance name when POJO is registered without an instance name
 		assertTrue("Expected appender output not found", output.contains("myCounter................ 0"));
     }    
+
+	public static class ReactiveContextChildren implements Runnable {
+		public void run() {
+			try {
+				PerfMonConfiguration config = new PerfMonConfiguration();
+				final String monitorName = "test";
+				final String childMonitorName = monitorName + ".child";
+				final String grandChildMonitorName =  childMonitorName + ".grandChild";
+				
+				final String appenderName = "bogus";
+				
+				config.defineMonitor(monitorName);
+				config.defineAppender(appenderName, BogusAppender.class.getName(), "100 ms");
+				config.attachAppenderToMonitor(monitorName, appenderName, "./**");
+				PerfMon.configure(config);
+				
+				final String ctxA = "ctxA";
+				final String ctxB = "ctxB";
+				
+				// This class verifies that providing a reactive context overrides Perfmon4j's default
+				// thread based model.
+				
+				api.org.perfmon4j.agent.PerfMonTimer outerA = api.org.perfmon4j.agent.PerfMonTimer.start(monitorName, false, ctxA);
+				api.org.perfmon4j.agent.PerfMonTimer outerB = api.org.perfmon4j.agent.PerfMonTimer.start(monitorName, false, ctxB);
+				
+				api.org.perfmon4j.agent.PerfMonTimer childA = api.org.perfmon4j.agent.PerfMonTimer.start(childMonitorName, false, ctxA);
+				api.org.perfmon4j.agent.PerfMonTimer childB = api.org.perfmon4j.agent.PerfMonTimer.start(childMonitorName, false, ctxB);
+
+				api.org.perfmon4j.agent.PerfMonTimer grandChildA = api.org.perfmon4j.agent.PerfMonTimer.start(grandChildMonitorName, false,ctxA);
+				api.org.perfmon4j.agent.PerfMonTimer grandChildB = api.org.perfmon4j.agent.PerfMonTimer.start(grandChildMonitorName, false, ctxB);
+
+				api.org.perfmon4j.agent.PerfMonTimer.stop(grandChildB);
+				api.org.perfmon4j.agent.PerfMonTimer.stop(grandChildA);
+				
+				api.org.perfmon4j.agent.PerfMonTimer.stop(childB);
+				api.org.perfmon4j.agent.PerfMonTimer.stop(childA);
+				
+				api.org.perfmon4j.agent.PerfMonTimer.stop(outerB);
+				api.org.perfmon4j.agent.PerfMonTimer.stop(outerA);
+			
+				// In a thread based model, we would only expect 1 completion per thread for each monitor.
+				// Since we have 2 reactiveContexts we expect to see 2.
+				assertEquals("Expected completions on: " + monitorName, 2, PerfMon.getMonitor(monitorName).getTotalCompletions());
+				assertEquals("Expected completions on: " + childMonitorName, 2, PerfMon.getMonitor(childMonitorName).getTotalCompletions());
+				assertEquals("Expected completions on: " + grandChildMonitorName, 2, PerfMon.getMonitor(grandChildMonitorName).getTotalCompletions());
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+    public void testEmbeddedReactiveContext() throws Exception {
+    	String output = LaunchRunnableInVM.run(ReactiveContextChildren.class,"-vtrue", "", perfmon4jJar);
+//System.out.println(output);    	
+    	TestHelper.validateNoFailuresInOutput(output);
+    }    
     
     
 /*----------------------------------------------------------------------------*/    
