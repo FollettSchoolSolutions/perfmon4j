@@ -16,6 +16,8 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 2..0.2 - TBD
+
 ** 2.0.1 - 12/20/23
 - Defect fix - The static methods PerfMonTimer.stop() and PerfMonTimer.abort() have
 	always been assumed to be null safe. It was found this was broken in 2.0.0
