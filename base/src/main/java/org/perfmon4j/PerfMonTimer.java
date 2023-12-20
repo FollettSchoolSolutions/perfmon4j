@@ -225,7 +225,9 @@ public class PerfMonTimer {
         } catch (Throwable th) {
             logger.logError("Error stopping timer", th);
         } finally {
-        	timer.flagStopped();
+        	if (timer != null) {
+        		timer.flagStopped();
+        	}
         }
     }
 
