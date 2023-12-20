@@ -16,8 +16,10 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
-** NEXT Version - TBD
-
+** 2.0.1 - 12/20/23
+- Defect fix - The static methods PerfMonTimer.stop() and PerfMonTimer.abort() have
+	always been assumed to be null safe. It was found this was broken in 2.0.0
+	and passing in null would throw a NullPointerException.  This has been fixed.
 
 ** 2.0.0 - 12/15/23
 - Added a new option for collecting and writing arbitrary metrics to appenders, an Emitter.
