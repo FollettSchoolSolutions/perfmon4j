@@ -1409,15 +1409,19 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
 
 //      public static void abort(PerfMonTimer timer)
         src = "{\r\n"
-        		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
-        		+ "org.perfmon4j.PerfMonTimer.abort(nativeTimer);\r\n"  	
+        		+ "  if ($1 != null) {"
+        		+ "    org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
+        		+ "    org.perfmon4j.PerfMonTimer.abort(nativeTimer);\r\n"  	
+        		+ "  }"
         		+ "}";
         replaceMethodIfExists(clazz, "abort", src, PERFMON_TIMER_API_CLASSNAME);
         
 //      public static void stop(PerfMonTimer timer)
         src = "{\r\n"
-        		+ "org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
-        		+ "org.perfmon4j.PerfMonTimer.stop(nativeTimer);\r\n"  	
+        		+ "  if ($1 != null) {"
+        		+ "    org.perfmon4j.PerfMonTimer nativeTimer = ((org.perfmon4j.instrument.PerfMonTimerAgentApiWrapper)$1).getNativeObject();"
+        		+ "    org.perfmon4j.PerfMonTimer.stop(nativeTimer);\r\n"  	
+        		+ "  }"
         		+ "}";
         replaceMethodIfExists(clazz, "stop", src, PERFMON_TIMER_API_CLASSNAME);
         

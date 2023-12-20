@@ -1000,6 +1000,33 @@ System.out.println(output);
     	TestHelper.validateNoFailuresInOutput(output);
     }    
     
+	public static class TestStopAndAbortNullAPITimer implements Runnable {
+		public void run() {
+			try {
+				try {
+					api.org.perfmon4j.agent.PerfMonTimer.stop(null);
+				} catch (NullPointerException npe) {
+					fail("Expected PerfMonTimer.stop() static method to be null safe");
+				}
+				
+				try {
+					api.org.perfmon4j.agent.PerfMonTimer.abort(null);
+				} catch (NullPointerException npe) {
+					fail("Expected PerfMonTimer.abort() static method to be null safe");
+				}
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+    public void testStopAndAbortNullAPITimer() throws Exception {
+    	String output = LaunchRunnableInVM.run(TestStopAndAbortNullAPITimer.class,"-vtrue", "", perfmon4jJar);
+//System.out.println(output);    	
+    	TestHelper.validateNoFailuresInOutput(output);
+    }    
+
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
