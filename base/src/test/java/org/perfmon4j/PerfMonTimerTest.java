@@ -322,6 +322,19 @@ public class PerfMonTimerTest extends PerfMonTestCase {
         }
     }
 
+    public void testStopAbortNullTimer() throws Exception {
+    	try {
+    		PerfMonTimer.stop(null);
+    	} catch (NullPointerException npe) {
+    		fail("Should be able to stop a null timer!");
+    	}
+    	try {
+    		PerfMonTimer.abort(null);
+    	} catch (NullPointerException npe) {
+    		fail("Should be able to abort a null timer!");
+    	}
+    }
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
