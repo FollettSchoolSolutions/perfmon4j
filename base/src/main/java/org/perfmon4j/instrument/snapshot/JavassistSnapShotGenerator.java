@@ -67,10 +67,15 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 	private static int SERIAL_NUMBER = 0;
 	
 	private String generateFieldName(String methodName) {
-		if (!methodName.startsWith("get")) {
+		int prefixLength;
+		if (methodName.startsWith("get")) {
+			prefixLength = 3;
+		} else if (methodName.startsWith("is")) {
+			prefixLength = 2;
+		} else {
 			throw new IllegalArgumentException("Invalid method expected expected to start with get"); 
 		}
-		StringBuffer m = new StringBuffer(methodName.substring(3));
+		StringBuffer m = new StringBuffer(methodName.substring(prefixLength));
 		m.setCharAt(0, Character.toLowerCase(m.charAt(0)));
 		
 		return m.toString();
