@@ -876,6 +876,40 @@ public class PerfMonAgentAPITest extends PerfMonTestCase {
 System.out.println(output);    	
     	TestHelper.validateNoFailuresInOutput(output);
     }
+
+    
+	public static class POJOSnapShotRegistryWithBadSnapshotExample implements Runnable {
+		@api.org.perfmon4j.agent.instrument.SnapShotPOJO
+		public static class MySnapShotPOJO {
+			@api.org.perfmon4j.agent.instrument.SnapShotGauge
+			public void getValue() {
+				// This is an invalid use of SnapShotGauge, it must return a value.
+				// When using the agent API we just want to warn
+				// and fail the registration.  We do not want to throw
+				// an exception.
+			}
+		}
+		
+		public void run() {
+			try {
+				MySnapShotPOJO pojo = new MySnapShotPOJO();
+				api.org.perfmon4j.agent.POJOSnapShotRegistry.register(pojo);
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}
+    
+    public void testPOJOSnapShotRegistryWithBadSnapshotExample() throws Exception {
+    	String output = LaunchRunnableInVM.run(
+        		new LaunchRunnableInVM.Params(POJOSnapShotRegistryWithBadSnapshotExample.class, perfmon4jJar));
+//System.out.println(output);    	
+		assertTrue("Warning about bad POJO should have been written to the log",
+			output.contains("WARN  POJOSnapShotRegistry - SKIPPING - Unable to generate snapshot from POJO"));
+
+    	TestHelper.validateNoFailuresInOutput(output);
+    }
     
     
 	public static class TestEmitterRegistryEmitterAPI implements Runnable {
@@ -903,7 +937,6 @@ System.out.println(output);
 				controller.emit(data);
 			}
 		}
-		
 		
 		@Override
 		public void run() {
@@ -937,7 +970,7 @@ System.out.println(output);
 	/*----------------------------------------------------------------------------*/
     public void testEmitterRegistryAPI() throws Exception {
     	String output = LaunchRunnableInVM.run(TestEmitterRegistryEmitterAPI.class,"-vtrue", "", perfmon4jJar);
-System.out.println(output);
+//System.out.println(output);
     	TestHelper.validateNoFailuresInOutput(output);
 		// Should not include instance name when POJO is registered without an instance name
 		assertTrue("Expected appender output not found", output.contains("myCounter................ 0"));

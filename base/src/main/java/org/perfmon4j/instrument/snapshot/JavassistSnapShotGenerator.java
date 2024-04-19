@@ -73,7 +73,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		} else if (methodName.startsWith("is")) {
 			prefixLength = 2;
 		} else {
-			throw new IllegalArgumentException("Invalid method expected expected to start with get"); 
+			throw new IllegalArgumentException("Invalid method expected expected to start with get or is"); 
 		}
 		StringBuffer m = new StringBuffer(methodName.substring(prefixLength));
 		m.setCharAt(0, Character.toLowerCase(m.charAt(0)));

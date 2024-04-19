@@ -1488,7 +1488,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "  try {\r\n"
         		+ "    org.perfmon4j.POJOSnapShotRegistry.getSingleton().register($1,$2,$3);\r\n"
         		+ "  } catch (org.perfmon4j.instrument.snapshot.GenerateSnapShotException ex) {\r\n"
-        		+ "    throw new java.lang.RuntimeException(ex);\r\n"  	
+        		+ "    org.perfmon4j.util.LoggerFactory.initLogger(\"api.org.perfmon4j.agent.POJOSnapShotRegistry\").logWarn(\"SKIPPING - Unable to generate snapshot from POJO: \" + $1.getClass().getName(), ex);\r\n"  	
         		+ "  }\r\n"
         		+ "}";
         replaceMethodIfExists(clazz, "register", src, Object.class.getName(), String.class.getName(), boolean.class.getName());
