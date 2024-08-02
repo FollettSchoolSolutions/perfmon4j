@@ -5,7 +5,8 @@
 Perfmon4j is a Java Instrumentation agent used to monitor performance in production application servers.
 
 ## Documentation
-[Perfmon4j Documentation](https://github.com/FollettSchoolSolutions/perfmon4j/wiki)
+- [![Mutable.ai Auto Wiki](https://img.shields.io/badge/Auto_Wiki-Mutable.ai-blue)](https://wiki.mutable.ai/FollettSchoolSolutions/perfmon4j)
+- [Perfmon4j Documentation](https://github.com/FollettSchoolSolutions/perfmon4j/wiki)
 
 ## Releases
 * Latest Snapshot
