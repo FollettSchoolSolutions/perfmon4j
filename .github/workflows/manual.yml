@@ -1,0 +1,27 @@
+name: Manual Workflow Example
+
+on:
+  workflow_dispatch: # This makes the workflow manually triggered
+
+jobs:
+  example-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checking out the code
+        uses: actions/checkout@v2
+
+      - name: Setting up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          server-id: ossrh
+          server-username: OSSRH_USERNAME
+          server-password: OSSRH_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+
+      - name: View generated settings.xml
+        run: cat ~/.m2/settings.xml
+
+    # Add more steps as needed
