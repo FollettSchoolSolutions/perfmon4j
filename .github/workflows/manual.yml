@@ -8,17 +8,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checking out the code
-        uses: actions/checkout@v2
+#      - name: Checking out the code
+#        uses: actions/checkout@v2
 
-      - name: Setting up Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'adopt'
+#      - name: Setting up Java
+#        uses: actions/setup-java@v3
+#        with:
+#          java-version: '11'
+#          distribution: 'adopt'
           
       - name: Set up Maven settings
-        run: echo "${ vars.MAVEN_SETTINGS }" > ~/.m2/settings.xml
+        run: echo "${{ vars.MAVEN_SETTINGS }}" > ~/.m2/settings.xml
 
       - name: View generated settings.xml
         run: cat ~/.m2/settings.xml
