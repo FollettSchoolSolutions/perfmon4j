@@ -1,0 +1,39 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              http://maven.apache.org/xsd/settings-1.0.0.xsd">
+<!-- The github action will copy this file into the ~/,m2/settings.xml location. -->
+
+  <servers>
+    <!-- Server for OSSRH (OSS Repository Hosting) -->
+    <server>
+      <id>ossrh</id>
+      <username>${env.OSSRH_USERNAME}</username>
+      <password>${env.OSSRH_PASSWORD}</password>
+    </server>
+  </servers>
+
+  <profiles>
+    <profile>
+      <id>ossrh</id>
+      <properties>
+        <!-- GPG key settings -->
+        <gpg.executable>gpg</gpg.executable>
+        <gpg.passphrase>${env.GPG_PASSPHRASE}</gpg.passphrase>
+      </properties>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+    </profile>
+  </profiles>
+
+  <mirrors>
+    <!-- Mirror configuration -->
+    <mirror>
+      <id>central</id>
+      <mirrorOf>central</mirrorOf>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </mirror>
+  </mirrors>
+
+</settings>
