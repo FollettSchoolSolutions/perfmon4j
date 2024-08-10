@@ -11,11 +11,12 @@ jobs:
       - name: Checking out the code
         uses: actions/checkout@v2
 
-#      - name: Setting up Java
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: '11'
-#          distribution: 'adopt'
+      - name: Setting up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           
       - name: Set up Maven settings
         # You can view the settings.xml file that will be used here: 
@@ -24,5 +25,16 @@ jobs:
 
       - name: View generated settings.xml
         run: cat ~/.m2/settings.xml
+
+      - name: Run Maven Build
+        run: mvn -B compile --file pom.xml
+        
+      - name: Publish to Maven Central
+#        if: ${{ fromJSON(env.DO_PUBLISH) }}
+        run: mvn -B deploy --file pom.xml -P release,mvnCentral -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
 
     # Add more steps as needed
