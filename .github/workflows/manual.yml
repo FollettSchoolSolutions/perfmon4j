@@ -20,7 +20,7 @@ jobs:
       - name: Set up Maven settings
         # You can view the settings.xml file that will be used here: 
         #   https://github.com/FollettSchoolSolutions/perfmon4j/blob/develop/.github/maven/settings.xml
-        run: cp .github/maven/settings.xml ~/.m2/settings.xml
+        run: mkdir -p ~/.m2 && cp .github/maven/settings.xml ~/.m2/settings.xml
 
       - name: View generated settings.xml
         run: cat ~/.m2/settings.xml
