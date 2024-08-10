@@ -50,22 +50,22 @@ jobs:
     steps:
       - name: Checking out the code
         uses: actions/checkout@v2
-
+      
       - name: Setting up Java
-        uses: actions/setup-java@v2
+        # Will setup java and add our signing key to gpg keyvault
+        uses: actions/setup-java@v3
         with:
           java-version: '11'
           distribution: 'adopt'
-          server-id: ossrh
-          server-username: OSSRH_USERNAME
-          server-password: OSSRH_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
 
-      - name: View generated settings.xml
-        run: cat ~/.m2/settings.xml
-          
+      - name: Set up Maven settings
+        # You can view the settings.xml file that will be used here: 
+        #   https://github.com/FollettSchoolSolutions/perfmon4j/blob/develop/.github/maven/settings.xml
+        run: mkdir -p ~/.m2 && cp .github/maven/settings.xml ~/.m2/settings.xml
+
       - name: Run Maven Build
-        run: mvn -B compile --file pom.xml
+        run: mvn -B compile -DskipTests --file pom.xml
 
       - name: Run Maven Test
         if: ${{ fromJSON(env.DO_TESTS) }}
@@ -84,25 +84,5 @@ jobs:
           
       - name: Publish to Maven Central
         if: ${{ fromJSON(env.DO_PUBLISH) }}
-        run: mvn -B deploy --file pom.xml -P release,mvnCentral -DskipTests -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
-        env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: mvn -B deploy -DskipTests --file pom.xml -P release,mvnCentral -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} -Dossrh.userName=${{ secrets.OSSRH_USERNAME }} -Dossrh.password=${{ secrets.OSSRH_PASSWORD }}
           
-      - name: Setting up Java for publish to Github packages
-        if: ${{ fromJSON(env.DO_PUBLISH) }}
-        uses: actions/setup-java@v2
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-          server-id: github
-          server-username: PACKAGES_GITHUB_USERNAME
-          server-password: PACKAGES_GITHUB_TOKEN
-          
-      - name: Publish to Github Packages
-        if: ${{ fromJSON(env.DO_PUBLISH) }}
-        run: mvn -B deploy --file pom.xml -P release,github -DskipTests  -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} 
-        env:
-          PACKAGES_GITHUB_USERNAME: ${{ secrets.PACKAGES_GITHUB_USERNAME }}
-          PACKAGES_GITHUB_TOKEN: ${{ secrets.PACKAGES_GITHUB_TOKEN }}
