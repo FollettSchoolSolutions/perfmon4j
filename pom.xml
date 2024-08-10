@@ -29,6 +29,19 @@
 		<developerConnection>git@github.com:FollettSchoolSolutions/perfmon4j.git</developerConnection>
 		<url>https://github.com/FollettSchoolSolutions/perfmon4j</url>
 	</scm>
+	
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+        	<name>OSS Sonatype Repository Hosting Snapshots</name>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+			<id>ossrh</id>
+        	<name>OSS Sonatype Repository Hosting</name>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement>
 
 	<modules>
 		<module>agent-api</module>
@@ -119,24 +132,24 @@
 			<!-- This profile must be activated along with the release profile
 				To activate add "-P release,mvnCentral" to the maven command line -->
 			<id>mvnCentral</id>
-			<distributionManagement>
-				<snapshotRepository>
-					<id>ossrh</id>
-            		<name>OSS Sonatype Repository Hosting Snapshots</name>
-					<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-				</snapshotRepository>
-				<repository>
-					<id>ossrh</id>
-            		<name>OSS Sonatype Repository Hosting</name>
-					<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-				</repository>
-			</distributionManagement>
 			<properties>
                 <gpg.passphrase>${env.GPG_PASSPHRASE}</gpg.passphrase>
             </properties>
             <build>
+            	<plugins>
+                      <plugin>
+                		<groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.0.0-M1</version>
+                <configuration>
+                    <repositoryId>ossrh</repositoryId>
+                    <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url> 
+                </configuration>
+            </plugin>
+            
+            <!--   
                 <plugins>
-                    <!-- Maven Release Plugin for managing releases -->
+                    <!- - Maven Release Plugin for managing releases - ->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-release-plugin</artifactId>
@@ -146,6 +159,7 @@
                             <tagNameFormat>@{project.version}</tagNameFormat>
                         </configuration>
                     </plugin>
+			-->                
                 </plugins>
             </build>			
 	  	</profile>

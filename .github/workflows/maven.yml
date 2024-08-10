@@ -43,7 +43,7 @@ jobs:
           !contains(github.event.head_commit.message, '[skip test]') &&
           !contains(github.event.head_commit.message, '#skip test#') &&
           !contains(github.event.head_commit.message, '[skip tests]') &&
-          !contains(github.event.head_commit.message, '#skip tests#') 
+          !contains(github.event.head_commit.message, '#skip tests#')
           )
           }}
 
@@ -60,6 +60,9 @@ jobs:
           server-username: OSSRH_USERNAME
           server-password: OSSRH_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+
+      - name: View generated settings.xml
+        run: cat ~/.m2/settings.xml
           
       - name: Run Maven Build
         run: mvn -B compile --file pom.xml
