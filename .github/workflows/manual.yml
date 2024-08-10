@@ -18,7 +18,7 @@ jobs:
           distribution: 'adopt'
           
       - name: Set up Maven settings
-        run: echo "${MAVEN_SETTINGS}" > ~/.m2/settings.xml
+        run: echo "${env.MAVEN_SETTINGS}" > ~/.m2/settings.xml
 
       - name: View generated settings.xml
         run: cat ~/.m2/settings.xml
