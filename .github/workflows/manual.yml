@@ -31,10 +31,6 @@ jobs:
         
       - name: Publish to Maven Central
 #        if: ${{ fromJSON(env.DO_PUBLISH) }}
-        run: mvn -B deploy --file pom.xml -P release,mvnCentral -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }}
-        env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: mvn -B deploy --file pom.xml -P release,mvnCentral -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} -Dossrh.userName=${{ secrets.OSSRH_USERNAME }} -Dossrh.password=${{ secrets.OSSRH_PASSWORD }}
 
     # Add more steps as needed
