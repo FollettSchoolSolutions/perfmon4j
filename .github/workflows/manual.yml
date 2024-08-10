@@ -8,19 +8,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checking out the code
-        uses: actions/checkout@v2
+#      - name: Checking out the code
+#        uses: actions/checkout@v2
 
-      - name: Setting up Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-          server-id: ossrh
-          server-username: ${{ secrets.OSSRH_USERNAME }}
-          server-password: ${{ secrets.OSSRH_PASSWORD }}
-          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+#      - name: Setting up Java
+#        uses: actions/setup-java@v3
+#        with:
+#          java-version: '11'
+#          distribution: 'adopt'
+          
+      - name: Set up Maven settings
+        run: echo "${{ vars.MAVEN_SETTINGS }}" > ~/.m2/settings.xml
 
       - name: View generated settings.xml
         run: cat ~/.m2/settings.xml
