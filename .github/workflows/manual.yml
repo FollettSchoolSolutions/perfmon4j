@@ -16,11 +16,9 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-          server-id: ossrh
-          server-username: ${{ secrets.OSSRH_USERNAME }}
-          server-password: ${{ secrets.OSSRH_PASSWORD }}
-          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+          
+      - name: Set up Maven settings
+        run: echo "${MAVEN_SETTINGS}" > ~/.m2/settings.xml
 
       - name: View generated settings.xml
         run: cat ~/.m2/settings.xml
