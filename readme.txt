@@ -17,7 +17,11 @@ Follett School Solutions, LLC
 McHenry, IL 60050
 
 ** 2..0.2 - TBD
-
+- Addressed Issue:  "POJOSnapShotMonitor should not throw exception on failure to instrument method"	
+	https://github.com/FollettSchoolSolutions/perfmon4j/issues/45  Now when using the agent api
+	to register a POJOSnapShotMonitor, if the class cannot be registered it will simply log a warning 
+	and swallow the exception.
+	
 ** 2.0.1 - 12/20/23
 - Defect fix - The static methods PerfMonTimer.stop() and PerfMonTimer.abort() have
 	always been assumed to be null safe. It was found this was broken in 2.0.0

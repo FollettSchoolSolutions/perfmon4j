@@ -8,19 +8,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-#      - name: Checking out the code
-#        uses: actions/checkout@v2
+      - name: Checking out the code
+        uses: actions/checkout@v2
 
-#      - name: Setting up Java
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: '11'
-#          distribution: 'adopt'
+      - name: Setting up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           
       - name: Set up Maven settings
-        run: echo "${{ vars.MAVEN_SETTINGS }}" > ~/.m2/settings.xml
+        # You can view the settings.xml file that will be used here: 
+        #   https://github.com/FollettSchoolSolutions/perfmon4j/blob/develop/.github/maven/settings.xml
+        run: mkdir -p ~/.m2 && cp .github/maven/settings.xml ~/.m2/settings.xml
 
       - name: View generated settings.xml
         run: cat ~/.m2/settings.xml
+
+      - name: Run Maven Build
+        run: mvn -B compile -DskipTests --file pom.xml
+        
+      - name: Publish to Maven Central
+#        if: ${{ fromJSON(env.DO_PUBLISH) }}
+        run: mvn -B deploy -DskipTests --file pom.xml -P release,mvnCentral -Dgpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }} -Dossrh.userName=${{ secrets.OSSRH_USERNAME }} -Dossrh.password=${{ secrets.OSSRH_PASSWORD }}
 
     # Add more steps as needed
