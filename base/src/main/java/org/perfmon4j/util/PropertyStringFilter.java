@@ -32,7 +32,9 @@ public class PropertyStringFilter {
      * @param args
      */
     final static String test = "dave${last.name}dave${first.name}dave";
-    final static Pattern REQUEST_PATTERN = Pattern.compile("\\$\\{(.+?)\\}");
+    final static Pattern REQUEST_PATTERN =  Pattern.compile("\\$\\{\\s*([^\\$\\{\\}\\:]+)(?:\\s*:\\s*([^}]+))?\\s*\\}");
+    
+    
     final private static String ENV_PREFIX = "env.";
 
     private Map<String, String> envVariables;
@@ -80,16 +82,18 @@ public class PropertyStringFilter {
         String result = sourceString;
         if (sourceString != null) {
 	        Matcher matcher = REQUEST_PATTERN.matcher(sourceString);
-	       
 	        while (matcher.find()) {
 	            final String key = matcher.group(1);
+	            final String defaultValue = matcher.group(2);
 	            String value = getProperty(key);
+	            value = value != null ? value : defaultValue;
 	            if (value != null) {
 	                if (!recursionPreventionList.contains(key)) {
 	                    try {
 	                        recursionPreventionList.add(key);
 	                        value = doFilter(value, recursionPreventionList);
-	                        result = replaceAll(result, "${" + key + "}", value);
+	                        final String fullKey = defaultValue == null ?  key : key + ":" + defaultValue;  
+	                        result = replaceAll(result, "${" + fullKey + "}", value);
 	                    } finally {
 	                        recursionPreventionList.remove(key);
 	                    }

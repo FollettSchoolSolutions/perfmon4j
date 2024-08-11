@@ -25,6 +25,7 @@ import java.io.StringReader;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -140,6 +141,60 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
             System.getProperties().remove("testParse");
         }
     }
+    
+    /*----------------------------------------------------------------------------*/
+    public void testProvideDefaultValueForSystemProperty() throws Exception {
+        try {
+            final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender name='5 minute' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='5 min'>" +
+                "       <attribute name='extraString'>testParse=${testParse:this is the default value}</attribute>" +
+                "   </appender>" +
+                "   <monitor name='mon'>" +
+                "       <appender name='5 minute'/>" +
+                "   </monitor>" +
+                "</Perfmon4JConfig>";
+            
+            PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+            Appender appender = config.getAppendersForMonitor("mon")[0].getAppender();
+            
+            assertEquals("Appender class", MyAppender.class, appender.getClass());
+            assertEquals("extraString property was not set, should have used the default value", 
+            		"testParse=this is the default value", ((MyAppender)appender).extraString);
+            
+        } finally {
+            System.getProperties().remove("testParse");
+        }
+    }    
+    
+    
+    /*----------------------------------------------------------------------------*/
+    public void testSystemPropertySubstitionShouldBeAllowedInAttributes() throws Exception {
+        try {
+            final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender name='5 minute' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='${textAppender.defaultInterval:5 min}'>" +
+                "   </appender>" +
+                "   <monitor name='mon'>" +
+                "       <appender name='5 minute'/>" +
+                "   </monitor>" +
+                "</Perfmon4JConfig>";
+            
+            PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+            Appender appender = config.getAppendersForMonitor("mon")[0].getAppender();
+            
+            assertEquals("Appender class", MyAppender.class, appender.getClass());
+            assertEquals("Shouild have used the default value from system property for the interval",
+            		TimeUnit.MINUTES.toMillis(5), appender.getIntervalMillis());
+        } finally {
+//            System.getProperties().remove("testParse");
+        }
+    }    
+    
 
     /*----------------------------------------------------------------------------*/
     public void testParseBodyValueFromEnvironmentVariable() throws Exception {
