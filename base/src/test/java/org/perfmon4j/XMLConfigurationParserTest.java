@@ -243,7 +243,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals("Key and value for the second property should have been altered by the prop1", "test2-test1", properties.getProperty("prop2-test1"));
     }    
 
-    public void TODOMustPickupHere_testPropertiesActivationPropertyMustSimplyExist() throws Exception {
+    public void testActivateBasedOnPropertyExists() throws Exception {
         final String XML =
                 "<Perfmon4JConfig>" +
                 "	<properties>" +
@@ -269,11 +269,90 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         envProps.setProperty("verbosePerfmonOutput", ""); 
         properties = new ConfigurationProperties(envProps, new Properties());
         XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("prop1 was not activated and should have been set", 
+        	"test2-activated", properties.getProperty("prop2-activated"));
+    }    
+
+    public void testActivateBasedOnPropertyMatch() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<activation>" +
+                "			<property name='perfmonOutputLevel'>verbose</property>" + 
+                "		</activation>" +
+                "		<property name='prop1'>verbose</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='prop2-${prop1:notVerbose}'>test2-${prop1:notVerbose}</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        Properties envProps = new Properties();
+
+        // First try with non-matching perfmonOutputLevel
+        ConfigurationProperties properties = new ConfigurationProperties(envProps, new Properties());
+        envProps.setProperty("perfmonOutputLevel", "default"); 
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
         assertEquals("prop1 was not activated and should not have been set", 
-        	"test2-notActivated", properties.getProperty("prop2-notActivated"));
+        	"test2-notVerbose", properties.getProperty("prop2-notVerbose"));
         
+        // Now try with verbosePerfmonOutput property being defined.
+        envProps.setProperty("perfmonOutputLevel", "verbose"); 
+        properties = new ConfigurationProperties(envProps, new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("prop1 was not activated and should have been set", 
+            	"test2-verbose", properties.getProperty("prop2-verbose"));
     }    
     
+    public void testMultipleActivationPropertiesMustAllMatch() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<activation>" +
+                "			<property name='influxGroups'/>" + 
+                "			<property name='influxPassword'/>" + 
+                "		</activation>" +
+                "		<property name='influxEnabled'>true</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='isInfluxEnabled'>${influxEnabled:false}</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        Properties envProps = new Properties();
+
+        // First try with only 1 or two required properties set.
+        ConfigurationProperties properties = new ConfigurationProperties(envProps, new Properties());
+        envProps.setProperty("influxGroups", "dly"); 
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("Influx enabled requres BOTH groups and password to be set", 
+        	"false", properties.getProperty("isInfluxEnabled"));
+        
+        // Now try with both set
+        envProps.setProperty("influxPassword", "secretPassword"); 
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("Influx should be enabled", 
+        	"true", properties.getProperty("isInfluxEnabled"));
+    }    
+    
+    public void testMultipePropertyActivationsNotAllowed() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<activation>" +
+                "			<property name='influxGroups'/>" + 
+                "		</activation>" +
+                "		<activation>" +
+                "			<property name='influxPassword'/>" + 
+                "		</activation>" +
+                "		<property name='influxEnabled'>true</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+    	
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertNotNull("Expected default configuration to be returned", result.getAppenderForName("DEFAULT_APPENDER"));
+    }
     
     /*----------------------------------------------------------------------------*/
     public void testParseBodyValueFromEnvironmentVariable() throws Exception {

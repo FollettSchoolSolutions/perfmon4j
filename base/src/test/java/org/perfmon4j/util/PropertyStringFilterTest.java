@@ -149,44 +149,6 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
 
     
     /**
-     * By the pattern ${env.KEY_NAME} the variable will attempt to be read from the environment first.
-     * If not found it will try looking in system properties.
-     * @throws Exception
-     */
-    public void testForcePreveredToEnvironment() throws Exception {
-    	/** TODO: 8/12/24 DCD Determine if we want this behavior to continue.  I actually don't 
-    	 * think it makes any sense.  If you prefix with "env." I believe you are explicitly
-    	 * saying I want to get it from the environment!
-    	 */
-//    	Random r = new Random();
-//    	
-//    	final String envKey = Long.toBinaryString(r.nextLong());
-//    	final String envValue = Long.toBinaryString(r.nextLong());
-//    	final String systemPropertyValue = "System Property Override";
-//    	final String sourceString = "${env." + envKey + "}";
-//    	
-//    	Map<String, String> mockEnvVariables = new HashMap<String, String>();
-//    	mockEnvVariables.put(envKey, envValue);
-//    	
-//    	try {
-//        	PropertyStringFilter filter = new PropertyStringFilter(true);
-//        	filter.setMockEnvVariables_TEST_ONLY(mockEnvVariables);
-//        	// Now use envKey to set a system property.  This should now be preferred and returned.
-//        	System.setProperty(envKey, systemPropertyValue);
-//        	
-//        	assertEquals("Should prefer the the environment variable", envValue, filter.doFilter(sourceString));
-//
-//        	//Now remove the mock environment variable...should now retrieve the system property 
-//        	filter = new PropertyStringFilter(true);
-//
-//        	assertEquals("Should return system property since environment variable not set", 
-//        			systemPropertyValue, filter.doFilter(sourceString));
-//    	} finally {
-//    		System.getProperties().remove(envKey);
-//    	}
-    }
-    
-    /**
      * For backwards compatibility if someone was using a system property that fit 
      * the pattern ${env.KEY_NAME} we should still retrieve this value (if KEY_NAME is
      * not found in the Environment or System properties)
@@ -209,7 +171,6 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
     		System.getProperties().remove(envKey);
     	}
     }
-
     
 	public void testUseDefaultValueWhenProvided() throws Exception {
 		try {

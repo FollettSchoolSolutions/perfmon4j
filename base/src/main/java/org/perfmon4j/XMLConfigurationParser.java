@@ -121,6 +121,7 @@ class XMLConfigurationParser extends DefaultHandler {
     private final static String SNAP_SHOT_MONITOR_NAME = "snapShotMonitor";
     private final static String PROPERTIES_NAME = "properties";
     private final static String PROPERTY_NAME = "property";
+    private final static String ACTIVATION_NAME = "activation";
     private final static String EMITTER_MONITOR_NAME = "emitterMonitor";
     private final static String THREAD_TRACE_NAME = "threadTrace";
     private final static String THREAD_TRACE_TRIGGERS_NAME = "Triggers";
@@ -144,7 +145,10 @@ class XMLConfigurationParser extends DefaultHandler {
     private final int STATE_IN_BOOT /* Ignored */				= 10;
     private final int STATE_IN_MONITOR_ATTRIBUTE               	= 11;
     private final int STATE_IN_PROPERTIES 						= 12;
-    private final int STATE_IN_PROPERTY 						= 13;
+    private final int STATE_IN_PROPERTIES_PROPERTY 				= 13;
+    private final int STATE_IN_ACTIVATION 						= 14;
+    private final int STATE_IN_ACTIVATION_PROPERTY 				= 15;
+    
     
     private int currentState = STATE_UNDEFINED;
     private MonitorConfig currentMonitorConfig = null;
@@ -169,6 +173,7 @@ class XMLConfigurationParser extends DefaultHandler {
     // Current properties
     private Map<String, String> currentProperties = null;
     private String currentPropertyKey = null;
+    private Boolean currentPropertiesActivationFlag = null;
 
     @Override() public void startElement(String uri, String name, String qName, Attributes atts) throws SAXException {
     	startElementWorker(uri, name, qName, new SystemPropertyAwareAttributes(atts, filter));
@@ -248,6 +253,7 @@ class XMLConfigurationParser extends DefaultHandler {
                 	currentState = STATE_IN_PROPERTIES;
                 	currentProperties = new HashMap<String, String>();
                 	currentPropertyKey = null;
+                	currentPropertiesActivationFlag = null;
         		} else {
                     throw new SAXException("Unexpected element: " + name);
                 }
@@ -382,7 +388,26 @@ class XMLConfigurationParser extends DefaultHandler {
                     validateArg(location, "name", propertyKey);
                     
                     currentPropertyKey = propertyKey;
-                    currentState = STATE_IN_PROPERTY;
+                    currentState = STATE_IN_PROPERTIES_PROPERTY;
+                } else if (ACTIVATION_NAME.equalsIgnoreCase(name)) {
+                	if (currentPropertiesActivationFlag != null) {
+                        throw new SAXException("Multiple activationFlags not allowed in properties" );
+                	}
+                    currentState = STATE_IN_ACTIVATION;
+                } else {
+                    throw new SAXException("Unexpected element: " + name);
+                }
+		        break;
+		        
+		    case STATE_IN_ACTIVATION:
+		    	if (PROPERTY_NAME.equalsIgnoreCase(name)) {
+                    String propertyKey = atts.getValue("name");
+
+                    String location = ACTIVATION_NAME + "." + PROPERTY_NAME;
+                    validateArg(location, "name", propertyKey);
+                    
+                    currentPropertyKey = propertyKey;
+                    currentState = STATE_IN_ACTIVATION_PROPERTY;
                 } else {
                     throw new SAXException("Unexpected element: " + name);
                 }
@@ -472,27 +497,50 @@ class XMLConfigurationParser extends DefaultHandler {
         }
     
         if (PROPERTIES_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_PROPERTIES) {
-        	if (currentProperties != null) {
+        	if (currentProperties != null && (currentPropertiesActivationFlag == null || currentPropertiesActivationFlag.booleanValue())) {
         		for (Map.Entry<String, String> entry : currentProperties.entrySet()) {
         			config.getConfigurationProperties().setProperty(entry.getKey(), entry.getValue());
         		}
         	}
         	currentProperties = null;
         	currentPropertyKey = null;
+        	currentPropertiesActivationFlag = null;
             currentState = STATE_IN_ROOT;
         }
-        if (PROPERTY_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_PROPERTY) {
-        	if (currentProperties != null) {
-        		currentProperties.put(currentPropertyKey, currentAttributeData);
-        	}
-        	currentAttributeData = null;
+        
+        if (PROPERTY_NAME.equalsIgnoreCase(name)) {
+            if (currentState == STATE_IN_PROPERTIES_PROPERTY) {
+            	if (currentProperties != null) {
+            		currentProperties.put(currentPropertyKey, currentAttributeData);
+            	}
+                currentState = STATE_IN_PROPERTIES;
+            } else if (currentState == STATE_IN_ACTIVATION_PROPERTY) {
+            	if (currentPropertiesActivationFlag == null || currentPropertiesActivationFlag.booleanValue()) {
+            		String propValue = config.getConfigurationProperties().getProperty(currentPropertyKey);
+            		if (propValue == null) {
+            			currentPropertiesActivationFlag = Boolean.FALSE;
+            		} else {
+            			if (currentAttributeData == null) {
+            				currentPropertiesActivationFlag = Boolean.TRUE;
+            			} else {
+            				currentPropertiesActivationFlag = Boolean.valueOf(currentAttributeData.equals(propValue));
+            			}
+            		}
+            	}
+                currentState = STATE_IN_ACTIVATION;
+            }
+            currentAttributeData = null;
+        }
+
+        if (ACTIVATION_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_ACTIVATION) {
             currentState = STATE_IN_PROPERTIES;
         }
+        
     }
     
     public void characters (char ch[], int start, int length) throws SAXException {
         if (currentState == STATE_IN_APPENDER_ATTRIBUTE || currentState == STATE_IN_MONITOR_ATTRIBUTE || currentState == STATE_IN_SNAP_SHOT_ATTRIBUTE
-        	|| currentState == STATE_IN_PROPERTY) {
+        	|| currentState == STATE_IN_PROPERTIES_PROPERTY || currentState == STATE_IN_ACTIVATION_PROPERTY) {
             if (currentAttributeData == null) {
                 currentAttributeData = "";
             }

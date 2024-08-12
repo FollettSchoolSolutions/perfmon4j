@@ -16,11 +16,23 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
-** 2..0.2 - TBD
+** 2.0.2 - TBD
 - Several enhancements to processing system properties when parsing perfmonconfig.xml:
 	1) Similar to wildfly you can provide a default value to use if the system property is null.  
 	To do this you append :<defaultValue> along with the property name.  For example 
 	${influxDbUserName:influxuser}
+	2) Now you can define properties within the perfmonconfig.xml that will be used while processing
+	the file. Example:
+      	<Perfmon4JConfig>
+        	<properties>
+            	<activation>
+                	<property name='reducePerfmonOutput'/>
+                <activation>	 
+           		<property name='intervalDuration'>1 hour</property>" +
+          	</properties>
+          	<appender name='TextAppender' className='org.perfmon4j.TextAppender' interval='${intervalDuration:1 minute}'/>
+          	...
+          			
 - Addressed Issue:  "POJOSnapShotMonitor should not throw exception on failure to instrument method"	
 	https://github.com/FollettSchoolSolutions/perfmon4j/issues/45  Now when using the agent api
 	to register a POJOSnapShotMonitor, if the class cannot be registered it will simply log a warning 
