@@ -24,6 +24,7 @@ package org.perfmon4j;
 import java.io.StringReader;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -33,6 +34,7 @@ import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
+import org.perfmon4j.util.ConfigurationProperties;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 
@@ -169,33 +171,110 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         }
     }    
     
-    
     /*----------------------------------------------------------------------------*/
     public void testSystemPropertySubstitionShouldBeAllowedInAttributes() throws Exception {
-        try {
-            final String XML =
+        final String XML =
+            "<Perfmon4JConfig>" +
+            "   <appender name='5 minute' " +
+            "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+            "       interval='${textAppender.defaultInterval:5 min}'>" +
+            "   </appender>" +
+            "   <monitor name='mon'>" +
+            "       <appender name='5 minute'/>" +
+            "   </monitor>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+        Appender appender = config.getAppendersForMonitor("mon")[0].getAppender();
+        
+        assertEquals("Appender class", MyAppender.class, appender.getClass());
+        assertEquals("Shouild have used the default value from system property for the interval",
+        		TimeUnit.MINUTES.toMillis(5), appender.getIntervalMillis());
+    }
+    
+    public void testDefineConfigProperty() throws Exception {
+        final String XML =
                 "<Perfmon4JConfig>" +
-                "   <appender name='5 minute' " +
-                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
-                "       interval='${textAppender.defaultInterval:5 min}'>" +
-                "   </appender>" +
-                "   <monitor name='mon'>" +
-                "       <appender name='5 minute'/>" +
-                "   </monitor>" +
+                "	<properties>" +
+                "		<property name='prop1'>test1</property>" +
+                "		<property name='prop2'>test2</property>" +
+                "	</properties>" +
                 "</Perfmon4JConfig>";
-            
-            PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
-            Appender appender = config.getAppendersForMonitor("mon")[0].getAppender();
-            
-            assertEquals("Appender class", MyAppender.class, appender.getClass());
-            assertEquals("Shouild have used the default value from system property for the interval",
-            		TimeUnit.MINUTES.toMillis(5), appender.getIntervalMillis());
-        } finally {
-//            System.getProperties().remove("testParse");
-        }
+           
+        ConfigurationProperties properties = new ConfigurationProperties(new Properties(), new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        
+        assertEquals("Should have defined prop1", "test1", properties.getProperty("prop1"));
+        assertEquals("Should have defined prop2", "test2", properties.getProperty("prop2"));
+    }
+
+    public void testMultipePropertiesElements() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<property name='prop1'>test1</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='prop2'>test2</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        ConfigurationProperties properties = new ConfigurationProperties(new Properties(), new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        
+        assertEquals("Should have defined prop1", "test1", properties.getProperty("prop1"));
+        assertEquals("Should have defined prop2", "test2", properties.getProperty("prop2"));
+    }
+
+    public void testDefinedPropertyBeingAppliedToSubsequentValues() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<property name='prop1'>test1</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='prop2-${prop1}'>test2-${prop1}</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        ConfigurationProperties properties = new ConfigurationProperties(new Properties(), new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        
+        assertEquals("Key and value for the second property should have been altered by the prop1", "test2-test1", properties.getProperty("prop2-test1"));
+    }    
+
+    public void TODOMustPickupHere_testPropertiesActivationPropertyMustSimplyExist() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<activation>" +
+                "			<property name='verbosePerfmonOutput'/>" + // Just require property to exist
+                "		</activation>" +
+                "		<property name='prop1'>activated</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='prop2-${prop1:notActivated}'>test2-${prop1:notActivated}</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        Properties envProps = new Properties();
+
+        // First try without verbosePerfmonOutput property being defined.
+        ConfigurationProperties properties = new ConfigurationProperties(envProps, new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("prop1 was not activated and should not have been set", 
+        	"test2-notActivated", properties.getProperty("prop2-notActivated"));
+        
+        // Now try with verbosePerfmonOutput property being defined.
+        envProps.setProperty("verbosePerfmonOutput", ""); 
+        properties = new ConfigurationProperties(envProps, new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("prop1 was not activated and should not have been set", 
+        	"test2-notActivated", properties.getProperty("prop2-notActivated"));
+        
     }    
     
-
+    
     /*----------------------------------------------------------------------------*/
     public void testParseBodyValueFromEnvironmentVariable() throws Exception {
     	Map.Entry<String, String> entry = getEnvironmentVariableForUser();

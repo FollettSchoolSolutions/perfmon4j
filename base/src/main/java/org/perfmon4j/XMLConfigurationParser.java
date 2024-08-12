@@ -22,15 +22,18 @@ package org.perfmon4j;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
+import org.perfmon4j.util.ConfigurationProperties;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -47,7 +50,16 @@ import org.xml.sax.helpers.XMLReaderFactory;
 class XMLConfigurationParser extends DefaultHandler {
     private static final Logger logger = LoggerFactory.initLogger(XMLConfigurationParser.class);
     
-    private final XMLPerfMonConfiguration config = new XMLPerfMonConfiguration();
+    private final XMLPerfMonConfiguration config;
+
+    XMLConfigurationParser() {
+    	this(new ConfigurationProperties());
+    }
+
+    XMLConfigurationParser(ConfigurationProperties configurationProperties) {
+    	config = new XMLPerfMonConfiguration(configurationProperties);
+    	filter = new PropertyStringFilter(configurationProperties, true);
+    }
     
     private static XMLPerfMonConfiguration getDefaultConfiguration()
         throws InvalidConfigException {
@@ -64,11 +76,15 @@ class XMLConfigurationParser extends DefaultHandler {
     public static final String DEFAULT_XML_READER_CLASS = "com.sun.org.apache.xerces.internal.parsers.SAXParser";
     public static String lastKnownGoodXMLReaderClass = null;
     
-    public static XMLPerfMonConfiguration parseXML(Reader reader)
+    public static XMLPerfMonConfiguration parseXML(Reader reader)throws InvalidConfigException {
+    	return parseXML(reader, new ConfigurationProperties());
+    }
+    
+    public static XMLPerfMonConfiguration parseXML(Reader reader, ConfigurationProperties configurationProperties)
         throws InvalidConfigException {
         XMLPerfMonConfiguration result = null;
         try {
-            XMLConfigurationParser handler = new XMLConfigurationParser();
+            XMLConfigurationParser handler = new XMLConfigurationParser(configurationProperties);
             XMLReader xr = null;
             
             try {
@@ -103,6 +119,8 @@ class XMLConfigurationParser extends DefaultHandler {
     private final static String ALIAS_NAME = "alias";
     private final static String ATTRIBUTE_NAME = "attribute";
     private final static String SNAP_SHOT_MONITOR_NAME = "snapShotMonitor";
+    private final static String PROPERTIES_NAME = "properties";
+    private final static String PROPERTY_NAME = "property";
     private final static String EMITTER_MONITOR_NAME = "emitterMonitor";
     private final static String THREAD_TRACE_NAME = "threadTrace";
     private final static String THREAD_TRACE_TRIGGERS_NAME = "Triggers";
@@ -125,6 +143,8 @@ class XMLConfigurationParser extends DefaultHandler {
     private final int STATE_DONE                                = 9;
     private final int STATE_IN_BOOT /* Ignored */				= 10;
     private final int STATE_IN_MONITOR_ATTRIBUTE               	= 11;
+    private final int STATE_IN_PROPERTIES 						= 12;
+    private final int STATE_IN_PROPERTY 						= 13;
     
     private int currentState = STATE_UNDEFINED;
     private MonitorConfig currentMonitorConfig = null;
@@ -144,7 +164,11 @@ class XMLConfigurationParser extends DefaultHandler {
     private String currentThreadTraceMonitorName = null;
     private ThreadTraceConfig currentThreadTraceConfig = null;
     private List<ThreadTraceConfig.Trigger> currentTriggers = null;
-    private final PropertyStringFilter filter = new PropertyStringFilter(true);
+    private final PropertyStringFilter filter;
+    
+    // Current properties
+    private Map<String, String> currentProperties = null;
+    private String currentPropertyKey = null;
 
     @Override() public void startElement(String uri, String name, String qName, Attributes atts) throws SAXException {
     	startElementWorker(uri, name, qName, new SystemPropertyAwareAttributes(atts, filter));
@@ -220,6 +244,10 @@ class XMLConfigurationParser extends DefaultHandler {
                     currentState = STATE_IN_THREAD_TRACE;
                 } else if (BOOT_NAME.equalsIgnoreCase(name)) {
                 	currentState = STATE_IN_BOOT;
+                } else if (PROPERTIES_NAME.equalsIgnoreCase(name)) {
+                	currentState = STATE_IN_PROPERTIES;
+                	currentProperties = new HashMap<String, String>();
+                	currentPropertyKey = null;
         		} else {
                     throw new SAXException("Unexpected element: " + name);
                 }
@@ -345,7 +373,21 @@ class XMLConfigurationParser extends DefaultHandler {
                     throw new SAXException("Unexpected element: " + name);
                 }
                 break;
-        }
+        
+		    case STATE_IN_PROPERTIES:
+		    	if (PROPERTY_NAME.equalsIgnoreCase(name)) {
+                    String propertyKey = atts.getValue("name");
+
+                    String location = PROPERTIES_NAME + "." + PROPERTY_NAME;
+                    validateArg(location, "name", propertyKey);
+                    
+                    currentPropertyKey = propertyKey;
+                    currentState = STATE_IN_PROPERTY;
+                } else {
+                    throw new SAXException("Unexpected element: " + name);
+                }
+		        break;
+        	}
     }
 
     private static void validateArg(String section, String name, String value) throws SAXException {
@@ -429,10 +471,28 @@ class XMLConfigurationParser extends DefaultHandler {
             currentState = STATE_IN_ROOT;
         }
     
+        if (PROPERTIES_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_PROPERTIES) {
+        	if (currentProperties != null) {
+        		for (Map.Entry<String, String> entry : currentProperties.entrySet()) {
+        			config.getConfigurationProperties().setProperty(entry.getKey(), entry.getValue());
+        		}
+        	}
+        	currentProperties = null;
+        	currentPropertyKey = null;
+            currentState = STATE_IN_ROOT;
+        }
+        if (PROPERTY_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_PROPERTY) {
+        	if (currentProperties != null) {
+        		currentProperties.put(currentPropertyKey, currentAttributeData);
+        	}
+        	currentAttributeData = null;
+            currentState = STATE_IN_PROPERTIES;
+        }
     }
     
     public void characters (char ch[], int start, int length) throws SAXException {
-        if (currentState == STATE_IN_APPENDER_ATTRIBUTE || currentState == STATE_IN_MONITOR_ATTRIBUTE || currentState == STATE_IN_SNAP_SHOT_ATTRIBUTE) {
+        if (currentState == STATE_IN_APPENDER_ATTRIBUTE || currentState == STATE_IN_MONITOR_ATTRIBUTE || currentState == STATE_IN_SNAP_SHOT_ATTRIBUTE
+        	|| currentState == STATE_IN_PROPERTY) {
             if (currentAttributeData == null) {
                 currentAttributeData = "";
             }

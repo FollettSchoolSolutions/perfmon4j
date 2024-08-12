@@ -34,6 +34,7 @@ import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
+import org.perfmon4j.util.ConfigurationProperties;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -50,6 +51,7 @@ public class PerfMonConfiguration {
     private final Map<String, Appender.AppenderID> appenderMap = new HashMap();
     private final Map<String, SnapShotMonitorConfig> snapShotMonitors = new HashMap();
     private final Map<String, ThreadTraceConfig> threadTraceConfigs = new HashMap();
+    private final ConfigurationProperties configurationProperties;
     
     // This list will be filled with the name of any classes that could not be found
     // while processing the config.
@@ -59,6 +61,14 @@ public class PerfMonConfiguration {
     public static final String DEFAULT_APPENDER_NAME = "Perfmon4jDefaultAppender";
     
     
+    public PerfMonConfiguration() {
+    	this(new ConfigurationProperties());
+    }
+    
+    
+    protected PerfMonConfiguration(ConfigurationProperties configurationProperties) {
+    	this.configurationProperties = configurationProperties;
+    }
     
 /*----------------------------------------------------------------------------*/
     public void defineAppender(String name, String className, 
@@ -94,7 +104,7 @@ public class PerfMonConfiguration {
         }
     }
 
-/*----------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------*/
     public String[] getAppenderNames() {
     	return appenderMap.keySet().toArray(new String[]{});
     }
@@ -213,7 +223,12 @@ public class PerfMonConfiguration {
         return result;
     }
     
-/*----------------------------------------------------------------------------*/  
+	/*----------------------------------------------------------------------------*/  
+    public ConfigurationProperties getConfigurationProperties() {
+		return configurationProperties;
+	}
+
+	/*----------------------------------------------------------------------------*/  
     public SnapShotMonitorConfig[] getSnapShotMonitorArray() {
         return snapShotMonitors.values().toArray(new SnapShotMonitorConfig[]{});
     }
@@ -334,6 +349,7 @@ public class PerfMonConfiguration {
     	return getAppendersForMonitor(monitorName, null);
     }
     
+
     
 /*----------------------------------------------------------------------------*/    
     public AppenderAndPattern[] getAppendersForMonitor(String monitorName, PerfMonConfiguration perfMonConfig) throws InvalidConfigException {

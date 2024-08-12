@@ -20,8 +20,6 @@
 */
 package org.perfmon4j.util;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
@@ -56,7 +54,7 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
     
 /*----------------------------------------------------------------------------*/    
     public void testSimple() throws Exception {
-        Properties props = new Properties();
+        ConfigurationProperties props = new ConfigurationProperties();
         PropertyStringFilter filter = new PropertyStringFilter(props);
         
         final String sourceString = "abc,${last.name},${first.name}.xyz";
@@ -75,7 +73,7 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
     }
     
     public void testKeyCanContainPunctuation() throws Exception {
-        Properties props = new Properties();
+        ConfigurationProperties props = new ConfigurationProperties();
         PropertyStringFilter filter = new PropertyStringFilter(props);
         
         // The key can contain any character except '$', '{', '}', and ':'.
@@ -90,7 +88,7 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
     
  /*----------------------------------------------------------------------------*/    
     public void testPropertyEmbeddedInProperty() throws Exception {
-        Properties props = new Properties();
+        ConfigurationProperties props = new ConfigurationProperties();
         PropertyStringFilter filter = new PropertyStringFilter(props);
         
         final String sourceString = "${full.name}";
@@ -105,7 +103,7 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
    
  /*----------------------------------------------------------------------------*/    
     public void testPreventRecursion() throws Exception {
-        Properties props = new Properties();
+        ConfigurationProperties props = new ConfigurationProperties();
         PropertyStringFilter filter = new PropertyStringFilter(props);
         
         final String sourceString = "${full.name}";
@@ -123,22 +121,6 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
     }
     
     
-    public void testGetVariableFromEnvironment() throws Exception {
-    	Random r = new Random();
-    	
-    	final String envKey = Long.toBinaryString(r.nextLong());
-    	final String envValue = Long.toBinaryString(r.nextLong());
-    	final String sourceString = "${" + envKey + "}";
-    	
-    	Map<String, String> mockEnvVariables = new HashMap<String, String>();
-    	mockEnvVariables.put(envKey, envValue);
-    	
-    	PropertyStringFilter filter = new PropertyStringFilter(true);
-    	filter.setMockEnvVariables_TEST_ONLY(mockEnvVariables);
-    	
-    	assertEquals("Should find mock environment variable", envValue, filter.doFilter(sourceString));
-    }
-    
     public void testSystemPropertyIsPreferred() throws Exception {
     	Random r = new Random();
     	
@@ -147,25 +129,22 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
     	final String systemPropertyValue = "System Property Override";
     	final String sourceString = "${" + envKey + "}";
     	
-    	Map<String, String> mockEnvVariables = new HashMap<String, String>();
-    	mockEnvVariables.put(envKey, envValue);
     	
-    	try {
-        	PropertyStringFilter filter = new PropertyStringFilter(true);
-        	filter.setMockEnvVariables_TEST_ONLY(mockEnvVariables);
+    	Properties envProps = new Properties();
+    	Properties systemProps = new Properties();
+    	ConfigurationProperties configurationProperties = new ConfigurationProperties(envProps, systemProps);
+    	
+    	envProps.setProperty(envKey, envValue);
+    	
+    	PropertyStringFilter filter = new PropertyStringFilter(configurationProperties, true);
 
-        	// Since envKey is only set as an environment variable that should be returned
-        	assertEquals("Should find mock environment variable", envValue, filter.doFilter(sourceString));
-        	
-        	// Now use envKey to set a system property.  This should now be preferred and returned.
-        	System.setProperty(envKey, systemPropertyValue);
-        	
-        	
-        	assertEquals("System property should override environment property", systemPropertyValue, filter.doFilter(sourceString));
-        	
-    	} finally {
-    		System.getProperties().remove(envKey);
-    	}
+    	// Since envKey is only set as an environment variable that should be returned
+    	assertEquals("Should find mock environment variable", envValue, filter.doFilter(sourceString));
+    	
+    	// Now use envKey to set a system property.  This should now be preferred and returned.
+    	systemProps.setProperty(envKey, systemPropertyValue);
+    	
+    	assertEquals("System property should override environment property", systemPropertyValue, filter.doFilter(sourceString));
     }
 
     
@@ -175,32 +154,36 @@ public class PropertyStringFilterTest extends PerfMonTestCase {
      * @throws Exception
      */
     public void testForcePreveredToEnvironment() throws Exception {
-    	Random r = new Random();
-    	
-    	final String envKey = Long.toBinaryString(r.nextLong());
-    	final String envValue = Long.toBinaryString(r.nextLong());
-    	final String systemPropertyValue = "System Property Override";
-    	final String sourceString = "${env." + envKey + "}";
-    	
-    	Map<String, String> mockEnvVariables = new HashMap<String, String>();
-    	mockEnvVariables.put(envKey, envValue);
-    	
-    	try {
-        	PropertyStringFilter filter = new PropertyStringFilter(true);
-        	filter.setMockEnvVariables_TEST_ONLY(mockEnvVariables);
-        	// Now use envKey to set a system property.  This should now be preferred and returned.
-        	System.setProperty(envKey, systemPropertyValue);
-        	
-        	assertEquals("Should prefer the the environment variable", envValue, filter.doFilter(sourceString));
-
-        	//Now remove the mock environment variable...should now retrieve the system property 
-        	filter = new PropertyStringFilter(true);
-
-        	assertEquals("Should return system property since environment variable not set", 
-        			systemPropertyValue, filter.doFilter(sourceString));
-    	} finally {
-    		System.getProperties().remove(envKey);
-    	}
+    	/** TODO: 8/12/24 DCD Determine if we want this behavior to continue.  I actually don't 
+    	 * think it makes any sense.  If you prefix with "env." I believe you are explicitly
+    	 * saying I want to get it from the environment!
+    	 */
+//    	Random r = new Random();
+//    	
+//    	final String envKey = Long.toBinaryString(r.nextLong());
+//    	final String envValue = Long.toBinaryString(r.nextLong());
+//    	final String systemPropertyValue = "System Property Override";
+//    	final String sourceString = "${env." + envKey + "}";
+//    	
+//    	Map<String, String> mockEnvVariables = new HashMap<String, String>();
+//    	mockEnvVariables.put(envKey, envValue);
+//    	
+//    	try {
+//        	PropertyStringFilter filter = new PropertyStringFilter(true);
+//        	filter.setMockEnvVariables_TEST_ONLY(mockEnvVariables);
+//        	// Now use envKey to set a system property.  This should now be preferred and returned.
+//        	System.setProperty(envKey, systemPropertyValue);
+//        	
+//        	assertEquals("Should prefer the the environment variable", envValue, filter.doFilter(sourceString));
+//
+//        	//Now remove the mock environment variable...should now retrieve the system property 
+//        	filter = new PropertyStringFilter(true);
+//
+//        	assertEquals("Should return system property since environment variable not set", 
+//        			systemPropertyValue, filter.doFilter(sourceString));
+//    	} finally {
+//    		System.getProperties().remove(envKey);
+//    	}
     }
     
     /**

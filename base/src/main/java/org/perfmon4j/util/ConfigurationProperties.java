@@ -7,6 +7,7 @@ public class ConfigurationProperties {
 	private final Properties envProperties;
 	private final Properties systemProperties;
 	private final Properties localProperties;
+	
 	/**
 	 * If autoEnvProperties is true, we will automatically resolve properties using the
 	 * environment if the property is not explicitly declared as a system or local property.
@@ -58,8 +59,10 @@ public class ConfigurationProperties {
 	private static Properties getEnvAsProperties() {
         Properties result = new Properties();
 		Map<String, String> env = System.getenv();
-		
-        System.getenv().forEach((k, v) -> result.setProperty(k, v));
+
+		// We are giving up a bit here, but I don't think we care,
+		// We are unable to distinguish between an empty string and a null
+        System.getenv().forEach((k, v) -> result.setProperty(k, v != null ? v : ""));
         
         return result;
 	}

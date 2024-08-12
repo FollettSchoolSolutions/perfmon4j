@@ -20,6 +20,8 @@
 */
 package org.perfmon4j;
 
+import org.perfmon4j.util.ConfigurationProperties;
+
 public class XMLPerfMonConfiguration extends PerfMonConfiguration {
     private boolean enabled = true;
     
@@ -27,6 +29,10 @@ public class XMLPerfMonConfiguration extends PerfMonConfiguration {
         super();
     }
 
+    /* package level for testing */ XMLPerfMonConfiguration(ConfigurationProperties configurationProperties) {
+        super(configurationProperties);
+    }
+    
     public boolean isEnabled() {
         return enabled;
     }
