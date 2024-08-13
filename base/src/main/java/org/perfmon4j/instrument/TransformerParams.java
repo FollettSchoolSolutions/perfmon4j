@@ -61,6 +61,12 @@ public class TransformerParams {
      */
     private final static List<String> BLACKLIST = new ArrayList<String>();{
     };
+   
+    /**
+     * When enabled, by default we will attempt to load the perfmonconfig.mxl from
+     * the default package.
+     */
+    private final static String DEFAULT_PERFMON_CONFIG_RESOURCE_NAME = "perfmonconfig.xml";
     
     static {
     	String[] blackListElements = {
@@ -92,6 +98,7 @@ public class TransformerParams {
 	private int remoteManagementPort = REMOTE_PORT_DISABLED;
 	private boolean installServletValve = false;
 	private boolean hystrixInstrumentationEnabled = false;
+	private String configFromClasspathName = null;
 	
 	public static final int REMOTE_PORT_DISABLED = -1;
 	public static final int REMOTE_PORT_AUTO = 0;
@@ -231,7 +238,12 @@ public class TransformerParams {
                 		logger.logWarn("Minimum reloadConfigSeconds allowed is 10 seconds");
                 	}
                 	
+                } else if (isParam('c', params)) {
+                	nextParam = getNextParam(params);
+                	configFromClasspathName = nextParam.parameter.isBlank()?
+                		DEFAULT_PERFMON_CONFIG_RESOURCE_NAME : nextParam.parameter;
                 }
+                
                 if (nextParam != null) {
                     params = nextParam.remainingParamString;
                 } else {
@@ -524,6 +536,14 @@ public class TransformerParams {
 
 	public boolean isHystrixInstrumentationEnabled() {
 		return hystrixInstrumentationEnabled;
+	}
+
+	public boolean isLoadConfigFromClasspath() {
+		return configFromClasspathName != null;
+	}
+	
+	public String getConfigFromClasspathName() {
+		return configFromClasspathName;
 	}
 
 	public Properties exportAsProperties() {

@@ -851,6 +851,33 @@ public class TransformerParamsTest extends PerfMonTestCase {
         	assertEquals("perfmon4j-debug-logging", "true", props.get("perfmon4j.javaagent.logging.debug"));
         	assertEquals("perfmon4j-verbose-logging", "true", props.get("perfmon4j.javaagent.logging.verbose"));
         }
+
+        public void testOptionLoadPerfmonConfigFromClasspath() {
+        	TransformerParams params = new TransformerParams("");
+        	
+        	assertFalse("By default we do not look to load perfmonconfig.xml from classpath", 
+        			params.isLoadConfigFromClasspath());
+        	
+        	params = new TransformerParams("-c");
+        	assertTrue("-c parameter indicates we should try loading perfmonconfig from classpath", 
+        			params.isLoadConfigFromClasspath());
+        	assertEquals("default resource name when for config when not specified",
+        			"perfmonconfig.xml", params.getConfigFromClasspathName());
+
+        	params = new TransformerParams("-ccom/follett/fsc/myapp/perfmonconfig.xml");
+        	assertTrue("-c parameter indicates we should try loading perfmonconfig from classpath", 
+        			params.isLoadConfigFromClasspath());
+        	assertEquals("Should use overloaded resource name",
+        			"com/follett/fsc/myapp/perfmonconfig.xml", params.getConfigFromClasspathName());
+        	
+        	// Make sure we continue processing parameters after the -c
+        	params = new TransformerParams("-c,-vTRUE");
+        	assertTrue("-c parameter indicates we should try loading perfmonconfig from classpath", 
+        			params.isLoadConfigFromClasspath());
+        	assertTrue("should still have passed the verbose flag", 
+        			params.isVerboseInstrumentationEnabled());
+        }
+        
         
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
