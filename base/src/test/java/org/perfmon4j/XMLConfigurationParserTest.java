@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
+import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
 import org.perfmon4j.util.ConfigurationProperties;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
@@ -352,6 +353,108 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         
         PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
         assertNotNull("Expected default configuration to be returned", result.getAppenderForName("DEFAULT_APPENDER"));
+    }
+
+    public void testDisableAppenderDisablesEverythingSoleyDependentOnIt() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender enabled='false' " + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <monitor name='myMon'>" +
+                "       <appender name='myAppender'/>" +
+                "   </monitor>" +                
+                "   <snapShotMonitor name='mySnapShot' className='perfmon.SystemMemory'>" +
+                "       <appender name='myAppender'/>" +
+                "   </snapShotMonitor>" +
+                "   <emitterMonitor name='myEmitter' className='org.perfmon4j.emitter.DemoEmitter'>" +
+                "       <appender name='myAppender'/>" +
+                "   </emitterMonitor>" +
+                "   <threadTrace monitorName='com.follett.fsc.DoSomething'>" +
+                "       <appender name='myAppender'/>" +
+                "   </threadTrace>" +
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        
+        assertNull("Text appender is disabled so it should not be included", 
+        	result.getAppenderForName("myAppender"));
+        assertFalse("Since the only appender on Monitor myMon is disabled, "
+        		+ "the monitor should not be configured", hasMonitor(result, "myMon"));
+        assertFalse("Since the only appender on SnapShotMonitor mySnapShot is disabled, "
+        		+ "the SnapShot should not be configured", hasSnapShot(result, "mySnapShot"));
+        assertFalse("Since the only appender on EmitterMonitor myEmitter is disabled, "
+        		+ "the Emitter (under the covers an Emitter is the same as a SnapShotConfig)"
+        		+ " should not be configured", hasSnapShot(result, "myEmitter"));
+        assertFalse("Since the only appender on ThreadTrace com.follett.fsc.DoSomething is disabled, "
+        		+ "the ThreadTrace should not be configured", hasThreadTrace(result, "com.follett.fsc.DoSomething"));
+    }
+
+    public void testDisableMonitor() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender" + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <monitor enabled='false' name='myMon'>" +
+                "       <appender name='myAppender'/>" +
+                "   </monitor>" +                
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertFalse("Monitor should be ignored since it is disabled", hasMonitor(result, "myMon"));
+    }
+
+    public void testDisableSnapShot() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender" + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <snapShotMonitor enabled='false' name='mySnapShot' className='perfmon.SystemMemory'>" +
+                "       <appender name='myAppender'/>" +
+                "   </snapShotMonitor>" +
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertFalse("SnapShot should be ignored since it is disabled", hasSnapShot(result, "mySnapShot"));
+    }
+    
+    public void testDisableEmitter() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender" + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <emitterMonitor enabled='false' name='myEmitter' className='org.perfmon4j.emitter.DemoEmitter'>" +
+                "       <appender name='myAppender'/>" +
+                "   </emitterMonitor>" +
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertFalse("Emitter should be ignored since it is disabled"
+        		+ " should not be configured", hasSnapShot(result, "myEmitter"));
+    }
+
+    public void testDisableThreadTrace() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender" + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <threadTrace enabled='false' monitorName='com.follett.fsc.DoSomething'>" +
+                "       <appender name='myAppender'/>" +
+                "   </threadTrace>" +
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertFalse("ThreadTrace should be ignored since it is disabled", 
+        	hasThreadTrace(result, "com.follett.fsc.DoSomething"));
     }
     
     /*----------------------------------------------------------------------------*/
@@ -953,7 +1056,33 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals("Expected pattern", "/##.MyPackage#*", appenders[0].getAppenderPattern());		
     }
     
+	private boolean hasMonitor(PerfMonConfiguration config, String monitorName) {
+		for (MonitorConfig monitorConfig : config.getMonitorConfigArray()) {
+			if (monitorName.equals(monitorConfig.getMonitorName())) {
+				return true;
+			}
+		}
+		return false;
+	}
     
+	private boolean hasSnapShot(PerfMonConfiguration config, String snapShotName) {
+		for (SnapShotMonitorConfig monitorConfig : config.getSnapShotMonitorArray()) {
+			if (snapShotName.equals(monitorConfig.getMonitorID().getName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean hasThreadTrace(PerfMonConfiguration config, String threadTraceName) {
+		for (String name : config.getThreadTraceConfigMap().keySet()) {
+			if (threadTraceName.equals(name)) {
+				return true;
+			}
+		}
+		return false;
+	}	
+
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

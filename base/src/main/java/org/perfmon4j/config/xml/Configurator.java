@@ -5,11 +5,11 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.InvalidConfigException;
 import org.perfmon4j.ThreadTraceConfig;
-import org.perfmon4j.XMLPerfMonConfiguration;
-import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.ThreadTraceConfig.Trigger;
+import org.perfmon4j.XMLPerfMonConfiguration;
 import org.perfmon4j.config.xml.TriggerConfigElement.Type;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -103,7 +103,7 @@ public class Configurator {
 			result.addThreadTraceConfig(ttConfig.getMonitorName(), tmp);
 		}
 
-		result.addDefaultAppendersToMonitors();
+		result.cleanupElementsPostConfig();
 		
 		return result;
 	}

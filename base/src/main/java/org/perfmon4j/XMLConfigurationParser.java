@@ -108,7 +108,7 @@ class XMLConfigurationParser extends DefaultHandler {
             result = getDefaultConfiguration();
         }
         
-        result.addDefaultAppendersToMonitors();
+        result.cleanupElementsPostConfig();
         
         return result;
     }
@@ -152,12 +152,15 @@ class XMLConfigurationParser extends DefaultHandler {
     
     private int currentState = STATE_UNDEFINED;
     private MonitorConfig currentMonitorConfig = null;
+    
     private SnapShotMonitorVO currentSnapShotMonitor = null;
+    private boolean currentSnapShotEnabled = true;
 
     // Current Appender information
     private String currentAppenderName = null;
     private String currentAppenderClassName = null;
     private String currentAppenderInterval = null;
+    private boolean currentAppenderEnabled = true;
     private Properties currentAppenderAttributes = null;
     
     // Current Attribute information
@@ -179,16 +182,22 @@ class XMLConfigurationParser extends DefaultHandler {
     	startElementWorker(uri, name, qName, new SystemPropertyAwareAttributes(atts, filter));
     }
     
+    private boolean processEnabledAttribute(Attributes atts) {
+    	boolean result = true;
+        String value = atts.getValue("enabled");
+        if (value != null && !Boolean.parseBoolean(value)) {
+            result = false;
+        }
+        return result;
+    }
+    
     public void startElementWorker(String uri, String name, String qName, Attributes atts) throws SAXException {
         switch (currentState) {
             case STATE_UNDEFINED: 
                 if (!ROOT_ELEMENT_NAME.equalsIgnoreCase(name)) {
                     throw new SAXException("Did not find root element: " + ROOT_ELEMENT_NAME);
                 }
-                String value = atts.getValue("enabled");
-                if (value != null && !Boolean.parseBoolean(value)) {
-                    config.setEnabled(false);
-                }
+                config.setEnabled(processEnabledAttribute(atts));
                 currentState = STATE_IN_ROOT;
                 break;
                 
@@ -200,6 +209,7 @@ class XMLConfigurationParser extends DefaultHandler {
                     currentAppenderName = atts.getValue("name");
                     currentAppenderClassName = atts.getValue("className");
                     currentAppenderInterval = atts.getValue("interval");
+                    currentAppenderEnabled = processEnabledAttribute(atts);
                     currentAppenderAttributes = null;
                     
                     validateArg(APPENDER_NAME, "name", currentAppenderName);
@@ -211,8 +221,8 @@ class XMLConfigurationParser extends DefaultHandler {
                     String nameAttr = atts.getValue("name");
 
                     validateArg(MONITOR_NAME, "name", nameAttr);
-                    
                     currentMonitorConfig = config.defineMonitor(nameAttr);
+                    currentMonitorConfig.setFlaggedAsDisabled(!processEnabledAttribute(atts));
                     currentState = STATE_IN_MONITOR;
                 } else if (ALIAS_NAME.equalsIgnoreCase(name)) {
                     logger.logDebug("Alias names are no longer supported in perfmon4j");
@@ -222,6 +232,7 @@ class XMLConfigurationParser extends DefaultHandler {
 
                     validateArg(name, "name", nameAttr);
                     validateArg(name, "className", classNameAttr);
+                    currentSnapShotEnabled = processEnabledAttribute(atts);
  
                     currentSnapShotMonitor = new SnapShotMonitorVO(nameAttr, classNameAttr);
                     currentState = STATE_IN_SNAP_SHOT_MONITOR;
@@ -232,6 +243,8 @@ class XMLConfigurationParser extends DefaultHandler {
                     String maxDepth = atts.getValue("maxDepth");
                     String minDurationToCapture = atts.getValue("minDurationToCapture");
                     String randomSamplingFactor = atts.getValue("randomSamplingFactor");
+                    
+                    currentThreadTraceConfig.setFlaggedAsDisabled(!processEnabledAttribute(atts));
                     
                     validateArg(THREAD_TRACE_NAME,"monitorName", currentThreadTraceMonitorName);
                     
@@ -315,14 +328,20 @@ class XMLConfigurationParser extends DefaultHandler {
                     String nameAttr = atts.getValue("name");
                     
                     validateArg(THREAD_TRACE_NAME + "." + APPENDER_NAME, "name", nameAttr);
-                    AppenderID appenderID = config.getAppenderForName(nameAttr);
-                    if (appenderID == null) {
-                    	logger.logError("Appender: \"" + nameAttr + "\" not defined. Attaching ThreadTraceMonitor \"" 
-                    			+ currentThreadTraceMonitorName + "\" to the default text appender." );
+                    boolean isDisabledAppender = config.isDisabledAppender(nameAttr);
 
-                    	appenderID = config.getOrCreateDefaultAppender();
+                    if (!isDisabledAppender) {
+	                    AppenderID appenderID = config.getAppenderForName(nameAttr);
+	                    if (appenderID == null) {
+	                    	logger.logError("Appender: \"" + nameAttr + "\" not defined. Attaching ThreadTraceMonitor \"" 
+	                    			+ currentThreadTraceMonitorName + "\" to the default text appender." );
+	
+	                    	appenderID = config.getOrCreateDefaultAppender();
+	                    }
+	                    currentThreadTraceConfig.addAppender(appenderID);
+                    } else {
+                    	currentThreadTraceConfig.setContainsDisabledAppenders(true);
                     }
-                    currentThreadTraceConfig.addAppender(appenderID);
                 } else if (THREAD_TRACE_TRIGGERS_NAME.equalsIgnoreCase(name)) {
                 	currentState = STATE_IN_THREAD_TRACE_TRIGGERS;
                 	currentTriggers = new Vector<ThreadTraceConfig.Trigger>();
@@ -431,8 +450,12 @@ class XMLConfigurationParser extends DefaultHandler {
         }
 
         if (APPENDER_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_APPENDER) {
-            config.defineAppender(currentAppenderName, currentAppenderClassName, currentAppenderInterval,
-                currentAppenderAttributes);
+        	if (currentAppenderEnabled) {
+	            config.defineAppender(currentAppenderName, currentAppenderClassName, currentAppenderInterval,
+	                currentAppenderAttributes);
+        	} else {
+        		config.addDisabledAppender(currentAppenderName);
+        	}
             currentState = STATE_IN_ROOT;
         }
 
@@ -448,23 +471,27 @@ class XMLConfigurationParser extends DefaultHandler {
         }
         
         if ((SNAP_SHOT_MONITOR_NAME.equalsIgnoreCase(name) || EMITTER_MONITOR_NAME.equalsIgnoreCase(name)) && currentState == STATE_IN_SNAP_SHOT_MONITOR) {
-            if (currentSnapShotMonitor.attributes.size() > 0) {
-                config.defineSnapShotMonitor(currentSnapShotMonitor.name, currentSnapShotMonitor.className,
-                    currentSnapShotMonitor.attributes);
-            } else {
-                config.defineSnapShotMonitor(currentSnapShotMonitor.name, currentSnapShotMonitor.className);
-            }
-            
-            Iterator itr = currentSnapShotMonitor.appenders.iterator();
-            while (itr.hasNext()) {
-                String snapShotMonitorName = currentSnapShotMonitor.name;
-                String appenderName = (String)itr.next();
-                try {
-                    config.attachAppenderToSnapShotMonitor(snapShotMonitorName, appenderName);
-                } catch (InvalidConfigException ex) {
-                    logger.logWarn("Unable to attach appender to monitor: " + snapShotMonitorName, ex);
-                }
-            }
+        	if (currentSnapShotEnabled) { 
+	        	if (currentSnapShotMonitor.attributes.size() > 0) {
+	                config.defineSnapShotMonitor(currentSnapShotMonitor.name, currentSnapShotMonitor.className,
+	                    currentSnapShotMonitor.attributes);
+	            } else {
+	                config.defineSnapShotMonitor(currentSnapShotMonitor.name, currentSnapShotMonitor.className);
+	            }
+	            
+	            Iterator itr = currentSnapShotMonitor.appenders.iterator();
+	            while (itr.hasNext()) {
+	                String snapShotMonitorName = currentSnapShotMonitor.name;
+	                String appenderName = (String)itr.next();
+	                try {
+	                    config.attachAppenderToSnapShotMonitor(snapShotMonitorName, appenderName);
+	                } catch (InvalidConfigException ex) {
+	                    logger.logWarn("Unable to attach appender to monitor: " + snapShotMonitorName, ex);
+	                }
+	            }
+        	} else {
+        		currentSnapShotEnabled = true;
+        	}
             currentState = STATE_IN_ROOT;
         }
 

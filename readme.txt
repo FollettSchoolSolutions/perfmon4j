@@ -32,6 +32,8 @@ McHenry, IL 60050
           	</properties>
           	<appender name='TextAppender' className='org.perfmon4j.TextAppender' interval='${intervalDuration:1 minute}'/>
           	...
+  	3) Now you can disable individual elements by setting the attribute enabled='false' on the following
+  	tags: appender, monitor, snapShotMonitor, emitter, and threadTrace
           			
 - Addressed Issue:  "POJOSnapShotMonitor should not throw exception on failure to instrument method"	
 	https://github.com/FollettSchoolSolutions/perfmon4j/issues/45  Now when using the agent api
