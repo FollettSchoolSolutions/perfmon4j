@@ -726,7 +726,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         if (t.params.isExtremeInstrumentationEnabled() && !t.params.isVerboseInstrumentationEnabled()) {
         	logger.logInfo("Perfmon4j verbose instrumentation logging disabled.  Add -vtrue to javaAgent parameters to enable.");
         }
-		logger.logInfo("Perfmon4j javaagent current working directory: " + safeGetCanonicalPathForFile(new File(".")));
+		logger.logInfo("Perfmon4j javaagent current working directory: " + MiscHelper.getDisplayablePath(new File(".")));
 
         SystemGCDisabler disabler = null;
         
@@ -758,11 +758,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	if (configFile != null) {
     		FileReader reader = null;
     		try {
-    			logger.logInfo("Loading boot configuration from: " + safeGetCanonicalPathForFile(new File(configFile)));
+    			logger.logInfo("Loading boot configuration from: " + MiscHelper.getDisplayablePath(new File(configFile)));
     			reader = new FileReader(configFile);
     			bootConfiguration = XMLBootParser.parseXML(reader);
 			} catch (FileNotFoundException e) {
-				logger.logError("Perfmon4j unable to load boot configuration, using default. File: " + safeGetCanonicalPathForFile(new File(configFile)));
+				logger.logError("Perfmon4j unable to load boot configuration, using default. File: " + MiscHelper.getDisplayablePath(new File(configFile)));
 			} finally {
 				if (reader != null) {
 					try {reader.close();} catch (Exception ex) {}
@@ -920,19 +920,19 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         
         String xmlFileToConfig = t.params.getXmlFileToConfig();
         if (xmlFileToConfig != null) {
-        	int reloadConfigSeconds = t.params.getReloadConfigSeconds();
+        	final int reloadConfigSeconds = t.params.getReloadConfigSeconds();
         	
         	File xmlFile = new File(xmlFileToConfig);
         	if (xmlFile.exists()) {
-        		logger.logInfo("Loading perfmon configuration from file: " + getDisplayablePath(xmlFile));
+        		logger.logInfo("Loading perfmon configuration from file: " + MiscHelper.getDisplayablePath(xmlFile));
         	} else {
         		if (reloadConfigSeconds == 0) {
-        			logger.logInfo("Configuration file not found since -r parameter was 0 or less the file will NOT be checked for updates -- file: " + getDisplayablePath(xmlFile));
+        			logger.logInfo("Configuration file not found since -r parameter was 0 or less the file will NOT be checked for updates -- file: " + MiscHelper.getDisplayablePath(xmlFile));
         		} else {
-        			logger.logInfo("Configuration file not found will check again in " + reloadConfigSeconds + " seconds -- file: " + getDisplayablePath(xmlFile));
+        			logger.logInfo("Configuration file not found will check again in " + reloadConfigSeconds + " seconds -- file: " + MiscHelper.getDisplayablePath(xmlFile));
         		}
         	}
-            XMLConfigurator.configure(new File(xmlFileToConfig), reloadConfigSeconds);
+        	new XMLConfigurator(t.params).start();
         }
         
         if (t.params.isRemoteManagementEnabled()) {
@@ -1006,33 +1006,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	return result;
     }
     
-    
-    private static String getDisplayablePath(File file) {
-    	String result = file.getAbsolutePath();
-    	
-    	try {
-			result = file.getCanonicalPath();
-		} catch (IOException e) {
-			// Nothing todo...  Just return the absolute path
-		}
-    	
-    	return result;
-    }
-
-    private static String safeGetCanonicalPathForFile(File file) {
-    	String result = "";
-    	if (file != null) {
-    		try {
-				result = file.getCanonicalPath();
-			} catch (IOException e) {
-				result = file.getAbsolutePath();
-			}
-    	} else {
-    		result = "File reference is null";
-    	}
-    	
-    	return result;
-    }
     
     private static boolean canJavassistClassesBeLoadedFromEmbeddedJar(File perfmon4j, URL url) {
     	/**

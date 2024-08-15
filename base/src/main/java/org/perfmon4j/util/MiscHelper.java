@@ -589,6 +589,20 @@ public class MiscHelper {
 			}
 		}
 	}
+	
+    public static String getDisplayablePath(File file) {
+    	String result = "File reference is null";
+
+    	if (file != null) {
+	    	try {
+				result = file.getCanonicalPath();
+			} catch (IOException e) {
+				result = file.getAbsolutePath();			}
+    	}
+    	
+    	return result;
+    }
+
 
     public static double safeDivide(long numerator, long denominator ) {
         double result = 0.0;

@@ -20,48 +20,52 @@
 */
 package org.perfmon4j;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.perfmon4j.instrument.TransformerParams;
 import org.perfmon4j.util.FailSafeTimerTask;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+import org.perfmon4j.util.MiscHelper;
 
-
-public class XMLConfigurator {
+public class XMLConfigurator implements Closeable {
     private static final Logger logger = LoggerFactory.initLogger(XMLConfigurator.class);
-    private static TimerTaskImpl timerTask = null;
-    private static final Object LOCK_TOKEN = new Object();
-    
-    private XMLConfigurator() {
+    private static final AtomicLong NEXT_XML_CONFIGURATOR_ID = new AtomicLong(0);
+    private PerfmonConfigLoaderRunnable scheduledLoader = null;
+    private final Object LOCK_TOKEN = new Object();
+    private final long id = NEXT_XML_CONFIGURATOR_ID.incrementAndGet();
+    private final File xmlFile;
+    private final String configFromClassloaderName;
+    private final int reloadSeconds;
+
+    public XMLConfigurator(TransformerParams params) {
+    	this(new File(params.getXmlFileToConfig()), params.getConfigFromClasspathName(), params.getReloadConfigSeconds());
+    }
+   
+    public XMLConfigurator(File xmlFile, String configFromClassloaderName, int reloadSeconds) {
+    	this.xmlFile = xmlFile;
+    	this.configFromClassloaderName = configFromClassloaderName;
+    	this.reloadSeconds = reloadSeconds;
     }
     
-    public static void configure(File xmlFile) {
-        configure(xmlFile, -1);
-    }
-    
-    public static void configure(File xmlFile, long reloadSeconds) {
+    /**
+     * Starts the configuration process.   Depending on the reloadSeconds setting
+     * this will schedule an async timer task that will monitor for changes
+     * until close() is called.
+     */
+    public void start() {
         synchronized (LOCK_TOKEN) {
-            if (timerTask != null) {
-                timerTask.cancel();
-                timerTask = null;
-            }
-            TimerTaskImpl task = new TimerTaskImpl(xmlFile, reloadSeconds);
-            if (reloadSeconds > 0) {
-                timerTask = task;
-            }
-        }
-    }
-    
-    private static class TimerTaskImpl extends FailSafeTimerTask {
-        private final File configFile;
-        private final long reloadSeconds;
-        private long lastModifiedTime = -1;
-        
-        TimerTaskImpl(File configFile, long reloadSeconds) {
-            this.configFile = configFile;
-            this.reloadSeconds = reloadSeconds;
+        	close();
+            scheduledLoader = new PerfmonConfigLoaderRunnable(this, xmlFile, configFromClassloaderName, reloadSeconds);
             long initialDelay = 500;
             
             // Having problems with JBoss 7.x when loading the perfmon4j configuration, particularly
@@ -75,62 +79,232 @@ public class XMLConfigurator {
             	System.err.println("org.jboss.logmanager.LogManager found.  Will delay initial load of perfmon4j config for 5 seconds to allow JBoss time to load the LogManager");
             	initialDelay = Integer.getInteger("Perfmon4j.configDelayMillisForJBossLogManager", 5000).longValue();
             }
-            if (reloadSeconds > 0) {
-                PerfMon.getUtilityTimer().schedule(this, initialDelay, reloadSeconds * 1000);
-            } else {
-                PerfMon.getUtilityTimer().schedule(this, initialDelay);
+            scheduleForRun(scheduledLoader, initialDelay);
+            
+            logger.logDebug(this + " started.");
+        }
+    }
+    
+    public void close() {
+        synchronized (LOCK_TOKEN) {
+            if (scheduledLoader != null) {
+                scheduledLoader.cancel();
+                scheduledLoader = null;
+                logger.logDebug(this + " has been closed.");
             }
+        }
+    }
+    
+    protected boolean isPerfMonConfigured() {
+    	return PerfMon.isConfigured();
+    }
+    
+    protected void deInitPerfMon() {
+    	PerfMon.deInit();
+		logger.logDebug(this + " de-initializing perfmon4j");
+    }
+    
+    protected void configurePerfMon(XMLPerfMonConfiguration config) throws InvalidConfigException {
+		PerfMon.configure(config);
+		logger.logDebug(this + " configuring perfmon4j");
+    }
+    
+    private InputStream loadResource(String resourceFileName) {
+    	InputStream resource = PerfMon.getClassLoader().getResourceAsStream(resourceFileName);
+    	if (resource == null) {
+    		resource = this.getClass().getClassLoader().getResourceAsStream(resourceFileName);
+    		if (resource != null) {
+    			logger.logDebug(this + " found resource (" + resourceFileName +  ") using the " +
+    				this.getClass().getName() + " class loader");
+    		}
+    	} else {
+    		logger.logDebug(this + " found resource (" + resourceFileName +  ") using the PerfMon.globalClassLoader");
+    	}
+    	
+    	if (resource == null) {
+    		logger.logDebug(this + " Unable to find resource (" + resourceFileName +  ") using classloaders");
+    	}
+    	
+    	return resource;
+    }
+    
+	protected XMLPerfMonConfiguration load(String resourceFileName)  {
+    	XMLPerfMonConfiguration result = null;
+    	InputStream resource = loadResource(resourceFileName);
+    	
+    	if (resource != null) {
+    		try (Reader reader =  new InputStreamReader(resource, StandardCharsets.UTF_8)) {
+    			result = XMLConfigurationParser.parseXML(reader);
+    			logger.logDebug(this + " loaded configuration from classloader");
+    		} catch (IOException | InvalidConfigException ex) {
+    			logger.logWarn("Unable to read Perfmon configuration from classloader: " + resourceFileName, ex);
+    		}
+    	} else {
+    		logger.logWarn("Could not locate Perfmon configuration from classloader: " + resourceFileName);
+    	}
+    	return result;
+    }
+
+    protected XMLPerfMonConfiguration load(File configFile)  {
+    	XMLPerfMonConfiguration result = null;
+		try (Reader reader =  new FileReader(configFile, StandardCharsets.UTF_8)) {
+			result = XMLConfigurationParser.parseXML(reader);
+			logger.logDebug(this + " loaded configuration from file");
+		} catch (IOException | InvalidConfigException ex) {
+			logger.logWarn("Unable to read Perfmon configuration from: " + MiscHelper.getDisplayablePath(configFile), ex);
+		}
+    	return result;
+    }
+    
+    
+    private void scheduleForRun(final PerfmonConfigLoaderRunnable loader, long initialDelay) {
+    	PerfMon.getUtilityTimer().schedule(new FailSafeTimerTask() {
+			@Override
+			public void failSafeRun() {
+				synchronized (LOCK_TOKEN) {
+					if (!loader.isCancelled()) {
+				    	logger.logDebug("Run being invoked on: " + loader);
+						loader.run();
+					} else {
+				    	logger.logDebug("Skipping run being on: " + loader + " loader has been cancelled");
+					}
+				}
+			}
+		}, initialDelay);
+    	logger.logDebug(loader + " has been scheduled to run in " + initialDelay + " millis");
+    }
+    
+    @Override
+	public String toString() {
+		return "XMLConfigurator [id=" + id + ", xmlFile=" + xmlFile + ", configFromClassloaderName="
+				+ configFromClassloaderName + ", reloadSeconds=" + reloadSeconds + ", scheduledLoader="
+				+ scheduledLoader + "]";
+	}
+
+	private static class PerfmonConfigLoaderRunnable implements Runnable {
+        private static enum LoadMode {
+        	LOAD_FROM_CLASSLOADER,
+        	LOAD_FROM_FILE,
+        	LOAD_FROM_CLASSLOADER_OR_FILE,
+        	LOAD_NONE;
+        	
+        	boolean hasOptionToLoadFromFile() {
+        		return this.equals(LOAD_FROM_FILE) || this.equals(LOAD_FROM_CLASSLOADER_OR_FILE);
+        	}
+        	
+        	boolean hasOptionToLoadFromClassloader() {
+        		return this.equals(LOAD_FROM_CLASSLOADER) || this.equals(LOAD_FROM_CLASSLOADER_OR_FILE);
+        	}
         }
 
-        public void failSafeRun() {
-            synchronized (LOCK_TOKEN) {
-                boolean hadFile = lastModifiedTime > 0;
-                
-                if (configFile.exists()) {
-                    long modifiedTime = configFile.lastModified();
-                    if (modifiedTime != lastModifiedTime) {
-                        logger.logInfo("Loading configuration from: " + configFile.getName());
-                        try {
-                            XMLPerfMonConfiguration config = XMLConfigurationParser.parseXML(new FileReader(configFile));
-                            if (!config.isEnabled()) {
-                                // Enabled flag was set to false...
-                                // disable monitoring...
-                                if (PerfMon.configured) {
-                                    PerfMon.deInit();
-                                }
-                            } else {
-                                PerfMon.configure(config);
-                                if (config.isPartialLoad()) {
-                                	String warning = "PerfMon4j could not load the following resources: ";
-                                	Iterator<String> itr = config.getClassNotFoundInfo().iterator();
-                                	boolean addComma = false;
-                                	while (itr.hasNext()) {
-                                		if (addComma) {
-                                			warning += ", ";
-                                		}
-                                		addComma = true;
-                                		warning += "(" + itr.next() + ")";
-                                	}
-                                	warning += ". Will try again in " + reloadSeconds + " seconds.";
-                                	logger.logWarn(warning);
-                                	modifiedTime = -1;
-                                }
-                            }
-                        } catch (Throwable ex) {
-                        	modifiedTime = -1;
-                            logger.logError("Unable to load configuration from file: " + configFile, ex);
-                        }
-                    }
-                    lastModifiedTime = modifiedTime;
-                } else if (hadFile || (lastModifiedTime == -1)) {
-                    logger.logInfo("Configuration file not found: " + configFile.getName() +
-                        " turning off PerfMon");
-                    if (PerfMon.configured) {
-                        PerfMon.deInit();
-                    }
-                    lastModifiedTime = 0;
-                }
+        private static final AtomicLong NEXT_LOADER_ID = new AtomicLong(0);
+        private final long id = NEXT_LOADER_ID.incrementAndGet();
+        private final XMLConfigurator configurator;
+        private final File configFile;
+        private final String configFromClassloaderName;
+        private final long reloadSeconds;
+        private LoadMode loadMode;
+        private boolean loadedFromClasspath = false;
+        private boolean cancelled = false;
+        
+        private long lastConfigFileModifiedTime = -1;
+        
+        PerfmonConfigLoaderRunnable(XMLConfigurator configurator, File configFile, String configFromClassloaderName, long reloadSeconds) {
+        	this.configurator = configurator;
+            this.configFile = configFile;
+            this.configFromClassloaderName = configFromClassloaderName;
+            this.reloadSeconds = reloadSeconds;
+            
+            if (configFile != null && configFromClassloaderName != null) {
+            	loadMode = LoadMode.LOAD_FROM_CLASSLOADER_OR_FILE;
+            } else if (configFile != null) {
+            	loadMode = LoadMode.LOAD_FROM_FILE;
+            } else if (configFromClassloaderName != null){
+            	loadMode = LoadMode.LOAD_FROM_CLASSLOADER;
+            } else {
+            	loadMode = LoadMode.LOAD_NONE;
             }
         }
+        
+        @Override
+        public void run() {
+    		XMLPerfMonConfiguration config = null;            		
+    		boolean reschedule = loadMode.hasOptionToLoadFromFile();
+    		boolean attemptLoadFromClassloader = loadMode.hasOptionToLoadFromClassloader();
+    		boolean doConfigure = false;
+    		
+    		if (loadMode.hasOptionToLoadFromFile()) {
+    			if (configFile.exists()) {
+    				if (loadedFromClasspath || (configFile.lastModified() != lastConfigFileModifiedTime)) {
+    					lastConfigFileModifiedTime = configFile.lastModified();
+    					config = configurator.load(configFile);
+    					doConfigure = true;
+    				} 
+					loadedFromClasspath = false;
+    				attemptLoadFromClassloader = false;
+    			} else {
+    				lastConfigFileModifiedTime = -1;
+    			}
+    		}
+    		
+    		if (attemptLoadFromClassloader && !loadedFromClasspath) {
+				config = configurator.load(configFromClassloaderName);
+				loadedFromClasspath = true;
+				doConfigure = true;
+				reschedule = reschedule || (config == null); // If we were unable to load from the classloader try again...
+    		}
+    		
+    		if (doConfigure) {
+        		if (config == null || !config.isEnabled()) {
+                    if (configurator.isPerfMonConfigured()) {
+                        configurator.deInitPerfMon();;
+                    }
+        		} else {
+      	            try {
+      	            	configurator.configurePerfMon(config);
+        	            if (config.isPartialLoad()) {
+        	            	String warning = "PerfMon4j could not load the following resources: ";
+        	            	Iterator<String> itr = config.getClassNotFoundInfo().iterator();
+        	            	boolean addComma = false;
+        	            	while (itr.hasNext()) {
+        	            		if (addComma) {
+        	            			warning += ", ";
+        	            		}
+        	            		addComma = true;
+        	            		warning += "(" + itr.next() + ")";
+        	            	}
+        	            	warning += ". Will try again in " + reloadSeconds + " seconds.";
+        	            	logger.logWarn(warning);
+        	            	loadedFromClasspath = true;
+        	            	reschedule = true;
+        	            }
+					} catch (InvalidConfigException e) {
+						logger.logWarn("Error confguring perfmon4j", e);
+                        if (PerfMon.configured) {
+                            PerfMon.deInit();
+                        }
+					}
+        		}
+    		}
+    		
+    		if (reschedule && reloadSeconds > 0) {
+    			configurator.scheduleForRun(this, reloadSeconds * 1000);
+    		}
+        }
+        
+        private void cancel() {
+        	logger.logDebug(this + " has been cancelled");
+        	cancelled = true;
+        }
+
+        private boolean isCancelled() {
+			return cancelled;
+		}
+
+		@Override
+		public String toString() {
+			return "PerfmonConfigLoaderRunnable [id=" + id + ", configurator.ID=" + configurator.id + ", loadMode=" + loadMode
+					+ ", cancelled=" + cancelled + ", lastConfigFileModifiedTime=" + lastConfigFileModifiedTime + "]";
+		}
     }
 }
