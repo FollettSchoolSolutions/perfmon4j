@@ -23,9 +23,7 @@ package org.perfmon4j.instrument;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -57,7 +55,6 @@ import org.perfmon4j.ConfiguredSettings;
 import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
-import org.perfmon4j.XMLBootParser;
 import org.perfmon4j.XMLConfigurator;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
@@ -686,8 +683,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     private static void doPremain(String packageName,  Instrumentation inst)  {
     	addPerfmon4jToJBoss7SystemPackageList();
     	
-    
-    	
         PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
 
         LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled() || t.params.isVerboseInstrumentationEnabled());
@@ -752,25 +747,11 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     			logger.logError("Perfmon4j can not disable java.lang.System.gc() JVM does not support redefining classes");
     		}
         }
-
-        BootConfiguration bootConfiguration = BootConfiguration.getDefault();
-    	String configFile = t.params.getXmlFileToConfig();
-    	if (configFile != null) {
-    		FileReader reader = null;
-    		try {
-    			logger.logInfo("Loading boot configuration from: " + MiscHelper.getDisplayablePath(new File(configFile)));
-    			reader = new FileReader(configFile);
-    			bootConfiguration = XMLBootParser.parseXML(reader);
-			} catch (FileNotFoundException e) {
-				logger.logError("Perfmon4j unable to load boot configuration, using default. File: " + MiscHelper.getDisplayablePath(new File(configFile)));
-			} finally {
-				if (reader != null) {
-					try {reader.close();} catch (Exception ex) {}
-				}
-			}
-    	} else {
-    		logger.logWarn("Perfmonconfig.xml file not specified.  Loading default boot configuration.");
-    	}
+        
+        @SuppressWarnings("resource") // Don't worry about singleton resource, there is only one per JVM 
+		XMLConfigurator configurator = new XMLConfigurator(t.params);
+        
+        BootConfiguration bootConfiguration = configurator.loadBootConfiguartion();
 		ConfiguredSettings.setBootConfigSettings(bootConfiguration.exportAsProperties());
         
         if (t.params.isInstallServletValve()) {
@@ -917,23 +898,9 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         		}
 	        } 
         } 
-        
-        String xmlFileToConfig = t.params.getXmlFileToConfig();
-        if (xmlFileToConfig != null) {
-        	final int reloadConfigSeconds = t.params.getReloadConfigSeconds();
-        	
-        	File xmlFile = new File(xmlFileToConfig);
-        	if (xmlFile.exists()) {
-        		logger.logInfo("Loading perfmon configuration from file: " + MiscHelper.getDisplayablePath(xmlFile));
-        	} else {
-        		if (reloadConfigSeconds == 0) {
-        			logger.logInfo("Configuration file not found since -r parameter was 0 or less the file will NOT be checked for updates -- file: " + MiscHelper.getDisplayablePath(xmlFile));
-        		} else {
-        			logger.logInfo("Configuration file not found will check again in " + reloadConfigSeconds + " seconds -- file: " + MiscHelper.getDisplayablePath(xmlFile));
-        		}
-        	}
-        	new XMLConfigurator(t.params).start();
-        }
+
+        // Start process to load perfmon4j configuration and optionally, based on parameters, monitor for changes  
+       	configurator.start();
         
         if (t.params.isRemoteManagementEnabled()) {
         	int port = t.params.getRemoteManagementPort();

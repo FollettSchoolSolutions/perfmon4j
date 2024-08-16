@@ -46,15 +46,87 @@ public class XMLConfigurator implements Closeable {
     private final File xmlFile;
     private final String configFromClassloaderName;
     private final int reloadSeconds;
-
+    private final LoadMode loadMode;
+    
+    private static enum LoadMode {
+    	LOAD_FROM_CLASSLOADER,
+    	LOAD_FROM_FILE,
+    	LOAD_FROM_CLASSLOADER_OR_FILE,
+    	LOAD_NONE;
+    	
+    	boolean hasOptionToLoadFromFile() {
+    		return this.equals(LOAD_FROM_FILE) || this.equals(LOAD_FROM_CLASSLOADER_OR_FILE);
+    	}
+    	
+    	boolean hasOptionToLoadFromClassloader() {
+    		return this.equals(LOAD_FROM_CLASSLOADER) || this.equals(LOAD_FROM_CLASSLOADER_OR_FILE);
+    	}
+    	
+    	public static LoadMode getLoadMode(File configFile, String configFromClassloaderName) {
+    		LoadMode result = LoadMode.LOAD_NONE;
+            if (configFile != null && configFromClassloaderName != null) {
+            	result = LoadMode.LOAD_FROM_CLASSLOADER_OR_FILE;
+            } else if (configFile != null) {
+            	result = LoadMode.LOAD_FROM_FILE;
+            } else if (configFromClassloaderName != null){
+            	result = LoadMode.LOAD_FROM_CLASSLOADER;
+            }
+            return result;
+    	}
+    }    
+    
     public XMLConfigurator(TransformerParams params) {
-    	this(new File(params.getXmlFileToConfig()), params.getConfigFromClasspathName(), params.getReloadConfigSeconds());
+    	this(fileOrNull(params.getXmlFileToConfig()), params.getConfigFromClasspathName(), params.getReloadConfigSeconds());
+    }
+    
+    private static File fileOrNull(String fileName) {
+    	return fileName != null ? new File(fileName) : null;
     }
    
     public XMLConfigurator(File xmlFile, String configFromClassloaderName, int reloadSeconds) {
     	this.xmlFile = xmlFile;
     	this.configFromClassloaderName = configFromClassloaderName;
     	this.reloadSeconds = reloadSeconds;
+    	this.loadMode = LoadMode.getLoadMode(xmlFile, configFromClassloaderName);
+    }
+    
+    public BootConfiguration loadBootConfiguartion() {
+    	BootConfiguration bootConfiguration = null;
+    	
+    	if (loadMode.hasOptionToLoadFromFile()) {
+			String fileDisplayName = MiscHelper.getDisplayablePath(xmlFile);
+    		if (xmlFile.exists()) {
+    			try (Reader reader = new FileReader(xmlFile, StandardCharsets.UTF_8)) {
+        			bootConfiguration = XMLBootParser.parseXML(reader);
+        			logger.logInfo("Loaded perfmon4j boot configuration from: " + fileDisplayName);
+    			} catch (IOException e) {
+    				logger.logInfo("Error loading perfmon4j boot configuration from file: " + fileDisplayName);
+				}
+    		} else {
+    			logger.logInfo("Unable to load perfmon4j boot configuration from (file not found): " + fileDisplayName);
+    		}
+    	}
+
+    	if (bootConfiguration == null && loadMode.hasOptionToLoadFromClassloader()) {
+        	InputStream resource = loadResource(configFromClassloaderName);
+        	if (resource != null) {
+        		try (Reader reader =  new InputStreamReader(resource, StandardCharsets.UTF_8)) {
+        			bootConfiguration = XMLBootParser.parseXML(reader);
+        			logger.logInfo("Loaded perfmon4j boot configuration from classloader. Resource name: " 
+        				+ configFromClassloaderName);
+        		} catch (IOException ex) {
+        			logger.logInfo("Unable to load pefmon4j boot configuration from classloader. Resource name: " 
+        				+ configFromClassloaderName, ex);
+        		}
+        	} 
+    	}
+
+    	if (bootConfiguration == null) {
+    		logger.logInfo("Perfmon4j using default boot configuration");
+    		bootConfiguration = BootConfiguration.getDefault();
+    	}
+    	
+    	return bootConfiguration;
     }
     
     /**
@@ -182,28 +254,13 @@ public class XMLConfigurator implements Closeable {
 	}
 
 	private static class PerfmonConfigLoaderRunnable implements Runnable {
-        private static enum LoadMode {
-        	LOAD_FROM_CLASSLOADER,
-        	LOAD_FROM_FILE,
-        	LOAD_FROM_CLASSLOADER_OR_FILE,
-        	LOAD_NONE;
-        	
-        	boolean hasOptionToLoadFromFile() {
-        		return this.equals(LOAD_FROM_FILE) || this.equals(LOAD_FROM_CLASSLOADER_OR_FILE);
-        	}
-        	
-        	boolean hasOptionToLoadFromClassloader() {
-        		return this.equals(LOAD_FROM_CLASSLOADER) || this.equals(LOAD_FROM_CLASSLOADER_OR_FILE);
-        	}
-        }
-
         private static final AtomicLong NEXT_LOADER_ID = new AtomicLong(0);
         private final long id = NEXT_LOADER_ID.incrementAndGet();
         private final XMLConfigurator configurator;
         private final File configFile;
         private final String configFromClassloaderName;
         private final long reloadSeconds;
-        private LoadMode loadMode;
+        private final LoadMode loadMode;
         private boolean loadedFromClasspath = false;
         private boolean cancelled = false;
         
@@ -215,15 +272,7 @@ public class XMLConfigurator implements Closeable {
             this.configFromClassloaderName = configFromClassloaderName;
             this.reloadSeconds = reloadSeconds;
             
-            if (configFile != null && configFromClassloaderName != null) {
-            	loadMode = LoadMode.LOAD_FROM_CLASSLOADER_OR_FILE;
-            } else if (configFile != null) {
-            	loadMode = LoadMode.LOAD_FROM_FILE;
-            } else if (configFromClassloaderName != null){
-            	loadMode = LoadMode.LOAD_FROM_CLASSLOADER;
-            } else {
-            	loadMode = LoadMode.LOAD_NONE;
-            }
+            loadMode = LoadMode.getLoadMode(configFile, configFromClassloaderName);
         }
         
         @Override
@@ -232,13 +281,15 @@ public class XMLConfigurator implements Closeable {
     		boolean reschedule = loadMode.hasOptionToLoadFromFile();
     		boolean attemptLoadFromClassloader = loadMode.hasOptionToLoadFromClassloader();
     		boolean doConfigure = false;
-    		
+
     		if (loadMode.hasOptionToLoadFromFile()) {
     			if (configFile.exists()) {
     				if (loadedFromClasspath || (configFile.lastModified() != lastConfigFileModifiedTime)) {
     					lastConfigFileModifiedTime = configFile.lastModified();
     					config = configurator.load(configFile);
     					doConfigure = true;
+    		    		logger.logInfo("Perfmon4j configuration retrieved from file: " 
+    		    			+ MiscHelper.getDisplayablePath(configFile));
     				} 
 					loadedFromClasspath = false;
     				attemptLoadFromClassloader = false;
@@ -251,13 +302,16 @@ public class XMLConfigurator implements Closeable {
 				config = configurator.load(configFromClassloaderName);
 				loadedFromClasspath = true;
 				doConfigure = true;
+	    		logger.logInfo("Perfmon4j configuration retrieved from classloader. Resource name: " 
+		    			+ configFromClassloaderName);
 				reschedule = reschedule || (config == null); // If we were unable to load from the classloader try again...
     		}
     		
     		if (doConfigure) {
         		if (config == null || !config.isEnabled()) {
                     if (configurator.isPerfMonConfigured()) {
-                        configurator.deInitPerfMon();;
+                        configurator.deInitPerfMon();
+        	    		logger.logInfo("Perfmon4j configuration not found or disabled. Perfmon4j has been deinitialized.");
                     }
         		} else {
       	            try {
