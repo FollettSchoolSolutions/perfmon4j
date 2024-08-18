@@ -23,9 +23,11 @@ package org.perfmon4j;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.Vector;
 
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
@@ -34,6 +36,7 @@ import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;
 public class BootConfiguration {
 	private ServletValveConfig servletValveConfig = null;
 	private ExceptionTrackerConfig exceptionTrackerConfig = null;
+	private String javaAgentParameters = null;
 	
 	public static BootConfiguration getDefault() {
 		return new BootConfiguration();
@@ -61,6 +64,14 @@ public class BootConfiguration {
 
 	public void setExceptionTrackerConfig(ExceptionTrackerConfig exceptionTrackerConfig) {
 		this.exceptionTrackerConfig = exceptionTrackerConfig;
+	}
+
+	public String getJavaAgentParameters() {
+		return javaAgentParameters;
+	}
+
+	public void setJavaAgentParameters(String javaAgentParameters) {
+		this.javaAgentParameters = javaAgentParameters;
 	}
 
 	public static final class ServletValveConfig {
@@ -264,6 +275,4 @@ public class BootConfiguration {
 			return value;
 		}
 	}
-	
-
 }

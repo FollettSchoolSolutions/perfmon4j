@@ -26,6 +26,7 @@ import java.io.StringReader;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+import org.perfmon4j.util.PropertyStringFilter;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -85,6 +86,7 @@ public class XMLBootParser extends DefaultHandler {
     private final static String SERVLET_VALVE_NAME = "servletValve";
     private final static String EXCEPTION_TRACKER_NAME = "exceptionTracker";
     private final static String EXCEPTION_ELEMENT_NAME = "exception";
+    private final static String JAVA_AGENT_PARAMETERS_NAME = "javaAgentParameters";
     
     private final int STATE_UNDEFINED                           = 0;
     private final int STATE_IN_ROOT                             = 1;
@@ -94,8 +96,10 @@ public class XMLBootParser extends DefaultHandler {
     private final int STATE_DONE               					= 5;
     private final int STATE_IN_EXCEPTION_TRACKER               	= 6;
     private final int STATE_IN_EXCEPTION_ELEMENT               	= 7;
+    private final int STATE_IN_JAVA_AGENT_PARAMETERS			= 8;
     
     private int currentState = STATE_UNDEFINED;
+    private String currentAttributeData = null;
     
     @Override() public void startElement(@SuppressWarnings("unused") String uri, String name, @SuppressWarnings("unused") String qName,
         Attributes atts) throws SAXException {
@@ -193,6 +197,9 @@ public class XMLBootParser extends DefaultHandler {
                 } else if (EXCEPTION_TRACKER_NAME.equalsIgnoreCase(name)) { 
                 	config.setExceptionTrackerConfig(new BootConfiguration.ExceptionTrackerConfig());
                 	currentState = STATE_IN_EXCEPTION_TRACKER;
+                } else if (JAVA_AGENT_PARAMETERS_NAME.equalsIgnoreCase(name)) { 
+                	currentAttributeData = null;
+                	currentState = STATE_IN_JAVA_AGENT_PARAMETERS;
                 } else {
                     throw new SAXException("Unexpected element: " + name);
                 }
@@ -229,14 +236,20 @@ public class XMLBootParser extends DefaultHandler {
             currentState = STATE_IN_EXCEPTION_TRACKER;
         }
         
+        if (JAVA_AGENT_PARAMETERS_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_JAVA_AGENT_PARAMETERS) {
+        	config.setJavaAgentParameters(currentAttributeData);
+            currentState = STATE_IN_BOOT;
+        }
     }
+
+    private final PropertyStringFilter propertyStringFilter = new PropertyStringFilter(false);
     
     public void characters (char ch[], int start, int length) throws SAXException {
-//        if (currentState == STATE_IN_APPENDER_ATTRIBUTE || currentState == STATE_IN_SNAP_SHOT_ATTRIBUTE) {
-//            if (currentAttributeData == null) {
-//                currentAttributeData = "";
-//            }
-//            currentAttributeData +=  PropertyStringFilter.filter(new String(ch, start, length));
-//        }
+        if (currentState == STATE_IN_JAVA_AGENT_PARAMETERS) {
+            if (currentAttributeData == null) {
+                currentAttributeData = "";
+            }
+            currentAttributeData +=  propertyStringFilter.doFilter(new String(ch, start, length));
+        }
     }
 }

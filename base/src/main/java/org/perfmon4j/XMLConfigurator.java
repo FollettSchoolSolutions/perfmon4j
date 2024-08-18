@@ -204,7 +204,7 @@ public class XMLConfigurator implements Closeable {
     		}
     	}
     	
-    	if (resource == null && MiscHelper.isRunningInQuarkusDevTestMode()) {
+    	if (resource == null) {
     		File file = new File("./target/classes/", resourceFileName);
     		if (file.exists()) {
     			try {

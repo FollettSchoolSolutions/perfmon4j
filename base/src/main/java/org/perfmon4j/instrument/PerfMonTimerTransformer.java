@@ -67,7 +67,7 @@ import org.perfmon4j.util.MiscHelper;
 
 
 public class PerfMonTimerTransformer implements ClassFileTransformer {
-    private final TransformerParams params; 
+    private TransformerParams params; 
     private static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
 	
     private final static String REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY="Perfmon4j.RemoteInterfaceDelaySeconds"; 
@@ -758,8 +758,29 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         
         @SuppressWarnings("resource") // Don't worry about singleton resource, there is only one per JVM 
 		XMLConfigurator configurator = new XMLConfigurator(t.params);
-        
         BootConfiguration bootConfiguration = configurator.loadBootConfiguartion();
+        
+        // If java agent parameters are set in the boot configuration, we will
+        // merge it with any parameters found on the javaagent command line
+        // IMPORTANT: When we merge the parameters from the boot configuration are processed
+        // first.  This means the parameters from the javaagent command line take
+        // higher precedence.
+        String bootJavaAgentParams = bootConfiguration.getJavaAgentParameters();
+        if (bootJavaAgentParams != null && !bootJavaAgentParams.isBlank()) {
+        	String fullParams = bootJavaAgentParams 
+        		+ (packageName == null || packageName.isBlank() ? "" :  ("," + packageName));
+        	try {
+        		t.params = new TransformerParams(fullParams);
+                // Update logging settings in case they have been modified by the bootConfiguration
+        		LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled() || t.params.isVerboseInstrumentationEnabled()); 
+                LoggerFactory.setVerboseInstrumentationEnabled(t.params.isVerboseInstrumentationEnabled()); 
+        		logger.logDebug("Combined parameters from javaagent and bootConfiguration: " + fullParams);
+        	} catch (RuntimeException re) {
+        		logger.logWarn("Unabled to parse combined javaAgentParameters parameters from javaAgent and bootConfiguration: " +
+        			fullParams, re);	
+        	}
+        }
+        
 		ConfiguredSettings.setBootConfigSettings(bootConfiguration.exportAsProperties());
         
         if (t.params.isInstallServletValve()) {

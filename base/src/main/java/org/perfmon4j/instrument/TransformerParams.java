@@ -93,7 +93,7 @@ public class TransformerParams {
     private boolean verboseEnabled = false;
     private boolean disableSystemGC = false;
     private boolean extremeSQLMonitorEnabled = false;
-    private final List<String> extremeSQLPackages = new Vector<String>();
+    private final List<String> extremeSQLPackages = new ArrayList<String>();
 	private boolean remoteManagementEnabled = false;
 	private int remoteManagementPort = REMOTE_PORT_DISABLED;
 	private boolean installServletValve = false;

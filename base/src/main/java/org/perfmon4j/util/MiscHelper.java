@@ -760,9 +760,4 @@ public class MiscHelper {
 	public static <T> T isNull(T value, T returnIfValueIsNull) {
 		return value != null ? value : returnIfValueIsNull;
 	}
-	
-	public static boolean isRunningInQuarkusDevTestMode() {
-		String launchMode = System.getProperty("quarkus.launch.mode");
-		return "dev".equals(launchMode) || "test".equals(launchMode);
-	}
 } 

@@ -17,6 +17,8 @@ Follett School Solutions, LLC
 McHenry, IL 60050
 
 ** 2.0.2 - TBD
+- Javaagent parameters can now be included in the bootConfiguration setting of
+	the perfmonconfig.xml.  Note the parameters from the bootconfiguration.
 - Added option to load perfmon configuration using the classloader. By default
 	we look for perfmonconfig.xml within the default package. To disable this you
 	can pass the argument (ex: '-cfalse') using the perfmon4j.jar javaagent parameter.
