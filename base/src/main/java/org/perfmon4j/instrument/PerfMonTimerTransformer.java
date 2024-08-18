@@ -42,6 +42,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TimerTask;
@@ -705,6 +706,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	}
         Properties agentProperties = t.params.exportAsProperties();
 
+        if (t.params.isVerboseInstrumentationEnabled()) {
+	        Optional<String> commandLine = ProcessHandle.current().info().commandLine();
+	        if (commandLine.isPresent()) {
+	        	logger.logInfo("Full command line: " + commandLine.get());
+	        }
+        }
+        
     	String perfmon4jVersion = PerfMonTimerTransformer.class.getPackage().getImplementationVersion();
     	logger.logInfo("Perfmon4j Instrumentation Agent v." + perfmon4jVersion + " installed. (http://perfmon4j.org)");
         agentProperties.setProperty("perfmon4j.javaagent.version", perfmon4jVersion == null ? "unknown" : perfmon4jVersion);

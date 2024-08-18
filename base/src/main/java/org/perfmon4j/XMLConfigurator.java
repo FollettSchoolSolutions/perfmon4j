@@ -22,6 +22,8 @@ package org.perfmon4j;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -183,14 +185,36 @@ public class XMLConfigurator implements Closeable {
     
     private InputStream loadResource(String resourceFileName) {
     	InputStream resource = PerfMon.getClassLoader().getResourceAsStream(resourceFileName);
+    	if (resource != null) {
+    		logger.logDebug(this + " found resource (" + resourceFileName +  ") using the PerfMon.globalClassLoader");
+    	}
+    	
     	if (resource == null) {
     		resource = this.getClass().getClassLoader().getResourceAsStream(resourceFileName);
     		if (resource != null) {
     			logger.logDebug(this + " found resource (" + resourceFileName +  ") using the " +
     				this.getClass().getName() + " class loader");
     		}
-    	} else {
-    		logger.logDebug(this + " found resource (" + resourceFileName +  ") using the PerfMon.globalClassLoader");
+    	}
+    	
+    	if (resource == null) {
+    		resource =  Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceFileName);
+    		if (resource != null) {
+    			logger.logDebug(this + " found resource (" + resourceFileName +  ") using the Thread Context class loader");
+    		}
+    	}
+    	
+    	if (resource == null && MiscHelper.isRunningInQuarkusDevTestMode()) {
+    		File file = new File("./target/classes/", resourceFileName);
+    		if (file.exists()) {
+    			try {
+					resource = new FileInputStream(file);
+	    			logger.logDebug(this + "- Running in quarkus dev/test mode and found resource (" + resourceFileName +  ") in local maven classpath: " 
+	    					+ MiscHelper.getDisplayablePath(file));
+				} catch (FileNotFoundException e) {
+					// Ignore.
+				}
+    		}
     	}
     	
     	if (resource == null) {
@@ -302,8 +326,10 @@ public class XMLConfigurator implements Closeable {
 				config = configurator.load(configFromClassloaderName);
 				loadedFromClasspath = true;
 				doConfigure = true;
-	    		logger.logInfo("Perfmon4j configuration retrieved from classloader. Resource name: " 
-		    			+ configFromClassloaderName);
+				if (config != null) {
+					logger.logInfo("Perfmon4j configuration retrieved from classloader. Resource name: " 
+							+ configFromClassloaderName);
+				}
 				reschedule = reschedule || (config == null); // If we were unable to load from the classloader try again...
     		}
     		
