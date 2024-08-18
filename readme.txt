@@ -17,6 +17,11 @@ Follett School Solutions, LLC
 McHenry, IL 60050
 
 ** 2.0.2 - TBD
+- Added option to load perfmon configuration using the classloader. By default
+	we look for perfmonconfig.xml within the default package. To disable this you
+	can pass the argument (ex: '-cfalse') using the perfmon4j.jar javaagent parameter.
+	You can also specify an alternative resource name to load using
+	(ex: '-corg/myorg/myconfig/p4j.xml')  
 - Several enhancements to processing system properties when parsing perfmonconfig.xml:
 	1) Similar to wildfly you can provide a default value to use if the system property is null.  
 	To do this you append :<defaultValue> along with the property name.  For example 
