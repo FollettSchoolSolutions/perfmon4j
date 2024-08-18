@@ -49,6 +49,7 @@ public class XMLConfigurator implements Closeable {
     private final String configFromClassloaderName;
     private final int reloadSeconds;
     private final LoadMode loadMode;
+    private boolean performedConfig = false; // true if the configurator loaded the perfmonconfiguration.
     
     private static enum LoadMode {
     	LOAD_FROM_CLASSLOADER,
@@ -169,16 +170,21 @@ public class XMLConfigurator implements Closeable {
         }
     }
     
+    /**
+     * @return true if PerfMonIsConfigured and the XMLConfiguration did the configuration.
+     */
     protected boolean isPerfMonConfigured() {
-    	return PerfMon.isConfigured();
+    	return performedConfig && PerfMon.isConfigured();
     }
     
     protected void deInitPerfMon() {
     	PerfMon.deInit();
+    	performedConfig = false;
 		logger.logDebug(this + " de-initializing perfmon4j");
     }
     
     protected void configurePerfMon(XMLPerfMonConfiguration config) throws InvalidConfigException {
+    	performedConfig = true;
 		PerfMon.configure(config);
 		logger.logDebug(this + " configuring perfmon4j");
     }
