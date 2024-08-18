@@ -98,7 +98,7 @@ public class TransformerParams {
 	private int remoteManagementPort = REMOTE_PORT_DISABLED;
 	private boolean installServletValve = false;
 	private boolean hystrixInstrumentationEnabled = false;
-	private String configFromClasspathName = null;
+	private String configFromClassloaderName = DEFAULT_PERFMON_CONFIG_RESOURCE_NAME;
 	
 	public static final int REMOTE_PORT_DISABLED = -1;
 	public static final int REMOTE_PORT_AUTO = 0;
@@ -240,8 +240,14 @@ public class TransformerParams {
                 	
                 } else if (isParam('c', params)) {
                 	nextParam = getNextParam(params);
-                	configFromClasspathName = nextParam.parameter.isBlank()?
-                		DEFAULT_PERFMON_CONFIG_RESOURCE_NAME : nextParam.parameter;
+                	String arg = nextParam.parameter;
+                	if (arg.isBlank()) {
+                		throw new RuntimeException("-c parameter must contain a resource name (i.e. -ccom/myorg/myconf/perfconfig.xml)");
+                	} else if ("false".equalsIgnoreCase(arg)) {
+                		configFromClassloaderName = null;
+                	} else {
+                    	configFromClassloaderName = arg;
+                	}
                 }
                 
                 if (nextParam != null) {
@@ -538,12 +544,12 @@ public class TransformerParams {
 		return hystrixInstrumentationEnabled;
 	}
 
-	public boolean isLoadConfigFromClasspath() {
-		return configFromClasspathName != null;
+	public boolean isLoadConfigFromClassloader() {
+		return configFromClassloaderName != null;
 	}
 	
-	public String getConfigFromClasspathName() {
-		return configFromClasspathName;
+	public String getConfigFromClassloaderName() {
+		return configFromClassloaderName;
 	}
 
 	public Properties exportAsProperties() {

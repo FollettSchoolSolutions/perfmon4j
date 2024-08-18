@@ -78,7 +78,7 @@ public class XMLConfigurator implements Closeable {
     }    
     
     public XMLConfigurator(TransformerParams params) {
-    	this(fileOrNull(params.getXmlFileToConfig()), params.getConfigFromClasspathName(), params.getReloadConfigSeconds());
+    	this(fileOrNull(params.getXmlFileToConfig()), params.getConfigFromClassloaderName(), params.getReloadConfigSeconds());
     }
     
     private static File fileOrNull(String fileName) {

@@ -855,25 +855,29 @@ public class TransformerParamsTest extends PerfMonTestCase {
         public void testOptionLoadPerfmonConfigFromClasspath() {
         	TransformerParams params = new TransformerParams("");
         	
-        	assertFalse("By default we do not look to load perfmonconfig.xml from classpath", 
-        			params.isLoadConfigFromClasspath());
+        	assertTrue("By default we should look for perfmonconfig.xml from classpath", 
+        			params.isLoadConfigFromClassloader());
+        	assertEquals("default resource name",
+        			"perfmonconfig.xml", params.getConfigFromClassloaderName());
         	
-        	params = new TransformerParams("-c");
-        	assertTrue("-c parameter indicates we should try loading perfmonconfig from classpath", 
-        			params.isLoadConfigFromClasspath());
-        	assertEquals("default resource name when for config when not specified",
-        			"perfmonconfig.xml", params.getConfigFromClasspathName());
-
-        	params = new TransformerParams("-ccom/follett/fsc/myapp/perfmonconfig.xml");
-        	assertTrue("-c parameter indicates we should try loading perfmonconfig from classpath", 
-        			params.isLoadConfigFromClasspath());
+        	try {
+        		params = new TransformerParams("-c");
+        		fail("Must either pass false to disable loading from classloader or the resource name to find");
+        	} catch (RuntimeException ex) {
+        		// Expected
+        	}
+        	
+        	params = new TransformerParams("-cfalse");
+        	assertFalse("Should not attempt to load from classloader", params.isLoadConfigFromClassloader());
+        	
+            params = new TransformerParams("-ccom/follett/fsc/myapp/perfmonconfig.xml");
         	assertEquals("Should use overloaded resource name",
-        			"com/follett/fsc/myapp/perfmonconfig.xml", params.getConfigFromClasspathName());
+        			"com/follett/fsc/myapp/perfmonconfig.xml", params.getConfigFromClassloaderName());
         	
         	// Make sure we continue processing parameters after the -c
-        	params = new TransformerParams("-c,-vTRUE");
-        	assertTrue("-c parameter indicates we should try loading perfmonconfig from classpath", 
-        			params.isLoadConfigFromClasspath());
+        	params = new TransformerParams("-cfalse,-vTRUE");
+        	assertFalse("-cfalse parameter indicates we will not use classloader to find resource", 
+        			params.isLoadConfigFromClassloader());
         	assertTrue("should still have passed the verbose flag", 
         			params.isVerboseInstrumentationEnabled());
         }
