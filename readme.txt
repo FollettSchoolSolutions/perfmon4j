@@ -16,7 +16,7 @@ Follett School Solutions, LLC
 1391 Corporate Drive
 McHenry, IL 60050
 
-** 2.0.2 - TBD
+** 2.1.0 - TBD
 - Javaagent parameters can now be included in the bootConfiguration setting of
 	the perfmonconfig.xml.  Note the parameters from the bootconfiguration.
 - Added option to load perfmon configuration using the classloader. By default

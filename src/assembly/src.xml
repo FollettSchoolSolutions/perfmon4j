@@ -80,20 +80,12 @@
 			<destName>perfmon4j-jbossweb7.jar</destName>
 		</file>		
 		<file>
-			<source>${basedir}/sunjava6/target/perfmon4j-sunjava6-${project.version}.jar</source>
-			<destName>perfmon4j-sunjava6.jar</destName>
-		</file>
-		<file>
 			<source>${basedir}/dbupgrader/target/perfmon4j-dbupgrader-${project.version}.run.jar</source>
 			<destName>perfmon4j-dbupgrader.jar</destName>
 		</file>
 		<file>
 			<source>${basedir}/wildfly8/target/perfmon4j-wildfly8-${project.version}.jar</source>
 			<destName>perfmon4j-wildfly8.jar</destName>
-		</file>		
-		<file>
-			<source>${basedir}/webapp/target/perfmon4j.war</source>
-			<destName>perfmon4j.war</destName>
 		</file>		
 
     </files>
