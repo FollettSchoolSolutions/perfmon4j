@@ -41,6 +41,7 @@ import org.perfmon4j.instrument.PerfMonTimerTransformerTest.SQLStatementTester.B
 import org.perfmon4j.util.MiscHelper;
 
 import api.org.perfmon4j.agent.PerfMonTimer;
+import api.org.perfmon4j.agent.util.SingletonTracker;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -1060,6 +1061,55 @@ System.out.println(output);
     	TestHelper.validateNoFailuresInOutput(output);
     }    
 
+    
+	public static class TestSingletonTrackerAPI implements Runnable {
+		@Override
+		public void run() {
+			try {
+				SingletonTracker singletonTracker = SingletonTracker.getSingleton();
+				
+				System.out.println("SingletonTracker isAttachedToAgent: " + SingletonTracker.isAttachedToAgent());
+				System.out.println("SingletonTracker isEnabled: " + singletonTracker.isEnabled());
+				
+				singletonTracker.register(this.getClass());
+				// This should force a Singleton Duplicate error in the log -- if tracking is enabled.
+				singletonTracker.register(this.getClass());
+				
+			} catch (Throwable ex) {
+				System.out.println("**FAIL: Unexpected Exception thrown: " + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
+	}    
+    
+	/*----------------------------------------------------------------------------*/
+    public void testSingletonTrackerAPIDisabled() throws Exception {
+    	String output = LaunchRunnableInVM.run(TestSingletonTrackerAPI.class,"-vtrue", "", perfmon4jJar);
+//System.out.println(output);
+    	TestHelper.validateNoFailuresInOutput(output);
+		// Should not include instance name when POJO is registered without an instance name
+		assertTrue("SingletonTrackerImpl should have been rewritten by the agent", 
+			output.contains("SingletonTracker isAttachedToAgent: true"));
+		assertTrue("SingletonTracker was not enabled via system property", 
+				output.contains("SingletonTracker isEnabled: false"));
+    }    
+    
+	/*----------------------------------------------------------------------------*/
+    public void testSingletonTrackerAPIEnabled() throws Exception {
+    	Properties systemProperties = new Properties();
+    	systemProperties.setProperty("org.perfmon4j.util.SingletonTracker.enabled", "true");
+    	
+    	String output = LaunchRunnableInVM.run(TestSingletonTrackerAPI.class,"-vtrue", "", systemProperties, perfmon4jJar);
+//System.out.println(output);
+    	TestHelper.validateNoFailuresInOutput(output);
+		// Should not include instance name when POJO is registered without an instance name
+		assertTrue("SingletonTrackerImpl should have been rewritten by the agent", 
+			output.contains("SingletonTracker isAttachedToAgent: true"));
+		assertTrue("SingletonTracker was not enabled via system property", 
+				output.contains("SingletonTracker isEnabled: true"));
+		assertTrue("SingletonTracker should have detected duplicate registration", 
+				output.contains("**** Duplicate Singleton Detected! ****"));
+    }    
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

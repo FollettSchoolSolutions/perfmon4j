@@ -34,9 +34,13 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.SingletonTracker;
 import org.perfmon4j.util.ThresholdCalculator;
 
 public abstract class Appender {
+	@SuppressWarnings("unused")
+	private static final SingletonTracker singletonTracker = SingletonTracker.getSingleton().register(Appender.class);
+	
     // Do not use Log4j here... Class may not be available
     private static final Logger logger = LoggerFactory.initLogger(Appender.class);
     

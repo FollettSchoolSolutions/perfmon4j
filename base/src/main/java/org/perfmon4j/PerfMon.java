@@ -55,10 +55,13 @@ import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.SingletonTracker;
 import org.perfmon4j.util.ThresholdCalculator;
 
 
 public class PerfMon {
+	@SuppressWarnings("unused")
+	private final static SingletonTracker singletonTracker = SingletonTracker.getSingleton().register(PerfMon.class);
     // Dont use Log4j here... Class may not be loaded...
     private final static Logger logger = LoggerFactory.initLogger(PerfMon.class);
     

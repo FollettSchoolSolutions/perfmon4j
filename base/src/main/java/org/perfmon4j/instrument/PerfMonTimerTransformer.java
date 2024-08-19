@@ -64,9 +64,13 @@ import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.SingletonTracker;
 
 
 public class PerfMonTimerTransformer implements ClassFileTransformer {
+	@SuppressWarnings("unused")
+	private final static SingletonTracker singletonTracker = SingletonTracker.getSingleton().register(PerfMonTimerTransformer.class);;
+
     private TransformerParams params; 
     private static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
 	
@@ -587,6 +591,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 		            logger.logInfo("Attached EmitterRegistry API class to agent");
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to attach EmitterRegistry API class to agent", ex);
+	            }
+	        } else if ("api/org/perfmon4j/agent/util/SingletonTrackerImpl".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToSingletonTrackerAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached SingletonTrackerImpl API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach SingletonTrackerImpl API class to agent", ex);
 	            }
 	        } else if (className.startsWith("api/org/perfmon4j/agent/impl/EmitterInstrumentationHelper$")) {
 	            try {
