@@ -6,6 +6,9 @@ import java.util.Set;
 
 /**
  * Package level class.
+ * 
+ * For a basic test of this class see:
+ * 	org.perfmon4j.instrument.PerfMonAgentAPITest.testSingletonTrackerAPIEnabled
  */
 class SingletonTrackerImpl implements SingletonTracker {
 	private static final boolean TRACK_SINGLETONS = Boolean.getBoolean(SINGLETON_TRACKER_ENABLED_KEY) 
@@ -27,13 +30,14 @@ class SingletonTrackerImpl implements SingletonTracker {
 	static SingletonTracker getSingleton() {
     	if (!TRACK_SINGLETONS) {
     		if (singleton == null) {
-    			logger.logInfo("*********** SingletonTracker Disabled *************");
+    			logger.logDebug("Perfmon4j SingletonTracker Disabled - to enable add System Property: " 
+    					+ SINGLETON_TRACKER_ENABLED_KEY + "=true");
     			singleton = new SingletonTrackerImpl(null);
     		} 
     	} else {
 	    	synchronized (System.class) {
 	    		if (singleton == null) {
-	    			logger.logInfo("*********** SingletonTracker Enabled *************");
+	    			logger.logInfo("Perfmon4j SingletonTracker Enabled");
 	    			
 	    			// Try to get the instance from system properties
 			    	Set<String> setRegisteredSingletons = (Set<String>)System.getProperties().get(SINGLETON_TRACKER_REGISTERED_SINGLETONS_KEY);
@@ -63,9 +67,9 @@ class SingletonTrackerImpl implements SingletonTracker {
     		synchronized(registeredSingletons) {
 	    		String className = clazz.getName();
 	    		if (registeredSingletons.contains(className)) {
-	    			logger.logError("**** Duplicate Singleton Detected! **** Existing singleton class '" + className + "' reloaded by classLoader: " + clazz.getClassLoader());
+	    			logger.logError("**** Perfmon4j.SingletonTracker detected duplicate Singleton! **** Existing singleton class '" + className + "' reloaded by classLoader: " + clazz.getClassLoader());
 	    		} else {
-	    			logger.logInfo("**** SingletonTracker registered singleton '" + className + "' ****. Loaded by classLoader: " + clazz.getClassLoader().getName());
+	    			logger.logInfo("**** Perfmon4j.SingletonTracker registered singleton '" + className + "' ****. Loaded by classLoader: " + clazz.getClassLoader().getName());
 	    			registeredSingletons.add(className);
 	    		}
     		}
