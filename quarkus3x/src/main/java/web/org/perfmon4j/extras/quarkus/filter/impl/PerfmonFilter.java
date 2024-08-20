@@ -20,6 +20,7 @@ import web.org.perfmon4j.extras.quarkus.filter.impl.container.Response;
 //@PreMatching
 //@Priority(Priorities.USER)
 public class PerfmonFilter implements ContainerRequestFilter, ContainerResponseFilter {
+	@SuppressWarnings("unused")
 	private static final SingletonTracker singletonTracker = SingletonTracker.getSingleton().register(PerfmonFilter.class);
 	private static final Logger logger = LoggerFactory.getLogger(PerfmonFilter.class);
 	private final QuarkusFilterLoader loader;

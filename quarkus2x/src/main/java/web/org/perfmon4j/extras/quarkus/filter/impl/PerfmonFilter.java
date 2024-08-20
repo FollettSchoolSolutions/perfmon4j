@@ -8,6 +8,7 @@ import javax.ws.rs.container.ContainerResponseContext;
 import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.ext.Provider;
 
+import api.org.perfmon4j.agent.util.SingletonTracker;
 import web.org.perfmon4j.extras.genericfilter.GenericFilter;
 import web.org.perfmon4j.extras.genericfilter.GenericFilter.AsyncFinishRequestCallback;
 import web.org.perfmon4j.extras.quarkus.filter.impl.container.Request;
@@ -17,6 +18,8 @@ import web.org.perfmon4j.extras.quarkus.filter.impl.container.Response;
 //@PreMatching
 //@Priority(Priorities.USER)
 public class PerfmonFilter implements ContainerRequestFilter, ContainerResponseFilter {
+	@SuppressWarnings("unused")
+	private static final SingletonTracker singletonTracker = SingletonTracker.getSingleton().register(PerfmonFilter.class);
 	private final QuarkusFilterLoader loader;
 
 	public PerfmonFilter() {

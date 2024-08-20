@@ -18,12 +18,21 @@ McHenry, IL 60050
 
 ** 2.1.0 - TBD
 - Javaagent parameters can now be included in the bootConfiguration setting of
-	the perfmonconfig.xml.  Note the parameters from the bootconfiguration.
+	the perfmonconfig.xml.
+	
 - Added option to load perfmon configuration using the classloader. By default
 	we look for perfmonconfig.xml within the default package. To disable this you
 	can pass the argument (ex: '-cfalse') using the perfmon4j.jar javaagent parameter.
 	You can also specify an alternative resource name to load using
-	(ex: '-corg/myorg/myconfig/p4j.xml')  
+	(ex: '-corg/myorg/myconfig/p4j.xml')
+	  
+- Perfmon4j has several classes that need to be loaded once per JVM (typically by
+	the perfmon4j javaagent). Incorrect classpaths can result in these
+	classes being loaded multiple times, by multiple classloaders.  This can cause 
+	unexpected results. For diagnosis a new class called SingletonTracker has been 
+	added that will track and log an error when these classes are loaded multiple times.  
+	To enable add -Dorg.perfmon4j.util.SingletonTracker.enabled=true to your java command line.
+	 	
 - Several enhancements to processing system properties when parsing perfmonconfig.xml:
 	1) Similar to wildfly you can provide a default value to use if the system property is null.  
 	To do this you append :<defaultValue> along with the property name.  For example 

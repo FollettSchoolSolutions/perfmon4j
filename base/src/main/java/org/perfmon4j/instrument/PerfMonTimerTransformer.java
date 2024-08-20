@@ -69,7 +69,7 @@ import org.perfmon4j.util.SingletonTracker;
 
 public class PerfMonTimerTransformer implements ClassFileTransformer {
 	@SuppressWarnings("unused")
-	private final static SingletonTracker singletonTracker = SingletonTracker.getSingleton().register(PerfMonTimerTransformer.class);;
+	private final static SingletonTracker singletonTracker = SingletonTracker.getSingleton().register(PerfMonTimerTransformer.class);
 
     private TransformerParams params; 
     private static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
