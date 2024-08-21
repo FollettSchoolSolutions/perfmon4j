@@ -23,9 +23,7 @@ package org.perfmon4j.instrument;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -44,6 +42,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TimerTask;
@@ -57,7 +56,6 @@ import org.perfmon4j.ConfiguredSettings;
 import org.perfmon4j.ExceptionTracker;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.SQLTime;
-import org.perfmon4j.XMLBootParser;
 import org.perfmon4j.XMLConfigurator;
 import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
@@ -66,10 +64,14 @@ import org.perfmon4j.util.GlobalClassLoader;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.SingletonTracker;
 
 
 public class PerfMonTimerTransformer implements ClassFileTransformer {
-    private final TransformerParams params; 
+	@SuppressWarnings("unused")
+	private final static SingletonTracker singletonTracker = SingletonTracker.getSingleton().register(PerfMonTimerTransformer.class);
+
+    private TransformerParams params; 
     private static Logger logger = LoggerFactory.initLogger(PerfMonTimerTransformer.class);
 	
     private final static String REMOTE_INTERFACE_DELAY_SECONDS_PROPERTY="Perfmon4j.RemoteInterfaceDelaySeconds"; 
@@ -590,6 +592,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
 	            } catch (Exception ex) {
 	            	logger.logError("Unable to attach EmitterRegistry API class to agent", ex);
 	            }
+	        } else if ("api/org/perfmon4j/agent/util/SingletonTrackerImpl".equals(className)) {
+	            try {
+		            result = runtimeTimerInjector.attachAgentToSingletonTrackerAPIClass(classfileBuffer, loader, protectionDomain);
+		            logger.logInfo("Attached SingletonTrackerImpl API class to agent");
+	            } catch (Exception ex) {
+	            	logger.logError("Unable to attach SingletonTrackerImpl API class to agent", ex);
+	            }
 	        } else if (className.startsWith("api/org/perfmon4j/agent/impl/EmitterInstrumentationHelper$")) {
 	            try {
 	            	if (className.endsWith("APIEmitterWrapper")) {
@@ -686,8 +695,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     private static void doPremain(String packageName,  Instrumentation inst)  {
     	addPerfmon4jToJBoss7SystemPackageList();
     	
-    
-    	
         PerfMonTimerTransformer t = new PerfMonTimerTransformer(packageName);
 
         LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled() || t.params.isVerboseInstrumentationEnabled());
@@ -710,6 +717,13 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	}
         Properties agentProperties = t.params.exportAsProperties();
 
+        if (t.params.isVerboseInstrumentationEnabled()) {
+	        Optional<String> commandLine = ProcessHandle.current().info().commandLine();
+	        if (commandLine.isPresent()) {
+	        	logger.logInfo("Full command line: " + commandLine.get());
+	        }
+        }
+        
     	String perfmon4jVersion = PerfMonTimerTransformer.class.getPackage().getImplementationVersion();
     	logger.logInfo("Perfmon4j Instrumentation Agent v." + perfmon4jVersion + " installed. (http://perfmon4j.org)");
         agentProperties.setProperty("perfmon4j.javaagent.version", perfmon4jVersion == null ? "unknown" : perfmon4jVersion);
@@ -726,7 +740,7 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         if (t.params.isExtremeInstrumentationEnabled() && !t.params.isVerboseInstrumentationEnabled()) {
         	logger.logInfo("Perfmon4j verbose instrumentation logging disabled.  Add -vtrue to javaAgent parameters to enable.");
         }
-		logger.logInfo("Perfmon4j javaagent current working directory: " + safeGetCanonicalPathForFile(new File(".")));
+		logger.logInfo("Perfmon4j javaagent current working directory: " + MiscHelper.getDisplayablePath(new File(".")));
 
         SystemGCDisabler disabler = null;
         
@@ -752,25 +766,32 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     			logger.logError("Perfmon4j can not disable java.lang.System.gc() JVM does not support redefining classes");
     		}
         }
-
-        BootConfiguration bootConfiguration = BootConfiguration.getDefault();
-    	String configFile = t.params.getXmlFileToConfig();
-    	if (configFile != null) {
-    		FileReader reader = null;
-    		try {
-    			logger.logInfo("Loading boot configuration from: " + safeGetCanonicalPathForFile(new File(configFile)));
-    			reader = new FileReader(configFile);
-    			bootConfiguration = XMLBootParser.parseXML(reader);
-			} catch (FileNotFoundException e) {
-				logger.logError("Perfmon4j unable to load boot configuration, using default. File: " + safeGetCanonicalPathForFile(new File(configFile)));
-			} finally {
-				if (reader != null) {
-					try {reader.close();} catch (Exception ex) {}
-				}
-			}
-    	} else {
-    		logger.logWarn("Perfmonconfig.xml file not specified.  Loading default boot configuration.");
-    	}
+        
+        @SuppressWarnings("resource") // Don't worry about singleton resource, there is only one per JVM 
+		XMLConfigurator configurator = new XMLConfigurator(t.params);
+        BootConfiguration bootConfiguration = configurator.loadBootConfiguartion();
+        
+        // If java agent parameters are set in the boot configuration, we will
+        // merge it with any parameters found on the javaagent command line
+        // IMPORTANT: When we merge the parameters from the boot configuration are processed
+        // first.  This means the parameters from the javaagent command line take
+        // higher precedence.
+        String bootJavaAgentParams = bootConfiguration.getJavaAgentParameters();
+        if (bootJavaAgentParams != null && !bootJavaAgentParams.isBlank()) {
+        	String fullParams = bootJavaAgentParams 
+        		+ (packageName == null || packageName.isBlank() ? "" :  ("," + packageName));
+        	try {
+        		t.params = new TransformerParams(fullParams);
+                // Update logging settings in case they have been modified by the bootConfiguration
+        		LoggerFactory.setDefaultDebugEnbled(t.params.isDebugEnabled() || t.params.isVerboseInstrumentationEnabled()); 
+                LoggerFactory.setVerboseInstrumentationEnabled(t.params.isVerboseInstrumentationEnabled()); 
+        		logger.logDebug("Combined parameters from javaagent and bootConfiguration: " + fullParams);
+        	} catch (RuntimeException re) {
+        		logger.logWarn("Unabled to parse combined javaAgentParameters parameters from javaAgent and bootConfiguration: " +
+        			fullParams, re);	
+        	}
+        }
+        
 		ConfiguredSettings.setBootConfigSettings(bootConfiguration.exportAsProperties());
         
         if (t.params.isInstallServletValve()) {
@@ -917,23 +938,9 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
         		}
 	        } 
         } 
-        
-        String xmlFileToConfig = t.params.getXmlFileToConfig();
-        if (xmlFileToConfig != null) {
-        	int reloadConfigSeconds = t.params.getReloadConfigSeconds();
-        	
-        	File xmlFile = new File(xmlFileToConfig);
-        	if (xmlFile.exists()) {
-        		logger.logInfo("Loading perfmon configuration from file: " + getDisplayablePath(xmlFile));
-        	} else {
-        		if (reloadConfigSeconds == 0) {
-        			logger.logInfo("Configuration file not found since -r parameter was 0 or less the file will NOT be checked for updates -- file: " + getDisplayablePath(xmlFile));
-        		} else {
-        			logger.logInfo("Configuration file not found will check again in " + reloadConfigSeconds + " seconds -- file: " + getDisplayablePath(xmlFile));
-        		}
-        	}
-            XMLConfigurator.configure(new File(xmlFileToConfig), reloadConfigSeconds);
-        }
+
+        // Start process to load perfmon4j configuration and optionally, based on parameters, monitor for changes  
+       	configurator.start();
         
         if (t.params.isRemoteManagementEnabled()) {
         	int port = t.params.getRemoteManagementPort();
@@ -1006,33 +1013,6 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     	return result;
     }
     
-    
-    private static String getDisplayablePath(File file) {
-    	String result = file.getAbsolutePath();
-    	
-    	try {
-			result = file.getCanonicalPath();
-		} catch (IOException e) {
-			// Nothing todo...  Just return the absolute path
-		}
-    	
-    	return result;
-    }
-
-    private static String safeGetCanonicalPathForFile(File file) {
-    	String result = "";
-    	if (file != null) {
-    		try {
-				result = file.getCanonicalPath();
-			} catch (IOException e) {
-				result = file.getAbsolutePath();
-			}
-    	} else {
-    		result = "File reference is null";
-    	}
-    	
-    	return result;
-    }
     
     private static boolean canJavassistClassesBeLoadedFromEmbeddedJar(File perfmon4j, URL url) {
     	/**

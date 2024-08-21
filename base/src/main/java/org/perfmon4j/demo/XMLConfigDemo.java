@@ -21,6 +21,7 @@
 package org.perfmon4j.demo;
 
 import java.io.File;
+
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -41,21 +42,23 @@ public class XMLConfigDemo {
         Logger.getLogger("org.perfmon4j").setLevel(Level.DEBUG);
         Logger logger = Logger.getLogger(XMLConfigDemo.class);
         
-        XMLConfigurator.configure(new File("c:/XMLConfigDemo.xml"), 30);
+        try (XMLConfigurator configurator = new XMLConfigurator(new File("/home/ddeucher/perfmonconfig.xml"), "democonfig.xml", 5)) {
+        	configurator.start();
        
-        for (int i = 0; i < 10; i++) {
-            new Thread(new RunnerImpl()).start();
-        }
-        
-        while (true) {
-            PerfMonTimer timer = PerfMonTimer.start("SimpleExample.outer");
-            try {
-                logger.info(".");
-                System.gc();
-                Thread.sleep(1000);
-            } finally {
-                PerfMonTimer.stop(timer);
-            }
+	        for (int i = 0; i < 10; i++) {
+	            new Thread(new RunnerImpl()).start();
+	        }
+	        
+	        while (true) {
+	            PerfMonTimer timer = PerfMonTimer.start("SimpleExample.outer");
+	            try {
+	                logger.info(".");
+	                System.gc();
+	                Thread.sleep(1000);
+	            } finally {
+	                PerfMonTimer.stop(timer);
+	            }
+	        }
         }
     }
     

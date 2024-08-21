@@ -38,7 +38,9 @@ public class ThreadTraceConfig {
     private Trigger[] triggers = null;
     private final Set<AppenderID> appenders = new HashSet<AppenderID>();
     private final Random random = new Random();
-    
+    private boolean containsDisabledAppenders = false;
+    private boolean flaggedAsDisabled = false;
+
     public ThreadTraceConfig() {
     }
 
@@ -86,6 +88,22 @@ public class ThreadTraceConfig {
     	return triggers;
     }
     
+	boolean isContainsDisabledAppenders() {
+		return containsDisabledAppenders;
+	}
+
+	void setContainsDisabledAppenders(boolean containsDisabledAppenders) {
+		this.containsDisabledAppenders = containsDisabledAppenders;
+	}   
+    
+	boolean isFlaggedAsDisabled() {
+		return flaggedAsDisabled;
+	}
+
+	void setFlaggedAsDisabled(boolean flaggedAsDisabled) {
+		this.flaggedAsDisabled = flaggedAsDisabled;
+	}
+	
     public boolean shouldTrace() {
     	boolean result = true;
     	
@@ -126,6 +144,8 @@ public class ThreadTraceConfig {
             result = random.nextInt(randomSamplingFactor-1) == 0;
         }
         return result;
+
+        
     }
 	
 	public static enum TriggerType {

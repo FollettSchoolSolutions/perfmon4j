@@ -1218,7 +1218,55 @@ System.out.println(appenderString);
  	void validateObservation(Set<PerfMonObservableDatum<?>> observations, String label, String expectedValue) {
  		PerfMonObservableDatumTest.validateObservation(observations, label, expectedValue);
      }
+ 	
+ 	
+    @SnapShotProvider
+    public static class FlexibleOptionsForGauge {
+    	boolean boolValue = false;
+	
+    	@SnapShotGauge
+    	public boolean isBoolValue() {
+    		return boolValue;
+    	}
+    }
+ 	
+    /**
+     * We should be more forgiving for gauge types. To build a gauge we simply
+     * need a method that takes no parameters and returns a numeric or boolean 
+     * value.  However we were strictly requiring a method that followed the 
+     * "getter" patter.  We would didn't allow an "isser" for boolean values.
+     * 
+     * We are now going to support "isser" methods.
+     * 
+     * @throws Exception
+     */
+    public void testFlexibleOptionsForGauge() throws Exception {
+    	JavassistSnapShotGenerator.SnapShotLifecycle lc = null;
+    	try {
+    		Class<?> clazz = PerfMonTimerTransformer.snapShotGenerator.generateSnapShotDataImpl(FlexibleOptionsForGauge.class);
+    		lc = (JavassistSnapShotGenerator.SnapShotLifecycle)clazz.newInstance();
+    	} catch (Exception ex) {
+//ex.printStackTrace();
+    		fail("Expected to be able to generate SnapShotLifeCyleClass");
+    	}
+    	
+		FlexibleOptionsForGauge provider = new FlexibleOptionsForGauge();
+		lc.init(provider, 0);
+		
+		lc.takeSnapShot(provider, 0);
+		String appenderString = ((SnapShotData)lc).toAppenderString();
 
+//System.out.println(appenderString);
+		assertTrue(appenderString.contains("boolValue................ false"));
+		
+		provider.boolValue = true;
+		lc.takeSnapShot(provider, 0);
+		appenderString = ((SnapShotData)lc).toAppenderString();
+
+//System.out.println(appenderString);
+		assertTrue(appenderString.contains("boolValue................ true"));
+		
+	}
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
 //    	System.setProperty("UNIT", "arg1");

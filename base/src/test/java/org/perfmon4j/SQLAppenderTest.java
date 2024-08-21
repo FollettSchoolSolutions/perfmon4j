@@ -69,7 +69,7 @@ public class SQLAppenderTest extends SQLTest {
 		double version = appender.getDatabaseVersion_TestOnly(100);
 		assertEquals("Should still be reading cached value", 0.0, version);
 		
-		Thread.sleep(100);
+		Thread.sleep(250);
 
 		version = appender.getDatabaseVersion_TestOnly(100);
 		assertEquals("Cache should have expired should now "

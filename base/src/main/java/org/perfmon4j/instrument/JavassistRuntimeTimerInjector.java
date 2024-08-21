@@ -71,6 +71,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
     private static final String PERFMON_THREAD_TRACE_CONFIG_API_CLASSNAME = "api.org.perfmon4j.agent.ThreadTraceConfig";
     private static final String PERFMON_POJO_SNAPSHOT_REGISTRY_API_CLASSNAME = "api.org.perfmon4j.agent.POJOSnapShotRegistry";
     private static final String PERFMON_EMITTER_REGISTRY_API_CLASSNAME = "api.org.perfmon4j.agent.EmitterRegistry";
+    private static final String PERFMON_SINGLETON_TRACKER_API_CLASSNAME = "api.org.perfmon4j.agent.util.SingletonTrackerImpl";
 
     private static final String PERFMON_EMITTER_WRAPPER_CLASSNAME = "api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.APIEmitterWrapper";
     private static final String PERFMON_EMITTER_DATA_WRAPPER_CLASSNAME = "api.org.perfmon4j.agent.impl.EmitterInstrumentationHelper.EmitterDataWrapper";
@@ -1272,7 +1273,39 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         
         return clazz.toBytecode();
 	}
+	
+	@Override
+	/**
+	 * Unit tests for this code can be found in: org.perfmon4j.instrument.PerfMonAgentAPITest
+	 */
+	public byte[] attachAgentToSingletonTrackerAPIClass(byte[] classfileBuffer, ClassLoader loader,
+			ProtectionDomain protectionDomain) throws Exception {
+    	ClassPool classPool = getClassPool(loader);
+    	CtClass clazz = getClazz(classPool, classfileBuffer);
 
+    	logger.logInfo("Instrumenting agent class " + PERFMON_SINGLETON_TRACKER_API_CLASSNAME + ". " );
+    	
+        updateIsAttachedToAgent(clazz);
+        
+        clazz.addInterface(classPool.getCtClass(PerfMonAgentApiWrapper.class.getName()));
+        clazz.addField(CtField.make("private final org.perfmon4j.util.SingletonTracker nativeObject = org.perfmon4j.util.SingletonTracker.getSingleton();", clazz));
+    	        
+//		public SingletonTracker register(Class<?> clazz);
+        String src = "{"
+        		+ "nativeObject.register($1);\r\n"
+        		+ "return this;"
+        		+ "}";
+        replaceMethodIfExists(clazz, "register", src, Class.class.getName());
+
+//    	public boolean isEnabled() ;
+        src = "{\r\n"
+        		+ " return nativeObject.isEnabled();\r\n"  	
+        		+ "}";
+        replaceMethodIfExists(clazz, "isEnabled", src);
+        
+    	logger.logDebug("Completed instrumenting agent class " + PERFMON_SINGLETON_TRACKER_API_CLASSNAME + ". " );
+        return clazz.toBytecode();
+	}
 
 	@Override
 	/**
@@ -1488,7 +1521,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
         		+ "  try {\r\n"
         		+ "    org.perfmon4j.POJOSnapShotRegistry.getSingleton().register($1,$2,$3);\r\n"
         		+ "  } catch (org.perfmon4j.instrument.snapshot.GenerateSnapShotException ex) {\r\n"
-        		+ "    throw new java.lang.RuntimeException(ex);\r\n"  	
+        		+ "    org.perfmon4j.util.LoggerFactory.initLogger(\"api.org.perfmon4j.agent.POJOSnapShotRegistry\").logWarn(\"SKIPPING - Unable to generate snapshot from POJO: \" + $1.getClass().getName(), ex);\r\n"  	
         		+ "  }\r\n"
         		+ "}";
         replaceMethodIfExists(clazz, "register", src, Object.class.getName(), String.class.getName(), boolean.class.getName());

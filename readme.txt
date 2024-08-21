@@ -1,6 +1,6 @@
 
 
-Copyright 2008-2023 Follett School Solutions, LLC
+Copyright 2008-2024 Follett Software
  
 Perfmon4j(tm) is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License, version 3,
@@ -12,10 +12,50 @@ http://www.gnu.org/licenses/
 
 ddeuchert@follettlearning.com
 David Deuchert
-Follett School Solutions, LLC
+Follett Software
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 2.1.0 - 8/20/24
+- Javaagent parameters can now be included in the bootConfiguration setting of
+	the perfmonconfig.xml.
+	
+- Added option to load perfmon configuration using the classloader. By default
+	we look for perfmonconfig.xml within the default package. To disable this you
+	can pass the argument (ex: '-cfalse') using the perfmon4j.jar javaagent parameter.
+	You can also specify an alternative resource name to load using
+	(ex: '-corg/myorg/myconfig/p4j.xml')
+	  
+- Perfmon4j has several classes that need to be loaded once per JVM (typically by
+	the perfmon4j javaagent). Incorrect classpaths can result in these
+	classes being loaded multiple times, by multiple classloaders.  This can cause 
+	unexpected results. For diagnosis a new class called SingletonTracker has been 
+	added that will track and log an error when these classes are loaded multiple times.  
+	To enable add -Dorg.perfmon4j.util.SingletonTracker.enabled=true to your java command line.
+	 	
+- Several enhancements to processing system properties when parsing perfmonconfig.xml:
+	1) Similar to wildfly you can provide a default value to use if the system property is null.  
+	To do this you append :<defaultValue> along with the property name.  For example 
+	${influxDbUserName:influxuser}
+	2) Now you can define properties within the perfmonconfig.xml that will be used while processing
+	the file. Example:
+      	<Perfmon4JConfig>
+        	<properties>
+            	<activation>
+                	<property name='reducePerfmonOutput'/>
+                <activation>	 
+           		<property name='intervalDuration'>1 hour</property>" +
+          	</properties>
+          	<appender name='TextAppender' className='org.perfmon4j.TextAppender' interval='${intervalDuration:1 minute}'/>
+          	...
+  	3) Now you can disable individual elements by setting the attribute enabled='false' on the following
+  	tags: appender, monitor, snapShotMonitor, emitter, and threadTrace
+          			
+- Addressed Issue:  "POJOSnapShotMonitor should not throw exception on failure to instrument method"	
+	https://github.com/FollettSchoolSolutions/perfmon4j/issues/45  Now when using the agent api
+	to register a POJOSnapShotMonitor, if the class cannot be registered it will simply log a warning 
+	and swallow the exception.
+	
 ** 2.0.1 - 12/20/23
 - Defect fix - The static methods PerfMonTimer.stop() and PerfMonTimer.abort() have
 	always been assumed to be null safe. It was found this was broken in 2.0.0

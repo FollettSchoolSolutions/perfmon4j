@@ -15,8 +15,6 @@ agent-api/bin/
 
 tomcat7/.classpath
 
-settings.xml
-
 nohup.out
 
 quarkus/.classpath

@@ -24,7 +24,9 @@ package org.perfmon4j;
 import java.io.StringReader;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -32,6 +34,8 @@ import org.apache.log4j.Logger;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.PerfMonConfiguration.AppenderAndPattern;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
+import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
+import org.perfmon4j.util.ConfigurationProperties;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 
@@ -140,7 +144,319 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
             System.getProperties().remove("testParse");
         }
     }
+    
+    /*----------------------------------------------------------------------------*/
+    public void testProvideDefaultValueForSystemProperty() throws Exception {
+        try {
+            final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender name='5 minute' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='5 min'>" +
+                "       <attribute name='extraString'>testParse=${testParse:this is the default value}</attribute>" +
+                "   </appender>" +
+                "   <monitor name='mon'>" +
+                "       <appender name='5 minute'/>" +
+                "   </monitor>" +
+                "</Perfmon4JConfig>";
+            
+            PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+            Appender appender = config.getAppendersForMonitor("mon")[0].getAppender();
+            
+            assertEquals("Appender class", MyAppender.class, appender.getClass());
+            assertEquals("extraString property was not set, should have used the default value", 
+            		"testParse=this is the default value", ((MyAppender)appender).extraString);
+            
+        } finally {
+            System.getProperties().remove("testParse");
+        }
+    }    
+    
+    /*----------------------------------------------------------------------------*/
+    public void testSystemPropertySubstitionShouldBeAllowedInAttributes() throws Exception {
+        final String XML =
+            "<Perfmon4JConfig>" +
+            "   <appender name='5 minute' " +
+            "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+            "       interval='${textAppender.defaultInterval:5 min}'>" +
+            "   </appender>" +
+            "   <monitor name='mon'>" +
+            "       <appender name='5 minute'/>" +
+            "   </monitor>" +
+            "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML));
+        Appender appender = config.getAppendersForMonitor("mon")[0].getAppender();
+        
+        assertEquals("Appender class", MyAppender.class, appender.getClass());
+        assertEquals("Shouild have used the default value from system property for the interval",
+        		TimeUnit.MINUTES.toMillis(5), appender.getIntervalMillis());
+    }
+    
+    public void testDefineConfigProperty() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<property name='prop1'>test1</property>" +
+                "		<property name='prop2'>test2</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        ConfigurationProperties properties = new ConfigurationProperties(new Properties(), new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        
+        assertEquals("Should have defined prop1", "test1", properties.getProperty("prop1"));
+        assertEquals("Should have defined prop2", "test2", properties.getProperty("prop2"));
+    }
 
+    public void testMultipePropertiesElements() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<property name='prop1'>test1</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='prop2'>test2</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        ConfigurationProperties properties = new ConfigurationProperties(new Properties(), new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        
+        assertEquals("Should have defined prop1", "test1", properties.getProperty("prop1"));
+        assertEquals("Should have defined prop2", "test2", properties.getProperty("prop2"));
+    }
+
+    public void testDefinedPropertyBeingAppliedToSubsequentValues() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<property name='prop1'>test1</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='prop2-${prop1}'>test2-${prop1}</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        ConfigurationProperties properties = new ConfigurationProperties(new Properties(), new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        
+        assertEquals("Key and value for the second property should have been altered by the prop1", "test2-test1", properties.getProperty("prop2-test1"));
+    }    
+
+    public void testActivateBasedOnPropertyExists() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<activation>" +
+                "			<property name='verbosePerfmonOutput'/>" + // Just require property to exist
+                "		</activation>" +
+                "		<property name='prop1'>activated</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='prop2-${prop1:notActivated}'>test2-${prop1:notActivated}</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        Properties envProps = new Properties();
+
+        // First try without verbosePerfmonOutput property being defined.
+        ConfigurationProperties properties = new ConfigurationProperties(envProps, new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("prop1 was not activated and should not have been set", 
+        	"test2-notActivated", properties.getProperty("prop2-notActivated"));
+        
+        // Now try with verbosePerfmonOutput property being defined.
+        envProps.setProperty("verbosePerfmonOutput", ""); 
+        properties = new ConfigurationProperties(envProps, new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("prop1 was not activated and should have been set", 
+        	"test2-activated", properties.getProperty("prop2-activated"));
+    }    
+
+    public void testActivateBasedOnPropertyMatch() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<activation>" +
+                "			<property name='perfmonOutputLevel'>verbose</property>" + 
+                "		</activation>" +
+                "		<property name='prop1'>verbose</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='prop2-${prop1:notVerbose}'>test2-${prop1:notVerbose}</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        Properties envProps = new Properties();
+
+        // First try with non-matching perfmonOutputLevel
+        ConfigurationProperties properties = new ConfigurationProperties(envProps, new Properties());
+        envProps.setProperty("perfmonOutputLevel", "default"); 
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("prop1 was not activated and should not have been set", 
+        	"test2-notVerbose", properties.getProperty("prop2-notVerbose"));
+        
+        // Now try with verbosePerfmonOutput property being defined.
+        envProps.setProperty("perfmonOutputLevel", "verbose"); 
+        properties = new ConfigurationProperties(envProps, new Properties());
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("prop1 was not activated and should have been set", 
+            	"test2-verbose", properties.getProperty("prop2-verbose"));
+    }    
+    
+    public void testMultipleActivationPropertiesMustAllMatch() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<activation>" +
+                "			<property name='influxGroups'/>" + 
+                "			<property name='influxPassword'/>" + 
+                "		</activation>" +
+                "		<property name='influxEnabled'>true</property>" +
+                "	</properties>" +
+                "	<properties>" +
+                "		<property name='isInfluxEnabled'>${influxEnabled:false}</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+           
+        Properties envProps = new Properties();
+
+        // First try with only 1 or two required properties set.
+        ConfigurationProperties properties = new ConfigurationProperties(envProps, new Properties());
+        envProps.setProperty("influxGroups", "dly"); 
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("Influx enabled requres BOTH groups and password to be set", 
+        	"false", properties.getProperty("isInfluxEnabled"));
+        
+        // Now try with both set
+        envProps.setProperty("influxPassword", "secretPassword"); 
+        XMLConfigurationParser.parseXML(new StringReader(XML), properties);
+        assertEquals("Influx should be enabled", 
+        	"true", properties.getProperty("isInfluxEnabled"));
+    }    
+    
+    public void testMultipePropertyActivationsNotAllowed() throws Exception {
+        final String XML =
+                "<Perfmon4JConfig>" +
+                "	<properties>" +
+                "		<activation>" +
+                "			<property name='influxGroups'/>" + 
+                "		</activation>" +
+                "		<activation>" +
+                "			<property name='influxPassword'/>" + 
+                "		</activation>" +
+                "		<property name='influxEnabled'>true</property>" +
+                "	</properties>" +
+                "</Perfmon4JConfig>";
+    	
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertNotNull("Expected default configuration to be returned", result.getAppenderForName("DEFAULT_APPENDER"));
+    }
+
+    public void testDisableAppenderDisablesEverythingSoleyDependentOnIt() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender enabled='false' " + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <monitor name='myMon'>" +
+                "       <appender name='myAppender'/>" +
+                "   </monitor>" +                
+                "   <snapShotMonitor name='mySnapShot' className='perfmon.SystemMemory'>" +
+                "       <appender name='myAppender'/>" +
+                "   </snapShotMonitor>" +
+                "   <emitterMonitor name='myEmitter' className='org.perfmon4j.emitter.DemoEmitter'>" +
+                "       <appender name='myAppender'/>" +
+                "   </emitterMonitor>" +
+                "   <threadTrace monitorName='com.follett.fsc.DoSomething'>" +
+                "       <appender name='myAppender'/>" +
+                "   </threadTrace>" +
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        
+        assertNull("Text appender is disabled so it should not be included", 
+        	result.getAppenderForName("myAppender"));
+        assertFalse("Since the only appender on Monitor myMon is disabled, "
+        		+ "the monitor should not be configured", hasMonitor(result, "myMon"));
+        assertFalse("Since the only appender on SnapShotMonitor mySnapShot is disabled, "
+        		+ "the SnapShot should not be configured", hasSnapShot(result, "mySnapShot"));
+        assertFalse("Since the only appender on EmitterMonitor myEmitter is disabled, "
+        		+ "the Emitter (under the covers an Emitter is the same as a SnapShotConfig)"
+        		+ " should not be configured", hasSnapShot(result, "myEmitter"));
+        assertFalse("Since the only appender on ThreadTrace com.follett.fsc.DoSomething is disabled, "
+        		+ "the ThreadTrace should not be configured", hasThreadTrace(result, "com.follett.fsc.DoSomething"));
+    }
+
+    public void testDisableMonitor() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender" + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <monitor enabled='false' name='myMon'>" +
+                "       <appender name='myAppender'/>" +
+                "   </monitor>" +                
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertFalse("Monitor should be ignored since it is disabled", hasMonitor(result, "myMon"));
+    }
+
+    public void testDisableSnapShot() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender" + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <snapShotMonitor enabled='false' name='mySnapShot' className='perfmon.SystemMemory'>" +
+                "       <appender name='myAppender'/>" +
+                "   </snapShotMonitor>" +
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertFalse("SnapShot should be ignored since it is disabled", hasSnapShot(result, "mySnapShot"));
+    }
+    
+    public void testDisableEmitter() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender" + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <emitterMonitor enabled='false' name='myEmitter' className='org.perfmon4j.emitter.DemoEmitter'>" +
+                "       <appender name='myAppender'/>" +
+                "   </emitterMonitor>" +
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertFalse("Emitter should be ignored since it is disabled"
+        		+ " should not be configured", hasSnapShot(result, "myEmitter"));
+    }
+
+    public void testDisableThreadTrace() throws Exception { 
+    	final String XML =
+                "<Perfmon4JConfig>" +
+                "   <appender" + 
+                "		name='myAppender' " +
+                "       className='org.perfmon4j.XMLConfigurationParserTest$MyAppender' " +
+                "       interval='1 min'/>" +
+                "   <threadTrace enabled='false' monitorName='com.follett.fsc.DoSomething'>" +
+                "       <appender name='myAppender'/>" +
+                "   </threadTrace>" +
+                "</Perfmon4JConfig>";
+        
+        PerfMonConfiguration result = XMLConfigurationParser.parseXML(new StringReader(XML));
+        assertFalse("ThreadTrace should be ignored since it is disabled", 
+        	hasThreadTrace(result, "com.follett.fsc.DoSomething"));
+    }
+    
     /*----------------------------------------------------------------------------*/
     public void testParseBodyValueFromEnvironmentVariable() throws Exception {
     	Map.Entry<String, String> entry = getEnvironmentVariableForUser();
@@ -740,7 +1056,33 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals("Expected pattern", "/##.MyPackage#*", appenders[0].getAppenderPattern());		
     }
     
+	private boolean hasMonitor(PerfMonConfiguration config, String monitorName) {
+		for (MonitorConfig monitorConfig : config.getMonitorConfigArray()) {
+			if (monitorName.equals(monitorConfig.getMonitorName())) {
+				return true;
+			}
+		}
+		return false;
+	}
     
+	private boolean hasSnapShot(PerfMonConfiguration config, String snapShotName) {
+		for (SnapShotMonitorConfig monitorConfig : config.getSnapShotMonitorArray()) {
+			if (snapShotName.equals(monitorConfig.getMonitorID().getName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean hasThreadTrace(PerfMonConfiguration config, String threadTraceName) {
+		for (String name : config.getThreadTraceConfigMap().keySet()) {
+			if (threadTraceName.equals(name)) {
+				return true;
+			}
+		}
+		return false;
+	}	
+
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

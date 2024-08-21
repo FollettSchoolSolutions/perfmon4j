@@ -27,13 +27,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.SnapShotMonitorBase.SnapShotMonitorID;
+import org.perfmon4j.util.ConfigurationProperties;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -50,6 +50,8 @@ public class PerfMonConfiguration {
     private final Map<String, Appender.AppenderID> appenderMap = new HashMap();
     private final Map<String, SnapShotMonitorConfig> snapShotMonitors = new HashMap();
     private final Map<String, ThreadTraceConfig> threadTraceConfigs = new HashMap();
+    private final Set<String> disabledAppenders = new HashSet<String>();
+    private final ConfigurationProperties configurationProperties;
     
     // This list will be filled with the name of any classes that could not be found
     // while processing the config.
@@ -59,6 +61,19 @@ public class PerfMonConfiguration {
     public static final String DEFAULT_APPENDER_NAME = "Perfmon4jDefaultAppender";
     
     
+    public PerfMonConfiguration() {
+    	this(new ConfigurationProperties());
+    }
+    
+    
+    protected PerfMonConfiguration(ConfigurationProperties configurationProperties) {
+    	this.configurationProperties = configurationProperties;
+    }
+
+    
+    public void addDisabledAppender(String name) {
+    	disabledAppenders.add(name);
+    }
     
 /*----------------------------------------------------------------------------*/
     public void defineAppender(String name, String className, 
@@ -94,7 +109,7 @@ public class PerfMonConfiguration {
         }
     }
 
-/*----------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------*/
     public String[] getAppenderNames() {
     	return appenderMap.keySet().toArray(new String[]{});
     }
@@ -113,6 +128,7 @@ public class PerfMonConfiguration {
         
         return result;
     }
+    
     
     /*----------------------------------------------------------------------------*/
     public MonitorConfig[] getMonitorConfigArray() {
@@ -153,6 +169,11 @@ public class PerfMonConfiguration {
         attachAppenderToMonitor(monitorName, appenderName, PerfMon.APPENDER_PATTERN_PARENT_AND_ALL_DESCENDENTS);
     }
     
+    
+    boolean isDisabledAppender(String appenderName) {
+    	return disabledAppenders.contains(appenderName);
+    }
+    
 /*----------------------------------------------------------------------------*/
     public void attachAppenderToMonitor(String monitorName, String appenderName, String appenderPattern) throws InvalidConfigException {
         String nameToSearch = monitorName;
@@ -163,14 +184,19 @@ public class PerfMonConfiguration {
         if (config == null) {
             throw new InvalidConfigException("Monitor: \"" + monitorName + "\" not defined.");
         }
-        Appender.AppenderID appenderID = appenderMap.get(appenderName);
-        if (appenderID == null) {
-        	logger.logError("Appender: \"" + appenderName + "\" not defined. Attaching monitor \"" 
-        			+ monitorName + "\" to the default text appender with a one minute polling interval." );
-        	// Get or create a default text appender...
-        	appenderID = getOrCreateDefaultAppender();
+    
+        if (!isDisabledAppender(appenderName)) {
+	        Appender.AppenderID appenderID = appenderMap.get(appenderName);
+	        if (appenderID == null) {
+	        	logger.logError("Appender: \"" + appenderName + "\" not defined. Attaching monitor \"" 
+	        			+ monitorName + "\" to the default text appender with a one minute polling interval." );
+	        	// Get or create a default text appender...
+	        	appenderID = getOrCreateDefaultAppender();
+	        }
+	        config.addAppender(appenderID, appenderPattern);
+        } else {
+        	config.setContainsDisabledAppenders(true);
         }
-        config.addAppender(appenderID, appenderPattern);
     }
 
 /*----------------------------------------------------------------------------*/
@@ -180,14 +206,18 @@ public class PerfMonConfiguration {
             throw new InvalidConfigException("SnapShotMonitor not defined. monitorName=" + monitorName);
         }
         
-        Appender.AppenderID appenderID = appenderMap.get(appenderName);
-        if (appenderID == null) {
-        	logger.logError("Appender: \"" + appenderName + "\" not defined. Attaching SnapShotMonitor \"" 
-        			+ monitorName + "\" to the default text appender with a one minute polling interval" );
-        	// Get or create a default text appender...
-        	appenderID = getOrCreateDefaultAppender();
+        if (!isDisabledAppender(appenderName)) {
+	        Appender.AppenderID appenderID = appenderMap.get(appenderName);
+	        if (appenderID == null) {
+	        	logger.logError("Appender: \"" + appenderName + "\" not defined. Attaching SnapShotMonitor \"" 
+	        			+ monitorName + "\" to the default text appender with a one minute polling interval" );
+	        	// Get or create a default text appender...
+	        	appenderID = getOrCreateDefaultAppender();
+	        }
+	        config.addAppender(appenderID);
+        } else {
+        	config.setContainsDisabledAppenders(true);
         }
-        config.addAppender(appenderID);
     }
     
     public Map<String, ThreadTraceConfig> getThreadTraceConfigMap() {
@@ -213,7 +243,12 @@ public class PerfMonConfiguration {
         return result;
     }
     
-/*----------------------------------------------------------------------------*/  
+	/*----------------------------------------------------------------------------*/  
+    public ConfigurationProperties getConfigurationProperties() {
+		return configurationProperties;
+	}
+
+	/*----------------------------------------------------------------------------*/  
     public SnapShotMonitorConfig[] getSnapShotMonitorArray() {
         return snapShotMonitors.values().toArray(new SnapShotMonitorConfig[]{});
     }
@@ -252,6 +287,8 @@ public class PerfMonConfiguration {
         private final Map<Appender.AppenderID, String> patternMap = new HashMap<Appender.AppenderID, String>();
         private final Properties properties = new Properties();
         private final String monitorName;
+        private boolean containsDisabledAppenders = false;
+        private boolean flaggedAsDisabled = false;
         
         private MonitorConfig(String monitorName) {
         	this.monitorName = monitorName;
@@ -265,6 +302,22 @@ public class PerfMonConfiguration {
         void setProperty(String key, String value) {
             properties.setProperty(key, value);
         }
+        
+		boolean isContainsDisabledAppenders() {
+			return containsDisabledAppenders;
+		}
+
+		void setContainsDisabledAppenders(boolean containsDisabledAppenders) {
+			this.containsDisabledAppenders = containsDisabledAppenders;
+		}
+		
+		boolean isFlaggedAsDisabled() {
+			return flaggedAsDisabled;
+		}
+
+		void setFlaggedAsDisabled(boolean flaggedAsDisabled) {
+			this.flaggedAsDisabled = flaggedAsDisabled;
+		}
 
 		String getProperty(String key) {
 			return properties.getProperty(key);
@@ -279,7 +332,15 @@ public class PerfMonConfiguration {
     public static class SnapShotMonitorConfig {
         private final SnapShotMonitorID monitorID;
         private final Set<Appender.AppenderID> appenderSet = new HashSet<Appender.AppenderID>();
+        private boolean containsDisabledAppenders = false;
         
+		boolean isContainsDisabledAppenders() {
+			return containsDisabledAppenders;
+		}
+
+		void setContainsDisabledAppenders(boolean containsDisabledAppenders) {
+			this.containsDisabledAppenders = containsDisabledAppenders;
+		}
         
         private SnapShotMonitorConfig(SnapShotMonitorID monitorID) {
             this.monitorID = monitorID;
@@ -334,6 +395,7 @@ public class PerfMonConfiguration {
     	return getAppendersForMonitor(monitorName, null);
     }
     
+
     
 /*----------------------------------------------------------------------------*/    
     public AppenderAndPattern[] getAppendersForMonitor(String monitorName, PerfMonConfiguration perfMonConfig) throws InvalidConfigException {
@@ -392,48 +454,54 @@ public class PerfMonConfiguration {
      * This method will find all monitors that are not currently attached
      * to an appender, and attach them to the default appender.
      */
-    public void addDefaultAppendersToMonitors() {
+    public void cleanupElementsPostConfig() {
     	// First look for interval monitors that are missing appenders...
-    	Iterator<Entry<String, MonitorConfig>> monitorConfigs = monitorMap.entrySet().iterator();
-    	while (monitorConfigs.hasNext()) {
-    		Entry<String, MonitorConfig> entry = monitorConfigs.next();
-    		String monitorName = entry.getKey();
-    		MonitorConfig config = entry.getValue();
-    		if (config.appenderSet.isEmpty()) {
-	        	logger.logInfo("No appenders defined for monitor \"" 
-	        			+  monitorName + "\" attaching to the default text appender" );
-	        	AppenderID appenderID = getOrCreateDefaultAppender();
-    			config.addAppender(appenderID, PerfMon.APPENDER_PATTERN_PARENT_ONLY);
+    	for (String monitorName : monitorMap.keySet().toArray(new String[]{})) {
+    		MonitorConfig config = monitorMap.get(monitorName);
+    		if (config.isFlaggedAsDisabled()) {
+    			monitorMap.remove(monitorName);
+    		} else if (config.appenderSet.isEmpty()) {
+    			if (config.isContainsDisabledAppenders()) {
+    				monitorMap.remove(monitorName);
+    			} else {
+		        	logger.logInfo("No appenders defined for monitor \"" 
+		        			+  monitorName + "\" attaching to the default text appender" );
+		        	AppenderID appenderID = getOrCreateDefaultAppender();
+	    			config.addAppender(appenderID, PerfMon.APPENDER_PATTERN_PARENT_ONLY);
+    			}
     		}
     	}
     	
-    	
     	// Next look for snapshot monitors missing appenders
-    	Iterator<Entry<String, SnapShotMonitorConfig>> ssConfigs = snapShotMonitors.entrySet().iterator();
-    	while (ssConfigs.hasNext()) {
-    		Entry<String, SnapShotMonitorConfig> entry = ssConfigs.next();
-    		String monitorName = entry.getKey();
-    		SnapShotMonitorConfig config = entry.getValue();
+    	for (String monitorName : snapShotMonitors.keySet().toArray(new String[] {})) {
+    		SnapShotMonitorConfig config = snapShotMonitors.get(monitorName);
     		if (config.appenderSet.isEmpty()) {
-	        	logger.logInfo("No appenders defined for SnapShotMonitor \"" 
-	        			+  monitorName + "\" attaching to the default text appender with a 1 minute polling interval." );
-	        	AppenderID appenderID = getOrCreateDefaultAppender();
-    			config.addAppender(appenderID);
+    			if (config.isContainsDisabledAppenders()) {
+    				snapShotMonitors.remove(monitorName);
+    			} else {
+		        	logger.logInfo("No appenders defined for SnapShotMonitor \"" 
+		        			+  monitorName + "\" attaching to the default text appender with a 1 minute polling interval." );
+		        	AppenderID appenderID = getOrCreateDefaultAppender();
+	    			config.addAppender(appenderID);
+    			}
     		}
     	}
 
     	// Finally look for ThreadTrace monitors missing appenders
-    	Iterator<Entry<String, ThreadTraceConfig>> ttConfigs = threadTraceConfigs.entrySet().iterator();
-    	while (ttConfigs.hasNext()) {
-    		Entry<String, ThreadTraceConfig> entry = ttConfigs.next();
-    		String monitorName = entry.getKey();
-    		ThreadTraceConfig config = entry.getValue();
-    		if (config.getAppenders().length == 0) {
-	        	logger.logInfo("No appenders defined for ThreadTraceMonitor \"" 
-	        			+  monitorName + "\" attaching to the default text appender." );
-	        	AppenderID appenderID = getOrCreateDefaultAppender();
-    			config.addAppender(appenderID);
+    	for (String monitorName : threadTraceConfigs.keySet().toArray(new String[] {})) {
+    		ThreadTraceConfig config = threadTraceConfigs.get(monitorName);
+    		if (config.isFlaggedAsDisabled()) {
+				threadTraceConfigs.remove(monitorName);
+    		} else if (config.getAppenders().length == 0) {
+    			if (config.isContainsDisabledAppenders()) {
+    				threadTraceConfigs.remove(monitorName);
+    			} else {
+		        	logger.logInfo("No appenders defined for ThreadTraceMonitor \"" 
+		        			+  monitorName + "\" attaching to the default text appender." );
+		        	AppenderID appenderID = getOrCreateDefaultAppender();
+	    			config.addAppender(appenderID);
+    			}
     		}
-    	}
+		}
     }
 }

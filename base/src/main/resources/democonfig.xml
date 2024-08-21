@@ -1,0 +1,16 @@
+<Perfmon4JConfig enabled='true'>
+	<boot>
+	<!--
+		<servletValve outputRequestAndDuration='true' 
+			servletPathTransformationPattern='/hello-world/ => /rest/hello-world/'
+			pushURLOnNDC='true'/>
+	-->		
+	</boot>
+
+	<appender name='text-appender' className='org.perfmon4j.TextAppender' interval='15 seconds'/>
+
+	<monitor name='SimpleExample'> 
+		<appender name='text-appender' pattern="./*"/> 
+	</monitor>
+	
+</Perfmon4JConfig>

@@ -282,6 +282,25 @@ public class XMLBootParserTest extends PerfMonTestCase {
         assertNotNull("Should have an Exception Tracker Configuration", etConfig);
         assertEquals("Expected number of elements", 3, etConfig.getElements().size());
     }
+
+    public void testParseJavaagentParameters() throws Exception {
+    	String XML =
+                "<Perfmon4JConfig enabled='true'>" +
+                "	<boot/>" +
+                "</Perfmon4JConfig>";
+        BootConfiguration boot = XMLBootParser.parseXML(XML);
+        assertNull("By default parameters should be null", boot.getJavaAgentParameters());
+
+    	XML =
+            "<Perfmon4JConfig enabled='true'>" +
+            "	<boot>" +
+            "		<javaAgentParameters>-ecom.follett.fsc,-vtrue</javaAgentParameters>" +
+            "	</boot>" +
+            "</Perfmon4JConfig>";
+        boot = XMLBootParser.parseXML(XML);
+        assertEquals("Should have retrieved javaAgentParameters", "-ecom.follett.fsc,-vtrue", boot.getJavaAgentParameters());
+    }
+
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {

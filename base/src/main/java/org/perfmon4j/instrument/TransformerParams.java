@@ -61,6 +61,12 @@ public class TransformerParams {
      */
     private final static List<String> BLACKLIST = new ArrayList<String>();{
     };
+   
+    /**
+     * When enabled, by default we will attempt to load the perfmonconfig.mxl from
+     * the default package.
+     */
+    private final static String DEFAULT_PERFMON_CONFIG_RESOURCE_NAME = "perfmonconfig.xml";
     
     static {
     	String[] blackListElements = {
@@ -87,11 +93,12 @@ public class TransformerParams {
     private boolean verboseEnabled = false;
     private boolean disableSystemGC = false;
     private boolean extremeSQLMonitorEnabled = false;
-    private final List<String> extremeSQLPackages = new Vector<String>();
+    private final List<String> extremeSQLPackages = new ArrayList<String>();
 	private boolean remoteManagementEnabled = false;
 	private int remoteManagementPort = REMOTE_PORT_DISABLED;
 	private boolean installServletValve = false;
 	private boolean hystrixInstrumentationEnabled = false;
+	private String configFromClassloaderName = DEFAULT_PERFMON_CONFIG_RESOURCE_NAME;
 	
 	public static final int REMOTE_PORT_DISABLED = -1;
 	public static final int REMOTE_PORT_AUTO = 0;
@@ -231,7 +238,18 @@ public class TransformerParams {
                 		logger.logWarn("Minimum reloadConfigSeconds allowed is 10 seconds");
                 	}
                 	
+                } else if (isParam('c', params)) {
+                	nextParam = getNextParam(params);
+                	String arg = nextParam.parameter;
+                	if (arg.isBlank()) {
+                		throw new RuntimeException("-c parameter must contain a resource name (i.e. -ccom/myorg/myconf/perfconfig.xml)");
+                	} else if ("false".equalsIgnoreCase(arg)) {
+                		configFromClassloaderName = null;
+                	} else {
+                    	configFromClassloaderName = arg;
+                	}
                 }
+                
                 if (nextParam != null) {
                     params = nextParam.remainingParamString;
                 } else {
@@ -524,6 +542,14 @@ public class TransformerParams {
 
 	public boolean isHystrixInstrumentationEnabled() {
 		return hystrixInstrumentationEnabled;
+	}
+
+	public boolean isLoadConfigFromClassloader() {
+		return configFromClassloaderName != null;
+	}
+	
+	public String getConfigFromClassloaderName() {
+		return configFromClassloaderName;
 	}
 
 	public Properties exportAsProperties() {
