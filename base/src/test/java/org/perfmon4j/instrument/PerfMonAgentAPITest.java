@@ -1108,7 +1108,7 @@ System.out.println(output);
 		assertTrue("SingletonTracker was not enabled via system property", 
 				output.contains("SingletonTracker isEnabled: true"));
 		assertTrue("SingletonTracker should have detected duplicate registration", 
-				output.contains("**** Duplicate Singleton Detected! ****"));
+				output.contains("**** Perfmon4j.SingletonTracker detected duplicate Singleton!"));
     }    
     
 /*----------------------------------------------------------------------------*/    
