@@ -16,6 +16,8 @@ Follett Software
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 2.1.1 TBD
+
 ** 2.1.0 - 8/20/24
 - Javaagent parameters can now be included in the bootConfiguration setting of
 	the perfmonconfig.xml.
