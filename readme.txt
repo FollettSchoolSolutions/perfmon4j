@@ -1,6 +1,6 @@
 
 
-Copyright 2008-2023 Follett School Solutions, LLC
+Copyright 2008-2024 Follett Software
  
 Perfmon4j(tm) is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License, version 3,
@@ -12,11 +12,11 @@ http://www.gnu.org/licenses/
 
 ddeuchert@follettlearning.com
 David Deuchert
-Follett School Solutions, LLC
+Follett Software
 1391 Corporate Drive
 McHenry, IL 60050
 
-** 2.1.0 - TBD
+** 2.1.0 - 8/20/24
 - Javaagent parameters can now be included in the bootConfiguration setting of
 	the perfmonconfig.xml.
 	
