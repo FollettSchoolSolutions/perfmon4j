@@ -78,6 +78,7 @@ public class LaunchRunnableInVM {
 		private boolean loadJavaAgent = true;
 		private String programArguments = null;
 		private String perfmonConfigXML = null;
+		private boolean loadFullTestRunnerClasspath = false;
 		
 		public Params(Class<?> classToLoad, File perfmon4j) {
 			this.classToLoad = classToLoad;
@@ -110,6 +111,11 @@ public class LaunchRunnableInVM {
 
 		public Params setPerfmonConfigXML(String perfmonConfigXML) {
 			this.perfmonConfigXML = perfmonConfigXML;
+			return this;
+		}
+
+		public Params setLoadFullTestRunnerClasspath(boolean loadFullTestRunnerClasspath) {
+			this.loadFullTestRunnerClasspath = loadFullTestRunnerClasspath;
 			return this;
 		}
 	}
@@ -193,11 +199,10 @@ public class LaunchRunnableInVM {
     	String cmdString = quoteIfNeeded(javaCmd);
     
     	String myClassPath = "";
-    	String originalClasspath = System.getProperty("java.class.path").replaceAll(";/", ";");
-    	originalClasspath.split(PATH_SEPERATOR);
+    	final String originalClasspath = System.getProperty("java.class.path");
     	File javassistFile = null;
     	
-    	for (String part : originalClasspath.split(PATH_SEPERATOR)) {
+    	for (String part : originalClasspath.replaceAll(";/", ";").split(PATH_SEPERATOR)) {
     		if (part.endsWith("test-classes")) {
     			// Add the perfmon4j test classes...
     			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 
@@ -225,6 +230,9 @@ public class LaunchRunnableInVM {
     		}
     	}
     	
+		if (params.loadFullTestRunnerClasspath) {
+			myClassPath = originalClasspath;
+		}
     	
 		if (params.loadJavaAgent) {
 			// For some strange reason it works better to have the classPath before the agent.

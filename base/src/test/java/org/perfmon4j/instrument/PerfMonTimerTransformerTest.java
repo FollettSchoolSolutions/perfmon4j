@@ -1261,6 +1261,32 @@ System.out.println(output);
 //    	assertTrue("Should have 1 completion for SQL.executeQuery", output.contains("SQL.executeQuery Completions:1"));
     }    
     
+	public static class InstrumentMSSQLJDBCDriver implements Runnable {
+		public void run() {
+			try {
+	            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+	            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerStatement");
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+    
+    public void testInstrumentSQLServerJDBCDriver() throws Exception {
+		Params params = new Params(InstrumentMSSQLJDBCDriver.class, perfmon4jJar)
+				.setJavaAgentParams("-vtrue,-eSQL")
+				.setLoadFullTestRunnerClasspath(true);
+    	String output = LaunchRunnableInVM.run(params);
+//System.out.println(output);   	
+    	assertFalse("Should not see any errors in the log regarding instrumenting SQLServer objects",
+    		output.contains("Error inserting timer into class: com.microsoft.sqlserver.jdbc"));
+    	assertTrue("Log should indicate we instrumented the connect method of SQLServerDriver",
+        		output.contains("Adding extreme SQLmonitor: SQL.connect"));
+    	assertTrue("Log should indicate we instrumented the execute method of SQLServerStatement",
+        		output.contains("Adding extreme SQLmonitor: SQL.execute"));
+    }    
+    
+    
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

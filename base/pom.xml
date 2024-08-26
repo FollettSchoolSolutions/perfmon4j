@@ -177,5 +177,15 @@ using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate cl
 				class loader (typically associated with a *.WAR or *.EAR file).
 			 -->
 		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
+		<dependency>
+			<!-- Used to test SQL Intstrumentation of the Microsoft JDBC Driver-->
+		    <groupId>com.microsoft.sqlserver</groupId>
+		    <artifactId>mssql-jdbc</artifactId>
+		    <version>12.8.1.jre11</version>
+			<scope>test</scope>
+		</dependency>
+		
 	</dependencies>
 </project>
