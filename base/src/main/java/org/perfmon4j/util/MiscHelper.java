@@ -643,6 +643,20 @@ public class MiscHelper {
 		return result;
 	}
 	
+	public static String toString(String[] values) {
+		String result = "";
+		
+		if (values != null && values.length > 0) {
+			for (int i = 0; i < values.length; i++) {
+				result += values[i];
+				if (i < values.length) {
+					result += ",";
+				}
+			}
+		}
+		return result;
+	}
+	
 	public static String getDefaultSystemName(boolean includeCWDHash) {
 		String result = defaultSystemName[0];
 		
