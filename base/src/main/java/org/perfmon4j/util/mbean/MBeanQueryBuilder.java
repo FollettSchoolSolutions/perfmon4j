@@ -9,6 +9,7 @@ import org.perfmon4j.util.MiscHelper;
 public class MBeanQueryBuilder {
 	private final String baseJMXName;
 	private String instanceName = null;
+	private String displayName = null;
 	private final Set<String> counters = new TreeSet<String>();
 	private final Set<String> gauges = new TreeSet<String>();
 	
@@ -17,7 +18,7 @@ public class MBeanQueryBuilder {
 	}
 	
 	public MBeanQuery build() {
-		return new MBeanQueryImpl(baseJMXName, instanceName, counters.toArray(new String[] {}),
+		return new MBeanQueryImpl(baseJMXName, displayName, instanceName, counters.toArray(new String[] {}),
 			gauges.toArray(new String[] {}));
 	}
 	
@@ -49,6 +50,15 @@ public class MBeanQueryBuilder {
 		return this;
 	}
 
+	public String getDisplayName() {
+		return displayName;
+	}
+
+	public MBeanQueryBuilder setDisplayName(String displayName) {
+		this.displayName = displayName;
+		return this;
+	}
+
 	public String[] getGauges() {
 		return gauges.toArray(new String[] {});
 	}
@@ -65,21 +75,24 @@ public class MBeanQueryBuilder {
 
 	private static class MBeanQueryImpl implements MBeanQuery {
 		private final String baseJMXName;
+		private final String displayName;
 		private final String instanceName;
 		private final String[] counters;
 		private final String[] gauges;
 		private final String comparableKey;
 		
-		MBeanQueryImpl(String baseJMXName, String instanceName, String[] counters, String[] gauges) {
+		MBeanQueryImpl(String baseJMXName, String displayName, String instanceName, String[] counters, String[] gauges) {
 			this.baseJMXName = baseJMXName;
+			this.displayName = displayName == null || displayName.isBlank() ? baseJMXName : displayName;
 			this.instanceName = instanceName;
 			this.counters = counters;
 			this.gauges = gauges;
-			this.comparableKey =  buildComparableKey(baseJMXName, instanceName, counters, gauges);
+			this.comparableKey =  buildComparableKey(this.baseJMXName, this.displayName, this.instanceName, counters, gauges);
 		}
 		
-		private static String buildComparableKey(String baseJMXName, String instanceName, String[] counters, String[] gauges) {
-			String result = MBeanQuery.class.getName() + "|" + baseJMXName;			
+		private static String buildComparableKey(String baseJMXName, String displayName, String instanceName, String[] counters, String[] gauges) {
+			String result = MBeanQuery.class.getName() + "|" + baseJMXName + "|" + displayName;
+			
 			if (instanceName != null) {
 				result += "|" + instanceName;
 			}
@@ -96,7 +109,12 @@ public class MBeanQueryBuilder {
 		}
 
 		@Override
-		public String getInstanceName() {
+		public String getDisplayName() {
+			return displayName;
+		}
+
+		@Override
+		public String getInstancePropertyKey() {
 			return instanceName;
 		}
 		

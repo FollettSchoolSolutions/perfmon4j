@@ -1,4 +1,4 @@
-package org.perfmon4j.util.jmxquery;
+package org.perfmon4j.util.mbean;
 
 import org.perfmon4j.util.mbean.MBeanQuery;
 import org.perfmon4j.util.mbean.MBeanQueryBuilder;
@@ -24,7 +24,7 @@ public class MBeanQueryBuilderTest extends TestCase {
 		
 		assertNotNull(query);
 		assertEquals("jboss:threads:type=thread-pool", query.getBaseJMXName());
-		assertNull("instanceName is optional", query.getInstanceName());
+		assertNull("instanceName is optional", query.getInstancePropertyKey());
 		assertEquals("gauges are optional", 0, query.getGauges().length);
 		assertEquals("counters are optional", 0, query.getCounters().length);
 	}
@@ -35,7 +35,7 @@ public class MBeanQueryBuilderTest extends TestCase {
 		MBeanQuery query = builder
 			.setInstanceName("name")
 			.build();
-		assertEquals("name", query.getInstanceName());
+		assertEquals("name", query.getInstancePropertyKey());
 	}
 	
 	public void testSetGauges() {

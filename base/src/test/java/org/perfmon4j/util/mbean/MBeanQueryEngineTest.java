@@ -1,7 +1,5 @@
 package org.perfmon4j.util.mbean;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 import javax.management.ObjectName;
@@ -48,17 +46,46 @@ public class MBeanQueryEngineTest extends TestCase {
 		assertNotNull("Should never return null", result);
 		assertEquals("Expected number of instances", 1, result.getInstances().length);
 	}
-
-	public static interface TestExampleMBean {
-		public int getNextValue();
+	
+	public void testMatchBasedOnQuery() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME + ",name=OldGen"));
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME + ",name=Eden"));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder
+			.setInstanceName("name")	
+			.setCounters("nextValue")
+			.build();
+		
+		MBeanQueryResult result = engine.doQuery(query);
+		assertNotNull("Should never return null", result);
+		assertEquals("Expected number of instances", 2, result.getInstances().length);
 	}
-
-	public static class TestExample implements TestExampleMBean {
-		private static final AtomicInteger nextValue = new AtomicInteger(0);
-
-		@Override
-		public int getNextValue() {
-			return nextValue.getAndIncrement();
-		} 
+	
+	public void testNoMatchOnAdditionalProperties() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME + ",name=OldGen,size=small"));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder
+			.setInstanceName("name")	
+			.setCounters("nextValue")
+			.build();
+		
+		MBeanQueryResult result = engine.doQuery(query);
+		assertNotNull("Should never return null", result);
+		assertEquals("Since there is not a 'full` match on the object name we do not expect a match", 
+			0, result.getInstances().length);
+		
+		// Now update object name in query so we have a 'full' match.
+		
+		builder = new MBeanQueryBuilder(BASE_OBJECT_NAME + ",size=small");
+		query = builder
+			.setInstanceName("name")	
+			.setCounters("nextValue")
+			.build();
+		
+		result = engine.doQuery(query);
+		assertEquals("Now with a 'full' match we should find it", 
+				1, result.getInstances().length);
 	}
 }
