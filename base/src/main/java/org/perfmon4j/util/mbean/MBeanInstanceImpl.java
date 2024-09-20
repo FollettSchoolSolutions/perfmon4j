@@ -13,7 +13,7 @@ class MBeanInstanceImpl implements MBeanInstance {
 	private final MBeanAttributeExtractor extractor;
 	
 	
-	MBeanInstanceImpl(MBeanServer mBeanServer, ObjectName objectName, MBeanQuery query) {
+	MBeanInstanceImpl(MBeanServer mBeanServer, ObjectName objectName, MBeanQuery query) throws MBeanQueryException {
 		this.objectName = objectName;
 		this.query = query;
 		this.extractor = new MBeanAttributeExtractor(mBeanServer, objectName, query);

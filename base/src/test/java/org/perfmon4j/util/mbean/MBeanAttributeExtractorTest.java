@@ -4,6 +4,8 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 import javax.management.ObjectName;
 
+import org.perfmon4j.util.mbean.MBeanAttributeExtractor.DatumDefinition;
+
 import junit.framework.TestCase;
 
 public class MBeanAttributeExtractorTest extends TestCase {
@@ -30,22 +32,54 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		super.tearDown();
 	}
 	
-	public void testExtractCounter() throws Exception { 	
+	public void testBuildData_NoMatchingAttributes() throws Exception { 	
 		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
 		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
-		MBeanQuery query = builder.setCounters("nextValue").build();
+		MBeanQuery query = builder.setCounters("THIS WILL NOT MATCH ANYTHING").build();
 		
-		
-		MBeanAttributeExtractor extractor = new MBeanAttributeExtractor(mBeanServer, objectName, query);
-		MBeanDatum<?> data[] = extractor.extractAttributes();
-		
-//		assertNotNull("Should never return null", data);
-//		assertEquals("Expected element size", 1, data.length);
-//		
-//		MBeanDatum<?> datum = data[0];
-//		assertEquals("Expected datum name", "nextValue", datum.getName());
-//		assertEquals("Expected datum Type", MBeanDatum.Type.COUNTER, datum.getType());
-//		assertEquals("Expected datum value", Long.valueOf(1), datum.getValue());
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+		assertNotNull("should never return null", dataDefinition);
+		assertEquals("No matching attributes", 0, dataDefinition.length);
 	}
+	
+	public void testBuildData_ExactMatch() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setCounters("NextValue").build();
+		
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+		assertNotNull("should never return null", dataDefinition);
+		assertEquals("No matching attributes", 1, dataDefinition.length);
+	}
+	
+	/**
+	 * JMX Attribute names are commonly in camel case, however there seems to be an inconsistency
+	 * regarding the first letter being capitalized -- sometimes it is, sometimes not.  
+	 * We want to be forgiving an match a definition of "nextValue" to "NextValue" or "nextValue".
+	 * @throws Exception
+	 */
+	public void testBuildData_IncorrectCapitalizationMatch() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setCounters("nextValue").build();  // Lower case first letter does not strictly match, but we want to be forgiving.
+		
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+		assertNotNull("should never return null", dataDefinition);
+		assertEquals("No matching attributes", 1, dataDefinition.length);
+	}
+
+	public void testBuildData_FindGauge() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setGauges("nextValue").build();
+		
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+		assertNotNull("should never return null", dataDefinition);
+		assertEquals("No matching attributes", 1, dataDefinition.length);
+	}
+
 }

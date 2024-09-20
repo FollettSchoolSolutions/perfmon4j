@@ -25,22 +25,27 @@ public class MBeanQueryEngine {
 		this.mBeanServer = mBeanServer;
 	}
 	
-	public MBeanQueryResult doQuery(MBeanQuery query) throws MalformedObjectNameException {
-		String instanceName = query.getInstancePropertyKey();
-		String fullMBeanQuery = query.getBaseJMXName();
-		
-		if (instanceName != null && !instanceName.isBlank()) {
-			fullMBeanQuery += "," + instanceName.trim() + "=*";
+	public MBeanQueryResult doQuery(MBeanQuery query) throws MBeanQueryException {
+		try {
+			String instanceName = query.getInstancePropertyKey();
+			String fullMBeanQuery = query.getBaseJMXName();
+			
+			if (instanceName != null && !instanceName.isBlank()) {
+				fullMBeanQuery += "," + instanceName.trim() + "=*";
+			}
+			
+			Set<ObjectInstance> mBeans = mBeanServer.queryMBeans(new ObjectName(fullMBeanQuery), null);
+			Set<MBeanInstance> instances = new HashSet<MBeanInstance>();
+			
+			for (ObjectInstance o : mBeans) {
+				instances.add(new MBeanInstanceImpl(mBeanServer, o.getObjectName(), query));
+			}
+			
+			return new MBeanQueryResultImpl(query, instances);
+		} catch (MalformedObjectNameException e) {
+			throw new MBeanQueryException(e);
 		}
 		
-		Set<ObjectInstance> mBeans = mBeanServer.queryMBeans(new ObjectName(fullMBeanQuery), null);
-		Set<MBeanInstance> instances = new HashSet<MBeanInstance>();
-		
-		for (ObjectInstance o : mBeans) {
-			instances.add(new MBeanInstanceImpl(mBeanServer, o.getObjectName(), query));
-		}
-		
-		return new MBeanQueryResultImpl(query, instances);
 	}
 
 	private static final class MBeanQueryResultImpl implements MBeanQueryResult {
