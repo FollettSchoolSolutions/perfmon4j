@@ -1,12 +1,12 @@
 package org.perfmon4j.util.mbean;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class TestExample implements TestExampleMBean {
-	private static final AtomicInteger nextValue = new AtomicInteger(0);
+	private static final AtomicLong nextValue = new AtomicLong(0);
 
 	@Override
-	public int getNextValue() {
+	public long getNextValue() {
 		return nextValue.getAndIncrement();
 	} 
 }

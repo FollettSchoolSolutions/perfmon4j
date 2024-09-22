@@ -11,9 +11,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
+import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
 import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanException;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -115,6 +117,33 @@ class MBeanAttributeExtractor {
 	}
 	
 	
+	private static final class MBeanDatumImpl<T extends Object> implements MBeanDatum<T> {
+		private final String name;
+		private final Type type;
+		private final T value;
+		
+		public MBeanDatumImpl(DatumDefinition dd, T value) {
+			this.name = dd.getName();
+			this.type = dd.getType();
+			this.value = value;
+		}
+		
+		@Override
+		public String getName() {
+			return name;
+		}
+
+		@Override
+		public Type getType() {
+			return type;
+		}
+
+		@Override
+		public T getValue() {
+			return value;
+		}
+	}
+	
 	static final class DatumDefinition {
 		private final MBeanDatum.Type type;
 		private final String name;
@@ -152,40 +181,24 @@ class MBeanAttributeExtractor {
 		}
 	}
 	
-	
-	
-	
 	MBeanDatum<?>[] extractAttributes() {
 		List<MBeanDatum<?>> result = new ArrayList<MBeanDatum<?>>();
 		MBeanServer mbs = mBeanServer.get();
 		if (mbs != null) {
-			try {
-				MBeanInfo info = mbs.getMBeanInfo(objectName);
-			
-				
-//				info.get
-//				info.getAttributes()[0].
-				
-				
-				
-			} catch (IntrospectionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InstanceNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ReflectionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			for (DatumDefinition d : dataDefinition) {
+				try {
+					Object obj = mbs.getAttribute(objectName, d.getName());
+					if (obj != null) {
+						result.add(new MBeanDatumImpl(d, obj));
+					}
+				} catch (InstanceNotFoundException | AttributeNotFoundException | ReflectionException
+						| MBeanException e) {
+					logger.logWarn("Unabled to retrieve attribute", e);
+				}
 			}
-			
-			
 		} else {
 			logger.logDebug("MBean server has been garbage collected.  Unable to return attributes for JMX Object: " + objectName.getCanonicalName());
 		}
-		
-		
-		
-		return null;
+		return result.toArray(new MBeanDatum<?>[] {});
 	}
 }

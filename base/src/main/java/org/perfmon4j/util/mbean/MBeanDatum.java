@@ -1,6 +1,6 @@
 package org.perfmon4j.util.mbean;
 
-public interface MBeanDatum<T> {
+public interface MBeanDatum<T extends Object> {
 	public enum Type {
 		GAUGE,
 		COUNTER
