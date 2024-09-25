@@ -9,7 +9,9 @@ import javax.management.ObjectName;
 
 import org.mockito.Mockito;
 import org.perfmon4j.instrument.SnapShotCounter;
+import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotPOJO;
+import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.snapshot.JavassistSnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.util.BeanHelper;
@@ -89,7 +91,7 @@ public class MBeanPojoBaseTest extends TestCase {
 		assertEquals(Long.valueOf(1), nativeLongValue);
 	}	
 	
-	public void testAnnotationIsPresentOnGetter() throws Exception { 	
+	public void testCounterAnnotationIsPresentOnGetter() throws Exception { 	
 		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
 		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
@@ -108,5 +110,41 @@ public class MBeanPojoBaseTest extends TestCase {
 		assertEquals("expected annotation type", SnapShotCounter.class, getterAnnotations[0].annotationType());
 	}	
 	
+	public void testGaugeAnnotationIsPresentOnGetter() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setGauges("float").build();
+		
+		MBeanInstance mBeanInstance = engine.doQuery(query).getInstances()[0];
+		
+		Class<MBeanPojoBase> pojoClass = snapShotGenerator.generatePOJOClassForMBeanInstance(mBeanInstance);
+		MBeanPojoBase pojo = MBeanPojoBase.invokeConstructor(pojoClass, mBeanInstance);
+		
+		Method getter = pojoClass.getDeclaredMethod("getFloat", new Class<?>[]{});
+		assertNotNull(getter);
+		
+		Annotation[] getterAnnotations = getter.getAnnotations();
+		assertEquals("Expected number of annotations", 1, getterAnnotations.length);
+		assertEquals("expected annotation type", SnapShotGauge.class, getterAnnotations[0].annotationType());
+	}	
 	
+	public void testStringAnnotationIsPresentOnGetter() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setGauges("string").build();
+		
+		MBeanInstance mBeanInstance = engine.doQuery(query).getInstances()[0];
+		
+		Class<MBeanPojoBase> pojoClass = snapShotGenerator.generatePOJOClassForMBeanInstance(mBeanInstance);
+		MBeanPojoBase pojo = MBeanPojoBase.invokeConstructor(pojoClass, mBeanInstance);
+		
+		Method getter = pojoClass.getDeclaredMethod("getString", new Class<?>[]{});
+		assertNotNull(getter);
+		
+		Annotation[] getterAnnotations = getter.getAnnotations();
+		assertEquals("Expected number of annotations", 1, getterAnnotations.length);
+		assertEquals("expected annotation type", SnapShotString.class, getterAnnotations[0].annotationType());
+	}	
 }

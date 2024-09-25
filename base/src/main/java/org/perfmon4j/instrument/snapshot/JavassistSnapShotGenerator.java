@@ -759,7 +759,7 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 			classPool.appendSystemPath();
 			classPool.appendClassPath(new ClassClassPath(mBeanInstance.getClass()));
 			
-			String className = MBeanPojoBase.class.getName() + "MBeanPojo" + (++SERIAL_NUMBER);
+			String className = MBeanPojoBase.class.getName() + "MBeanPOJO_" + (++SERIAL_NUMBER);
 			CtClass superClass = classPool.get(MBeanPojoBase.class.getName());
 			CtClass ctClass = classPool.makeClass(className, superClass);
 			ConstPool constPool = ctClass.getClassFile().getConstPool();
