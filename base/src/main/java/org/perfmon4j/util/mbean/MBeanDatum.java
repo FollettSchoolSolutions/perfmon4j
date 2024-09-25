@@ -2,11 +2,25 @@ package org.perfmon4j.util.mbean;
 
 import javax.management.MBeanAttributeInfo;
 
+import org.perfmon4j.instrument.SnapShotCounter;
+import org.perfmon4j.instrument.SnapShotGauge;
+import org.perfmon4j.instrument.SnapShotString;
+
 public interface MBeanDatum<T> {
 	public enum OutputType {
-		GAUGE,
-		COUNTER,
-		STRING
+		GAUGE(SnapShotGauge.class),
+		COUNTER(SnapShotCounter.class),
+		STRING(SnapShotString.class);
+		
+		final String annotationClassName;
+
+		private OutputType(Class<?> annotationClass) {
+			this.annotationClassName = annotationClass.getName(); 
+		}
+		
+		public String getAnnotationClassName() {
+			return annotationClassName;
+		}
 	};
 	
 	public enum AttributeType {

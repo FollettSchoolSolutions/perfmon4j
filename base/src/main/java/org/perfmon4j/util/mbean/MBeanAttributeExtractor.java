@@ -24,7 +24,7 @@ import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.mbean.MBeanDatum.AttributeType;
 import org.perfmon4j.util.mbean.MBeanDatum.OutputType;
 
-class MBeanAttributeExtractor {
+public class MBeanAttributeExtractor {
 	private final MBeanServerFinder mBeanServerFinder;
 	private final ObjectName objectName;
 	private final MBeanQuery query;
@@ -109,7 +109,7 @@ class MBeanAttributeExtractor {
 	}
 	
 	
-	static final class MBeanDatumImpl<T> implements MBeanDatum<T> {
+	public static final class MBeanDatumImpl<T> implements MBeanDatum<T> {
 		private final String name;
 		private final OutputType type;
 		private final AttributeType attributeType;
@@ -143,7 +143,7 @@ class MBeanAttributeExtractor {
 		}
 	}
 	
-	static final class DatumDefinition {
+	public static final class DatumDefinition {
 		private final MBeanDatum.OutputType type;
 		private final MBeanDatum.AttributeType attributeType;
 		private final String name;

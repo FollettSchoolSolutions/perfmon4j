@@ -52,6 +52,7 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.NumberFormatter;
+import org.perfmon4j.util.mbean.MBeanAttributeExtractor.DatumDefinition;
 import org.perfmon4j.util.mbean.MBeanInstance;
 import org.perfmon4j.util.mbean.MBeanPojoBase;
 
@@ -62,6 +63,9 @@ import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtField;
 import javassist.CtMethod;
+import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.annotation.Annotation;
 
 public class JavassistSnapShotGenerator extends SnapShotGenerator {
 	private final AnnotationTransformer transformer = new AnnotationTransformer(); 
@@ -744,6 +748,9 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		return MonitorKeyWithFields.groupFields(fields.toArray(new FieldKey[fields.size()]));
 	}
 
+	/**
+	 * Test for this method are found in MBeanPojoBaseTest.java
+	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public Class<MBeanPojoBase> generatePOJOClassForMBeanInstance(MBeanInstance mBeanInstance) throws GenerateSnapShotException {
@@ -755,10 +762,104 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 			String className = MBeanPojoBase.class.getName() + "MBeanPojo" + (++SERIAL_NUMBER);
 			CtClass superClass = classPool.get(MBeanPojoBase.class.getName());
 			CtClass ctClass = classPool.makeClass(className, superClass);
+			ConstPool constPool = ctClass.getClassFile().getConstPool();
 			
+			AnnotationsAttribute annotationsAttribute = new AnnotationsAttribute(constPool, AnnotationsAttribute.visibleTag);
+			annotationsAttribute.addAnnotation(new Annotation(SnapShotPOJO.class.getName(), constPool));
+			ctClass.getClassFile().addAttribute(annotationsAttribute);
+			
+			DatumDefinition[] dataDef = mBeanInstance.getDatumDefinition();
+			for (DatumDefinition d : dataDef) {
+				String methodBody = buildMBeanGetterBody(d);
+//System.out.println(methodBody);				
+				CtMethod method = CtMethod.make(methodBody, ctClass);
+				String annotationName = d.getOutputType().getAnnotationClassName();
+				annotationsAttribute = new AnnotationsAttribute(constPool, AnnotationsAttribute.visibleTag);
+				annotationsAttribute.addAnnotation(new Annotation(annotationName, constPool));
+				method.getMethodInfo().addAttribute(annotationsAttribute);
+				
+				ctClass.addMethod(method);
+			}
+		
 			return (Class<MBeanPojoBase>)ctClass.toClass(MBeanPojoBase.class);
 		} catch (Exception ex) {
 			throw new GenerateSnapShotException("Error generating MBeanPojoBase class", ex);
 		}
 	}
+	
+	
+	private String buildMBeanGetterBody(DatumDefinition def) {
+		String returnType = null;
+		String castType = null;
+		String nativeSuffix = "";
+		
+		switch (def.getAttributeType()) {
+			case NATIVE_SHORT:
+				returnType = "short";
+				nativeSuffix = ".shortValue()";
+			case SHORT:
+				castType = "Short";
+				break;
+				
+			case NATIVE_INTEGER:
+				returnType = "int";
+				nativeSuffix = ".intValue()";
+			case INTEGER:
+				castType = "Integer";
+				break;
+				
+			case NATIVE_LONG:
+				returnType = "long";
+				nativeSuffix = ".longValue()";
+			case LONG:
+				castType = "Long";
+				break;
+
+			case NATIVE_FLOAT:
+				returnType = "float";
+				nativeSuffix = ".floatValue()";
+			case FLOAT:
+				castType = "Float";
+				break;
+				
+			case NATIVE_DOUBLE:
+				returnType = "double";
+				nativeSuffix = ".doubleValue()";
+			case DOUBLE:
+				castType = "Double";
+				break;
+				
+			case NATIVE_BYTE:
+				returnType = "byte";
+				nativeSuffix = ".byteValue()";
+			case BYTE:
+				castType = "Byte";
+				break;
+
+			case NATIVE_BOOLEAN:
+				returnType = "boolean";
+				nativeSuffix = ".booleanValue()";
+			case BOOLEAN:
+				castType = "Boolean";
+				break;
+				
+			case NATIVE_CHARACTER:
+				returnType = "char";
+				nativeSuffix = ".charValue()";
+			case CHARACTER:
+				castType = "Character";
+				break;
+				
+			case STRING:
+			default:
+				castType = "String";
+		}
+		returnType = returnType != null ? returnType : castType;
+		
+		return "public " + returnType + " get" + def.getName() + "() throws org.perfmon4j.util.mbean.MBeanQueryException {\r\n" +
+			" return " + "((" + castType + ")getData(\"" + def.getName() + "\").getValue())" + nativeSuffix + ";\r\n" +
+			"}";
+	}
+	
+	
 }
