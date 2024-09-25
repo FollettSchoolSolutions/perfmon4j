@@ -4,10 +4,13 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 import javax.management.ObjectName;
 
+import org.mockito.Mockito;
+
 import junit.framework.TestCase;
 
 public class MBeanQueryEngineTest extends TestCase {
 	private MBeanServer mBeanServer = null;
+	private MBeanServerFinder mBeanServerFinder;
 	private MBeanQueryEngine engine;
 	private static final String BASE_OBJECT_NAME = "org.perfmon4j.util.mbean:type=TestExample";
 
@@ -16,12 +19,15 @@ public class MBeanQueryEngineTest extends TestCase {
 		super.setUp();
 		
 		mBeanServer = MBeanServerFactory.createMBeanServer();
-		engine = new MBeanQueryEngine(mBeanServer);
+		mBeanServerFinder = Mockito.mock(MBeanServerFinder.class);
+		Mockito.when(mBeanServerFinder.getMBeanServer()).thenReturn(mBeanServer);
+		engine = new MBeanQueryEngine(mBeanServerFinder);
 	}
 
 	@Override
 	protected void tearDown() throws Exception {
 		engine = null;
+		mBeanServerFinder = null;
 		mBeanServer = null;
 		
 		super.tearDown();

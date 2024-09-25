@@ -3,26 +3,16 @@ package org.perfmon4j.util.mbean;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 
-import org.perfmon4j.util.MiscHelper;
-
 public class MBeanQueryEngine {
-	private final MBeanServer mBeanServer;
+	private final MBeanServerFinder mBeanServerFinder;
 	
-	public MBeanQueryEngine() {
-		this((String)null);
-	}
 	
-	public MBeanQueryEngine(String serverDomain) {
-		this(MiscHelper.findMBeanServer(serverDomain));
-	}
-	
-	public MBeanQueryEngine(MBeanServer mBeanServer) {
-		this.mBeanServer = mBeanServer;
+	public MBeanQueryEngine(MBeanServerFinder mBeanServerFinder) {
+		this.mBeanServerFinder = mBeanServerFinder;
 	}
 	
 	public MBeanQueryResult doQuery(MBeanQuery query) throws MBeanQueryException {
@@ -34,11 +24,11 @@ public class MBeanQueryEngine {
 				fullMBeanQuery += "," + instanceName.trim() + "=*";
 			}
 			
-			Set<ObjectInstance> mBeans = mBeanServer.queryMBeans(new ObjectName(fullMBeanQuery), null);
+			Set<ObjectInstance> mBeans = mBeanServerFinder.getMBeanServer().queryMBeans(new ObjectName(fullMBeanQuery), null);
 			Set<MBeanInstance> instances = new HashSet<MBeanInstance>();
 			
 			for (ObjectInstance o : mBeans) {
-				instances.add(new MBeanInstanceImpl(mBeanServer, o.getObjectName(), query));
+				instances.add(new MBeanInstanceImpl(mBeanServerFinder, o.getObjectName(), query));
 			}
 			
 			return new MBeanQueryResultImpl(query, instances);

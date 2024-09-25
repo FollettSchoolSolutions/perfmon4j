@@ -8,6 +8,7 @@ import org.perfmon4j.util.MiscHelper;
 
 public class MBeanQueryBuilder {
 	private final String baseJMXName;
+	private String domain = null;
 	private String instanceName = null;
 	private String displayName = null;
 	private final Set<String> counters = new TreeSet<String>();
@@ -17,11 +18,19 @@ public class MBeanQueryBuilder {
 		this.baseJMXName = baseJMXName;
 	}
 	
-	public MBeanQuery build() {
-		return new MBeanQueryImpl(baseJMXName, displayName, instanceName, counters.toArray(new String[] {}),
+	public MBeanQuery build() throws Exception {
+		return new MBeanQueryImpl(domain, baseJMXName, displayName, instanceName, counters.toArray(new String[] {}),
 			gauges.toArray(new String[] {}));
 	}
+
+	public String getDomain() {
+		return domain;
+	}
 	
+	public MBeanQueryBuilder setDomain(String domain) {
+		this.domain = domain;
+		return this;
+	}
 	
 	public String getInstanceName() {
 		return instanceName;
@@ -74,24 +83,30 @@ public class MBeanQueryBuilder {
 	}
 
 	private static class MBeanQueryImpl implements MBeanQuery {
+		private final String domain;
 		private final String baseJMXName;
 		private final String displayName;
 		private final String instanceName;
 		private final String[] counters;
 		private final String[] gauges;
-		private final String comparableKey;
+		private final String signature;
 		
-		MBeanQueryImpl(String baseJMXName, String displayName, String instanceName, String[] counters, String[] gauges) {
+		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceName, String[] counters, String[] gauges) throws Exception {
+			this.domain = domain;
 			this.baseJMXName = baseJMXName;
 			this.displayName = displayName == null || displayName.isBlank() ? baseJMXName : displayName;
 			this.instanceName = instanceName;
 			this.counters = counters;
 			this.gauges = gauges;
-			this.comparableKey =  buildComparableKey(this.baseJMXName, this.displayName, this.instanceName, counters, gauges);
+			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceName, counters, gauges));
 		}
 		
-		private static String buildComparableKey(String baseJMXName, String displayName, String instanceName, String[] counters, String[] gauges) {
+		private static String buildComparableKey(String domain, String baseJMXName, String displayName, String instanceName, String[] counters, String[] gauges) {
 			String result = MBeanQuery.class.getName() + "|" + baseJMXName + "|" + displayName;
+			
+			if (domain != null) {
+				result += "|" + domain;
+			}
 			
 			if (instanceName != null) {
 				result += "|" + instanceName;
@@ -128,9 +143,13 @@ public class MBeanQueryBuilder {
 			return gauges;
 		}
 
+		public String getSignature() {
+			return signature;
+		}
+
 		@Override
 		public int hashCode() {
-			return Objects.hash(comparableKey);
+			return Objects.hash(signature);
 		}
 
 		@Override
@@ -142,16 +161,21 @@ public class MBeanQueryBuilder {
 			if (getClass() != obj.getClass())
 				return false;
 			MBeanQueryImpl other = (MBeanQueryImpl) obj;
-			return Objects.equals(comparableKey, other.comparableKey);
+			return Objects.equals(signature, other.signature);
 		}
 
 		@Override
 		public int compareTo(MBeanQuery o) {
 			int result = -1;
 			if (o instanceof MBeanQueryImpl) {
-				result = comparableKey.compareTo(((MBeanQueryImpl)o).comparableKey);
+				result = signature.compareTo(((MBeanQueryImpl)o).signature);
 			}
 			return result;
+		}
+
+		@Override
+		public String getDomain() {
+			return domain;
 		}
 	}
 }

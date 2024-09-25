@@ -52,6 +52,8 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.NumberFormatter;
+import org.perfmon4j.util.mbean.MBeanInstance;
+import org.perfmon4j.util.mbean.MBeanPojoBase;
 
 import javassist.CannotCompileException;
 import javassist.ClassClassPath;
@@ -740,5 +742,23 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 			}
 		}
 		return MonitorKeyWithFields.groupFields(fields.toArray(new FieldKey[fields.size()]));
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Class<MBeanPojoBase> generatePOJOClassForMBeanInstance(MBeanInstance mBeanInstance) throws GenerateSnapShotException {
+		try {
+			ClassPool classPool = new ClassPool();
+			classPool.appendSystemPath();
+			classPool.appendClassPath(new ClassClassPath(mBeanInstance.getClass()));
+			
+			String className = MBeanPojoBase.class.getName() + "MBeanPojo" + (++SERIAL_NUMBER);
+			CtClass superClass = classPool.get(MBeanPojoBase.class.getName());
+			CtClass ctClass = classPool.makeClass(className, superClass);
+			
+			return (Class<MBeanPojoBase>)ctClass.toClass(MBeanPojoBase.class);
+		} catch (Exception ex) {
+			throw new GenerateSnapShotException("Error generating MBeanPojoBase class", ex);
+		}
 	}
 }

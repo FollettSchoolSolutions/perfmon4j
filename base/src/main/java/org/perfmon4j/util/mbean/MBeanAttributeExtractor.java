@@ -1,6 +1,5 @@
 package org.perfmon4j.util.mbean;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -17,38 +16,34 @@ import javax.management.IntrospectionException;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanException;
 import javax.management.MBeanInfo;
-import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
-import org.perfmon4j.util.mbean.MBeanDatum.Type;
+import org.perfmon4j.util.mbean.MBeanDatum.AttributeType;
+import org.perfmon4j.util.mbean.MBeanDatum.OutputType;
 
 class MBeanAttributeExtractor {
-	private final WeakReference<MBeanServer> mBeanServer;
+	private final MBeanServerFinder mBeanServerFinder;
 	private final ObjectName objectName;
 	private final MBeanQuery query;
-	private final DatumDefinition dataDefinition[];
+	private final DatumDefinition datumDefinition[];
+
 	private static final Logger logger = LoggerFactory.initLogger(MBeanAttributeExtractor.class);
-	
-	MBeanAttributeExtractor(MBeanServer mBeanServer, ObjectName objectName,
+
+	MBeanAttributeExtractor(MBeanServerFinder mBeanServerFinder, ObjectName objectName,
 			MBeanQuery query) throws MBeanQueryException {
 		super();
-		this.mBeanServer = new WeakReference<>(mBeanServer);
+		this.mBeanServerFinder = mBeanServerFinder;
 		this.objectName = objectName;
 		this.query = query;
 		try {
-			dataDefinition = buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+			datumDefinition = buildDataDefinitionArray(mBeanServerFinder.getMBeanServer().getMBeanInfo(objectName), query);
 		} catch (IntrospectionException | InstanceNotFoundException | ReflectionException e) {
 			throw new MBeanQueryException("Unabled to retrieve data from mbean: " + objectName.getCanonicalName(), e);
 		}
 	}
-	
-	// A counter is a never increasing value.  These are almost always Long/long, however we will also accept 
-	// Integer/int and Short/short.
-	private static final Set<String>  VALID_COUNTER_TYPES
-		= new HashSet<String>(Arrays.asList(new String[] {"short", "Short", "int", "Integer", "long", "Long"}));
 	
     private static final Function<String, String> toggleCaseOfFirstLetter = s -> {
         if (s == null || s.isEmpty()) {
@@ -92,13 +87,10 @@ class MBeanAttributeExtractor {
 			for (String counter : counterNames.toArray(new String[] {})) {
 				MBeanAttributeInfo info = attributes.get(transform.apply(counter));
 				if (info != null) {
-					if (!VALID_COUNTER_TYPES.contains(info.getType())) {
-						logger.logWarn("Skipping potential match for defined gauage (" + counter + ") because MBeanAttribute contains incompatable type: " + info.getType());
-					} else {
-						counterNames.remove(counter);
-						attributes.remove(info.getName());
-						result.add(new DatumDefinition(Type.COUNTER, info.getName(), info));
-					}
+					OutputType outputType = AttributeType.getAttributeType(info).getValidOutputType(OutputType.COUNTER);
+					counterNames.remove(counter);
+					result.add(new DatumDefinition(info, outputType));
+					attributes.remove(info.getName());
 				}
 			}
 			
@@ -106,26 +98,33 @@ class MBeanAttributeExtractor {
 			for (String gauge : gaugeNames.toArray(new String[] {})) {
 				MBeanAttributeInfo info = attributes.get(transform.apply(gauge));
 				if (info != null) {
-					counterNames.remove(gauge);
+					OutputType outputType = AttributeType.getAttributeType(info).getValidOutputType(OutputType.GAUGE);
+					gaugeNames.remove(gauge);
 					attributes.remove(info.getName());
-					result.add(new DatumDefinition(Type.GAUGE, info.getName(), info));
+					result.add(new DatumDefinition(info, outputType));
 				}
 			}
-			
 		}
 		return result.toArray(new DatumDefinition[] {});
 	}
 	
 	
-	private static final class MBeanDatumImpl<T extends Object> implements MBeanDatum<T> {
+	static final class MBeanDatumImpl<T> implements MBeanDatum<T> {
 		private final String name;
-		private final Type type;
+		private final OutputType type;
+		private final AttributeType attributeType;
 		private final T value;
 		
-		public MBeanDatumImpl(DatumDefinition dd, T value) {
+		MBeanDatumImpl(DatumDefinition dd, T value) {
 			this.name = dd.getName();
-			this.type = dd.getType();
+			this.type = dd.getOutputType();
+			this.attributeType = dd.getAttributeType();
 			this.value = value;
+		}
+		
+		@Override
+		public AttributeType getAttributeType() {
+			return attributeType;
 		}
 		
 		@Override
@@ -134,7 +133,7 @@ class MBeanAttributeExtractor {
 		}
 
 		@Override
-		public Type getType() {
+		public OutputType getOutputType() {
 			return type;
 		}
 
@@ -145,18 +144,22 @@ class MBeanAttributeExtractor {
 	}
 	
 	static final class DatumDefinition {
-		private final MBeanDatum.Type type;
+		private final MBeanDatum.OutputType type;
+		private final MBeanDatum.AttributeType attributeType;
 		private final String name;
-		MBeanAttributeInfo attributeInfo;
 		
-		public DatumDefinition(Type type, String name, MBeanAttributeInfo attributeInfo) {
+		public DatumDefinition(MBeanAttributeInfo attributeInfo, OutputType type) {
+			this.name = attributeInfo.getName();
 			this.type = type;
-			this.name = name;
-			this.attributeInfo = attributeInfo;
+			this.attributeType = MBeanDatum.AttributeType.getAttributeType(attributeInfo);
 		}
 
-		public MBeanDatum.Type getType() {
+		public MBeanDatum.OutputType getOutputType() {
 			return type;
+		}
+		
+		public MBeanDatum.AttributeType getAttributeType() {
+			return attributeType;
 		}
 
 		public String getName() {
@@ -181,24 +184,70 @@ class MBeanAttributeExtractor {
 		}
 	}
 	
-	MBeanDatum<?>[] extractAttributes() {
-		List<MBeanDatum<?>> result = new ArrayList<MBeanDatum<?>>();
-		MBeanServer mbs = mBeanServer.get();
-		if (mbs != null) {
-			for (DatumDefinition d : dataDefinition) {
-				try {
-					Object obj = mbs.getAttribute(objectName, d.getName());
-					if (obj != null) {
-						result.add(new MBeanDatumImpl(d, obj));
-					}
-				} catch (InstanceNotFoundException | AttributeNotFoundException | ReflectionException
-						| MBeanException e) {
-					logger.logWarn("Unabled to retrieve attribute", e);
+	MBeanDatum<?>[] extractAttributes() throws MBeanQueryException {
+		List<MBeanDatum<?>> result = new ArrayList<>();
+		for (DatumDefinition d : datumDefinition) {
+			try {
+				Object value = mBeanServerFinder.getMBeanServer().getAttribute(objectName, d.getName());
+				
+				switch (d.getAttributeType()) {
+					case NATIVE_SHORT:
+					case SHORT:
+						result.add(new MBeanDatumImpl<>(d, (Short)value));
+						break;
+						
+					case NATIVE_INTEGER:
+					case INTEGER:
+						result.add(new MBeanDatumImpl<>(d, (Integer)value));
+						break;
+						
+					case NATIVE_LONG:
+					case LONG:
+						result.add(new MBeanDatumImpl<>(d, (Long)value));
+						break;
+
+					case NATIVE_FLOAT:
+					case FLOAT:
+						result.add(new MBeanDatumImpl<>(d, (Float)value));
+						break;
+
+					case NATIVE_DOUBLE:
+					case DOUBLE:
+						result.add(new MBeanDatumImpl<>(d, (Double)value));
+						break;
+	
+					case NATIVE_BOOLEAN:
+					case BOOLEAN:
+						result.add(new MBeanDatumImpl<>(d, (Boolean)value));
+						break;
+
+					case NATIVE_CHARACTER:
+					case CHARACTER:
+						result.add(new MBeanDatumImpl<>(d, (Character)value));
+						break;
+						
+					case NATIVE_BYTE:
+					case BYTE:
+						result.add(new MBeanDatumImpl<>(d, (Byte)value));
+						break;
+						
+					case STRING:
+					default:
+						if (value == null || value instanceof String) {
+							result.add(new MBeanDatumImpl<>(d, (String)value));
+						} else {
+							result.add(new MBeanDatumImpl<>(d, value.toString()));
+						}
 				}
+			} catch (InstanceNotFoundException | AttributeNotFoundException | ReflectionException
+					| MBeanException e) {
+				logger.logWarn("Unabled to retrieve attribute", e);
 			}
-		} else {
-			logger.logDebug("MBean server has been garbage collected.  Unable to return attributes for JMX Object: " + objectName.getCanonicalName());
 		}
-		return result.toArray(new MBeanDatum<?>[] {});
+		return result.toArray(new MBeanDatum<?>[]{});
+	}
+	
+	DatumDefinition[] getDatumDefinition() {
+		return Arrays.copyOf(datumDefinition, datumDefinition.length);
 	}
 }

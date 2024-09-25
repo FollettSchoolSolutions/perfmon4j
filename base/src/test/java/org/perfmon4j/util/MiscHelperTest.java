@@ -406,6 +406,11 @@ public class MiscHelperTest extends PerfMonTestCase {
 		assertNull("Both parameters are null then null will be returned", MiscHelper.isNull(null, null));
 	}
 	
+	public void testGenerateSHA256() throws Exception {
+		assertEquals("Expected SHA256", "x74e2QL7jdTUiZfGRS9dflCfvNvigIsWvPTtzkwH0U4=", 
+			MiscHelper.generateSHA256("This is a test"));
+	}
+	
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
