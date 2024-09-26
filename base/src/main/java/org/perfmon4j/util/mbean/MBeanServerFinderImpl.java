@@ -1,31 +1,37 @@
 package org.perfmon4j.util.mbean;
 
-import java.lang.ref.SoftReference;
+import java.util.concurrent.TimeUnit;
 
 import javax.management.MBeanServer;
 
+import org.perfmon4j.util.Cacheable;
 import org.perfmon4j.util.MiscHelper;
 
 public class MBeanServerFinderImpl implements MBeanServerFinder {
-	private final String jmxDomain;
-	private SoftReference<MBeanServer> mBeanServerReference = null; 
-
+	private static final long CACHE_MILLIS = Long.getLong(MBeanServerFinder.class.getName() + ".CACHE_MILLIS", TimeUnit.MINUTES.toMillis(5));
+	private final Cacheable<MBeanServer> cachedMBeanServer;
+	
 	public MBeanServerFinderImpl(String jmxDomain) throws MBeanQueryException {
-		this.jmxDomain = jmxDomain;
-		// Do this so we find out on construction that we can't find the mBeanSever.
-		getMBeanServer();
+		cachedMBeanServer = new Cacheable<>(() -> MBeanServerFinderImpl.findMBeanServer(jmxDomain), CACHE_MILLIS);
+		
+		getMBeanServer(); // Call now so we fail sooner, rather than later, if we can't find mBeanServer for jmxDomain;
 	}
 
 	@Override
-	public synchronized MBeanServer getMBeanServer() throws MBeanQueryException {
-		MBeanServer result = null;
-		
-		if (mBeanServerReference == null || (result = mBeanServerReference.get()) == null) {
-			result = MiscHelper.findMBeanServer(jmxDomain);
-			if (result == null) {
-				throw new MBeanQueryException("Unable to find mBeanServer matching domain: " + jmxDomain);
-			}
-			mBeanServerReference = new SoftReference<MBeanServer>(result);
+	public MBeanServer getMBeanServer() throws MBeanQueryException {
+		try {
+			return cachedMBeanServer.get();
+		} catch (MBeanQueryException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new MBeanQueryException(e);
+		}
+	}
+	
+	private static MBeanServer findMBeanServer(String jmxDomain) throws MBeanQueryException {
+		MBeanServer result = MiscHelper.findMBeanServer(jmxDomain);
+		if (result == null) {
+			throw new MBeanQueryException("Unable to find mBeanServer matching domain: " + jmxDomain);
 		}
 		return result;
 	}

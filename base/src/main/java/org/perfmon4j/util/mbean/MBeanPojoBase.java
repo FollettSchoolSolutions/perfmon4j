@@ -3,6 +3,7 @@ package org.perfmon4j.util.mbean;
 import java.lang.reflect.Constructor;
 
 import org.perfmon4j.GenericItemRegistry.OverrideClassNameForWrappedObject;
+import org.perfmon4j.util.Cacheable;
 
 /**
  * This will be used as a base class by Javassist when generating a 
@@ -11,29 +12,26 @@ import org.perfmon4j.GenericItemRegistry.OverrideClassNameForWrappedObject;
 public abstract class MBeanPojoBase implements OverrideClassNameForWrappedObject {
 	private final long cacheDurationMillis = Long.getLong(MBeanPojoBase.class.getName() + ".cacheDurationMillis", 500);
 	private final MBeanInstance mBeanInstance;
-	
-	private final Object cachedDataLockToken = new Object(); 
-	private MBeanDatum[] cachedData = null;
-	private long lastDataReadTime = -1;
+	private final Cacheable<MBeanDatum<?>[]> cachedData;
+ 	
 
 	public MBeanPojoBase(MBeanInstance mBeanInstance) {
 		this.mBeanInstance = mBeanInstance;
+		cachedData = new Cacheable<>(() -> this.mBeanInstance.extractAttributes(), cacheDurationMillis);
 	}
 	
 	protected MBeanDatum<?> getData(String attributeName) throws MBeanQueryException {
-		MBeanDatum<?>[] data = null;
-		synchronized (cachedDataLockToken) {
-			long now = System.currentTimeMillis();
-			if (cachedData == null || (now > (lastDataReadTime + cacheDurationMillis))) {
-				cachedData = mBeanInstance.extractAttributes();
-				lastDataReadTime = now;
-			} 
-			data = cachedData;
-		}
-		for (MBeanDatum<?> datum : data) {
-			if (datum.getName().equals(attributeName)) {
-				return datum;
+		try {
+			MBeanDatum<?>[] data = cachedData.get();
+			for (MBeanDatum<?> datum : data) {
+				if (datum.getName().equals(attributeName)) {
+					return datum;
+				}
 			}
+		} catch (MBeanQueryException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new MBeanQueryException(e);
 		}
 		
 		throw new MBeanQueryException("Unable to find expected attribute in MBean. Attribute name: " + attributeName);
@@ -48,17 +46,15 @@ public abstract class MBeanPojoBase implements OverrideClassNameForWrappedObject
 	 * generated, using javassist,for each MBeanAttribute
 	 * 
 	 * 	@SnapShotCounter
-	 *	public Long getMyCounter() {
-	 *		return (Long)getData("MyCounter");
-	 *	}
-	 *
+	 *	public long getMyCounter() throws org.perfmon4j.util.mbean.MBeanQueryException {
+	 *		return ((Long)getData("MyCounter").getValue()).getLong();
+	 *	};	
+	 * 
 	 *	@SnapShotGauge
-	 *	public Float getCpuPercent() {
-	 *		return (Float)getData("CpuPercent");
+	 *	public float getCpuPercent() {
+	 *		return ((Float)getData("CpuPercent").getValue()).getFloat();
 	 *	}
-	 *
 	 */
-	
 	static MBeanPojoBase invokeConstructor(Class<MBeanPojoBase> clazz, MBeanInstance instance) throws Exception {
 		try {
 			Constructor<MBeanPojoBase> constructor = clazz.getConstructor(new Class<?>[] {MBeanInstance.class});
