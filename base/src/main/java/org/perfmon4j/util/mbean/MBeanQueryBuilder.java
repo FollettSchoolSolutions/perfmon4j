@@ -9,7 +9,7 @@ import org.perfmon4j.util.MiscHelper;
 public class MBeanQueryBuilder {
 	private final String baseJMXName;
 	private String domain = null;
-	private String instanceName = null;
+	private String instanceKey = null;
 	private String displayName = null;
 	private final Set<String> counters = new TreeSet<String>();
 	private final Set<String> gauges = new TreeSet<String>();
@@ -19,7 +19,7 @@ public class MBeanQueryBuilder {
 	}
 	
 	public MBeanQuery build() throws Exception {
-		return new MBeanQueryImpl(domain, baseJMXName, displayName, instanceName, counters.toArray(new String[] {}),
+		return new MBeanQueryImpl(domain, baseJMXName, displayName, instanceKey, counters.toArray(new String[] {}),
 			gauges.toArray(new String[] {}));
 	}
 
@@ -32,12 +32,12 @@ public class MBeanQueryBuilder {
 		return this;
 	}
 	
-	public String getInstanceName() {
-		return instanceName;
+	public String getInstanceKey() {
+		return instanceKey;
 	}
 
-	public MBeanQueryBuilder setInstanceName(String instanceName) {
-		this.instanceName = instanceName;
+	public MBeanQueryBuilder setInstanceKey(String instanceKey) {
+		this.instanceKey = instanceKey;
 		return this;
 	}
 
@@ -86,30 +86,30 @@ public class MBeanQueryBuilder {
 		private final String domain;
 		private final String baseJMXName;
 		private final String displayName;
-		private final String instanceName;
+		private final String instanceKey;
 		private final String[] counters;
 		private final String[] gauges;
 		private final String signature;
 		
-		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceName, String[] counters, String[] gauges) throws Exception {
+		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges) throws Exception {
 			this.domain = domain;
 			this.baseJMXName = baseJMXName;
 			this.displayName = displayName == null || displayName.isBlank() ? baseJMXName : displayName;
-			this.instanceName = instanceName;
+			this.instanceKey = instanceKey;
 			this.counters = counters;
 			this.gauges = gauges;
-			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceName, counters, gauges));
+			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceKey, counters, gauges));
 		}
 		
-		private static String buildComparableKey(String domain, String baseJMXName, String displayName, String instanceName, String[] counters, String[] gauges) {
+		private static String buildComparableKey(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges) {
 			String result = MBeanQuery.class.getName() + "|" + baseJMXName + "|" + displayName;
 			
 			if (domain != null) {
 				result += "|" + domain;
 			}
 			
-			if (instanceName != null) {
-				result += "|" + instanceName;
+			if (instanceKey != null) {
+				result += "|" + instanceKey;
 			}
 			
 			result += "|counters=" + MiscHelper.toString(counters);
@@ -129,8 +129,8 @@ public class MBeanQueryBuilder {
 		}
 
 		@Override
-		public String getInstancePropertyKey() {
-			return instanceName;
+		public String getInstanceKey() {
+			return instanceKey;
 		}
 		
 		@Override

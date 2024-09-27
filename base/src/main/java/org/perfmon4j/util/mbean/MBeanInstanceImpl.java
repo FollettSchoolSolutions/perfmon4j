@@ -21,7 +21,7 @@ class MBeanInstanceImpl implements MBeanInstance {
 		this.extractor = new MBeanAttributeExtractor(mBeanServerFinder, objectName, query);
 		this.datumDefinition = extractor.getDatumDefinition();
 		
-		final String instanceNameKey = query.getInstancePropertyKey();
+		final String instanceNameKey = query.getInstanceKey();
 		if (instanceNameKey != null  && !instanceNameKey.isEmpty()) {
 			this.instanceName = objectName.getKeyProperty(instanceNameKey);
 		} else {

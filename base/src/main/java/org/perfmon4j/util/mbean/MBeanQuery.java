@@ -4,7 +4,7 @@ public interface MBeanQuery extends Comparable<MBeanQuery>{
 	public String getDomain();
 	public String getDisplayName();
 	public String getBaseJMXName();
-	public String getInstancePropertyKey();
+	public String getInstanceKey();
 	public String[] getCounters();
 	public String[] getGauges();
 	

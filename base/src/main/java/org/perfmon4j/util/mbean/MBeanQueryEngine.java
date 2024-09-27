@@ -7,6 +7,8 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 
+import org.perfmon4j.util.MiscHelper;
+
 public class MBeanQueryEngine {
 	private final MBeanServerFinder mBeanServerFinder;
 	
@@ -17,11 +19,11 @@ public class MBeanQueryEngine {
 	
 	public MBeanQueryResult doQuery(MBeanQuery query) throws MBeanQueryException {
 		try {
-			String instanceName = query.getInstancePropertyKey();
+			String instanceKey = query.getInstanceKey();
 			String fullMBeanQuery = query.getBaseJMXName();
 			
-			if (instanceName != null && !instanceName.isBlank()) {
-				fullMBeanQuery += "," + instanceName.trim() + "=*";
+			if (!MiscHelper.isBlankOrNull(instanceKey)) {
+				fullMBeanQuery += "," + instanceKey.trim() + "=*";
 			}
 			
 			Set<ObjectInstance> mBeans = mBeanServerFinder.getMBeanServer().queryMBeans(new ObjectName(fullMBeanQuery), null);

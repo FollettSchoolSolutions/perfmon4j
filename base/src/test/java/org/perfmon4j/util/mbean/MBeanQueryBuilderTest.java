@@ -8,7 +8,7 @@ public class MBeanQueryBuilderTest extends TestCase {
 	 
 	<JMXSnapshot name="WildflyThreadPool" 
 			jmxName="jboss:threads:type=thread-pool" 
-			instanceName="name"  
+			instanceKey="name"  
 			gauges="poolSize,activeCount,largestPoolSize,queueSize,largestQueueSize" 
 			counters="completedTaskCount,rejectedTaskCount,submittedTaskCount,spinMissCount" >
 	</JMXSnapShot>
@@ -20,18 +20,18 @@ public class MBeanQueryBuilderTest extends TestCase {
 		
 		assertNotNull(query);
 		assertEquals("jboss:threads:type=thread-pool", query.getBaseJMXName());
-		assertNull("instanceName is optional", query.getInstancePropertyKey());
+		assertNull("instanceKey is optional", query.getInstanceKey());
 		assertEquals("gauges are optional", 0, query.getGauges().length);
 		assertEquals("counters are optional", 0, query.getCounters().length);
 	}
 
-	public void testAddInstanceName() throws Exception {
+	public void testAddInstanceKey() throws Exception {
 		MBeanQueryBuilder builder = new MBeanQueryBuilder("jboss:threads:type=thread-pool");
 		
 		MBeanQuery query = builder
-			.setInstanceName("name")
+			.setInstanceKey("name")
 			.build();
-		assertEquals("name", query.getInstancePropertyKey());
+		assertEquals("name", query.getInstanceKey());
 	}
 	
 	public void testSetGauges() throws Exception {

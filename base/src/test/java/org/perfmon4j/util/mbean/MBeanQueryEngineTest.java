@@ -59,7 +59,7 @@ public class MBeanQueryEngineTest extends TestCase {
 		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder
-			.setInstanceName("name")	
+			.setInstanceKey("name")	
 			.setCounters("nextValue")
 			.build();
 		
@@ -73,7 +73,7 @@ public class MBeanQueryEngineTest extends TestCase {
 		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder
-			.setInstanceName("name")	
+			.setInstanceKey("name")	
 			.setCounters("nextValue")
 			.build();
 		
@@ -86,7 +86,7 @@ public class MBeanQueryEngineTest extends TestCase {
 		
 		builder = new MBeanQueryBuilder(BASE_OBJECT_NAME + ",size=small");
 		query = builder
-			.setInstanceName("name")	
+			.setInstanceKey("name")	
 			.setCounters("nextValue")
 			.build();
 		
