@@ -173,6 +173,30 @@ public class MiscHelper {
     public static String getMillisDisplayable(long millis) {
     	return getMillisDisplayable(millis, " ");
     }
+    
+    public static boolean isBlankOrNull(String value) {
+    	return value == null || value.isBlank();
+    }
+
+    public static String mergeStrings(String... values) {
+    	return mergeStrings(true, values);
+    }
+
+    public static String mergeStrings(boolean ignoreNulls, String... values) {
+    	String result = "";
+    	
+    	for (String v : values) {
+    		if (!ignoreNulls || v != null) {
+    			result += v;
+    		}
+    	}
+    	
+    	return result;
+    }
+    
+    public static String blankToNull(String value) {
+    	return isBlankOrNull(value) ? null : value; 
+    }
 
     public static String getMillisDisplayable(long millis, String whitespaceCharacter) {
         String result = null;

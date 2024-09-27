@@ -411,6 +411,15 @@ public class MiscHelperTest extends PerfMonTestCase {
 			MiscHelper.generateSHA256("This is a test"));
 	}
 	
+	public void testMergeStrings() {
+		String a = "a";
+		String b = null;
+		String c = "c";
+				
+		assertEquals("By default null strings are ignored", "ac", MiscHelper.mergeStrings(a, b, c));
+		assertEquals("Expected to embed \"null\" whent not ignoring null strings", "anullc", MiscHelper.mergeStrings(false, a, b, c));
+	}
+	
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
