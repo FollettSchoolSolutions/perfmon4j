@@ -38,6 +38,7 @@ import org.perfmon4j.PerfMonConfiguration.SnapShotMonitorConfig;
 import org.perfmon4j.util.ConfigurationProperties;
 import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
+import org.perfmon4j.util.mbean.MBeanQuery;
 
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -1055,6 +1056,51 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals("Should have one appender", 1, appenders.length);		
         assertEquals("Expected pattern", "/##.MyPackage#*", appenders[0].getAppenderPattern());		
     }
+
+    public void testParseMBeanSnapshot() throws Exception {
+        final String XML_DEFAULT =
+                "<Perfmon4JConfig enabled='true'>" +
+                "   <appender name='5 minute' className='org.SpecialAppender' interval='5 min'/>" +
+                "	<mBeanSnapshotMonitor name='WildflyThreadPool'" + 
+            	"		domain='jboss'" + // domain is optional and typically not needed.
+            	"		jmxName='jboss:threads:type=thread-pool'" + 
+            	"		instanceKey='name'" +
+            	"		gauges='poolSize'" + 
+            	"		counters='completedTaskCount'>" +
+                "    	<appender name='5 minute'/>" +
+            	"	</mBeanSnapshotMonitor>" +                		
+                "</Perfmon4JConfig>";        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+        
+        /**
+         * First check that we created a the MBeanQuery.
+         */
+        MBeanQuery querys[] = config.getMBeanQueryArray(); 
+        assertEquals("Expected mBeanQuery count", 1, querys.length);
+        
+        MBeanQuery query = querys[0];
+        assertEquals("mBeanQuery display name", "WildflyThreadPool", query.getDisplayName());
+        assertEquals("mBeanQuery domain", "jboss", query.getDomain());
+        assertEquals("mBeanQuery jmxName", "jboss:threads:type=thread-pool", query.getBaseJMXName());
+        assertEquals("mBeanQuery instanceKey", "name", query.getInstanceKey());
+        assertEquals("mBeanQuery gauges", "poolSize", query.getGauges()[0]);
+        assertEquals("mBeanQuery counters", "completedTaskCount", query.getCounters()[0]);
+        
+        /**
+         * Now check to make sure we created a SnapShot Monitor that will be 'attached'
+         * to the MBeanInstance created by the MBeanQuery
+         */
+        SnapShotMonitorConfig[] snapShotMonitors = config.getSnapShotMonitorArray();
+        assertEquals("Expected 'implicit' snapShotMonitor to be created", 1, snapShotMonitors.length);
+        
+        SnapShotMonitorConfig monitorConfig = snapShotMonitors[0];
+        assertEquals("Expected name of SnapShotMonitor", query.getDisplayName(), monitorConfig.getMonitorID().getName());
+        assertEquals("Expected 'classname' of the SnapShotMonitor", query.getBaseJMXName(), monitorConfig.getMonitorID().getClassName());
+        
+        assertEquals("expected number of appenders", 1, monitorConfig.getAppenders().length);
+        assertEquals("expected appender", "org.SpecialAppender", monitorConfig.getAppenders()[0].getClassName());
+    }
+    
     
 	private boolean hasMonitor(PerfMonConfiguration config, String monitorName) {
 		for (MonitorConfig monitorConfig : config.getMonitorConfigArray()) {

@@ -38,6 +38,8 @@ import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.PropertyStringFilter;
+import org.perfmon4j.util.mbean.MBeanQuery;
+import org.perfmon4j.util.mbean.MBeanQueryBuilder;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -119,6 +121,7 @@ class XMLConfigurationParser extends DefaultHandler {
     private final static String ALIAS_NAME = "alias";
     private final static String ATTRIBUTE_NAME = "attribute";
     private final static String SNAP_SHOT_MONITOR_NAME = "snapShotMonitor";
+    private final static String MBEAN_SNAP_SHOT_MONITOR_NAME = "mBeanSnapshotMonitor";
     private final static String PROPERTIES_NAME = "properties";
     private final static String PROPERTY_NAME = "property";
     private final static String ACTIVATION_NAME = "activation";
@@ -148,6 +151,7 @@ class XMLConfigurationParser extends DefaultHandler {
     private final int STATE_IN_PROPERTIES_PROPERTY 				= 13;
     private final int STATE_IN_ACTIVATION 						= 14;
     private final int STATE_IN_ACTIVATION_PROPERTY 				= 15;
+    private final int STATE_IN_MBEAN_SNAP_SHOT_MONITOR         	= 16;
     
     
     private int currentState = STATE_UNDEFINED;
@@ -156,6 +160,8 @@ class XMLConfigurationParser extends DefaultHandler {
     private SnapShotMonitorVO currentSnapShotMonitor = null;
     private boolean currentSnapShotEnabled = true;
 
+    private MBeanSnapShotMonitorVO currentMBeanSnapShotMonitor = null;
+    
     // Current Appender information
     private String currentAppenderName = null;
     private String currentAppenderClassName = null;
@@ -236,6 +242,35 @@ class XMLConfigurationParser extends DefaultHandler {
  
                     currentSnapShotMonitor = new SnapShotMonitorVO(nameAttr, classNameAttr);
                     currentState = STATE_IN_SNAP_SHOT_MONITOR;
+                } else if (MBEAN_SNAP_SHOT_MONITOR_NAME.equalsIgnoreCase(name)) {
+                	// Get required attributes
+                	String nameAttr = MiscHelper.blankToNull(atts.getValue("name"));
+                	String jmxNameAttr = MiscHelper.blankToNull(atts.getValue("jmxName"));
+                    
+                    validateArg(name, "name", nameAttr);
+                    validateArg(name, "jmxNameAttr", jmxNameAttr);
+                    
+                    // Must supply a counters or gauges attribute
+                    String gaugesAttr = atts.getValue("gauges");
+                    String countersAttr = atts.getValue("counters");
+                    validateArg(name, "gauges OR counters", MiscHelper.mergeStrings(gaugesAttr, countersAttr));
+                    
+                    String domainAttr = MiscHelper.blankToNull(atts.getValue("domain"));
+                    String instanceKeyAttr = MiscHelper.blankToNull(atts.getValue("instanceKey"));
+
+                    boolean enabled = processEnabledAttribute(atts);
+                    MBeanQueryBuilder builder = new MBeanQueryBuilder(jmxNameAttr)
+                    	.setDomain(domainAttr)
+                    	.setDisplayName(nameAttr)
+                    	.setInstanceKey(instanceKeyAttr)
+                    	.setCounters(countersAttr)
+                    	.setGauges(gaugesAttr);
+                    try {
+	                    currentMBeanSnapShotMonitor = new MBeanSnapShotMonitorVO(builder.build(), enabled);
+	                    currentState = STATE_IN_MBEAN_SNAP_SHOT_MONITOR;
+					} catch (Exception e) {
+						throw new SAXException("Error processing: " + name, e);
+					}
                 } else if (THREAD_TRACE_NAME.equalsIgnoreCase(name)  ){
                     currentThreadTraceConfig = new ThreadTraceConfig();
 
@@ -322,6 +357,17 @@ class XMLConfigurationParser extends DefaultHandler {
                     throw new SAXException("Unexpected element: " + name);
                 }
                 break;
+                
+            case STATE_IN_MBEAN_SNAP_SHOT_MONITOR:
+                if (APPENDER_NAME.equalsIgnoreCase(name)) {
+                    String nameAttr = atts.getValue("name");
+                    
+                    validateArg(SNAP_SHOT_MONITOR_NAME + "." + APPENDER_NAME, "name", nameAttr);
+                    currentMBeanSnapShotMonitor.appenders.add(nameAttr);
+                } else {
+                    throw new SAXException("Unexpected element: " + name);
+                }
+                break;                
                 
             case STATE_IN_THREAD_TRACE:
                 if (APPENDER_NAME.equalsIgnoreCase(name)) {
@@ -435,7 +481,7 @@ class XMLConfigurationParser extends DefaultHandler {
     }
 
     private static void validateArg(String section, String name, String value) throws SAXException {
-        if (value == null || "".equals(value)) {
+        if (MiscHelper.isBlankOrNull(value)) {
             throw new SAXException("Attribute: " + name + " required for section: " + section);
         }
     }
@@ -495,6 +541,24 @@ class XMLConfigurationParser extends DefaultHandler {
             currentState = STATE_IN_ROOT;
         }
 
+        if (MBEAN_SNAP_SHOT_MONITOR_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_MBEAN_SNAP_SHOT_MONITOR) {
+        	if (currentMBeanSnapShotMonitor.enabled) { 
+        		config.defineMBeanSnapShotMonitor(currentMBeanSnapShotMonitor.query);
+        		
+                String snapShotMonitorName = currentMBeanSnapShotMonitor.query.getDisplayName();
+	            Iterator<String> itr = currentMBeanSnapShotMonitor.appenders.iterator();
+	            while (itr.hasNext()) {
+	                String appenderName = itr.next();
+	                try {
+	                    config.attachAppenderToSnapShotMonitor(snapShotMonitorName, appenderName);
+	                } catch (InvalidConfigException ex) {
+	                    logger.logWarn("Unable to attach appender to monitor: " + snapShotMonitorName, ex);
+	                }
+	            }
+        	}
+            currentState = STATE_IN_ROOT;
+        }        
+        
         if (ATTRIBUTE_NAME.equalsIgnoreCase(name) && currentState == STATE_IN_MONITOR_ATTRIBUTE) {
         	String attributeData = currentAttributeData != null ? currentAttributeData : "";
         	currentMonitorConfig.setProperty(currentAttributeName, attributeData);
@@ -586,6 +650,20 @@ class XMLConfigurationParser extends DefaultHandler {
             this.className = className;
         }
     }
+    
+    private static class MBeanSnapShotMonitorVO {
+    	final MBeanQuery query;
+    	final boolean enabled;
+    	
+    	final Set<String> appenders = new HashSet<>();
+
+		public MBeanSnapShotMonitorVO(MBeanQuery query, boolean enabled) {
+			super();
+			this.query = query;
+			this.enabled = enabled;
+		}
+    }
+    
     
     private static class SystemPropertyAwareAttributes implements Attributes {
     	private final PropertyStringFilter filter;

@@ -38,6 +38,7 @@ import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.mbean.MBeanQuery;
 
 
 public class PerfMonConfiguration {
@@ -46,10 +47,11 @@ public class PerfMonConfiguration {
     public final static long DEFAULT_APPENDER_INTERVAL = 60 * 60 * 1000; // 
     public final static long ONE_MINUTE_INTERVAL = 60 * 1000; // 
     
-    private final Map<String, MonitorConfig> monitorMap = new HashMap();
-    private final Map<String, Appender.AppenderID> appenderMap = new HashMap();
-    private final Map<String, SnapShotMonitorConfig> snapShotMonitors = new HashMap();
-    private final Map<String, ThreadTraceConfig> threadTraceConfigs = new HashMap();
+    private final Map<String, MonitorConfig> monitorMap = new HashMap<>();
+    private final Map<String, Appender.AppenderID> appenderMap = new HashMap<>();
+    private final Map<String, SnapShotMonitorConfig> snapShotMonitors = new HashMap<>();
+    private final Set<MBeanQuery> mBeanQuerys = new HashSet<MBeanQuery>();
+    private final Map<String, ThreadTraceConfig> threadTraceConfigs = new HashMap<>();
     private final Set<String> disabledAppenders = new HashSet<String>();
     private final ConfigurationProperties configurationProperties;
     
@@ -242,6 +244,35 @@ public class PerfMonConfiguration {
         
         return result;
     }
+
+    
+    /*----------------------------------------------------------------------------*/
+    /**
+     * This method actually defines two elements:
+     * 	1) The MBeanQuery that will be used to generate a SnapShotPOJO that will be used
+     * 		to extract data from the JMX MBean.  This generated POJO will be registered
+     * 		with the SnapShotPOJORegistry.
+     * 	2) A SnapShotMonitor that will be created to pull measurements from the SnapShotPOJO
+     * 		and write them to one or more appenders.
+     * @param query
+     * @return
+     */
+    public SnapShotMonitorID defineMBeanSnapShotMonitor(MBeanQuery query) {
+    	String name = query.getDisplayName();
+    	SnapShotMonitorID result = null;
+        
+        if (snapShotMonitors.containsKey(name)) {
+            logger.logWarn("Duplicate snapShotMonitor name found name=" + name);
+        }
+        
+        result = SnapShotMonitor.getSnapShotMonitorID(query.getBaseJMXName(), name);
+        snapShotMonitors.put(name, new SnapShotMonitorConfig(result));
+        
+        mBeanQuerys.add(query);
+        
+        return result;
+    }
+    
     
 	/*----------------------------------------------------------------------------*/  
     public ConfigurationProperties getConfigurationProperties() {
@@ -253,9 +284,12 @@ public class PerfMonConfiguration {
         return snapShotMonitors.values().toArray(new SnapShotMonitorConfig[]{});
     }
     
+    public MBeanQuery[] getMBeanQueryArray() {
+    	return mBeanQuerys.toArray(new MBeanQuery[] {});
+    }
+    
     public Appender.AppenderID[] getAllDefinedAppenders() {
         return appenderMap.values().toArray(new Appender.AppenderID[]{});
-        
     }
     
     private static String cleanAppenderPattern(String pattern) {
@@ -486,7 +520,7 @@ public class PerfMonConfiguration {
     			}
     		}
     	}
-
+    	
     	// Finally look for ThreadTrace monitors missing appenders
     	for (String monitorName : threadTraceConfigs.keySet().toArray(new String[] {})) {
     		ThreadTraceConfig config = threadTraceConfigs.get(monitorName);
