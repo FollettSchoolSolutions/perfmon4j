@@ -2,13 +2,10 @@ package org.perfmon4j.instrument.snapshot;
 
 import org.perfmon4j.SnapShotData;
 import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
-import org.perfmon4j.util.mbean.MBeanInstance;
-import org.perfmon4j.util.mbean.MBeanPojoBase;
 
 public abstract class SnapShotGenerator {
 	public static final String DELTA_FIELD_SUFFIX = "PerSecond";
 
-	public abstract Class<MBeanPojoBase> generatePOJOClassForMBeanInstance(MBeanInstance mBeanInstance) throws GenerateSnapShotException;
 	public abstract Class<?> generateSnapShotDataImpl(Class<?> dataProvider) throws GenerateSnapShotException;
 	public abstract Bundle generateBundle(Class<?> provider) throws GenerateSnapShotException;
 	public abstract Bundle generateBundle(Class<?> provider, String instanceName) throws GenerateSnapShotException;

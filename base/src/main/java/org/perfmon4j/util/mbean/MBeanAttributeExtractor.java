@@ -19,6 +19,8 @@ import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
+import org.perfmon4j.PerfMonObservableDatum;
+import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.mbean.MBeanDatum.AttributeType;
@@ -140,6 +142,78 @@ public class MBeanAttributeExtractor {
 		@Override
 		public T getValue() {
 			return value;
+		}
+
+		@Override
+		public PerfMonObservableDatum<?> toPerfMonObservableDatum() {
+			PerfMonObservableDatum<?> result = null;
+			
+			switch (getAttributeType()) {
+				case NATIVE_SHORT:
+				case SHORT:
+					result = PerfMonObservableDatum.newDatum(getName(), (Short)getValue());
+					break;
+				
+				case NATIVE_INTEGER:
+				case INTEGER:
+					result = PerfMonObservableDatum.newDatum(getName(), (Integer)getValue());
+					break;
+					
+				case NATIVE_LONG:
+				case LONG:
+					result = PerfMonObservableDatum.newDatum(getName(), (Long)getValue());
+					break;
+	
+				case NATIVE_FLOAT:
+				case FLOAT:
+					result = PerfMonObservableDatum.newDatum(getName(), (Float)getValue());
+					break;
+	
+				case NATIVE_DOUBLE:
+				case DOUBLE:
+					result = PerfMonObservableDatum.newDatum(getName(), (Double)getValue());
+					break;
+	
+				case NATIVE_BOOLEAN:
+				case BOOLEAN:
+					result = PerfMonObservableDatum.newDatum(getName(), (Boolean)getValue());
+					break;
+	
+				case NATIVE_CHARACTER:
+				case CHARACTER:
+					result = PerfMonObservableDatum.newDatum(getName(), (Character)getValue());
+					break;
+					
+				case NATIVE_BYTE:
+				case BYTE:
+					result = PerfMonObservableDatum.newDatum(getName(), (Byte)getValue());
+					break;
+					
+				case STRING:
+				default:
+					if (value == null || value instanceof String) {
+						result = PerfMonObservableDatum.newDatum(getName(), (String)getValue());
+					} else {
+						result = PerfMonObservableDatum.newDatum(getName(), (String)getValue().toString());
+					}
+			}
+			return result;
+		}
+
+		@Override
+		public PerfMonObservableDatum<Delta> toPerfMonObservableDatum(MBeanDatum<?> initialDatum, long durationMillis) {
+			// Make sure we have a before and after value and they are the right type.
+			Delta deltaValue = null;
+			if (initialDatum != null) {
+				Object before = initialDatum.getValue();
+				Object after = getValue();
+	
+				if (before != null && (before instanceof Number) 
+					&& after != null && (after instanceof Number)) {
+					deltaValue = new Delta(((Number)before).longValue(), ((Number)after).longValue(), durationMillis);
+				}
+			}
+			return PerfMonObservableDatum.newDatum(getName(), deltaValue);
 		}
 	}
 	

@@ -105,8 +105,6 @@ public class MBeanInstanceData extends SnapShotData implements GeneratedData, Pe
 	@Override
 	public String toAppenderString() {
 		SnapShotStringFormatter stringFormatter = new SnapShotStringFormatter();
-		org.perfmon4j.instrument.snapshot.Delta delta;		
-		
 		String result = "\r\n********************************************************************************\r\n";
 		result += getName() + "\r\n";
 		result += MiscHelper.formatTimeAsString(startTime) + " -> " + MiscHelper.formatTimeAsString(endTime) + "\r\n";
@@ -114,7 +112,7 @@ public class MBeanInstanceData extends SnapShotData implements GeneratedData, Pe
 			result += stringFormatter.format(25, "instanceName", instanceName);
 		}
 		for (PerfMonObservableDatum<?> datum : getObservations(false)) {
-			result += stringFormatter.format(25, datum.getFieldName(), datum.getValue());
+			result += stringFormatter.format(25, datum.getFieldName(), datum.toString());
 		}
 		result += "********************************************************************************\r\n";
 		
@@ -136,18 +134,18 @@ public class MBeanInstanceData extends SnapShotData implements GeneratedData, Pe
 		for (DatumDefinition def : datumDefinition) {
 			String attributeName = def.getName();
 			switch (def.getOutputType()) {
-				case COUNTER: // {
-//					MBeanDatum<?> datumBefore = initialData.get(attributeName);
-//					MBeanDatum<?> datumAfter = finalData.get(attributeName);
-//					result.add(PerfMonObservableDatumn(new Delta(datumAfter.getName(), (Long)datumBefore.getValue(). (Long)datumAfter.getValue()));
-//				}
-//				break;
+				case COUNTER: {
+					MBeanDatum<?> datumBefore = initialData.get(attributeName);
+					MBeanDatum<?> datumAfter = finalData.get(attributeName);
+					result.add(datumAfter.toPerfMonObservableDatum(datumBefore, durationMillis));
+				}
+				break;
 
 				case GAUGE:
 				case STRING: 
 				default: {
 					MBeanDatum<?> datum = finalData.get(attributeName);
-					result.add(PerfMonObservableDatum.newDatum(attributeName, datum.getValue()));
+					result.add(datum.toPerfMonObservableDatum());
 				}
 				break;
 			}
@@ -161,7 +159,6 @@ public class MBeanInstanceData extends SnapShotData implements GeneratedData, Pe
 		for (MBeanDatum<?> datum : data) {
 			result.put(datum.getName(), datum);
 		}
-		
 		return result;
 	}
 }

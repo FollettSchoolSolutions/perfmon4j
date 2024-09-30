@@ -1,11 +1,17 @@
 package org.perfmon4j.util.mbean;
 
+import java.util.concurrent.TimeUnit;
+
+import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 import javax.management.ObjectName;
 
 import org.mockito.Mockito;
+import org.perfmon4j.PerfMonObservableDatum;
+import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.util.mbean.MBeanAttributeExtractor.DatumDefinition;
+import org.perfmon4j.util.mbean.MBeanDatum.AttributeType;
 import org.perfmon4j.util.mbean.MBeanDatum.OutputType;
 
 import junit.framework.TestCase;
@@ -191,6 +197,152 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		assertEquals(MBeanDatum.AttributeType.STRING, findDefinition(def, "string").getAttributeType());
 		assertEquals(MBeanDatum.AttributeType.STRING, findDefinition(def, "object").getAttributeType());
 	}
+	
+	public void testMBeanDataumToPerfMonObservableDatum_Long() {
+		Long value = Long.valueOf(2);
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.LONG, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertTrue("Should be numeric type", datum.isNumeric());
+		assertEquals("Expected value", value, datum.getValue());
+		assertEquals("toString should always return a string representation of the object", "2", 
+				datum.toString());
+	}
+	
+	public void testMBeanDataumToPerfMonObservableDatum_Integer() {
+		Integer value = Integer.valueOf(3);
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.INTEGER, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertTrue("Should be numeric type", datum.isNumeric());
+		assertEquals("Expected value", value, datum.getValue());
+		assertEquals("toString should always return a string representation of the object", "3", 
+				datum.toString());
+	}
+	
+	public void testMBeanDataumToPerfMonObservableDatum_Short() {
+		Short value = Short.valueOf((short)4);
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.SHORT, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertTrue("Should be numeric type", datum.isNumeric());
+		assertEquals("Expected value", value, datum.getValue());
+		assertEquals("toString should always return a string representation of the object", "4", 
+				datum.toString());
+	}
+
+	public void testMBeanDataumToPerfMonObservableDatum_Float() {
+		Float value = Float.valueOf(5.0f);
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.FLOAT, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertTrue("Should be numeric type", datum.isNumeric());
+		assertEquals("Expected value", value, datum.getValue());
+		assertEquals("toString should always return a string representation of the object", "5.000", 
+				datum.toString());
+	}
+	
+	public void testMBeanDataumToPerfMonObservableDatum_Double() {
+		Double value = Double.valueOf(6.0d);
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.DOUBLE, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertTrue("Should be numeric type", datum.isNumeric());
+		assertEquals("Expected value", value, datum.getValue());
+		assertEquals("toString should always return a string representation of the object", "6.000", 
+				datum.toString());
+		
+	}
+
+	public void testMBeanDataumToPerfMonObservableDatum_Boolean() {
+		Boolean value = Boolean.TRUE;
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.BOOLEAN, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertTrue("Should be numeric type", datum.isNumeric());
+		assertEquals("Expected value - PerfMonObservableDatum converts boolean to 0 or 1"
+			, Short.valueOf((short)1), datum.getValue());
+		assertEquals("toString should always return a string representation of the object", "1", 
+				datum.toString());
+	}
+
+	public void testMBeanDataumToPerfMonObservableDatum_Character() {
+		Character value = Character.valueOf('x');
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.CHARACTER, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertFalse("Should NOT be numeric type", datum.isNumeric());
+		assertNull("Value will be null, as it is treated as a non-numeric object", datum.getValue());
+		assertEquals("A character is treated as an object by PerfMonObservableDatum "
+				+ "and stored in the complexObject attribute", value, datum.getComplexObject());
+		assertEquals("toString should always return a string representation of the object", "x", 
+				datum.toString());
+	}
+
+	public void testMBeanDataumToPerfMonObservableDatum_Byte() {
+		Byte value = Byte.valueOf((byte)7);
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.BYTE, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertTrue("Should be numeric type", datum.isNumeric());
+		assertEquals("Expected value", value, datum.getValue());
+		assertEquals("toString should always return a string representation of the object", "7", 
+				datum.toString());
+	}
+	
+	public void testMBeanDataumToPerfMonObservableDatum_String() {
+		String value = "StringValue";
+		PerfMonObservableDatum<?> datum = buildMBeanDatum("MyField", AttributeType.STRING, value).toPerfMonObservableDatum();
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertFalse("Should be numeric type", datum.isNumeric());
+		assertNull("Value will be null, as a String is treated as a non-numeric object", datum.getValue());
+		assertEquals("A String is treated as an object by PerfMonObservableDatum "
+				+ "and stored in the complexObject attribute", value, datum.getComplexObject());
+		assertEquals("toString should always return a string representation of the object", value, 
+			datum.toString());
+	}
+	
+	
+	public void testMBeanDataumToPerfMonObservableDatum_Delta() {
+		MBeanDatum<?> datumBefore = buildMBeanDatum("MyField", AttributeType.LONG, Long.valueOf(2));
+		MBeanDatum<?> datumAfter = buildMBeanDatum("MyField", AttributeType.LONG, Long.valueOf(3));
+		
+		long durationMillis = TimeUnit.MINUTES.toMillis(1);
+		PerfMonObservableDatum<?> datum = datumAfter.toPerfMonObservableDatum(datumBefore, durationMillis);
+		
+		
+		assertNotNull("Should have created datum", datum);
+		assertEquals("Field Name", "MyField", datum.getFieldName());
+		assertTrue("Should be numeric type", datum.isNumeric());
+		assertEquals("Value should be after - before", Long.valueOf(1), datum.getValue());
+		assertEquals("toString should always return a string representation of the object", "1", 
+				datum.toString());
+		assertEquals("The complexObject attribute should be a Delta ", 
+				new Delta(2L, 3L, durationMillis), datum.getComplexObject());
+	}	
+
+	private MBeanDatum<?> buildMBeanDatum(String attributeName, AttributeType attributeType, Object value) {
+		return new MBeanAttributeExtractor.MBeanDatumImpl<>(buildDatumDefinition(attributeName, attributeType), value);
+	}
+	
+	private DatumDefinition buildDatumDefinition(String attributeName, AttributeType attributeType) {
+		MBeanAttributeInfo info = Mockito.mock(MBeanAttributeInfo.class);
+		Mockito.when(info.getName()).thenReturn(attributeName);
+		Mockito.when(info.getType()).thenReturn(attributeType.getJmxType());
+
+		return new DatumDefinition(info, OutputType.GAUGE);
+	}
+	
 	
 	private DatumDefinition findDefinition(DatumDefinition[] def, String name) {
 		for (DatumDefinition d : def) {

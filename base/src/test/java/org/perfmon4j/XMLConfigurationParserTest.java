@@ -1113,7 +1113,6 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
 		
 		@Override
 		public void outputData(PerfMonData data) {
-System.out.println(data.toAppenderString());
 			lastData.set(data);
 		}
 		
@@ -1134,9 +1133,7 @@ System.out.println(data.toAppenderString());
             "</Perfmon4JConfig>";    
 
 
-	public void XtestFullConfigureMBeanSnapShot() throws Exception {
-        assertFalse("Did not expect perfmon4j to be actively running during this test", PerfMon.isConfigured());
-		
+	public void testFullConfigureMBeanSnapShot() throws Exception {
 		PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_GC_MONITOR));
 		PerfMon.configure(config);
         try {

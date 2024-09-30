@@ -2,9 +2,11 @@ package org.perfmon4j.util.mbean;
 
 import javax.management.MBeanAttributeInfo;
 
+import org.perfmon4j.PerfMonObservableDatum;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotGauge;
 import org.perfmon4j.instrument.SnapShotString;
+import org.perfmon4j.instrument.snapshot.Delta;
 
 public interface MBeanDatum<T> {
 	public enum OutputType {
@@ -24,30 +26,36 @@ public interface MBeanDatum<T> {
 	};
 	
 	public enum AttributeType {
-		NATIVE_SHORT(true, false),
-		NATIVE_INTEGER(true, true),
-		NATIVE_LONG(true, true),
-		NATIVE_FLOAT(true, false),
-		NATIVE_DOUBLE(true, false),
-		NATIVE_BOOLEAN(true, false),
-		NATIVE_CHARACTER(true, false),
-		NATIVE_BYTE(true, false),
-		SHORT(true, false),
-		INTEGER(true, true),
-		LONG(true, true),
-		FLOAT(true, false),
-		DOUBLE(true, false),
-		BOOLEAN(true, false),
-		CHARACTER(true, false),
-		BYTE(true, false),
-		STRING(false, false);
+		NATIVE_SHORT("short", true, false),
+		NATIVE_INTEGER("int", true, true),
+		NATIVE_LONG("long", true, true),
+		NATIVE_FLOAT("float", true, false),
+		NATIVE_DOUBLE("double", true, false),
+		NATIVE_BOOLEAN("boolean", true, false),
+		NATIVE_CHARACTER("char", true, false),
+		NATIVE_BYTE("byte", true, false),
+		SHORT("java.lang.Short", true, false),
+		INTEGER("java.lang.Integer", true, true),
+		LONG("java.lang.Long", true, true),
+		FLOAT("java.lang.Float", true, false),
+		DOUBLE("java.lang.Double", true, false),
+		BOOLEAN("java.lang.Boolean", true, false),
+		CHARACTER("java.lang.Character", true, false),
+		BYTE("java.lang.Byte", true, false),
+		STRING("java.lang.String", false, false);
 		
+		private final String jmxType;
 		private final boolean supportsGauge;
 		private final boolean supportsCounter;
 		
-		private AttributeType(boolean supportsGauge, boolean supportsCounter) {
+		private AttributeType(String jmxType, boolean supportsGauge, boolean supportsCounter) {
+			this.jmxType = jmxType;
 			this.supportsGauge = supportsGauge;
 			this.supportsCounter = supportsCounter;
+		}
+		
+		public String getJmxType() {
+			return jmxType;
 		}
 		
 		public boolean isSupportsGauge() {
@@ -73,42 +81,12 @@ public interface MBeanDatum<T> {
 		}
 		
 		public static AttributeType getAttributeType(MBeanAttributeInfo info) {
-			AttributeType result = STRING;
-			
-			if ("short".equals(info.getType())) {
-				result = NATIVE_SHORT;
-			} else if ("int".equals(info.getType())) {
-				result = NATIVE_INTEGER;
-			} else if ("long".equals(info.getType())) {
-				result = NATIVE_LONG;
-			} else if ("float".equals(info.getType())) {
-				result = NATIVE_FLOAT;
-			} else if ("double".equals(info.getType())) {
-				result = NATIVE_DOUBLE;
-			} else if ("char".equals(info.getType())) {
-				result = NATIVE_CHARACTER;
-			} else if ("byte".equals(info.getType())) {
-				result = NATIVE_BYTE;
-			} else if ("boolean".equals(info.getType())) {
-				result = NATIVE_BOOLEAN;
-			} else if ("java.lang.Short".equals(info.getType())) {
-				result = SHORT;
-			} else if ("java.lang.Integer".equals(info.getType())) {
-				result = INTEGER;
-			} else if ("java.lang.Long".equals(info.getType())) {
-				result = LONG;
-			} else if ("java.lang.Float".equals(info.getType())) {
-				result = FLOAT;
-			} else if ("java.lang.Double".equals(info.getType())) {
-				result = DOUBLE;
-			} else if ("java.lang.Boolean".equals(info.getType())) {
-				result = BOOLEAN;
-			} else if ("java.lang.Character".equals(info.getType())) {
-				result = CHARACTER;
-			} else if ("java.lang.Byte".equals(info.getType())) {
-				result = BYTE;
-			} 
-			return result;
+			for (AttributeType a : AttributeType.values()) {
+				if (a.getJmxType().equals(info.getType())) {
+					return a;
+				}
+			}
+			return STRING;
 		}
 	};
 	
@@ -116,4 +94,6 @@ public interface MBeanDatum<T> {
 	public OutputType getOutputType();
 	public AttributeType getAttributeType();
 	public T getValue();
+	public PerfMonObservableDatum<?> toPerfMonObservableDatum();
+	public PerfMonObservableDatum<Delta> toPerfMonObservableDatum(MBeanDatum<?> initialDatum, long durationMills);
 }
