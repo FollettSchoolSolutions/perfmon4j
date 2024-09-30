@@ -44,7 +44,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.perfmon4j.Appender.AppenderID;
 import org.perfmon4j.MonitorThreadTracker.Tracker;
 import org.perfmon4j.PerfMonConfiguration.MonitorConfig;
-import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.reactive.ReactiveContext;
 import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.remotemanagement.ExternalAppender;
@@ -59,7 +58,6 @@ import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.SingletonTracker;
 import org.perfmon4j.util.ThresholdCalculator;
 import org.perfmon4j.util.mbean.MBeanInstance;
-import org.perfmon4j.util.mbean.MBeanPOJO;
 import org.perfmon4j.util.mbean.MBeanQuery;
 import org.perfmon4j.util.mbean.MBeanQueryEngine;
 import org.perfmon4j.util.mbean.MBeanQueryResult;
@@ -1313,7 +1311,7 @@ public class PerfMon {
     	configure(XMLConfigurationParser.parseXML(new StringReader(stringXML)));
     }
     
-    private final static Map<MBeanQuery, MBeanPOJO[]> activeMBeanPOJOs = new HashMap<>();
+    private final static Map<MBeanQuery, MBeanInstance[]> activeMBeanInstances = new HashMap<>();
     
 /*----------------------------------------------------------------------------*/    
     public static void configure(PerfMonConfiguration config) throws InvalidConfigException {
@@ -1335,44 +1333,30 @@ public class PerfMon {
         
         POJOSnapShotRegistry registry = POJOSnapShotRegistry.getSingleton();
         
-        // First clear out any activelyRegisteredPOJOS that are no longer included in the configuration;
-        for (MBeanQuery q : activeMBeanPOJOs.keySet().toArray(new MBeanQuery[]{})) {
+        // First clear out any activelyRegisteredMBeanInstances that are no longer included in the configuration;
+        for (MBeanQuery q : activeMBeanInstances.keySet().toArray(new MBeanQuery[]{})) {
         	if (!querys.contains(q)) {
-        		for (MBeanPOJO pojo : activeMBeanPOJOs.get(q)) {
-        			registry.deRegister(pojo, pojo.getInstanceName());
+        		for (MBeanInstance mBeanInstance : activeMBeanInstances.get(q)) {
+        			registry.deRegister(mBeanInstance, mBeanInstance.getInstanceName());
         		}
-        		activeMBeanPOJOs.remove(q);
+        		activeMBeanInstances.remove(q);
         	}
         }
         
         // Now create MBeanPOJOs for each MBeanQuery that has not already been configured and registered.
         for (MBeanQuery q : querys) {
-        	if (!activeMBeanPOJOs.containsKey(q)) {
+        	if (!activeMBeanInstances.containsKey(q)) {
         		try {
 					MBeanQueryEngine engine = new MBeanQueryEngine(new MBeanServerFinderImpl(q.getDomain()));
 					MBeanQueryResult queryResult  = engine.doQuery(q);
 					if (queryResult.getInstances().length > 0) {
-						Class<MBeanPOJO> pojoClass = 
-								PerfMonTimerTransformer.snapShotGenerator.generatePOJOClassForMBeanInstance(queryResult.getInstances()[0]);
-						
-						List<MBeanPOJO> pojoList = new ArrayList<MBeanPOJO>(); 
-						for (MBeanInstance instance : queryResult.getInstances()) {
-							MBeanPOJO pojo = MBeanPOJO.invokeConstructor(pojoClass, instance, q.getBaseJMXName());
-							registry.register(pojo, pojo.getInstanceName(), true);
-							pojoList.add(pojo);
-						}
-						activeMBeanPOJOs.put(q, pojoList.toArray(new MBeanPOJO[] {}));
+						activeMBeanInstances.put(q, queryResult.getInstances());
 					}
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					logger.logWarn("Error attempting to find MBean instances for query: " + q);
 				}
         	}
         }
-        
-        
-        
-        
         
         AppenderToMonitorMapper.Builder builder = new AppenderToMonitorMapper.Builder();
         for (MonitorConfig monitorConfig : monitorConfigs) {
