@@ -284,8 +284,8 @@ public class PerfMonConfiguration {
         return snapShotMonitors.values().toArray(new SnapShotMonitorConfig[]{});
     }
     
-    public MBeanQuery[] getMBeanQueryArray() {
-    	return mBeanQuerys.toArray(new MBeanQuery[] {});
+    public Set<MBeanQuery> getMBeanQueryArray() {
+    	return new HashSet<MBeanQuery>(mBeanQuerys);
     }
     
     public Appender.AppenderID[] getAllDefinedAppenders() {

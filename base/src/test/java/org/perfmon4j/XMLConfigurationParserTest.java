@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -1075,7 +1076,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         /**
          * First check that we created a the MBeanQuery.
          */
-        MBeanQuery querys[] = config.getMBeanQueryArray(); 
+        MBeanQuery querys[] = config.getMBeanQueryArray().toArray(new MBeanQuery[] {}); 
         assertEquals("Expected mBeanQuery count", 1, querys.length);
         
         MBeanQuery query = querys[0];
@@ -1101,6 +1102,49 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals("expected appender", "org.SpecialAppender", monitorConfig.getAppenders()[0].getClassName());
     }
     
+	
+	public static final class CaptureLastDataAppender extends Appender {
+		private static final AtomicReference<PerfMonData> lastData = new AtomicReference<PerfMonData>();
+		
+		public CaptureLastDataAppender(AppenderID id) {
+			super(id);
+		}
+		
+		@Override
+		public void outputData(PerfMonData data) {
+			lastData.set(data);
+		}
+		
+		public static PerfMonData getLastData() {
+			return lastData.get();
+		}
+	}
+	
+    final String XML_GC_MONITOR =
+            "<Perfmon4JConfig enabled='true'>" +
+            "   <appender name='inMemory' className='" + CaptureLastDataAppender.class.getName() + "' interval='100 millis'/>" +
+            "	<mBeanSnapshotMonitor name='GarbageCollector'" + 
+        	"		jmxName='java.lang:type=GarbageCollector'" + 
+        	"		instanceKey='name'" +
+        	"		counters='collectionCount,collectionTime'>" +
+            "    	<appender name='inMemory'/>" +
+        	"	</mBeanSnapshotMonitor>" +                		
+            "</Perfmon4JConfig>";    
+
+
+	public void testFullConfigureMBeanSnapShot() throws Exception {
+        assertFalse("Did not expect perfmon4j to be actively running during this test", PerfMon.isConfigured());
+		
+		PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_GC_MONITOR));
+		PerfMon.configure(config);
+        try {
+        	Thread.sleep(250);
+        	
+        	assertNotNull(CaptureLastDataAppender.getLastData());
+        } finally {
+        	PerfMon.deInit();
+        }
+	}
     
 	private boolean hasMonitor(PerfMonConfiguration config, String monitorName) {
 		for (MonitorConfig monitorConfig : config.getMonitorConfigArray()) {

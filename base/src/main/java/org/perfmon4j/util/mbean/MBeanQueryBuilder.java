@@ -52,8 +52,10 @@ public class MBeanQueryBuilder {
 	public MBeanQueryBuilder setCounters(String counterCSV) {
 		synchronized (counters) {
 			counters.clear();
-			for (String counter : counterCSV.split(",")) {
-				counters.add(counter.trim());
+			if (!MiscHelper.isBlankOrNull(counterCSV)) {
+				for (String counter : counterCSV.split(",")) {
+					counters.add(counter.trim());
+				}
 			}
 		}
 		return this;
@@ -75,8 +77,10 @@ public class MBeanQueryBuilder {
 	public MBeanQueryBuilder setGauges(String gaugesCSV) {
 		synchronized (gauges) {
 			gauges.clear();
-			for (String gauge : gaugesCSV.split(",")) {
-				gauges.add(gauge.trim());
+			if (!MiscHelper.isBlankOrNull(gaugesCSV)) {
+				for (String gauge : gaugesCSV.split(",")) {
+					gauges.add(gauge.trim());
+				}
 			}
 		}		
 		return this;
