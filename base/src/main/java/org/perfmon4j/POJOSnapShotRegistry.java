@@ -4,6 +4,8 @@ import org.perfmon4j.instrument.PerfMonTimerTransformer;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator.Bundle;
+import org.perfmon4j.util.mbean.MBeanInstance;
+import org.perfmon4j.util.mbean.MBeanInstanceData;
 
 public class POJOSnapShotRegistry extends GenericItemRegistry<Object> {
 	private static final POJOSnapShotRegistry singleton = new POJOSnapShotRegistry();
@@ -18,7 +20,15 @@ public class POJOSnapShotRegistry extends GenericItemRegistry<Object> {
 
 	@Override
 	public ItemRegistry<Object> buildRegistryEntry(Object item) throws GenerateSnapShotException {
-		return new POJORegistryEntry(item.getClass().getName(), generator.generateBundleForPOJO(item.getClass()));
+		Bundle bundle = null;
+		
+		if (item instanceof MBeanInstance) {
+			bundle = new Bundle(MBeanInstanceData.class, null, false);
+		} else {
+			bundle = generator.generateBundleForPOJO(item.getClass());
+		}
+		
+		return new POJORegistryEntry(item.getClass().getName(), bundle);
 	}
 	
 	@Override

@@ -72,63 +72,71 @@ public class SnapShotManager {
     public static synchronized SnapShotMonitorLifecycle getOrCreateMonitor(SnapShotMonitorID monitorID) throws ClassNotFoundException {
     	SnapShotMonitorLifecycle result = monitorMap.get(monitorID);
         if (result == null) {
-            try {
-                Class<?> clazz = null;
-                if (PerfMon.getClassLoader() != null) {
-                    clazz = PerfMon.getClassLoader().loadClass(monitorID.getClassName());
-                } else {
-                    clazz = Thread.currentThread().getContextClassLoader().loadClass(monitorID.getClassName());
-                }
-                Properties attr = monitorID.getAttributes();
-                if (clazz.getName().equals(JMXSnapShotProxyFactory.class.getName())) {
-                	String XML = attr.getProperty(JMX_XML_PROPERTY);
-                	result = PerfMonTimerTransformer.jmxSnapShotProxyFactory.getnerateSnapShotWrapper(monitorID.getName(), XML);
-                } else if (SnapShotMonitor.class.isAssignableFrom(clazz)) {
-	                Constructor constructor = clazz.getConstructor(new Class[]{String.class});
-	                result = (SnapShotMonitor)constructor.newInstance(new Object[]{monitorID.getName()});
-	                if (attr != null) {
-	                    Iterator itr = attr.entrySet().iterator();
-	                    while (itr.hasNext()) {
-	                        Map.Entry entry = (Map.Entry)itr.next();
-	                        try {
-	                            BeanHelper.setValue(result, (String)entry.getKey(), (String)entry.getValue());
-	                        } catch (BeanHelper.UnableToSetAttributeException ex) {
-	                            if (logger.isDebugEnabled()) {
-	                                // Only show stack trace if debug is enabled...
-	                                logger.logError(ex.getMessage(), ex);
-	                            } else {
-	                                logger.logError(ex.getMessage());
-	                            }
-	                        }
-	                    }
-	                }                
-                } else {
-                	try {
-                		if (isEmitterClass(clazz)) {
-                			result = new EmitterMonitor(clazz.getName(), monitorID.getName());
-	                    	logger.logDebug("Found SnapShotEmitter for class: " + clazz.getName());
-                		} else {
-	                		// First see if this is a new style POJO Monitor.
-	                		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(clazz);
-	                    	result = new POJOSnapShotMonitor(monitorID.getName(), bundle.isUsePriorityTimer(), clazz.getName(), POJOSnapShotRegistry.getSingleton());
-	                    	logger.logDebug("Found POJO based SnapShotMonitor for class: " + clazz.getName());
-                		}
-                    	// Try to initialize the class
-                		Class.forName(clazz.getName(), true, clazz.getClassLoader());
-                	} catch(GenerateSnapShotException ex) {
-                		// Try legacy monitor.
-                    	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
-                    	result = new SnapShotProviderWrapper(monitorID.getName(), bundle);
-                    	logger.logDebug("Found Legacy based SnapShotMonitor for class: " + clazz.getName());
-                	}
-                	ExternalAppender.registerSnapShotClass(clazz.getName());
-                }
+        	if (monitorID.isMBeanInstance()) {
+        		// TODO: deal with priority timer;
+        		boolean usePriorityTimer = false;
+            	result = new POJOSnapShotMonitor(monitorID, usePriorityTimer, POJOSnapShotRegistry.getSingleton());
+        	} else {
+	            try {
+	                Class<?> clazz = null;
+	                if (PerfMon.getClassLoader() != null) {
+	                    clazz = PerfMon.getClassLoader().loadClass(monitorID.getClassName());
+	                } else {
+	                    clazz = Thread.currentThread().getContextClassLoader().loadClass(monitorID.getClassName());
+	                }
+	                Properties attr = monitorID.getAttributes();
+	                if (clazz.getName().equals(JMXSnapShotProxyFactory.class.getName())) {
+	                	String XML = attr.getProperty(JMX_XML_PROPERTY);
+	                	result = PerfMonTimerTransformer.jmxSnapShotProxyFactory.getnerateSnapShotWrapper(monitorID.getName(), XML);
+	                } else if (SnapShotMonitor.class.isAssignableFrom(clazz)) {
+		                Constructor constructor = clazz.getConstructor(new Class[]{String.class});
+		                result = (SnapShotMonitor)constructor.newInstance(new Object[]{monitorID.getName()});
+		                if (attr != null) {
+		                    Iterator itr = attr.entrySet().iterator();
+		                    while (itr.hasNext()) {
+		                        Map.Entry entry = (Map.Entry)itr.next();
+		                        try {
+		                            BeanHelper.setValue(result, (String)entry.getKey(), (String)entry.getValue());
+		                        } catch (BeanHelper.UnableToSetAttributeException ex) {
+		                            if (logger.isDebugEnabled()) {
+		                                // Only show stack trace if debug is enabled...
+		                                logger.logError(ex.getMessage(), ex);
+		                            } else {
+		                                logger.logError(ex.getMessage());
+		                            }
+		                        }
+		                    }
+		                }                
+	                } else {
+	                	try {
+	                		if (isEmitterClass(clazz)) {
+	                			result = new EmitterMonitor(clazz.getName(), monitorID.getName());
+		                    	logger.logDebug("Found SnapShotEmitter for class: " + clazz.getName());
+	                		} else {
+		                		// First see if this is a new style POJO Monitor.
+		                		SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundleForPOJO(clazz);
+		                    	result = new POJOSnapShotMonitor(monitorID.getName(), bundle.isUsePriorityTimer(), clazz.getName(), POJOSnapShotRegistry.getSingleton());
+		                    	logger.logDebug("Found POJO based SnapShotMonitor for class: " + clazz.getName());
+	                		}
+	                    	// Try to initialize the class
+	                		Class.forName(clazz.getName(), true, clazz.getClassLoader());
+	                	} catch(GenerateSnapShotException ex) {
+	                		// Try legacy monitor.
+	                    	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
+	                    	result = new SnapShotProviderWrapper(monitorID.getName(), bundle);
+	                    	logger.logDebug("Found Legacy based SnapShotMonitor for class: " + clazz.getName());
+	                	}
+	                	ExternalAppender.registerSnapShotClass(clazz.getName());
+	                }
+	            } catch (ClassNotFoundException nfe) {
+	            	throw nfe;
+	        	} catch (Exception ex) {
+	                logger.logError("Error creating snapshot manager", ex);
+	            }
+        	}
+        	if (result != null) {
                 monitorMap.put(monitorID, result);
-            } catch (ClassNotFoundException nfe) {
-            	throw nfe;
-        	} catch (Exception ex) {
-                logger.logError("Error creating snapshot manager", ex);
-            }
+        	}
         }
         
         return result;

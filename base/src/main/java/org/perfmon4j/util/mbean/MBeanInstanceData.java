@@ -20,7 +20,6 @@ import org.perfmon4j.util.mbean.MBeanAttributeExtractor.DatumDefinition;
 
 public class MBeanInstanceData extends SnapShotData implements GeneratedData, PerfMonObservableData, SnapShotPOJOLifecycle  {
 	private static final Logger logger = LoggerFactory.initLogger(MBeanInstanceData.class);
-	private final MBeanInstance mBeanInstance;
 
 	private long startTime = PerfMon.NOT_SET;
 	private long endTime = PerfMon.NOT_SET;
@@ -31,9 +30,7 @@ public class MBeanInstanceData extends SnapShotData implements GeneratedData, Pe
 	private Map<String,MBeanDatum<?>> initialData = null;
 	private Map<String,MBeanDatum<?>> finalData = null;
  	
-	public MBeanInstanceData(MBeanInstance mBeanInstance) {
-		this.mBeanInstance = mBeanInstance;
-		this.instanceName = mBeanInstance.getInstanceName();
+	public MBeanInstanceData() {
 	} 
 
 	@Override
@@ -70,7 +67,7 @@ public class MBeanInstanceData extends SnapShotData implements GeneratedData, Pe
 	public void init(Object data, long timeStamp) {
 		startTime = timeStamp;
 		try {
-			initialData = buildDatumMap(((MBeanInstanceImpl)mBeanInstance).extractAttributes());
+			initialData = buildDatumMap(((MBeanInstance)data).extractAttributes());
 		} catch (MBeanQueryException e) {
 			logger.logWarn("Unable to initialize SnapShot for: " +  getName(), e);
 		}
@@ -81,7 +78,8 @@ public class MBeanInstanceData extends SnapShotData implements GeneratedData, Pe
 		endTime = timesStamp;
 		durationMillis = endTime - startTime;
 		try {
-			finalData = buildDatumMap(((MBeanInstanceImpl)mBeanInstance).extractAttributes());
+			MBeanInstance mBeanInstance = (MBeanInstance)dataProvider;
+			finalData = buildDatumMap(mBeanInstance.extractAttributes());
 			datumDefinition = mBeanInstance.getDatumDefinition();
 		} catch (MBeanQueryException e) {
 			logger.logWarn("Unable to take SnapShot for: " + getName(), e);

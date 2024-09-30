@@ -11,6 +11,7 @@ class MBeanInstanceImpl implements MBeanInstance {
 	private final String name;
 	private final ObjectName objectName;
 	private final String instanceName;
+	private final String effectiveClassName;
 	private final MBeanAttributeExtractor extractor;
 	private final DatumDefinition[] datumDefinition;
 	
@@ -20,6 +21,7 @@ class MBeanInstanceImpl implements MBeanInstance {
 		this.objectName = objectName;
 		this.extractor = new MBeanAttributeExtractor(mBeanServerFinder, objectName, query);
 		this.datumDefinition = extractor.getDatumDefinition();
+		this.effectiveClassName = MBeanInstance.buildEffectiveClassName(query);
 		
 		final String instanceNameKey = query.getInstanceKey();
 		if (instanceNameKey != null  && !instanceNameKey.isEmpty()) {
@@ -65,6 +67,16 @@ class MBeanInstanceImpl implements MBeanInstance {
 	@Override
 	public DatumDefinition[] getDatumDefinition() {
 		return datumDefinition;
+	}
+
+	@Override
+	/**
+	 * This is required by the POJOSnapShotRegistry
+	 * Each "POJO" (Even thought the MBeanInstance is not technically a POJO)
+	 * must have a unique className.  The className is used as a key by the POJSnapShotRegistry.
+	 */
+	public String getEffectiveClassName() {
+		return effectiveClassName;
 	}
 }
 

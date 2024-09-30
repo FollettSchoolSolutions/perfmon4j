@@ -1351,6 +1351,9 @@ public class PerfMon {
 					MBeanQueryResult queryResult  = engine.doQuery(q);
 					if (queryResult.getInstances().length > 0) {
 						activeMBeanInstances.put(q, queryResult.getInstances());
+						for (MBeanInstance instance : queryResult.getInstances()) {
+							registry.register(instance, instance.getInstanceName());
+						}
 					}
 				} catch (Exception e) {
 					logger.logWarn("Error attempting to find MBean instances for query: " + q);

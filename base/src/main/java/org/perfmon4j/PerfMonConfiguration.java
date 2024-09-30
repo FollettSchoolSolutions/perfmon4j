@@ -38,6 +38,7 @@ import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.mbean.MBeanInstance;
 import org.perfmon4j.util.mbean.MBeanQuery;
 
 
@@ -265,7 +266,7 @@ public class PerfMonConfiguration {
             logger.logWarn("Duplicate snapShotMonitor name found name=" + name);
         }
         
-        result = SnapShotMonitor.getSnapShotMonitorID(query.getBaseJMXName(), name);
+        result = SnapShotMonitor.getSnapShotMonitorID(MBeanInstance.buildEffectiveClassName(query), name);
         snapShotMonitors.put(name, new SnapShotMonitorConfig(result));
         
         mBeanQuerys.add(query);

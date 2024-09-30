@@ -38,7 +38,11 @@ public class POJOSnapShotMonitor extends SnapShotMonitorBase<POJODataSnapShot[]>
     private final String pojoClassName;
     private final POJOSnapShotRegistry registry;
 
-/*----------------------------------------------------------------------------*/    
+/*----------------------------------------------------------------------------*/
+    public POJOSnapShotMonitor(SnapShotMonitorID monitorID, boolean usePriorityTimer, POJOSnapShotRegistry registry) {
+    	this(monitorID.getName(), usePriorityTimer, monitorID.getClassName(), registry);
+    }
+
     public POJOSnapShotMonitor(String name, boolean usePriorityTimer, String pojoClassName, POJOSnapShotRegistry registry) {
         super(name, usePriorityTimer);
         this.registry = registry;
@@ -85,14 +89,18 @@ public class POJOSnapShotMonitor extends SnapShotMonitorBase<POJODataSnapShot[]>
 
 	@Override
 	protected void appendData(Appender appender, POJODataSnapShot[] dataArray) {
-		for (POJODataSnapShot data : dataArray) {
-			SnapShotData snapShotData = data.getSnapShotData();
-			snapShotData.setName(getName());
-			String instanceName = data.getPojoInstance().getInstanceName();
-			if (instanceName != null) {
-				((SnapShotPOJOLifecycle)snapShotData).setInstanceName(instanceName);
+		if (dataArray != null) {
+			for (POJODataSnapShot data : dataArray) {
+				SnapShotData snapShotData = data.getSnapShotData();
+				snapShotData.setName(getName());
+				String instanceName = data.getPojoInstance().getInstanceName();
+				if (instanceName != null) {
+					((SnapShotPOJOLifecycle)snapShotData).setInstanceName(instanceName);
+				}
+				appender.appendData(snapShotData);
 			}
-			appender.appendData(snapShotData);
+		} else {
+			logger.logVerbose("Skipping appendData - dataArray = null");
 		}
 	}
 

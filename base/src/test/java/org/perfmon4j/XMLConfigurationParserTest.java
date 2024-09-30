@@ -1112,6 +1112,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
 		
 		@Override
 		public void outputData(PerfMonData data) {
+System.out.println(data.toAppenderString());
 			lastData.set(data);
 		}
 		
@@ -1122,7 +1123,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
 	
     final String XML_GC_MONITOR =
             "<Perfmon4JConfig enabled='true'>" +
-            "   <appender name='inMemory' className='" + CaptureLastDataAppender.class.getName() + "' interval='100 millis'/>" +
+            "   <appender name='inMemory' className='" + CaptureLastDataAppender.class.getName() + "' interval='500 millis'/>" +
             "	<mBeanSnapshotMonitor name='GarbageCollector'" + 
         	"		jmxName='java.lang:type=GarbageCollector'" + 
         	"		instanceKey='name'" +
@@ -1137,8 +1138,16 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
 		
 		PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_GC_MONITOR));
 		PerfMon.configure(config);
+		
+//		POJOSnapShotRegistry registry = POJOSnapShotRegistry.getSingleton();
+//		
+//		registry.get
+		
+	
+		
         try {
-        	Thread.sleep(250);
+        	Thread.sleep(750);
+        	Appender.flushAllAppenders();
         	
         	assertNotNull(CaptureLastDataAppender.getLastData());
         } finally {

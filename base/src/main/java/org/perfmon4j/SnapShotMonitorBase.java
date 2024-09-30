@@ -32,6 +32,7 @@ import org.perfmon4j.util.FailSafeTimerTask;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.mbean.MBeanInstance;
 
 abstract class SnapShotMonitorBase<T extends Object> implements SnapShotMonitorLifecycle {
     final private static Logger logger = LoggerFactory.initLogger(SnapShotMonitorBase.class);
@@ -187,6 +188,10 @@ abstract class SnapShotMonitorBase<T extends Object> implements SnapShotMonitorL
 
         public String buildAttributeString() {
             return super.buildAttributeString() + "-Name=" + name;
+        }
+        
+        public boolean isMBeanInstance() {
+        	return MBeanInstance.isMBeanInstanceEffectiveClassName(this.getClassName());
         }
     }
 }
