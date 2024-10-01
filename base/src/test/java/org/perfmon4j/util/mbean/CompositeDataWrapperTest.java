@@ -59,8 +59,8 @@ public class CompositeDataWrapperTest extends TestCase {
 	
 	public void testFindWithFullyQualifiedAttributeName() throws Exception {
 		CompositeDataWrapper wrapper = new CompositeDataWrapper(compositeData, "CompositeData");
-		
 		DatumDefinition dd = wrapper.getDataDefinition("CompositeData.completed", OutputType.GAUGE);
+		
 		assertNotNull("Should be able to prefix object with baseName", dd);
 		
 		// Should also be forgiving if the case of the first letter is incorrect.
@@ -68,4 +68,11 @@ public class CompositeDataWrapperTest extends TestCase {
 		assertNotNull("Should be able to prefix object with baseName", dd);
 	}
 	
+	public void testGetDatum() throws Exception {
+		CompositeDataWrapper wrapper = new CompositeDataWrapper(compositeData, "CompositeData");
+		DatumDefinition dd = wrapper.getDataDefinition("CompositeData.completed", OutputType.GAUGE);
+		
+		MBeanDatum<?> datum = wrapper.getMBeanDatum(dd);
+		assertEquals(Long.valueOf(5),datum.getValue());
+	}
 }

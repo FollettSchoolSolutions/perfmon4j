@@ -75,6 +75,13 @@ public class CompositeDataWrapper {
 		return result;
 	}
 	
+	public MBeanDatum<?> getMBeanDatum(DatumDefinition dd) {
+		String attributeName = filterBaseNameFromAttributeName(dd.getName());
+		Object obj = data.get(attributeName);
+		
+		return new MBeanAttributeExtractor.MBeanDatumImpl<>(dd, obj);
+	}
+	
 	private String filterBaseNameFromAttributeName(String attributeName) {
 		String result = attributeName;
 		String prefix = baseName + ".";
