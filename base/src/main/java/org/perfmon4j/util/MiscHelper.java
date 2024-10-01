@@ -819,4 +819,21 @@ public class MiscHelper {
 			throw new Exception("Unable to generate SHA256 of text: " + text, e);
 		}
 	}
+	
+	public static String toggleCaseOfFirstLetter(String s) {
+	    if (s == null || s.isEmpty()) {
+	        return s;
+	    }
+	    
+	    // Get the first character
+	    char firstChar = s.charAt(0);
+	    
+	    // Change the case of the first character
+	    char newFirstChar = Character.isUpperCase(firstChar) 
+	        ? Character.toLowerCase(firstChar) 
+	        : Character.toUpperCase(firstChar);
+	    
+	    // Combine the new first character with the rest of the string
+	    return newFirstChar + s.substring(1);
+	}
 } 

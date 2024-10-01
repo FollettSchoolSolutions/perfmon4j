@@ -1,5 +1,8 @@
 package org.perfmon4j.util.mbean;
 
+import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.OpenDataException;
+
 public interface TestExampleMBean {
 	public long getNextValue();
 	
@@ -29,4 +32,6 @@ public interface TestExampleMBean {
 	
 	public String getString();
 	public Object getObject();
+	
+	public CompositeData getCompositeData() throws OpenDataException;
 }

@@ -1,6 +1,14 @@
 package org.perfmon4j.util.mbean;
 
+import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicLong;
+
+import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.CompositeDataSupport;
+import javax.management.openmbean.CompositeType;
+import javax.management.openmbean.OpenDataException;
+import javax.management.openmbean.OpenType;
+import javax.management.openmbean.SimpleType;
 
 public class TestExample implements TestExampleMBean {
 	private static final AtomicLong nextValue = new AtomicLong(0);
@@ -98,5 +106,14 @@ public class TestExample implements TestExampleMBean {
 	@Override
 	public Object getObject() {
 		return new StringBuilder("14");
+	}
+	
+	@Override
+	public CompositeData getCompositeData() throws OpenDataException {
+		String[] itemNames = {"completed", "failed", "active", "status", "bigDecimal"}; 
+		OpenType[] itemTypes = {SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.STRING, SimpleType.BIGDECIMAL};
+		Object[] itemValues = {Long.valueOf(5), Long.valueOf(1), Long.valueOf(3), "Active", BigDecimal.valueOf(1000)};
+		CompositeType type = new CompositeType("Request Count", "asdf", itemNames, itemNames, itemTypes);
+		return new CompositeDataSupport(type, itemNames, itemValues);
 	}
 }

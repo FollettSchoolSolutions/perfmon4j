@@ -23,6 +23,7 @@ import org.perfmon4j.PerfMonObservableDatum;
 import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.mbean.MBeanDatum.AttributeType;
 import org.perfmon4j.util.mbean.MBeanDatum.OutputType;
 
@@ -48,20 +49,7 @@ public class MBeanAttributeExtractor {
 	}
 	
     private static final Function<String, String> toggleCaseOfFirstLetter = s -> {
-        if (s == null || s.isEmpty()) {
-            return s;
-        }
-        
-        // Get the first character
-        char firstChar = s.charAt(0);
-        
-        // Change the case of the first character
-        char newFirstChar = Character.isUpperCase(firstChar) 
-            ? Character.toLowerCase(firstChar) 
-            : Character.toUpperCase(firstChar);
-        
-        // Combine the new first character with the rest of the string
-        return newFirstChar + s.substring(1);
+    	return MiscHelper.toggleCaseOfFirstLetter(s);
     };
 	
 	static DatumDefinition[] buildDataDefinitionArray(MBeanInfo mBeanInfo, MBeanQuery query) {
@@ -228,6 +216,12 @@ public class MBeanAttributeExtractor {
 			this.attributeType = MBeanDatum.AttributeType.getAttributeType(attributeInfo);
 		}
 
+		public DatumDefinition(String name, AttributeType attributeType, OutputType type) {
+			this.name = name;
+			this.type = type;
+			this.attributeType = attributeType;
+		}
+		
 		public MBeanDatum.OutputType getOutputType() {
 			return type;
 		}
