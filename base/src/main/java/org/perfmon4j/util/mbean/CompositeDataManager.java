@@ -1,7 +1,9 @@
 package org.perfmon4j.util.mbean;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -64,6 +66,23 @@ public class CompositeDataManager {
 		
 		return result;
 	}
+	
+	List<MBeanDatum<?>> extractCompositeDataAttributes(DatumDefinition[] datumArray) throws MBeanQueryException {
+		Map<String, CompositeDataWrapper> wrapperMap = new HashMap<String, CompositeDataWrapper>(); 
+		List<MBeanDatum<?>> result = new ArrayList<MBeanDatum<?>>();
+		
+		for (DatumDefinition datum : datumArray) {
+			if (datum.isCompositeAttribute()) {
+				CompositeDataWrapper wrapper = getOrCreateCompositeWrapper(wrapperMap, datum.getParentName());
+				if (wrapper != null) {
+					result.add(wrapper.getMBeanDatum(datum));
+				}
+			}
+		}
+		
+		return result;
+	}
+	
 	
 	private CompositeDataWrapper getOrCreateCompositeWrapper(Map<String, CompositeDataWrapper> wrapperMap, String attributeName) 
 		throws MBeanQueryException {

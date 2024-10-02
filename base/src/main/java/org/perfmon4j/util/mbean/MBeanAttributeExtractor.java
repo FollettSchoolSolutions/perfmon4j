@@ -1,6 +1,5 @@
 package org.perfmon4j.util.mbean;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -291,66 +290,76 @@ public class MBeanAttributeExtractor {
 			DatumDefinition other = (DatumDefinition) obj;
 			return Objects.equals(name, other.name) && type == other.type;
 		}
+
+		@Override
+		public String toString() {
+			return "DatumDefinition [type=" + type + ", attributeType=" + attributeType + ", name=" + name
+					+ ", parentName=" + parentName + "]";
+		}
 	}
 	
 	MBeanDatum<?>[] extractAttributes() throws MBeanQueryException {
-		List<MBeanDatum<?>> result = new ArrayList<>();
+		CompositeDataManager dataManager = new CompositeDataManager(mBeanServerFinder, objectName);
+
+		List<MBeanDatum<?>> result = dataManager.extractCompositeDataAttributes(datumDefinition);
 		for (DatumDefinition d : datumDefinition) {
-			try {
-				Object value = mBeanServerFinder.getMBeanServer().getAttribute(objectName, d.getName());
-				
-				switch (d.getAttributeType()) {
-					case NATIVE_SHORT:
-					case SHORT:
-						result.add(new MBeanDatumImpl<>(d, (Short)value));
-						break;
-						
-					case NATIVE_INTEGER:
-					case INTEGER:
-						result.add(new MBeanDatumImpl<>(d, (Integer)value));
-						break;
-						
-					case NATIVE_LONG:
-					case LONG:
-						result.add(new MBeanDatumImpl<>(d, (Long)value));
-						break;
-
-					case NATIVE_FLOAT:
-					case FLOAT:
-						result.add(new MBeanDatumImpl<>(d, (Float)value));
-						break;
-
-					case NATIVE_DOUBLE:
-					case DOUBLE:
-						result.add(new MBeanDatumImpl<>(d, (Double)value));
-						break;
+			if (!d.isCompositeAttribute()) {
+				try {
+					Object value = mBeanServerFinder.getMBeanServer().getAttribute(objectName, d.getName());
+					
+					switch (d.getAttributeType()) {
+						case NATIVE_SHORT:
+						case SHORT:
+							result.add(new MBeanDatumImpl<>(d, (Short)value));
+							break;
+							
+						case NATIVE_INTEGER:
+						case INTEGER:
+							result.add(new MBeanDatumImpl<>(d, (Integer)value));
+							break;
+							
+						case NATIVE_LONG:
+						case LONG:
+							result.add(new MBeanDatumImpl<>(d, (Long)value));
+							break;
 	
-					case NATIVE_BOOLEAN:
-					case BOOLEAN:
-						result.add(new MBeanDatumImpl<>(d, (Boolean)value));
-						break;
-
-					case NATIVE_CHARACTER:
-					case CHARACTER:
-						result.add(new MBeanDatumImpl<>(d, (Character)value));
-						break;
-						
-					case NATIVE_BYTE:
-					case BYTE:
-						result.add(new MBeanDatumImpl<>(d, (Byte)value));
-						break;
-						
-					case STRING:
-					default:
-						if (value == null || value instanceof String) {
-							result.add(new MBeanDatumImpl<>(d, (String)value));
-						} else {
-							result.add(new MBeanDatumImpl<>(d, value.toString()));
-						}
+						case NATIVE_FLOAT:
+						case FLOAT:
+							result.add(new MBeanDatumImpl<>(d, (Float)value));
+							break;
+	
+						case NATIVE_DOUBLE:
+						case DOUBLE:
+							result.add(new MBeanDatumImpl<>(d, (Double)value));
+							break;
+		
+						case NATIVE_BOOLEAN:
+						case BOOLEAN:
+							result.add(new MBeanDatumImpl<>(d, (Boolean)value));
+							break;
+	
+						case NATIVE_CHARACTER:
+						case CHARACTER:
+							result.add(new MBeanDatumImpl<>(d, (Character)value));
+							break;
+							
+						case NATIVE_BYTE:
+						case BYTE:
+							result.add(new MBeanDatumImpl<>(d, (Byte)value));
+							break;
+							
+						case STRING:
+						default:
+							if (value == null || value instanceof String) {
+								result.add(new MBeanDatumImpl<>(d, (String)value));
+							} else {
+								result.add(new MBeanDatumImpl<>(d, value.toString()));
+							}
+					}
+				} catch (InstanceNotFoundException | AttributeNotFoundException | ReflectionException
+						| MBeanException e) {
+					logger.logWarn("Unabled to retrieve attribute: " + d);
 				}
-			} catch (InstanceNotFoundException | AttributeNotFoundException | ReflectionException
-					| MBeanException e) {
-				logger.logWarn("Unabled to retrieve attribute", e);
 			}
 		}
 		return result.toArray(new MBeanDatum<?>[]{});

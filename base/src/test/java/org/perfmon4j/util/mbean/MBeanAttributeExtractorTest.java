@@ -327,6 +327,10 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		
 		assertEquals(MBeanDatum.OutputType.COUNTER, findDefinition(def, "CompositeData.completed").getOutputType());
 		assertEquals(MBeanDatum.OutputType.GAUGE, findDefinition(def, "CompositeData.status").getOutputType());
+		
+		
+		MBeanDatum<?> data[] = extractor.extractAttributes();
+		assertEquals("Expected number of data elements", 2, data.length);
 	}
 
 	private MBeanDatum<?> buildMBeanDatum(String attributeName, AttributeType attributeType, Object value) {
