@@ -12,7 +12,6 @@ import java.util.function.Function;
 
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
-import javax.management.IntrospectionException;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanException;
 import javax.management.MBeanInfo;
@@ -41,22 +40,43 @@ public class MBeanAttributeExtractor {
 		this.mBeanServerFinder = mBeanServerFinder;
 		this.objectName = objectName;
 		this.query = query;
-		try {
-			datumDefinition = buildDataDefinitionArray(mBeanServerFinder.getMBeanServer().getMBeanInfo(objectName), query);
-		} catch (IntrospectionException | InstanceNotFoundException | ReflectionException e) {
-			throw new MBeanQueryException("Unabled to retrieve data from mbean: " + objectName.getCanonicalName(), e);
-		}
+		this.datumDefinition = buildDataDefinitionArray(mBeanServerFinder, objectName, query);
 	}
 	
     private static final Function<String, String> toggleCaseOfFirstLetter = s -> {
     	return MiscHelper.toggleCaseOfFirstLetter(s);
     };
 	
-	static DatumDefinition[] buildDataDefinitionArray(MBeanInfo mBeanInfo, MBeanQuery query) {
-		Set<DatumDefinition> result = new HashSet<>();
+    
+    /**
+     * Removes attributes Strings that match the "complex object" pattern (i.e. "Usage.initial")
+     * from the passed in set.  These attributes are returned in a new set.
+     * @param set
+     * @return
+     */
+    private static Set<String> extractComplexObjectAttributes(Set<String> set) {
+    	Set<String> result = new HashSet<String>();
+    	
+    	for (String attribute : set.toArray(new String[] {})) {
+    		if (CompositeDataManager.isCompositeAttributeName(attribute)) {
+    			set.remove(attribute);
+    			result.add(attribute);
+    		}
+    	}
+    	return result;
+    }
+    
+	static DatumDefinition[] buildDataDefinitionArray(MBeanServerFinder serverFinder, ObjectName objectName, MBeanQuery query) throws MBeanQueryException {
+		CompositeDataManager dataManager = new CompositeDataManager(serverFinder, objectName);
+		
 		Map<String, MBeanAttributeInfo> attributes = new HashMap<String, MBeanAttributeInfo>();
 		Set<String> gaugeNames = new HashSet<String>(Arrays.asList(query.getGauges()));
 		Set<String> counterNames = new HashSet<String>(Arrays.asList(query.getCounters()));
+
+		// First get any DatumDefinitions associated with any Composite Data attributes (i.e. "Usage.used")
+		Set<DatumDefinition> result = dataManager.buildCompositeDatumDefinitionArray(query);
+		
+		MBeanInfo mBeanInfo = serverFinder.getMBeanInfo(objectName);
 		
 		for (MBeanAttributeInfo aInfo : mBeanInfo.getAttributes()) {
 			attributes.put(aInfo.getName(), aInfo);
@@ -75,23 +95,27 @@ public class MBeanAttributeExtractor {
 			
 			// First get Counters
 			for (String counter : counterNames.toArray(new String[] {})) {
-				MBeanAttributeInfo info = attributes.get(transform.apply(counter));
-				if (info != null) {
-					OutputType outputType = AttributeType.getAttributeType(info).getValidOutputType(OutputType.COUNTER);
-					counterNames.remove(counter);
-					result.add(new DatumDefinition(info, outputType));
-					attributes.remove(info.getName());
-				}
+				if (!CompositeDataManager.isCompositeAttributeName(counter)) {
+					MBeanAttributeInfo info = attributes.get(transform.apply(counter));
+					if (info != null) {
+						OutputType outputType = AttributeType.getAttributeType(info).getValidOutputType(OutputType.COUNTER);
+						counterNames.remove(counter);
+						result.add(new DatumDefinition(info, outputType));
+						attributes.remove(info.getName());
+					}
+				}	
 			}
 			
 			// Then try gauges
 			for (String gauge : gaugeNames.toArray(new String[] {})) {
-				MBeanAttributeInfo info = attributes.get(transform.apply(gauge));
-				if (info != null) {
-					OutputType outputType = AttributeType.getAttributeType(info).getValidOutputType(OutputType.GAUGE);
-					gaugeNames.remove(gauge);
-					attributes.remove(info.getName());
-					result.add(new DatumDefinition(info, outputType));
+				if (!CompositeDataManager.isCompositeAttributeName(gauge)) {
+					MBeanAttributeInfo info = attributes.get(transform.apply(gauge));
+					if (info != null) {
+						OutputType outputType = AttributeType.getAttributeType(info).getValidOutputType(OutputType.GAUGE);
+						gaugeNames.remove(gauge);
+						attributes.remove(info.getName());
+						result.add(new DatumDefinition(info, outputType));
+					}
 				}
 			}
 		}
@@ -209,17 +233,26 @@ public class MBeanAttributeExtractor {
 		private final MBeanDatum.OutputType type;
 		private final MBeanDatum.AttributeType attributeType;
 		private final String name;
+		private final String parentName;
 		
 		public DatumDefinition(MBeanAttributeInfo attributeInfo, OutputType type) {
 			this.name = attributeInfo.getName();
 			this.type = type;
 			this.attributeType = MBeanDatum.AttributeType.getAttributeType(attributeInfo);
+			this.parentName = null;
 		}
 
 		public DatumDefinition(String name, AttributeType attributeType, OutputType type) {
 			this.name = name;
 			this.type = type;
 			this.attributeType = attributeType;
+			
+			String split[] = CompositeDataManager.splitAtFirstPeriod(name);
+			if (split.length > 1) {
+				this.parentName = split[0];
+			} else {
+				this.parentName = null;
+			}
 		}
 		
 		public MBeanDatum.OutputType getOutputType() {
@@ -232,6 +265,14 @@ public class MBeanAttributeExtractor {
 
 		public String getName() {
 			return name;
+		}
+		
+		public boolean isCompositeAttribute() {
+			return parentName != null;
+		}
+		
+		public String getParentName() {
+			return parentName;
 		}
 
 		@Override

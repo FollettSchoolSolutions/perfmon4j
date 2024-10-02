@@ -27,11 +27,13 @@ public class MBeanAttributeExtractorTest extends TestCase {
 	protected void setUp() throws Exception {
 		super.setUp();
 		
+		objectName = new ObjectName(BASE_OBJECT_NAME);
 		mBeanServer = MBeanServerFactory.createMBeanServer();
-		mBeanServerFinder = Mockito.mock(MBeanServerFinder.class);
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
+
+		mBeanServerFinder = Mockito.spy(new MBeanServerFinderImpl(null));
 		Mockito.when(mBeanServerFinder.getMBeanServer()).thenReturn(mBeanServer);
 		engine = new MBeanQueryEngine(mBeanServerFinder);
-		objectName = new ObjectName(BASE_OBJECT_NAME);
 	}
 
 	@Override
@@ -45,23 +47,19 @@ public class MBeanAttributeExtractorTest extends TestCase {
 	}
 	
 	public void testBuildData_NoMatchingAttributes() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setCounters("THIS WILL NOT MATCH ANYTHING").build();
 		
-		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
 		assertNotNull("should never return null", dataDefinition);
 		assertEquals("No matching attributes", 0, dataDefinition.length);
 	}
 	
 	public void testBuildData_ExactMatch() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setCounters("NextValue").build();
 		
-		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
 		assertNotNull("should never return null", dataDefinition);
 		assertEquals("No matching attributes", 1, dataDefinition.length);
 		assertEquals("Should be the actual name of the MBean Attribute", "NextValue", dataDefinition[0].getName());
@@ -75,23 +73,19 @@ public class MBeanAttributeExtractorTest extends TestCase {
 	 * @throws Exception
 	 */
 	public void testBuildData_IncorrectCapitalizationMatch() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setCounters("nextValue").build();  // Lower case first letter does not strictly match, but we want to be forgiving.
 		
-		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
 		assertNotNull("should never return null", dataDefinition);
 		assertEquals("No matching attributes", 1, dataDefinition.length);
 	}
 
 	public void testBuildData_FindGauge() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setGauges("nextValue").build();
 		
-		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServer.getMBeanInfo(objectName), query);
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
 		assertNotNull("should never return null", dataDefinition);
 		assertEquals("No matching attributes", 1, dataDefinition.length);
 		assertEquals("Should be the actual name of the MBean Attribute", "NextValue", dataDefinition[0].getName());
@@ -99,8 +93,6 @@ public class MBeanAttributeExtractorTest extends TestCase {
 	}
 
 	public void testExtractData() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setGauges("nativeShort, nativeInteger, nativeLong, nativeFloat, nativeDouble, nativeBoolean, nativeCharacter, nativeByte, " +
 				"short, integer, long, float, double, boolean, character, byte, " +
@@ -130,8 +122,6 @@ public class MBeanAttributeExtractorTest extends TestCase {
 	}
 
 	public void testInvalidCounterTypeDemotedToGauge() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setCounters("byte").build();
 
@@ -142,8 +132,6 @@ public class MBeanAttributeExtractorTest extends TestCase {
 	}
 	
 	public void testInvalidCounterTypeDemotedToString() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setCounters("string").build();
 
@@ -154,8 +142,6 @@ public class MBeanAttributeExtractorTest extends TestCase {
 	}
 
 	public void testInvalidGaugeTypeDemotedToString() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setGauges("object").build();
 
@@ -166,8 +152,6 @@ public class MBeanAttributeExtractorTest extends TestCase {
 	}
 	
 	public void testExtractDataType() throws Exception { 	
-		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME));
-		
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
 		MBeanQuery query = builder.setGauges("nativeShort, nativeInteger, nativeLong, nativeFloat, nativeDouble, nativeBoolean, nativeCharacter, nativeByte, " +
 			"short, integer, long, float, double, boolean, character, byte, " +
@@ -312,7 +296,6 @@ public class MBeanAttributeExtractorTest extends TestCase {
 			datum.toString());
 	}
 	
-	
 	public void testMBeanDataumToPerfMonObservableDatum_Delta() {
 		MBeanDatum<?> datumBefore = buildMBeanDatum("MyField", AttributeType.LONG, Long.valueOf(2));
 		MBeanDatum<?> datumAfter = buildMBeanDatum("MyField", AttributeType.LONG, Long.valueOf(3));
@@ -330,6 +313,21 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		assertEquals("The complexObject attribute should be a Delta ", 
 				new Delta(2L, 3L, durationMillis), datum.getComplexObject());
 	}	
+	
+	public void testExtractAttributesWithCompositeAttributes() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder
+			.setCounters("compositeData.completed")
+			.setGauges("CompositeData.Status,compositeData.DOES_NOT_EXIST")
+			.build();
+
+		MBeanAttributeExtractor extractor = new MBeanAttributeExtractor(mBeanServerFinder, objectName, query);
+		DatumDefinition[] def = extractor.getDatumDefinition();
+		assertEquals("DatumDefinition length", 2, def.length);
+		
+		assertEquals(MBeanDatum.OutputType.COUNTER, findDefinition(def, "CompositeData.completed").getOutputType());
+		assertEquals(MBeanDatum.OutputType.GAUGE, findDefinition(def, "CompositeData.status").getOutputType());
+	}
 
 	private MBeanDatum<?> buildMBeanDatum(String attributeName, AttributeType attributeType, Object value) {
 		return new MBeanAttributeExtractor.MBeanDatumImpl<>(buildDatumDefinition(attributeName, attributeType), value);
@@ -362,5 +360,8 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		}
 		return null;
 	}
+	
+	
+	
 	
 }

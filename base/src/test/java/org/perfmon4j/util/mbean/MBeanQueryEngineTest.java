@@ -19,7 +19,7 @@ public class MBeanQueryEngineTest extends TestCase {
 		super.setUp();
 		
 		mBeanServer = MBeanServerFactory.createMBeanServer();
-		mBeanServerFinder = Mockito.mock(MBeanServerFinder.class);
+		mBeanServerFinder = Mockito.spy(new MBeanServerFinderImpl(null));
 		Mockito.when(mBeanServerFinder.getMBeanServer()).thenReturn(mBeanServer);
 		engine = new MBeanQueryEngine(mBeanServerFinder);
 	}

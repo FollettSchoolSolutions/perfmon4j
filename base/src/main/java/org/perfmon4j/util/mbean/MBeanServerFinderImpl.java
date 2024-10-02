@@ -2,7 +2,14 @@ package org.perfmon4j.util.mbean;
 
 import java.util.concurrent.TimeUnit;
 
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.IntrospectionException;
+import javax.management.MBeanException;
+import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
 
 import org.perfmon4j.util.Cacheable;
 import org.perfmon4j.util.MiscHelper;
@@ -35,4 +42,25 @@ public class MBeanServerFinderImpl implements MBeanServerFinder {
 		}
 		return result;
 	}
+
+	@Override
+	public MBeanInfo getMBeanInfo(ObjectName objectName) throws MBeanQueryException {
+		try {
+			return getMBeanServer().getMBeanInfo(objectName);
+		} catch (IntrospectionException | InstanceNotFoundException | ReflectionException e) {
+			throw new MBeanQueryException("Unable to get MBeanInfo for objectName: " + objectName, e);
+		}
+	}
+	
+	public Object getAttribute(ObjectName objectName, String attributeName) throws MBeanQueryException {
+		try {
+			return getMBeanServer().getAttribute(objectName, attributeName);
+		} catch (InstanceNotFoundException | AttributeNotFoundException e) {
+			return null;
+		} catch (ReflectionException | MBeanException e) {
+			throw new MBeanQueryException("Unable to get MBeanInfo for objectName: " + objectName, e);
+		}
+		
+	}
+	
 }
