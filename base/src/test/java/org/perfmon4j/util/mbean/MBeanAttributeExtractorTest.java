@@ -332,7 +332,29 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		MBeanDatum<?> data[] = extractor.extractAttributes();
 		assertEquals("Expected number of data elements", 2, data.length);
 	}
+	
+	public void testBuildData_SpecifyAlternateDisplayName() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = 
+			builder.setCounters("nextValue(displayName=\"myValue\")")
+			.build();  
+		
+		DatumDefinition dataDefinition[] = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
+		assertEquals("expected dataDefinition length", 1, dataDefinition.length);
+		assertEquals("myValue", dataDefinition[0].getDisplayName());
+	}	
 
+	public void testBuildData_SpecifyAlternateDisplayNameCompositeData() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = 
+			builder.setCounters("compositeData.status(displayName=\"myStatus\")")
+			.build();  
+		
+		DatumDefinition dataDefinition[] = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
+		assertEquals("expected dataDefinition length", 1, dataDefinition.length);
+		assertEquals("myStatus", dataDefinition[0].getDisplayName());
+	}	
+	
 	private MBeanDatum<?> buildMBeanDatum(String attributeName, AttributeType attributeType, Object value) {
 		return new MBeanAttributeExtractor.MBeanDatumImpl<>(buildDatumDefinition(attributeName, attributeType), value);
 	}

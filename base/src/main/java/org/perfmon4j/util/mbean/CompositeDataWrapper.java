@@ -4,6 +4,7 @@ import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.OpenType;
 
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.mbean.GaugeCounterArgumentParser.AttributeSpec;
 import org.perfmon4j.util.mbean.MBeanAttributeExtractor.DatumDefinition;
 import org.perfmon4j.util.mbean.MBeanDatum.AttributeType;
 import org.perfmon4j.util.mbean.MBeanDatum.OutputType;
@@ -52,7 +53,7 @@ public class CompositeDataWrapper {
 	 *  be prefixed with the baseName  (i.e. Usage.used") regardless of if the
 	 *  base name was passed in or not.
 	 */
-	public DatumDefinition getDataDefinition(String attributeName, OutputType outputType) {
+	public DatumDefinition getDataDefinition(String attributeName, OutputType outputType, AttributeSpec spec) {
 		DatumDefinition result = null; 
 		attributeName = filterBaseNameFromAttributeName(attributeName);
 		AttributeType attributeType = AttributeType.STRING; //  
@@ -70,7 +71,7 @@ public class CompositeDataWrapper {
 					break;
 				}
 			}
-			result = new DatumDefinition(baseName + "." + attributeName, attributeType, outputType);
+			result = new DatumDefinition(baseName + "." + attributeName, attributeType, outputType, spec);
 		}
 		return result;
 	}

@@ -1115,7 +1115,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
             	"	</mBeanSnapshotMonitor>" +                		
                 "	<mBeanSnapshotMonitor name='OldGenMemoryPool'" + 
             	"		jmxName='java.lang:name=G1 Old Gen,type=MemoryPool'" + 
-            	"		counters='usage.committed,usage.max,usage.used'>" +
+            	"		counters='usage.committed(displayName=\"committed\"),usage.max(displayName=\"max\"),usage.used(displayName=\"used\")'>" +
                 "    	<appender name='5 minute'/>" +
             	"	</mBeanSnapshotMonitor>" +                		
                 "</Perfmon4JConfig>";        
@@ -1169,12 +1169,12 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
             "   <appender name='inMemory' className='" + SimpleListAppender.class.getName() + "' interval='500 millis'/>" +
             "	<mBeanSnapshotMonitor name='JVMRuntime'" + 
         	"		jmxName='java.lang:type=Runtime'" + 
-        	"		gauges='uptime'>" +
+        	"		gauges='uptime(displayName=\"My Custom Gauge\")'>" +
             "    	<appender name='inMemory'/>" +
         	"	</mBeanSnapshotMonitor>" +                		
             "	<mBeanSnapshotMonitor name='JVMThreading'" + 
         	"		jmxName='java.lang:type=Threading'" + 
-        	"		counters='TotalStartedThreadCount'" +
+        	"		counters=\"TotalStartedThreadCount(displayName='My Custom Counter')\"" +
         	"		gauges='ThreadCount,DaemonThreadCount'>" +
             "    	<appender name='inMemory'/>" +
         	"	</mBeanSnapshotMonitor>" +                		
@@ -1189,8 +1189,12 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         	Appender.flushAllAppenders();
         	
         	String output = SimpleListAppender.extractOutput();
+//System.out.println(output);        	
 			assertTrue("Expected output from MemoryPool monitor", output.contains("JVMRuntime"));
 			assertTrue("Expected output from JVMThreading monitor", output.contains("JVMThreading"));
+			assertTrue("Output should have contained my custom gauge name", output.contains("My Custom Gauge"));
+			assertTrue("Output should have contained my custom counter name", output.contains("My Custom Counter"));
+			
         } finally {
         	PerfMon.deInit();
         }

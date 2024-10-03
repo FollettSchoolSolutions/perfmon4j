@@ -22,6 +22,7 @@ import org.perfmon4j.instrument.snapshot.Delta;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.mbean.GaugeCounterArgumentParser.AttributeSpec;
 import org.perfmon4j.util.mbean.MBeanDatum.AttributeType;
 import org.perfmon4j.util.mbean.MBeanDatum.OutputType;
 
@@ -66,14 +67,16 @@ public class MBeanAttributeExtractor {
     }
     
 	static DatumDefinition[] buildDataDefinitionArray(MBeanServerFinder serverFinder, ObjectName objectName, MBeanQuery query) throws MBeanQueryException {
+		Map<String, MBeanAttributeInfo> attributes = new HashMap<String, MBeanAttributeInfo>();
+		
+		GaugeCounterArgumentParser parser = new GaugeCounterArgumentParser(query);
+		Set<AttributeSpec> counters = parser.getCounters();
+		Set<AttributeSpec> gauges = parser.getGauges();
+
 		CompositeDataManager dataManager = new CompositeDataManager(serverFinder, objectName);
 		
-		Map<String, MBeanAttributeInfo> attributes = new HashMap<String, MBeanAttributeInfo>();
-		Set<String> gaugeNames = new HashSet<String>(Arrays.asList(query.getGauges()));
-		Set<String> counterNames = new HashSet<String>(Arrays.asList(query.getCounters()));
-
 		// First get any DatumDefinitions associated with any Composite Data attributes (i.e. "Usage.used")
-		Set<DatumDefinition> result = dataManager.buildCompositeDatumDefinitionArray(query);
+		Set<DatumDefinition> result = dataManager.buildCompositeDatumDefinitionArray(parser);
 		
 		MBeanInfo mBeanInfo = serverFinder.getMBeanInfo(objectName);
 		
@@ -93,27 +96,27 @@ public class MBeanAttributeExtractor {
 			}
 			
 			// First get Counters
-			for (String counter : counterNames.toArray(new String[] {})) {
-				if (!CompositeDataManager.isCompositeAttributeName(counter)) {
-					MBeanAttributeInfo info = attributes.get(transform.apply(counter));
+			for (AttributeSpec counter : counters.toArray(new AttributeSpec[] {})) {
+				if (!counter.isCompositeName()) {
+					MBeanAttributeInfo info = attributes.get(transform.apply(counter.getName()));
 					if (info != null) {
 						OutputType outputType = AttributeType.getAttributeType(info).getValidOutputType(OutputType.COUNTER);
-						counterNames.remove(counter);
-						result.add(new DatumDefinition(info, outputType));
+						counters.remove(counter);
+						result.add(new DatumDefinition(info, outputType, counter));
 						attributes.remove(info.getName());
 					}
 				}	
 			}
 			
 			// Then try gauges
-			for (String gauge : gaugeNames.toArray(new String[] {})) {
-				if (!CompositeDataManager.isCompositeAttributeName(gauge)) {
-					MBeanAttributeInfo info = attributes.get(transform.apply(gauge));
+			for (AttributeSpec gauge : gauges.toArray(new AttributeSpec[] {})) {
+				if (!gauge.isCompositeName()) {
+					MBeanAttributeInfo info = attributes.get(transform.apply(gauge.getName()));
 					if (info != null) {
 						OutputType outputType = AttributeType.getAttributeType(info).getValidOutputType(OutputType.GAUGE);
-						gaugeNames.remove(gauge);
+						gauges.remove(gauge);
 						attributes.remove(info.getName());
-						result.add(new DatumDefinition(info, outputType));
+						result.add(new DatumDefinition(info, outputType, gauge));
 					}
 				}
 			}
@@ -124,12 +127,14 @@ public class MBeanAttributeExtractor {
 	
 	public static final class MBeanDatumImpl<T> implements MBeanDatum<T> {
 		private final String name;
+		private final String displayName;
 		private final OutputType type;
 		private final AttributeType attributeType;
 		private final T value;
 		
 		MBeanDatumImpl(DatumDefinition dd, T value) {
 			this.name = dd.getName();
+			this.displayName = dd.getDisplayName();
 			this.type = dd.getOutputType();
 			this.attributeType = dd.getAttributeType();
 			this.value = value;
@@ -145,6 +150,11 @@ public class MBeanAttributeExtractor {
 			return name;
 		}
 
+		@Override
+		public String getDisplayName() {
+			return displayName;
+		}
+		
 		@Override
 		public OutputType getOutputType() {
 			return type;
@@ -162,50 +172,50 @@ public class MBeanAttributeExtractor {
 			switch (getAttributeType()) {
 				case NATIVE_SHORT:
 				case SHORT:
-					result = PerfMonObservableDatum.newDatum(getName(), (Short)getValue());
+					result = PerfMonObservableDatum.newDatum(getDisplayName(), (Short)getValue());
 					break;
 				
 				case NATIVE_INTEGER:
 				case INTEGER:
-					result = PerfMonObservableDatum.newDatum(getName(), (Integer)getValue());
+					result = PerfMonObservableDatum.newDatum(getDisplayName(), (Integer)getValue());
 					break;
 					
 				case NATIVE_LONG:
 				case LONG:
-					result = PerfMonObservableDatum.newDatum(getName(), (Long)getValue());
+					result = PerfMonObservableDatum.newDatum(getDisplayName(), (Long)getValue());
 					break;
 	
 				case NATIVE_FLOAT:
 				case FLOAT:
-					result = PerfMonObservableDatum.newDatum(getName(), (Float)getValue());
+					result = PerfMonObservableDatum.newDatum(getDisplayName(), (Float)getValue());
 					break;
 	
 				case NATIVE_DOUBLE:
 				case DOUBLE:
-					result = PerfMonObservableDatum.newDatum(getName(), (Double)getValue());
+					result = PerfMonObservableDatum.newDatum(getDisplayName(), (Double)getValue());
 					break;
 	
 				case NATIVE_BOOLEAN:
 				case BOOLEAN:
-					result = PerfMonObservableDatum.newDatum(getName(), (Boolean)getValue());
+					result = PerfMonObservableDatum.newDatum(getDisplayName(), (Boolean)getValue());
 					break;
 	
 				case NATIVE_CHARACTER:
 				case CHARACTER:
-					result = PerfMonObservableDatum.newDatum(getName(), (Character)getValue());
+					result = PerfMonObservableDatum.newDatum(getDisplayName(), (Character)getValue());
 					break;
 					
 				case NATIVE_BYTE:
 				case BYTE:
-					result = PerfMonObservableDatum.newDatum(getName(), (Byte)getValue());
+					result = PerfMonObservableDatum.newDatum(getDisplayName(), (Byte)getValue());
 					break;
 					
 				case STRING:
 				default:
 					if (value == null || value instanceof String) {
-						result = PerfMonObservableDatum.newDatum(getName(), (String)getValue());
+						result = PerfMonObservableDatum.newDatum(getDisplayName(), (String)getValue());
 					} else {
-						result = PerfMonObservableDatum.newDatum(getName(), (String)getValue().toString());
+						result = PerfMonObservableDatum.newDatum(getDisplayName(), (String)getValue().toString());
 					}
 			}
 			return result;
@@ -224,25 +234,36 @@ public class MBeanAttributeExtractor {
 					deltaValue = new Delta(((Number)before).longValue(), ((Number)after).longValue(), durationMillis);
 				}
 			}
-			return PerfMonObservableDatum.newDatum(getName(), deltaValue);
+			return PerfMonObservableDatum.newDatum(getDisplayName(), deltaValue);
 		}
 	}
 	
 	public static final class DatumDefinition {
 		private final MBeanDatum.OutputType type;
 		private final MBeanDatum.AttributeType attributeType;
+		private final String displayName;
 		private final String name;
 		private final String parentName;
 		
 		public DatumDefinition(MBeanAttributeInfo attributeInfo, OutputType type) {
+			this(attributeInfo, type, null);
+		}
+		
+		public DatumDefinition(MBeanAttributeInfo attributeInfo, OutputType type, AttributeSpec spec) {
 			this.name = attributeInfo.getName();
+			this.displayName = spec != null ? spec.getPreferredDisplayName(name) : name;
 			this.type = type;
 			this.attributeType = MBeanDatum.AttributeType.getAttributeType(attributeInfo);
 			this.parentName = null;
 		}
-
+		
 		public DatumDefinition(String name, AttributeType attributeType, OutputType type) {
+			this(name, attributeType, type, null);
+		}
+
+		public DatumDefinition(String name, AttributeType attributeType, OutputType type, AttributeSpec spec) {
 			this.name = name;
+			this.displayName = spec != null ? spec.getPreferredDisplayName(name) : name;
 			this.type = type;
 			this.attributeType = attributeType;
 			
@@ -291,10 +312,14 @@ public class MBeanAttributeExtractor {
 			return Objects.equals(name, other.name) && type == other.type;
 		}
 
+		public String getDisplayName() {
+			return displayName;
+		}
+
 		@Override
 		public String toString() {
-			return "DatumDefinition [type=" + type + ", attributeType=" + attributeType + ", name=" + name
-					+ ", parentName=" + parentName + "]";
+			return "DatumDefinition [type=" + type + ", attributeType=" + attributeType + ", displayName=" + displayName
+					+ ", name=" + name + ", parentName=" + parentName + "]";
 		}
 	}
 	
@@ -364,6 +389,7 @@ public class MBeanAttributeExtractor {
 		}
 		return result.toArray(new MBeanDatum<?>[]{});
 	}
+
 	
 	DatumDefinition[] getDatumDefinition() {
 		return Arrays.copyOf(datumDefinition, datumDefinition.length);

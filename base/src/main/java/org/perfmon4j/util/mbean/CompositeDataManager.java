@@ -13,6 +13,7 @@ import javax.management.openmbean.CompositeData;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
+import org.perfmon4j.util.mbean.GaugeCounterArgumentParser.AttributeSpec;
 import org.perfmon4j.util.mbean.MBeanAttributeExtractor.DatumDefinition;
 import org.perfmon4j.util.mbean.MBeanDatum.OutputType;
 
@@ -26,40 +27,42 @@ public class CompositeDataManager {
 		this.objectName = objectName;
 	}
 	
-	Set<DatumDefinition> buildCompositeDatumDefinitionArray(MBeanQuery query) {
+	Set<DatumDefinition> buildCompositeDatumDefinitionArray(GaugeCounterArgumentParser parser) {
 		Map<String, CompositeDataWrapper> wrapperMap = new HashMap<String, CompositeDataWrapper>(); 
 		Set<DatumDefinition> result = new HashSet<MBeanAttributeExtractor.DatumDefinition>();
 		
-		for (String name : query.getCounters()) {
-			String compositeName[] = splitAtFirstPeriod(name);
-			if (compositeName.length > 1) {
-				try {
-					CompositeDataWrapper wrapper = getOrCreateCompositeWrapper(wrapperMap, compositeName[0]);
-					if (wrapper != null) {
-						DatumDefinition def = wrapper.getDataDefinition(compositeName[1], OutputType.COUNTER); 
-						if (def != null) {
-							result.add(def);
+		for (AttributeSpec counter : parser.getCounters()) {
+			if (counter.isCompositeName()) {
+				String compositeName[] = splitAtFirstPeriod(counter.getName());
+				if (compositeName.length > 1) {
+					try {
+						CompositeDataWrapper wrapper = getOrCreateCompositeWrapper(wrapperMap, compositeName[0]);
+						if (wrapper != null) {
+							DatumDefinition def = wrapper.getDataDefinition(compositeName[1], OutputType.COUNTER, counter); 
+							if (def != null) {
+								result.add(def);
+							}
 						}
+					} catch (MBeanQueryException e) {
+						logger.logWarn("Unable to retrieve attribute type for composite attribute: " + counter, e);
 					}
-				} catch (MBeanQueryException e) {
-					logger.logWarn("Unable to retrieve attribute type for composite attribute: " + name, e);
 				}
 			}
 		}
 		
-		for (String name : query.getGauges()) {
-			String compositeName[] = splitAtFirstPeriod(name);
-			if (compositeName.length > 1) {
+		for (AttributeSpec gauge : parser.getGauges()) {
+			if (gauge.isCompositeName()) {
+				String compositeName[] = splitAtFirstPeriod(gauge.getName());
 				try {
 					CompositeDataWrapper wrapper = getOrCreateCompositeWrapper(wrapperMap, compositeName[0]);
 					if (wrapper != null) {
-						DatumDefinition def = wrapper.getDataDefinition(compositeName[1], OutputType.GAUGE); 
+						DatumDefinition def = wrapper.getDataDefinition(compositeName[1], OutputType.GAUGE, gauge); 
 						if (def != null) {
 							result.add(def);
 						}
 					}
 				} catch (MBeanQueryException e) {
-					logger.logWarn("Unable to retrieve attribute type for composite attribute: " + name, e);
+					logger.logWarn("Unable to retrieve attribute type for composite attribute: " + gauge, e);
 				}
 			}
 		}
@@ -106,16 +109,6 @@ public class CompositeDataManager {
 		
 		return wrapper;
 	}
-	
-	
-	
-//	for (String gauge)
-	
-	
-	
-	
-	
-	
 	
 	static boolean isCompositeAttributeName(String attributeName) {
 		return splitAtFirstPeriod(attributeName).length > 1;

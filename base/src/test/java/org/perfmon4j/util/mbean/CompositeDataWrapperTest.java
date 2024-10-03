@@ -33,7 +33,7 @@ public class CompositeDataWrapperTest extends TestCase {
 	public void testGetDataDefinition_Long() throws Exception {
 		CompositeDataWrapper wrapper = new CompositeDataWrapper(compositeData, "CompositeData");
 		
-		DatumDefinition dd = wrapper.getDataDefinition("completed", OutputType.GAUGE);
+		DatumDefinition dd = wrapper.getDataDefinition("completed", OutputType.GAUGE, null);
 		assertEquals(AttributeType.LONG, dd.getAttributeType());
 		assertEquals("Expected to include prefix of the CompositeData object name", "CompositeData.completed", dd.getName()); 
 		assertEquals(OutputType.GAUGE, dd.getOutputType());
@@ -42,7 +42,7 @@ public class CompositeDataWrapperTest extends TestCase {
 	public void testForgiveFirstLetterCaseOfAttributeName() throws Exception {
 		CompositeDataWrapper wrapper = new CompositeDataWrapper(compositeData, "CompositeData");
 		
-		DatumDefinition dd = wrapper.getDataDefinition("Completed", OutputType.GAUGE);
+		DatumDefinition dd = wrapper.getDataDefinition("Completed", OutputType.GAUGE, null);
 		assertNotNull("Should have found completed field even with first letter capitalized", dd);
 		assertEquals("Should fully match case of attribute", "CompositeData.completed", dd.getName()); 
 	}	
@@ -50,7 +50,7 @@ public class CompositeDataWrapperTest extends TestCase {
 	public void testGetDataDefinition_Object() throws Exception {
 		CompositeDataWrapper wrapper = new CompositeDataWrapper(compositeData, "CompositeData");
 		
-		DatumDefinition dd = wrapper.getDataDefinition("bigDecimal", OutputType.GAUGE);
+		DatumDefinition dd = wrapper.getDataDefinition("bigDecimal", OutputType.GAUGE, null);
 		assertEquals("BigDecimal is an unsupported object type - will be returned as a String", 
 			AttributeType.STRING, dd.getAttributeType());
 		assertEquals("Expected to include prefix of the CompositeData object name", "CompositeData.bigDecimal", dd.getName()); 
@@ -59,18 +59,18 @@ public class CompositeDataWrapperTest extends TestCase {
 	
 	public void testFindWithFullyQualifiedAttributeName() throws Exception {
 		CompositeDataWrapper wrapper = new CompositeDataWrapper(compositeData, "CompositeData");
-		DatumDefinition dd = wrapper.getDataDefinition("CompositeData.completed", OutputType.GAUGE);
+		DatumDefinition dd = wrapper.getDataDefinition("CompositeData.completed", OutputType.GAUGE, null);
 		
 		assertNotNull("Should be able to prefix object with baseName", dd);
 		
 		// Should also be forgiving if the case of the first letter is incorrect.
-		dd = wrapper.getDataDefinition("compositeData.completed", OutputType.GAUGE);
+		dd = wrapper.getDataDefinition("compositeData.completed", OutputType.GAUGE, null);
 		assertNotNull("Should be able to prefix object with baseName", dd);
 	}
 	
 	public void testGetDatum() throws Exception {
 		CompositeDataWrapper wrapper = new CompositeDataWrapper(compositeData, "CompositeData");
-		DatumDefinition dd = wrapper.getDataDefinition("CompositeData.completed", OutputType.GAUGE);
+		DatumDefinition dd = wrapper.getDataDefinition("CompositeData.completed", OutputType.GAUGE, null);
 		
 		MBeanDatum<?> datum = wrapper.getMBeanDatum(dd);
 		assertEquals(Long.valueOf(5),datum.getValue());

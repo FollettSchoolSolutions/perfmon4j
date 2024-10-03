@@ -91,6 +91,7 @@ public interface MBeanDatum<T> {
 	};
 	
 	public String getName();
+	public String getDisplayName();
 	public OutputType getOutputType();
 	public AttributeType getAttributeType();
 	public T getValue();

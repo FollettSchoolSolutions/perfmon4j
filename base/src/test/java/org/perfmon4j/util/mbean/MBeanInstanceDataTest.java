@@ -105,7 +105,7 @@ public class MBeanInstanceDataTest extends TestCase {
 		data.takeSnapShot(mBeanInstance, now + TimeUnit.MINUTES.toMillis(1));
 
 		String appenderString =  data.toAppenderString();
-System.out.println(appenderString);
+//System.out.println(appenderString);
 		
 		// Check that we properly converted the non-numeric types.
 		assertTrue("should have nativeCharacter", appenderString.contains("NativeCharacter.......... a"));
