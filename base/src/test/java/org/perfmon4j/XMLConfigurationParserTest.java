@@ -22,12 +22,13 @@
 package org.perfmon4j;
 
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -1102,32 +1103,79 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals("expected number of appenders", 1, monitorConfig.getAppenders().length);
         assertEquals("expected appender", "org.SpecialAppender", monitorConfig.getAppenders()[0].getClassName());
     }
+
+    public void testParseMultipleMBeanSnapshots() throws Exception {
+        final String XML_DEFAULT =
+                "<Perfmon4JConfig enabled='true'>" +
+                "   <appender name='5 minute' className='org.SpecialAppender' interval='5 min'/>" +
+                "	<mBeanSnapshotMonitor name='OldGenGC'" + 
+            	"		jmxName='java.lang:name=G1 Old Generation,type=GarbageCollector'" + 
+            	"		counters='collectionTime,collectionCount'>" +
+                "    	<appender name='5 minute'/>" +
+            	"	</mBeanSnapshotMonitor>" +                		
+                "	<mBeanSnapshotMonitor name='OldGenMemoryPool'" + 
+            	"		jmxName='java.lang:name=G1 Old Gen,type=MemoryPool'" + 
+            	"		counters='usage.committed,usage.max,usage.used'>" +
+                "    	<appender name='5 minute'/>" +
+            	"	</mBeanSnapshotMonitor>" +                		
+                "</Perfmon4JConfig>";        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+        
+        /**
+         * First check that we created a the MBeanQuery.
+         */
+        MBeanQuery querys[] = config.getMBeanQueryArray().toArray(new MBeanQuery[] {}); 
+        assertEquals("Expected mBeanQuery count", 2, querys.length);
+        
+        /**
+         * Now check to make sure we created a SnapShot Monitor that will be 'attached'
+         * to the MBeanInstance created by the MBeanQuery
+         */
+        SnapShotMonitorConfig[] snapShotMonitors = config.getSnapShotMonitorArray();
+        assertEquals("Expected 'implicit' snapShotMonitor count", 2, snapShotMonitors.length);
+    }
     
 	
-	public static final class CaptureLastDataAppender extends Appender {
-		private static final AtomicReference<PerfMonData> lastData = new AtomicReference<PerfMonData>();
+	public static final class SimpleListAppender extends Appender {
+		private static final List<String> output = new ArrayList<String>();
 		
-		public CaptureLastDataAppender(AppenderID id) {
+		public SimpleListAppender(AppenderID id) {
 			super(id);
 		}
 		
 		@Override
 		public void outputData(PerfMonData data) {
-			lastData.set(data);
+			synchronized (output) {
+				output.add(data.toAppenderString());
+			}
 		}
 		
-		public static PerfMonData getLastData() {
-			return lastData.get();
+		public static String extractOutput() {
+			StringBuilder result = new StringBuilder();
+			
+			synchronized (output) {
+				for (String value : output) {
+					result.append(value)
+						.append(System.lineSeparator());
+				}
+				output.clear();
+			}
+			return result.toString();
 		}
 	}
 	
     final String XML_GC_MONITOR =
             "<Perfmon4JConfig enabled='true'>" +
-            "   <appender name='inMemory' className='" + CaptureLastDataAppender.class.getName() + "' interval='500 millis'/>" +
-            "	<mBeanSnapshotMonitor name='GarbageCollector'" + 
-        	"		jmxName='java.lang:type=GarbageCollector'" + 
-        	"		instanceKey='name'" +
-        	"		counters='collectionCount,collectionTime'>" +
+            "   <appender name='inMemory' className='" + SimpleListAppender.class.getName() + "' interval='500 millis'/>" +
+            "	<mBeanSnapshotMonitor name='JVMRuntime'" + 
+        	"		jmxName='java.lang:type=Runtime'" + 
+        	"		gauges='uptime'>" +
+            "    	<appender name='inMemory'/>" +
+        	"	</mBeanSnapshotMonitor>" +                		
+            "	<mBeanSnapshotMonitor name='JVMThreading'" + 
+        	"		jmxName='java.lang:type=Threading'" + 
+        	"		counters='TotalStartedThreadCount'" +
+        	"		gauges='ThreadCount,DaemonThreadCount'>" +
             "    	<appender name='inMemory'/>" +
         	"	</mBeanSnapshotMonitor>" +                		
             "</Perfmon4JConfig>";    
@@ -1140,7 +1188,9 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         	Thread.sleep(1000);
         	Appender.flushAllAppenders();
         	
-        	assertNotNull(CaptureLastDataAppender.getLastData());
+        	String output = SimpleListAppender.extractOutput();
+			assertTrue("Expected output from MemoryPool monitor", output.contains("JVMRuntime"));
+			assertTrue("Expected output from JVMThreading monitor", output.contains("JVMThreading"));
         } finally {
         	PerfMon.deInit();
         }
