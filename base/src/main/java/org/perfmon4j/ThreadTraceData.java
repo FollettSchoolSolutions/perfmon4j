@@ -96,7 +96,12 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
     public long getEndTime() {
         return endTime;
     }
-
+    
+    public long getDuration() {
+    	long duration = getEndTime() - getStartTime();
+    	return duration>=0 ? duration : 0;
+    }
+    
     void stop(long stopTime, long sqlStopTime) {
         endTime = stopTime;
         sqlEndTime = sqlStopTime;
@@ -117,7 +122,6 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
         return result;
     }
     
-    
     public String buildAppenderStringBody(String indent) {
         StringBuilder childAppenderString = new StringBuilder();
         ThreadTraceData children[] = getChildren();
@@ -135,7 +139,7 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
             "%s+-%s %s\r\n",
             indent,
             MiscHelper.formatTimeAsString(getStartTime()),
-            getEndTime() - getStartTime(),
+            getDuration(),
             sqlTime,
             name,
             childAppenderString.toString(),

@@ -21,6 +21,9 @@
 
 package org.perfmon4j;
 
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.log4j.BasicConfigurator;
@@ -958,7 +961,7 @@ System.out.println(appenderString);
     	
         ThreadTraceData trace = TestAppender.getLastResult();
         String appenderString = trace.toAppenderString();
-//System.out.println(appenderString);
+System.out.println(appenderString);
         
 		
 		appenderString = normalizeTraceOutput(appenderString);
@@ -986,6 +989,111 @@ System.out.println(appenderString);
 
 		return appenderString;
     }
+    
+    
+    public static class SimpleListAppender extends Appender {
+    	private static final List<String> output = new ArrayList<String>(); 
+	 
+		public SimpleListAppender(AppenderID id) { 
+			super(id); 
+		} 
+	 
+		@Override 
+		public void outputData(PerfMonData data) { 
+			synchronized (output) { 
+				output.add(data.toAppenderString()); 
+			} 
+		} 
+	 
+		public static String extractOutput() { 
+			StringBuilder result = new StringBuilder(); 
+			 
+			synchronized (output) { 
+				for (String value : output) { 
+					result.append(value) 
+						.append(System.lineSeparator()); 
+				} 
+				output.clear(); 
+			} 
+			return result.toString(); 
+		} 
+	} 
+
+    public static class NoOpAppender extends Appender {
+		public NoOpAppender(AppenderID id) { 
+			super(id); 
+		} 
+	 
+		@Override 
+		public void outputData(PerfMonData data) { 
+			// Do nothing.
+		} 
+	} 
+    
+    private void runThroughTimers(String category) {
+    	PerfMonTimer.stop(PerfMonTimer.start(category, true));
+    }
+ 
+	final private static String XML_ON_MyBase = 
+	        "<Perfmon4JConfig enabled='true'>" + 
+	        "   <appender name='noOp' className='" + NoOpAppender.class.getName() + "' interval='500 millis'/>" + 
+	        "   <appender name='inMemory' className='" + SimpleListAppender.class.getName() + "' interval='500 millis'/>" + 
+	        "	<monitor name='WebRequest'>" +  
+	        "    	<appender name='noOp' pattern='.'/>" + 
+	        "       <attribute name='activeThreadMonitor'>5 minutes, 30 minutes, 1 hour</attribute>" +
+	    	"	</monitor>" +                		 
+	        "	<monitor name='WebRequest.circulation'>" +  
+	        "    	<appender name='noOp' pattern='.'/>" + 
+	    	"	</monitor>" +                		 
+	        "</Perfmon4JConfig>";     
+	final private static String XML_ON_MyBase_WithThreadTrace = 
+	        "<Perfmon4JConfig enabled='true'>" + 
+	        "   <appender name='noOp' className='" + NoOpAppender.class.getName() + "' interval='500 millis'/>" + 
+	        "   <appender name='inMemory' className='" + SimpleListAppender.class.getName() + "' interval='500 millis'/>" + 
+	        "	<monitor name='WebRequest'>" +  
+	        "    	<appender name='noOp' pattern='.'/>" + 
+	        "       <attribute name='activeThreadMonitor'>5 minutes, 30 minutes, 1 hour</attribute>" +
+	    	"	</monitor>" +                		 
+	        "	<monitor name='WebRequest.circulation'>" +  
+	        "    	<appender name='noOp' pattern='.'/>" + 
+	    	"	</monitor>" +                		 
+	        "	<threadTrace monitorName='WebRequest.api.v1.rest.self'>" + 
+	        "    	<appender name='inMemory'/>" + 
+	    	"	</threadTrace>" +                		 
+	        "</Perfmon4JConfig>";     
+
+
+	public void testThreadTraceOnMyBase() throws Exception {
+		final String expectedThreadTraceOutput = "********************************************************************************"
+				+ "+-X:X:X:X (X) WebRequest.api.vX.rest.self"
+				+ "+-X:X:X:X WebRequest.api.vX.rest.self"
+				+ "********************************************************************************";
+		
+		PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_ON_MyBase));
+		PerfMon.configure(config);
+	    try { 
+	    	runThroughTimers("WebRequest.api.v1.rest.self");
+	    	Thread.sleep(50);
+	    	Appender.flushAllAppenders(); 
+	    	 
+	    	String output = SimpleListAppender.extractOutput(); 
+//System.out.println(output);	    	
+	    	assertFalse("Thread Trace was not enabled. Did not expect ouput", normalizeTraceOutput(output).contains(expectedThreadTraceOutput));
+	    	
+			config = XMLConfigurationParser.parseXML(new StringReader(XML_ON_MyBase_WithThreadTrace));
+			PerfMon.configure(config);
+
+	    	runThroughTimers("WebRequest.api.v1.rest.self");
+	    	Thread.sleep(50);
+	    	Appender.flushAllAppenders(); 
+	    	 
+	    	output = SimpleListAppender.extractOutput(); 
+//System.out.println(output);
+	    	assertTrue("We now should see the thread trace output", normalizeTraceOutput(output).contains(expectedThreadTraceOutput));
+    } finally { 
+	    	PerfMon.deInit(); 
+	    } 
+	} 
     
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
