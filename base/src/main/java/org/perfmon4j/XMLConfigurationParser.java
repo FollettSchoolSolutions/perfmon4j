@@ -47,7 +47,7 @@ import org.xml.sax.helpers.XMLReaderFactory;
 
 
 // Only package level
-class XMLConfigurationParser extends DefaultHandler {
+public class XMLConfigurationParser extends DefaultHandler {
     private static final Logger logger = LoggerFactory.initLogger(XMLConfigurationParser.class);
     
     private final XMLPerfMonConfiguration config;
