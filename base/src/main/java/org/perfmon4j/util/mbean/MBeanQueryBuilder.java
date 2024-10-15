@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.util.MiscHelper;
 
 public class MBeanQueryBuilder {
@@ -93,6 +94,7 @@ public class MBeanQueryBuilder {
 		private final String instanceKey;
 		private final String[] counters;
 		private final String[] gauges;
+		private final SnapShotRatio[] ratios;
 		private final String signature;
 		
 		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges) throws Exception {
@@ -102,6 +104,7 @@ public class MBeanQueryBuilder {
 			this.instanceKey = instanceKey;
 			this.counters = counters;
 			this.gauges = gauges;
+			this.ratios = new SnapShotRatio[] {};
 			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceKey, counters, gauges));
 		}
 		
@@ -180,6 +183,11 @@ public class MBeanQueryBuilder {
 		@Override
 		public String getDomain() {
 			return domain;
+		}
+
+		@Override
+		public SnapShotRatio[] getRatios() {
+			return ratios;
 		}
 	}
 }
