@@ -1,6 +1,5 @@
 package org.perfmon4j.util.mbean;
 
-import org.perfmon4j.instrument.SnapShotRatio;
 
 public interface MBeanQuery extends Comparable<MBeanQuery>{
 	public String getDomain();

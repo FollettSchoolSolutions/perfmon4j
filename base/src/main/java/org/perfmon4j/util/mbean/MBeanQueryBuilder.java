@@ -4,7 +4,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.perfmon4j.instrument.SnapShotRatio;
 import org.perfmon4j.util.MiscHelper;
 
 public class MBeanQueryBuilder {
@@ -14,6 +13,7 @@ public class MBeanQueryBuilder {
 	private String displayName = null;
 	private final Set<String> counters = new TreeSet<String>();
 	private final Set<String> gauges = new TreeSet<String>();
+	private final Set<SnapShotRatioImpl> ratios = new TreeSet<SnapShotRatioImpl>();
 	
 	public MBeanQueryBuilder(String baseJMXName) {
 		this.baseJMXName = baseJMXName;
@@ -87,6 +87,22 @@ public class MBeanQueryBuilder {
 		return this;
 	}
 
+	public SnapShotRatio[] getRatios() {
+		return ratios.toArray(new SnapShotRatio[] {});
+	}
+	
+	public MBeanQueryBuilder setRatios(String ratiosCSV) {
+		synchronized (ratios) {
+			ratios.clear();
+//			if (!MiscHelper.isBlankOrNull(gaugesCSV)) {
+//				for (String gauge : gaugesCSV.split(",")) {
+//					gauges.add(gauge.trim());
+//				}
+//			}
+		}		
+		return this;
+	}
+	
 	private static class MBeanQueryImpl implements MBeanQuery {
 		private final String domain;
 		private final String baseJMXName;
@@ -188,6 +204,87 @@ public class MBeanQueryBuilder {
 		@Override
 		public SnapShotRatio[] getRatios() {
 			return ratios;
+		}
+	}
+	
+	private static class SnapShotRatioImpl implements SnapShotRatio, Comparable<SnapShotRatioImpl> {
+		private final String name;
+		private final String numerator;
+		private final String denominator;
+		private final boolean displayAsPercentage;
+		private final boolean displayAsDuration;
+		private final String sortKey;
+	
+		SnapShotRatioImpl(String name, String numerator, String denominator, boolean displayAsPercentage,
+				boolean displayAsDuration) {
+			this.name = name;
+			this.numerator = numerator;
+			this.denominator = denominator;
+			this.displayAsPercentage = displayAsPercentage;
+			this.displayAsDuration = displayAsDuration;
+			this.sortKey = buildSortKey(name, numerator, denominator, displayAsPercentage, displayAsDuration);
+		}
+		
+		private static String buildSortKey(String name, String numerator, String denominator, boolean displayAsPercentage,
+			boolean displayAsDuration) {
+			return name + "|" + numerator + "|" + denominator + "|" + Boolean.toString(displayAsPercentage) +
+					"|" + Boolean.toString(displayAsDuration);
+		}
+		
+//		private static SnapShotRatio
+//		
+
+		@Override
+		public String getName() {
+			return name;
+		}
+
+		@Override
+		public String getDenominator() {
+			return denominator;
+		}
+
+		@Override
+		public String getNumerator() {
+			return numerator;
+		}
+
+		@Override
+		public boolean isDisplayAsPercentage() {
+			return displayAsPercentage;
+		}
+
+		@Override
+		public boolean isDisplayAsDuration() {
+			return displayAsDuration;
+		}
+
+		@Override
+		public int compareTo(SnapShotRatioImpl o) {
+			return sortKey.compareTo(o.sortKey);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(sortKey);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			SnapShotRatioImpl other = (SnapShotRatioImpl) obj;
+			return Objects.equals(sortKey, other.sortKey);
+		}
+
+		@Override
+		public String toString() {
+			return "SnapShotRatioImpl [name=" + name + ", numerator=" + numerator + ", denominator=" + denominator
+					+ ", displayAsPercentage=" + displayAsPercentage + ", displayAsDuration=" + displayAsDuration + "]";
 		}
 	}
 }

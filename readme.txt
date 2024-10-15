@@ -17,6 +17,9 @@ Follett Software
 McHenry, IL 60050
 
 ** 2.1.1 TBD
+- Fixed a cosmetic issue where a thread trace could display a negative duration
+due to clock slewing.  This was seen once in a test environment, though the 
+exact cause is uncertain.
 
 ** 2.1.0 - 8/20/24
 - Javaagent parameters can now be included in the bootConfiguration setting of

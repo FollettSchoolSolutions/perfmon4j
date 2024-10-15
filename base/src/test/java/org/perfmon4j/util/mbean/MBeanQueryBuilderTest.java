@@ -10,7 +10,9 @@ public class MBeanQueryBuilderTest extends TestCase {
 			jmxName="jboss:threads:type=thread-pool" 
 			instanceKey="name"  
 			gauges="poolSize,activeCount,largestPoolSize,queueSize,largestQueueSize" 
-			counters="completedTaskCount,rejectedTaskCount,submittedTaskCount,spinMissCount" >
+			counters="completedTaskCount,rejectedTaskCount,submittedTaskCount,spinMissCount" 
+			ratios="completedPercent=completedTaskCount/submittedTaskCount">
+			
 	</JMXSnapShot>
 	*/
 	
@@ -68,5 +70,23 @@ public class MBeanQueryBuilderTest extends TestCase {
 		assertEquals("signatures match", queryA.getSignature(), queryB.getSignature());
 		assertEquals("hashCode", queryA.hashCode(), queryB.hashCode());
 		assertEquals(queryA, queryB);
+	}
+	
+	public void XtestIncludeRatio() throws Exception {
+		MBeanQueryBuilder builder = new MBeanQueryBuilder("jboss:threads:type=thread-pool");
+		MBeanQuery query = builder.setCounters("rejectedTaskCount,submittedTaskCount,spinMissCount,completedTaskCount")
+		.setGauges("poolSize,activeCount,largestPoolSize,queueSize,largestQueueSize")
+		.setRatios("rejectedPercent=rejectedTaskCount/submittedTaskCount,inUsePercent=activeCount/queueSize")
+		.build();
+		
+		assertNotNull(query);
+		
+		SnapShotRatio ratios[] = query.getRatios();
+		assertNotNull("Should always return ratios", ratios);
+		assertEquals("ratios.length", 2, ratios.length);
+
+		// Ratios should return in Alpha order.
+		assertEquals("ratio.name", "inUsePercent", ratios[0].getName());
+		assertEquals("ratio.name", "rejectedPercent", ratios[1].getName());
 	}
 }
