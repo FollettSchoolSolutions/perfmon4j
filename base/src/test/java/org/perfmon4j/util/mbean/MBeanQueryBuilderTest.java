@@ -72,7 +72,7 @@ public class MBeanQueryBuilderTest extends TestCase {
 		assertEquals(queryA, queryB);
 	}
 	
-	public void XtestIncludeRatio() throws Exception {
+	public void testIncludeRatio() throws Exception {
 		MBeanQueryBuilder builder = new MBeanQueryBuilder("jboss:threads:type=thread-pool");
 		MBeanQuery query = builder.setCounters("rejectedTaskCount,submittedTaskCount,spinMissCount,completedTaskCount")
 		.setGauges("poolSize,activeCount,largestPoolSize,queueSize,largestQueueSize")
@@ -89,4 +89,15 @@ public class MBeanQueryBuilderTest extends TestCase {
 		assertEquals("ratio.name", "inUsePercent", ratios[0].getName());
 		assertEquals("ratio.name", "rejectedPercent", ratios[1].getName());
 	}
+
+	public void testRatioHasVaildName() throws Exception {
+		MBeanQueryBuilder builder = new MBeanQueryBuilder("jboss:threads:type=thread-pool");
+		MBeanQuery query = builder.setCounters("rejectedTaskCount,submittedTaskCount,spinMissCount,completedTaskCount")
+		.setRatios("  =rejectedTaskCount/submittedTaskCount") // missing name.
+		.build();
+		
+		assertEquals("Ratio name must be provided and must contain non white-space characters", 0, query.getRatios().length);
+	}
+
+
 }

@@ -3,10 +3,16 @@ package org.perfmon4j.util.mbean;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.perfmon4j.util.Logger;
+import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 
 public class MBeanQueryBuilder {
+	private static final Logger logger = LoggerFactory.initLogger(MBeanQueryImpl.class);
+	
 	private final String baseJMXName;
 	private String domain = null;
 	private String instanceKey = null;
@@ -21,7 +27,7 @@ public class MBeanQueryBuilder {
 	
 	public MBeanQuery build() throws Exception {
 		return new MBeanQueryImpl(domain, baseJMXName, displayName, instanceKey, counters.toArray(new String[] {}),
-			gauges.toArray(new String[] {}));
+			gauges.toArray(new String[] {}), ratios.toArray(new SnapShotRatio[] {}));
 	}
 
 	public String getDomain() {
@@ -94,11 +100,16 @@ public class MBeanQueryBuilder {
 	public MBeanQueryBuilder setRatios(String ratiosCSV) {
 		synchronized (ratios) {
 			ratios.clear();
-//			if (!MiscHelper.isBlankOrNull(gaugesCSV)) {
-//				for (String gauge : gaugesCSV.split(",")) {
-//					gauges.add(gauge.trim());
-//				}
-//			}
+			if (!MiscHelper.isBlankOrNull(ratiosCSV)) {
+				for (String ratioString : ratiosCSV.split(",")) {
+					SnapShotRatioImpl ratio = SnapShotRatioImpl.parse(ratioString);
+					if (ratio == null) {
+						logger.logWarn("Unable to build SnapShotRatio from: " + ratioString);
+					} else {
+						ratios.add(ratio);
+					}
+				}
+			}
 		}		
 		return this;
 	}
@@ -113,18 +124,19 @@ public class MBeanQueryBuilder {
 		private final SnapShotRatio[] ratios;
 		private final String signature;
 		
-		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges) throws Exception {
+		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges, SnapShotRatio[] ratios) throws Exception {
 			this.domain = domain;
 			this.baseJMXName = baseJMXName;
 			this.displayName = displayName == null || displayName.isBlank() ? baseJMXName : displayName;
 			this.instanceKey = instanceKey;
-			this.counters = counters;
-			this.gauges = gauges;
-			this.ratios = new SnapShotRatio[] {};
-			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceKey, counters, gauges));
+			this.counters = (counters != null) ? counters : new String[] {};
+			this.gauges = (gauges != null) ? gauges : new String[] {};
+			this.ratios = (ratios != null) ? ratios : new SnapShotRatio[] {};
+			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceKey, counters, gauges, ratios));
 		}
 		
-		private static String buildComparableKey(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges) {
+		private static String buildComparableKey(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges,
+			SnapShotRatio[] ratios) {
 			String result = MBeanQuery.class.getName() + "|" + baseJMXName + "|" + displayName;
 			
 			if (domain != null) {
@@ -137,9 +149,19 @@ public class MBeanQueryBuilder {
 			
 			result += "|counters=" + MiscHelper.toString(counters);
 			result += "|gauges=" + MiscHelper.toString(gauges);
+			result += "|ratios=" + ratiosToString(ratios);
 			
 			return result;
 		}
+		
+		private static String ratiosToString(SnapShotRatio[] ratios) {
+			String[] result = new String[ratios.length];
+			for (int i = 0; i < ratios.length; i++) {
+				result[i] = ratios[i].getName();
+			}
+			return MiscHelper.toString(result);
+		}
+		
 		
 		@Override
 		public String getBaseJMXName() {
@@ -205,6 +227,13 @@ public class MBeanQueryBuilder {
 		public SnapShotRatio[] getRatios() {
 			return ratios;
 		}
+		
+		@Override
+		public String toString() {
+			return "MBeanQueryImpl [domain=" + domain + ", baseJMXName=" + baseJMXName + ", displayName=" + displayName
+					+ ", instanceKey=" + instanceKey + ", counters=" + MiscHelper.toString(counters) + ", gauges="
+					+ MiscHelper.toString(gauges) + ", ratios=" + ratiosToString(ratios) + "]";
+		}
 	}
 	
 	private static class SnapShotRatioImpl implements SnapShotRatio, Comparable<SnapShotRatioImpl> {
@@ -231,8 +260,24 @@ public class MBeanQueryBuilder {
 					"|" + Boolean.toString(displayAsDuration);
 		}
 		
-//		private static SnapShotRatio
-//		
+		private static final Pattern RATIO_PATTERN = Pattern.compile("([^\\=]+)\\=([^\\/]+)\\/(.+)");
+		
+		private static SnapShotRatioImpl parse(String value) {
+			SnapShotRatioImpl result = null;
+			
+			Matcher m = RATIO_PATTERN.matcher(value);
+			if (m.matches()) {
+				String name = m.group(1).trim();
+				String numerator = m.group(2).trim();
+				String denominator = m.group(3).trim();
+				
+				if (!name.isEmpty() && !numerator.isEmpty() && !denominator.isEmpty()) {
+					result = new SnapShotRatioImpl(name, numerator, denominator, false, false);
+				}
+			}
+			
+			return result;
+		}
 
 		@Override
 		public String getName() {

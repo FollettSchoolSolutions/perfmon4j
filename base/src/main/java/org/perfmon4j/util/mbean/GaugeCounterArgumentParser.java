@@ -18,7 +18,8 @@ import java.util.regex.Pattern;
  *    <mBeanSnapshotMonitor name='JVMThreading' 
  * 		jmxName='java.lang:type=Threading'
  *       counters='TotalStartedThreadCount(displayName="threadsStarted")'
- *       gauges='ThreadCount(displayName="currentThreadCount"),DaemonThreadCount(displayName="currentDaemonCount")'>
+ *       gauges='ThreadCount(displayName="currentThreadCount"),DaemonThreadCount(displayName="currentDaemonCount")'
+ *       ratios='memInUsePercent=bytesUsed/bytesAvailable'>
  *       <appender name='inMemory'/>
  *     </mBeanSnapShotMonitor>
  */
@@ -28,12 +29,21 @@ class GaugeCounterArgumentParser {
 	private final Set<AttributeSpec> counters = new HashSet<GaugeCounterArgumentParser.AttributeSpec>();	
 	private final Set<AttributeSpec> gauges = new HashSet<GaugeCounterArgumentParser.AttributeSpec>();
 	
+	// The ratioComponents are the numerator and denominator fields included in ratio definition(s)
+	//  For example if a query had the following ratio defined "memInUsePercent=bytesUsed/bytesAvailable"
+	// bytesUsed and bytesAvailable would be the components.
+	private final Set<AttributeSpec> ratioComponents = new HashSet<AttributeSpec>();
+	
 	GaugeCounterArgumentParser(MBeanQuery query) {
 		for (String counter : query.getCounters()) {
 			counters.add(new AttributeSpec(counter));
 		}
 		for (String gauge : query.getGauges()) {
 			gauges.add(new AttributeSpec(gauge));
+		}
+		for (SnapShotRatio ratio : query.getRatios()) {
+			ratioComponents.add(new AttributeSpec(ratio.getNumerator()));
+			ratioComponents.add(new AttributeSpec(ratio.getDenominator()));
 		}
 	}
 	
@@ -45,6 +55,10 @@ class GaugeCounterArgumentParser {
 		return gauges;
 	}
 	
+	Set<AttributeSpec> getRatioComponents() {
+		return ratioComponents;
+	}
+
 	static class AttributeSpec {
 		private final String name;
 		private final String displayName;

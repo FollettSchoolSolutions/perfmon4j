@@ -27,9 +27,29 @@ public class CompositeDataManager {
 		this.objectName = objectName;
 	}
 	
-	Set<DatumDefinition> buildCompositeDatumDefinitionArray(GaugeCounterArgumentParser parser) {
+	Set<DatumDefinition> buildCompositeDatumDefinitionArray(GaugeCounterArgumentParser parser, Set<String> foundRatioComponents) {
 		Map<String, CompositeDataWrapper> wrapperMap = new HashMap<String, CompositeDataWrapper>(); 
 		Set<DatumDefinition> result = new HashSet<MBeanAttributeExtractor.DatumDefinition>();
+
+		for (AttributeSpec ratioComponent : parser.getRatioComponents()) {
+			if (ratioComponent.isCompositeName()) {
+				String compositeName[] = splitAtFirstPeriod(ratioComponent.getName());
+				if (compositeName.length > 1) {
+					try {
+						CompositeDataWrapper wrapper = getOrCreateCompositeWrapper(wrapperMap, compositeName[0]);
+						if (wrapper != null) {
+							DatumDefinition def = wrapper.getDataDefinition(compositeName[1], OutputType.VOID, ratioComponent); 
+							if (def != null && def.getAttributeType().isSupportsRatioComponent()) {
+								foundRatioComponents.add(def.getName());
+								result.add(def);
+							}
+						}
+					} catch (MBeanQueryException e) {
+						logger.logWarn("Unable to retrieve attribute type for composite attribute for ratio component: " + ratioComponent, e);
+					}
+				}
+			}
+		}
 		
 		for (AttributeSpec counter : parser.getCounters()) {
 			if (counter.isCompositeName()) {

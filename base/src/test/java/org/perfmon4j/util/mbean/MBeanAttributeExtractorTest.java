@@ -353,7 +353,82 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		DatumDefinition dataDefinition[] = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
 		assertEquals("expected dataDefinition length", 1, dataDefinition.length);
 		assertEquals("myStatus", dataDefinition[0].getDisplayName());
-	}	
+	}
+	
+	
+	
+	
+	public void testBuildDataWithRatio() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setRatios("longRatio=nativeLong/long").build();
+		
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
+		assertNotNull("should never return null", dataDefinition);
+		
+		// Should have 3 data definitions - one for the Ratio, one for the numerator, and one for the denominator.
+		assertEquals("Expected data definition length", 3, dataDefinition.length);
+
+		DatumDefinition longRatio = findDefinition(dataDefinition, "longRatio");
+		assertNotNull(longRatio);
+		assertEquals("Ratio output type is always a Ratio", OutputType.RATIO, longRatio.getOutputType());
+		assertEquals("Ratio attribute type is always a java.lang.Double", AttributeType.DOUBLE, longRatio.getAttributeType());
+		
+		DatumDefinition nativeLongForNominator = findDefinition(dataDefinition, "nativeLong", OutputType.VOID);
+		DatumDefinition longForDenominator = findDefinition(dataDefinition, "long", OutputType.VOID);
+		
+		assertNotNull("nativeLongForNominator", nativeLongForNominator);
+		assertNotNull("longForDenominator", longForDenominator);
+	}
+
+	public void testBuildDataWithRatioFromCompositeObject() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setRatios("failedRatio=compositeData.failed/compositeData.completed").build();
+		
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
+		assertNotNull("should never return null", dataDefinition);
+		
+		// Should have 3 data definitions - one for the Ratio, one for the numerator, and one for the denominator.
+		assertEquals("Expected data definition length", 3, dataDefinition.length);
+
+		DatumDefinition failedRatio = findDefinition(dataDefinition, "failedRatio");
+		assertNotNull(failedRatio);
+		assertEquals("Ratio output type is always a Ratio", OutputType.RATIO, failedRatio.getOutputType());
+		assertEquals("Ratio attribute type is always a java.lang.Double", AttributeType.DOUBLE, failedRatio.getAttributeType());
+		
+		DatumDefinition longForNominator = findDefinition(dataDefinition, "compositeData.failed", OutputType.VOID);
+		DatumDefinition longForDenominator = findDefinition(dataDefinition, "compositeData.completed", OutputType.VOID);
+		
+		assertNotNull("nativeLongForNominator", longForNominator);
+		assertNotNull("longForDenominator", longForDenominator);
+	}
+	
+	public void testRatioWillNotLoadWithMissingNumerator() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setRatios("longRatio=wontBefound/long").build();
+		
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
+		assertNotNull("should never return null", dataDefinition);
+		
+		// Should have only found the denominator and should not have loaded the ratio.
+		assertEquals("Expected data definition length", 1, dataDefinition.length);
+
+		DatumDefinition longForDenominator = findDefinition(dataDefinition, "long", OutputType.VOID);
+		assertNotNull("longForDenominator", longForDenominator);
+	}
+
+	public void testRatioWillNotLoadWithMissingDenomenator() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setRatios("longRatio=long/wontBefound").build();
+	
+		DatumDefinition[] dataDefinition = MBeanAttributeExtractor.buildDataDefinitionArray(mBeanServerFinder, objectName, query);
+		assertNotNull("should never return null", dataDefinition);
+		
+		// Should have only found the numerator and should not have loaded the ratio.
+		assertEquals("Expected data definition length", 1, dataDefinition.length);
+
+		DatumDefinition longForNumerator = findDefinition(dataDefinition, "long", OutputType.VOID);
+		assertNotNull("longForNumerator", longForNumerator);
+	}
 	
 	private MBeanDatum<?> buildMBeanDatum(String attributeName, AttributeType attributeType, Object value) {
 		return new MBeanAttributeExtractor.MBeanDatumImpl<>(buildDatumDefinition(attributeName, attributeType), value);
@@ -367,10 +442,14 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		return new DatumDefinition(info, OutputType.GAUGE);
 	}
 	
-	
 	private DatumDefinition findDefinition(DatumDefinition[] def, String name) {
+		return findDefinition(def, name, null);
+	}
+	
+	private DatumDefinition findDefinition(DatumDefinition[] def, String name, OutputType outputType) {
 		for (DatumDefinition d : def) {
-			if (name.equalsIgnoreCase(d.getName())) {
+			if (name.equalsIgnoreCase(d.getName()) 
+				&& (outputType == null || d.getOutputType().equals(outputType))) {
 				return d;
 			}
 		}

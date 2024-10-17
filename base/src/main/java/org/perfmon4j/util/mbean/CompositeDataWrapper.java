@@ -71,7 +71,17 @@ public class CompositeDataWrapper {
 					break;
 				}
 			}
-			result = new DatumDefinition(baseName + "." + attributeName, attributeType, outputType, spec);
+			if (OutputType.VOID.equals(outputType)) {
+				// VOID types are not written to an appender. They are only used
+				// as numerators or denominators to calculate ratios. For these elements
+				// the Datum name must fully match (including case) the value configured
+				// in the SnapShotRatio.
+				// Based on this we build the data using an exact match to what was defined
+				// by the ratio
+				result = new DatumDefinition(spec.getName(), attributeType, outputType, spec);
+			} else {
+				result = new DatumDefinition(baseName + "." + attributeName, attributeType, outputType, spec);
+			}
 		}
 		return result;
 	}

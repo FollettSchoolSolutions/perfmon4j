@@ -3,55 +3,50 @@ package org.perfmon4j.util.mbean;
 import javax.management.MBeanAttributeInfo;
 
 import org.perfmon4j.PerfMonObservableDatum;
-import org.perfmon4j.instrument.SnapShotCounter;
-import org.perfmon4j.instrument.SnapShotGauge;
-import org.perfmon4j.instrument.SnapShotString;
 import org.perfmon4j.instrument.snapshot.Delta;
 
 public interface MBeanDatum<T> {
 	public enum OutputType {
-		GAUGE(SnapShotGauge.class),
-		COUNTER(SnapShotCounter.class),
-		STRING(SnapShotString.class);
+		GAUGE,
+		COUNTER,
+		STRING,
+		RATIO,
+		VOID; // Used to retrieve numerator and denominator for a Ratio - Should not be directly written to an appender.
 		
-		final String annotationClassName;
-
-		private OutputType(Class<?> annotationClass) {
-			this.annotationClassName = annotationClass.getName(); 
-		}
-		
-		public String getAnnotationClassName() {
-			return annotationClassName;
+		public boolean isOutputToAppender() {
+			return !this.equals(VOID);
 		}
 	};
 	
 	public enum AttributeType {
-		NATIVE_SHORT("short", true, false),
-		NATIVE_INTEGER("int", true, true),
-		NATIVE_LONG("long", true, true),
-		NATIVE_FLOAT("float", true, false),
-		NATIVE_DOUBLE("double", true, false),
-		NATIVE_BOOLEAN("boolean", true, false),
-		NATIVE_CHARACTER("char", true, false),
-		NATIVE_BYTE("byte", true, false),
-		SHORT("java.lang.Short", true, false),
-		INTEGER("java.lang.Integer", true, true),
-		LONG("java.lang.Long", true, true),
-		FLOAT("java.lang.Float", true, false),
-		DOUBLE("java.lang.Double", true, false),
-		BOOLEAN("java.lang.Boolean", true, false),
-		CHARACTER("java.lang.Character", true, false),
-		BYTE("java.lang.Byte", true, false),
-		STRING("java.lang.String", false, false);
+		NATIVE_SHORT("short", true, false, true),
+		NATIVE_INTEGER("int", true, true, true),
+		NATIVE_LONG("long", true, true, true),
+		NATIVE_FLOAT("float", true, false, true),
+		NATIVE_DOUBLE("double", true, false, true),
+		NATIVE_BOOLEAN("boolean", true, false, false),
+		NATIVE_CHARACTER("char", true, false, false),
+		NATIVE_BYTE("byte", true, false, false),
+		SHORT("java.lang.Short", true, false, true),
+		INTEGER("java.lang.Integer", true, true, true),
+		LONG("java.lang.Long", true, true, true),
+		FLOAT("java.lang.Float", true, false, true),
+		DOUBLE("java.lang.Double", true, false, true),
+		BOOLEAN("java.lang.Boolean", true, false, false),
+		CHARACTER("java.lang.Character", true, false, false),
+		BYTE("java.lang.Byte", true, false, false),
+		STRING("java.lang.String", false, false, false);
 		
 		private final String jmxType;
 		private final boolean supportsGauge;
 		private final boolean supportsCounter;
+		private final boolean supportsRatioComponent; // Can be used as a numerator/denominator in a ratio,
 		
-		private AttributeType(String jmxType, boolean supportsGauge, boolean supportsCounter) {
+		private AttributeType(String jmxType, boolean supportsGauge, boolean supportsCounter, boolean supportsRatioComponent) {
 			this.jmxType = jmxType;
 			this.supportsGauge = supportsGauge;
 			this.supportsCounter = supportsCounter;
+			this.supportsRatioComponent = supportsRatioComponent;
 		}
 		
 		public String getJmxType() {
@@ -66,6 +61,10 @@ public interface MBeanDatum<T> {
 			return supportsCounter;
 		}
 		
+		public boolean isSupportsRatioComponent() {
+			return supportsRatioComponent;
+		}
+
 		public OutputType getValidOutputType(OutputType desiredOutputType) {
 			OutputType result = desiredOutputType;
 			

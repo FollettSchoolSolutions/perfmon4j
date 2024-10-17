@@ -26,7 +26,7 @@ import org.perfmon4j.util.mbean.GaugeCounterArgumentParser.AttributeSpec;
 import org.perfmon4j.util.mbean.MBeanDatum.AttributeType;
 import org.perfmon4j.util.mbean.MBeanDatum.OutputType;
 
-public class MBeanAttributeExtractor {
+class MBeanAttributeExtractor {
 	private final MBeanServerFinder mBeanServerFinder;
 	private final ObjectName objectName;
 	private final MBeanQuery query;
@@ -47,41 +47,43 @@ public class MBeanAttributeExtractor {
     	return MiscHelper.toggleCaseOfFirstLetter(s);
     };
 	
-    
-    /**
-     * Removes attributes Strings that match the "complex object" pattern (i.e. "Usage.initial")
-     * from the passed in set.  These attributes are returned in a new set.
-     * @param set
-     * @return
-     */
-    private static Set<String> extractComplexObjectAttributes(Set<String> set) {
-    	Set<String> result = new HashSet<String>();
-    	
-    	for (String attribute : set.toArray(new String[] {})) {
-    		if (CompositeDataManager.isCompositeAttributeName(attribute)) {
-    			set.remove(attribute);
-    			result.add(attribute);
-    		}
-    	}
-    	return result;
-    }
-    
 	static DatumDefinition[] buildDataDefinitionArray(MBeanServerFinder serverFinder, ObjectName objectName, MBeanQuery query) throws MBeanQueryException {
 		Map<String, MBeanAttributeInfo> attributes = new HashMap<String, MBeanAttributeInfo>();
 		
 		GaugeCounterArgumentParser parser = new GaugeCounterArgumentParser(query);
 		Set<AttributeSpec> counters = parser.getCounters();
 		Set<AttributeSpec> gauges = parser.getGauges();
+		Set<AttributeSpec> ratioComponents = parser.getRatioComponents();
+		Set<String> foundRatioComponents = new HashSet<String>();
 
 		CompositeDataManager dataManager = new CompositeDataManager(serverFinder, objectName);
 		
 		// First get any DatumDefinitions associated with any Composite Data attributes (i.e. "Usage.used")
-		Set<DatumDefinition> result = dataManager.buildCompositeDatumDefinitionArray(parser);
+		Set<DatumDefinition> result = dataManager.buildCompositeDatumDefinitionArray(parser, foundRatioComponents);
 		
 		MBeanInfo mBeanInfo = serverFinder.getMBeanInfo(objectName);
 		
 		for (MBeanAttributeInfo aInfo : mBeanInfo.getAttributes()) {
 			attributes.put(aInfo.getName(), aInfo);
+		}
+		
+		// First walk through and get all the ratio components.
+		// Ratio components can duplicate defined counters/gauges.
+		for (AttributeSpec ratioComponent : ratioComponents) {
+			if (!ratioComponent.isCompositeName()) {
+				MBeanAttributeInfo info = attributes.get(ratioComponent.getName());
+				if (info == null) {
+					// Try again after toggling case of first letter.
+					info = attributes.get(MiscHelper.toggleCaseOfFirstLetter(ratioComponent.getName()));
+				}
+				
+				if (info != null) {
+					if (AttributeType.getAttributeType(info).isSupportsRatioComponent()) {
+						result.add(new DatumDefinition(info, OutputType.VOID, ratioComponent));
+						foundRatioComponents.add(ratioComponent.getName());
+					}
+				}
+			}	
 		}
 		
 		for (int i = 0; i < 2; i++) {
@@ -121,9 +123,24 @@ public class MBeanAttributeExtractor {
 				}
 			}
 		}
+		
+		// Finally add the ratios.  Only add ratios where a data mapping is found for both
+		// the numerator and denominator.
+		for (SnapShotRatio ratio : query.getRatios()) {
+			if (validateRatioComponents(ratio, foundRatioComponents)) {
+				result.add(new DatumDefinition(ratio.getName(), AttributeType.DOUBLE, OutputType.RATIO));
+			} else {
+				logger.logWarn("Skipping ratio: " + ratio.getName()  + ". Numerator or denominator not found.");
+			}
+		}
+		
 		return result.toArray(new DatumDefinition[] {});
 	}
 	
+	private static boolean validateRatioComponents(SnapShotRatio snapShotRatio, Set<String> ratioComponents) {
+		return ratioComponents.contains(snapShotRatio.getNumerator()) 
+			&& ratioComponents.contains(snapShotRatio.getDenominator());
+	}
 	
 	public static final class MBeanDatumImpl<T> implements MBeanDatum<T> {
 		private final String name;
@@ -238,18 +255,18 @@ public class MBeanAttributeExtractor {
 		}
 	}
 	
-	public static final class DatumDefinition {
+	static final class DatumDefinition {
 		private final MBeanDatum.OutputType type;
 		private final MBeanDatum.AttributeType attributeType;
 		private final String displayName;
 		private final String name;
 		private final String parentName;
 		
-		public DatumDefinition(MBeanAttributeInfo attributeInfo, OutputType type) {
+		DatumDefinition(MBeanAttributeInfo attributeInfo, OutputType type) {
 			this(attributeInfo, type, null);
 		}
 		
-		public DatumDefinition(MBeanAttributeInfo attributeInfo, OutputType type, AttributeSpec spec) {
+		DatumDefinition(MBeanAttributeInfo attributeInfo, OutputType type, AttributeSpec spec) {
 			this.name = attributeInfo.getName();
 			this.displayName = spec != null ? spec.getPreferredDisplayName(name) : name;
 			this.type = type;
@@ -257,11 +274,11 @@ public class MBeanAttributeExtractor {
 			this.parentName = null;
 		}
 		
-		public DatumDefinition(String name, AttributeType attributeType, OutputType type) {
+		DatumDefinition(String name, AttributeType attributeType, OutputType type) {
 			this(name, attributeType, type, null);
 		}
 
-		public DatumDefinition(String name, AttributeType attributeType, OutputType type, AttributeSpec spec) {
+		DatumDefinition(String name, AttributeType attributeType, OutputType type, AttributeSpec spec) {
 			this.name = name;
 			this.displayName = spec != null ? spec.getPreferredDisplayName(name) : name;
 			this.type = type;
@@ -275,23 +292,23 @@ public class MBeanAttributeExtractor {
 			}
 		}
 		
-		public MBeanDatum.OutputType getOutputType() {
+		MBeanDatum.OutputType getOutputType() {
 			return type;
 		}
 		
-		public MBeanDatum.AttributeType getAttributeType() {
+		MBeanDatum.AttributeType getAttributeType() {
 			return attributeType;
 		}
 
-		public String getName() {
+		String getName() {
 			return name;
 		}
 		
-		public boolean isCompositeAttribute() {
+		boolean isCompositeAttribute() {
 			return parentName != null;
 		}
 		
-		public String getParentName() {
+		String getParentName() {
 			return parentName;
 		}
 

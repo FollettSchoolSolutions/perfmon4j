@@ -12,7 +12,7 @@ public class GaugeCounterArgumentParserTest extends TestCase {
 		MBeanQuery query = Mockito.mock(MBeanQuery.class);
 		Mockito.when(query.getCounters()).thenReturn(new String[] {"threadCount(displayName='threadsStarted')"});
 		Mockito.when(query.getGauges()).thenReturn(new String[] {"activeThreads(displayName=\"currentActiveThreads\")"});
-
+		Mockito.when(query.getRatios()).thenReturn(new SnapShotRatio[] {});
 		
 		GaugeCounterArgumentParser parser = new GaugeCounterArgumentParser(query);
 		Set<AttributeSpec> counters = parser.getCounters();
@@ -32,6 +32,7 @@ public class GaugeCounterArgumentParserTest extends TestCase {
 		MBeanQuery query = Mockito.mock(MBeanQuery.class);
 		Mockito.when(query.getCounters()).thenReturn(new String[] {"threadCount(displayName='#threads@Started(this is a test!)')"});
 		Mockito.when(query.getGauges()).thenReturn(new String[] {});
+		Mockito.when(query.getRatios()).thenReturn(new SnapShotRatio[] {});
 		
 		GaugeCounterArgumentParser parser = new GaugeCounterArgumentParser(query);
 		Set<AttributeSpec> counters = parser.getCounters();
