@@ -236,6 +236,11 @@ public class MBeanQueryBuilder {
 		}
 	}
 	
+	static SnapShotRatio normalize(SnapShotRatio ratio, String newNumerator, String newDenominator) {
+		return new SnapShotRatioImpl(ratio.getName(),  newNumerator, newDenominator, ratio.isDisplayAsPercentage(), ratio.isDisplayAsDuration());
+	}
+	
+	
 	private static class SnapShotRatioImpl implements SnapShotRatio, Comparable<SnapShotRatioImpl> {
 		private final String name;
 		private final String numerator;

@@ -1,8 +1,8 @@
 package org.perfmon4j.util.mbean;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,7 +54,9 @@ class MBeanAttributeExtractor {
 		Set<AttributeSpec> counters = parser.getCounters();
 		Set<AttributeSpec> gauges = parser.getGauges();
 		Set<AttributeSpec> ratioComponents = parser.getRatioComponents();
-		Set<String> foundRatioComponents = new HashSet<String>();
+		
+		// key=<attribute name from SnapShotDefinition>, value=<attributeName from JMXObject> - there many minor differences in case. 
+		Map<String, String> foundRatioComponents = new HashMap<String, String>();
 
 		CompositeDataManager dataManager = new CompositeDataManager(serverFinder, objectName);
 		
@@ -78,9 +80,10 @@ class MBeanAttributeExtractor {
 				}
 				
 				if (info != null) {
-					if (AttributeType.getAttributeType(info).isSupportsRatioComponent()) {
-						result.add(new DatumDefinition(info, OutputType.VOID, ratioComponent));
-						foundRatioComponents.add(ratioComponent.getName());
+					AttributeType attributeType = AttributeType.getAttributeType(info);
+					if (attributeType.isSupportsRatioComponent()) {
+						result.add(new DatumDefinition(info.getName(), attributeType, OutputType.VOID));
+						foundRatioComponents.put(ratioComponent.getName(), info.getName());
 					}
 				}
 			}	
@@ -127,19 +130,36 @@ class MBeanAttributeExtractor {
 		// Finally add the ratios.  Only add ratios where a data mapping is found for both
 		// the numerator and denominator.
 		for (SnapShotRatio ratio : query.getRatios()) {
-			if (validateRatioComponents(ratio, foundRatioComponents)) {
-				result.add(new DatumDefinition(ratio.getName(), AttributeType.DOUBLE, OutputType.RATIO));
+			SnapShotRatio normalizedRatio = normalizeRatio(ratio, foundRatioComponents);
+			if (normalizedRatio != null) {
+				result.add(new RatioDatumDefinition(normalizedRatio));
 			} else {
-				logger.logWarn("Skipping ratio: " + ratio.getName()  + ". Numerator or denominator not found.");
+				logger.logWarn("Skipping ratio: " + ratio.getName()  + ". Numerator and/or denominator not found.");
 			}
 		}
-		
 		return result.toArray(new DatumDefinition[] {});
 	}
 	
-	private static boolean validateRatioComponents(SnapShotRatio snapShotRatio, Set<String> ratioComponents) {
-		return ratioComponents.contains(snapShotRatio.getNumerator()) 
-			&& ratioComponents.contains(snapShotRatio.getDenominator());
+	
+	/** This method will make a copy of the SnapShotRatio that ensures the numerator and
+	 * denominator matches the JMXAttribute name's case.
+	 * 
+	 * Will return null if the required numerator and denominator are not found
+	 * @param snapShotRatio
+	 * @param ratioComponents
+	 * @return
+	 */
+	private static SnapShotRatio normalizeRatio(SnapShotRatio snapShotRatio, Map<String,String> ratioComponents) {
+		SnapShotRatio result = null;
+		
+		String numerator = ratioComponents.get(snapShotRatio.getNumerator());
+		String denominator = ratioComponents.get(snapShotRatio.getDenominator());
+
+		if (numerator != null && denominator != null) {
+			result = MBeanQueryBuilder.normalize(snapShotRatio, numerator, denominator);
+		}
+	
+		return result;
 	}
 	
 	public static final class MBeanDatumImpl<T> implements MBeanDatum<T> {
@@ -255,7 +275,7 @@ class MBeanAttributeExtractor {
 		}
 	}
 	
-	static final class DatumDefinition {
+	static class DatumDefinition {
 		private final MBeanDatum.OutputType type;
 		private final MBeanDatum.AttributeType attributeType;
 		private final String displayName;
@@ -340,62 +360,75 @@ class MBeanAttributeExtractor {
 		}
 	}
 	
+	static final class RatioDatumDefinition extends DatumDefinition {
+		private final SnapShotRatio snapShotRatio;
+		
+		RatioDatumDefinition(SnapShotRatio snapShotRatio) {
+			super(snapShotRatio.getName(), AttributeType.DOUBLE, OutputType.RATIO);
+			this.snapShotRatio = snapShotRatio;
+		}
+
+		SnapShotRatio getSnapShotRatio() {
+			return snapShotRatio;
+		}
+	}
+	
 	MBeanDatum<?>[] extractAttributes() throws MBeanQueryException {
 		CompositeDataManager dataManager = new CompositeDataManager(mBeanServerFinder, objectName);
 
-		List<MBeanDatum<?>> result = dataManager.extractCompositeDataAttributes(datumDefinition);
+		Map<String, MBeanDatum<?>> allData = dataManager.extractCompositeDataAttributes(datumDefinition);
 		for (DatumDefinition d : datumDefinition) {
-			if (!d.isCompositeAttribute()) {
+			if (!d.isCompositeAttribute() && !d.getOutputType().equals(OutputType.RATIO)) {
 				try {
 					Object value = mBeanServerFinder.getMBeanServer().getAttribute(objectName, d.getName());
 					
 					switch (d.getAttributeType()) {
 						case NATIVE_SHORT:
 						case SHORT:
-							result.add(new MBeanDatumImpl<>(d, (Short)value));
+							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Short)value));
 							break;
 							
 						case NATIVE_INTEGER:
 						case INTEGER:
-							result.add(new MBeanDatumImpl<>(d, (Integer)value));
+							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Integer)value));
 							break;
 							
 						case NATIVE_LONG:
 						case LONG:
-							result.add(new MBeanDatumImpl<>(d, (Long)value));
+							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Long)value));
 							break;
 	
 						case NATIVE_FLOAT:
 						case FLOAT:
-							result.add(new MBeanDatumImpl<>(d, (Float)value));
+							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Float)value));
 							break;
 	
 						case NATIVE_DOUBLE:
 						case DOUBLE:
-							result.add(new MBeanDatumImpl<>(d, (Double)value));
+							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Double)value));
 							break;
 		
 						case NATIVE_BOOLEAN:
 						case BOOLEAN:
-							result.add(new MBeanDatumImpl<>(d, (Boolean)value));
+							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Boolean)value));
 							break;
 	
 						case NATIVE_CHARACTER:
 						case CHARACTER:
-							result.add(new MBeanDatumImpl<>(d, (Character)value));
+							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Character)value));
 							break;
 							
 						case NATIVE_BYTE:
 						case BYTE:
-							result.add(new MBeanDatumImpl<>(d, (Byte)value));
+							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Byte)value));
 							break;
 							
 						case STRING:
 						default:
 							if (value == null || value instanceof String) {
-								result.add(new MBeanDatumImpl<>(d, (String)value));
+								allData.put(d.getName(), new MBeanDatumImpl<>(d, (String)value));
 							} else {
-								result.add(new MBeanDatumImpl<>(d, value.toString()));
+								allData.put(d.getName(), new MBeanDatumImpl<>(d, value.toString()));
 							}
 					}
 				} catch (InstanceNotFoundException | AttributeNotFoundException | ReflectionException
@@ -404,8 +437,46 @@ class MBeanAttributeExtractor {
 				}
 			}
 		}
+		
+		// Now process all ratio definitions
+		for (DatumDefinition d : datumDefinition) {
+			if (d.getOutputType().equals(OutputType.RATIO)) {
+				SnapShotRatio ratio = ((RatioDatumDefinition)d).getSnapShotRatio();
+				
+				allData.put(ratio.getName(), resolveRatio(d,
+						allData.get(ratio.getNumerator()),
+						allData.get(ratio.getDenominator())));
+			}
+		}
+
+		// Finally remove any data elements that are not
+		// intended for output to an appender and add to the return 
+		// list.
+		List<MBeanDatum<?>> result = new ArrayList<MBeanDatum<?>>();
+
+		for (MBeanDatum<?> datum : allData.values()) {
+			if (datum.getOutputType().isOutputToAppender()) {
+				result.add(datum);
+			}
+		}
+		
 		return result.toArray(new MBeanDatum<?>[]{});
 	}
+	
+	MBeanDatum<Double> resolveRatio(DatumDefinition def, MBeanDatum<?> numerator, MBeanDatum<?> denominator) {
+		Double ratio = null;
+		
+		if (numerator != null && denominator != null) {
+			Number n = (Number)numerator.getValue();
+			Number d = (Number)denominator.getValue();
+			
+			if (n != null && d != null) {
+				ratio = Double.valueOf(MiscHelper.safeDivide(n.longValue(), d.longValue()));
+			} 
+		}
+		return new MBeanDatumImpl<>(def, ratio);
+	}
+	
 
 	
 	DatumDefinition[] getDatumDefinition() {

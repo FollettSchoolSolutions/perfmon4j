@@ -1,9 +1,7 @@
 package org.perfmon4j.util.mbean;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,7 +25,7 @@ public class CompositeDataManager {
 		this.objectName = objectName;
 	}
 	
-	Set<DatumDefinition> buildCompositeDatumDefinitionArray(GaugeCounterArgumentParser parser, Set<String> foundRatioComponents) {
+	Set<DatumDefinition> buildCompositeDatumDefinitionArray(GaugeCounterArgumentParser parser, Map<String, String> foundRatioComponents) {
 		Map<String, CompositeDataWrapper> wrapperMap = new HashMap<String, CompositeDataWrapper>(); 
 		Set<DatumDefinition> result = new HashSet<MBeanAttributeExtractor.DatumDefinition>();
 
@@ -40,7 +38,7 @@ public class CompositeDataManager {
 						if (wrapper != null) {
 							DatumDefinition def = wrapper.getDataDefinition(compositeName[1], OutputType.VOID, ratioComponent); 
 							if (def != null && def.getAttributeType().isSupportsRatioComponent()) {
-								foundRatioComponents.add(def.getName());
+								foundRatioComponents.put(ratioComponent.getName(), def.getName());
 								result.add(def);
 							}
 						}
@@ -90,15 +88,15 @@ public class CompositeDataManager {
 		return result;
 	}
 	
-	List<MBeanDatum<?>> extractCompositeDataAttributes(DatumDefinition[] datumArray) throws MBeanQueryException {
+	Map<String, MBeanDatum<?>> extractCompositeDataAttributes(DatumDefinition[] datumArray) throws MBeanQueryException {
 		Map<String, CompositeDataWrapper> wrapperMap = new HashMap<String, CompositeDataWrapper>(); 
-		List<MBeanDatum<?>> result = new ArrayList<MBeanDatum<?>>();
+		Map<String, MBeanDatum<?>> result = new HashMap<String, MBeanDatum<?>>();
 		
-		for (DatumDefinition datum : datumArray) {
-			if (datum.isCompositeAttribute()) {
-				CompositeDataWrapper wrapper = getOrCreateCompositeWrapper(wrapperMap, datum.getParentName());
+		for (DatumDefinition def : datumArray) {
+			if (def.isCompositeAttribute()) {
+				CompositeDataWrapper wrapper = getOrCreateCompositeWrapper(wrapperMap, def.getParentName());
 				if (wrapper != null) {
-					result.add(wrapper.getMBeanDatum(datum));
+					result.put(def.getName(), wrapper.getMBeanDatum(def));
 				}
 			}
 		}

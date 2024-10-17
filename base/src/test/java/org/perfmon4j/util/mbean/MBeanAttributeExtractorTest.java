@@ -429,6 +429,39 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		DatumDefinition longForNumerator = findDefinition(dataDefinition, "long", OutputType.VOID);
 		assertNotNull("longForNumerator", longForNumerator);
 	}
+
+	public void testExtractRatio() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setRatios("longRatio=nativeLong/long").build();
+
+		MBeanAttributeExtractor extractor = new MBeanAttributeExtractor(mBeanServerFinder, objectName, query);
+		MBeanDatum<?>[] data = extractor.extractAttributes();
+		
+		assertNotNull(data);
+		assertEquals("Expected number of data elements", 1, data.length);
+		
+		assertEquals("datum name", "longRatio", data[0].getName());
+		assertEquals("datum attribute type", AttributeType.DOUBLE, data[0].getAttributeType());
+		assertEquals("datum output type", OutputType.RATIO, data[0].getOutputType());
+		assertEquals("datum value", Double.valueOf(0.5d), data[0].getValue());
+	}
+
+	public void testExtractRatio_WithCompositeObject() throws Exception { 	
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder.setRatios("failedRatio=compositeData.failed/compositeData.completed").build();
+
+		MBeanAttributeExtractor extractor = new MBeanAttributeExtractor(mBeanServerFinder, objectName, query);
+		MBeanDatum<?>[] data = extractor.extractAttributes();
+		
+		assertNotNull(data);
+		assertEquals("Expected number of data elements", 1, data.length);
+		
+		assertEquals("datum name", "failedRatio", data[0].getName());
+		assertEquals("datum attribute type", AttributeType.DOUBLE, data[0].getAttributeType());
+		assertEquals("datum output type", OutputType.RATIO, data[0].getOutputType());
+		assertEquals("datum value", Double.valueOf(0.2d), data[0].getValue());
+	}
+	
 	
 	private MBeanDatum<?> buildMBeanDatum(String attributeName, AttributeType attributeType, Object value) {
 		return new MBeanAttributeExtractor.MBeanDatumImpl<>(buildDatumDefinition(attributeName, attributeType), value);
