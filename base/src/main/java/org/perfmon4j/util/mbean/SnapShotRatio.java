@@ -5,6 +5,5 @@ public interface SnapShotRatio {
 	public String getName();
 	public String getDenominator();
 	public String getNumerator();
-	public boolean isDisplayAsPercentage();
-	public boolean isDisplayAsDuration();
+	public boolean isFormatAsPercent();
 }

@@ -1135,6 +1135,37 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals("Expected 'implicit' snapShotMonitor count", 2, snapShotMonitors.length);
     }
     
+    
+    public void testParseMBeanSnapshotWithRatio() throws Exception {
+        final String XML_DEFAULT =
+                "<Perfmon4JConfig enabled='true'>" +
+                "   <appender name='5 minute' className='org.SpecialAppender' interval='5 min'/>" +
+                "	<mBeanSnapshotMonitor name='WildflyThreadPool'" + 
+            	"		jmxName='jboss:threads:type=thread-pool'" + 
+            	"		ratios='inUsePercent=inUse/poolSize(formatAsPercent=true)'>" +
+                "    	<appender name='5 minute'/>" +
+            	"	</mBeanSnapshotMonitor>" +                		
+                "</Perfmon4JConfig>";        
+        PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_DEFAULT));
+        
+        /**
+         * First check that we created a the MBeanQuery.
+         */
+        MBeanQuery querys[] = config.getMBeanQueryArray().toArray(new MBeanQuery[] {}); 
+        assertEquals("Expected mBeanQuery count", 1, querys.length);
+        
+        MBeanQuery query = querys[0];
+        org.perfmon4j.util.mbean.SnapShotRatio[] ratios = query.getRatios();
+
+        assertNotNull("MBeanQuery.getRatios() should never return null", ratios);
+        assertEquals("Expected number of ratios", 1, ratios.length);
+        
+        assertEquals("Expected ratio name", "inUsePercent", ratios[0].getName());
+        assertEquals("Expected ratio numerator", "inUse", ratios[0].getNumerator());
+        assertEquals("Expected ratio denominator", "poolSize", ratios[0].getDenominator());
+        assertTrue("Should format as percent", ratios[0].isFormatAsPercent());
+    }
+    
 	
 	public static final class SimpleListAppender extends Appender {
 		private static final List<String> output = new ArrayList<String>();
@@ -1175,7 +1206,8 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
             "	<mBeanSnapshotMonitor name='JVMThreading'" + 
         	"		jmxName='java.lang:type=Threading'" + 
         	"		counters=\"TotalStartedThreadCount(displayName='My Custom Counter')\"" +
-        	"		gauges='ThreadCount,DaemonThreadCount'>" +
+        	"		gauges='ThreadCount,DaemonThreadCount'" +
+        	"		ratios='DaemonPercent=daemonThreadCount/threadCount(formatAsPercent=true)'>" +
             "    	<appender name='inMemory'/>" +
         	"	</mBeanSnapshotMonitor>" +                		
             "</Perfmon4JConfig>";    
@@ -1189,11 +1221,12 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         	Appender.flushAllAppenders();
         	
         	String output = SimpleListAppender.extractOutput();
-//System.out.println(output);        	
+System.out.println(output);        	
 			assertTrue("Expected output from MemoryPool monitor", output.contains("JVMRuntime"));
 			assertTrue("Expected output from JVMThreading monitor", output.contains("JVMThreading"));
 			assertTrue("Output should have contained my custom gauge name", output.contains("My Custom Gauge"));
 			assertTrue("Output should have contained my custom counter name", output.contains("My Custom Counter"));
+			assertTrue("Output should have my Ratio", output.contains("DaemonPercent"));
 			
         } finally {
         	PerfMon.deInit();

@@ -237,7 +237,7 @@ public class MBeanQueryBuilder {
 	}
 	
 	static SnapShotRatio normalize(SnapShotRatio ratio, String newNumerator, String newDenominator) {
-		return new SnapShotRatioImpl(ratio.getName(),  newNumerator, newDenominator, ratio.isDisplayAsPercentage(), ratio.isDisplayAsDuration());
+		return new SnapShotRatioImpl(ratio.getName(),  newNumerator, newDenominator, ratio.isFormatAsPercent());
 	}
 	
 	
@@ -245,27 +245,22 @@ public class MBeanQueryBuilder {
 		private final String name;
 		private final String numerator;
 		private final String denominator;
-		private final boolean displayAsPercentage;
-		private final boolean displayAsDuration;
+		private final boolean formatAsPercent;
 		private final String sortKey;
 	
-		SnapShotRatioImpl(String name, String numerator, String denominator, boolean displayAsPercentage,
-				boolean displayAsDuration) {
+		SnapShotRatioImpl(String name, String numerator, String denominator, boolean formatAsPercent) {
 			this.name = name;
 			this.numerator = numerator;
 			this.denominator = denominator;
-			this.displayAsPercentage = displayAsPercentage;
-			this.displayAsDuration = displayAsDuration;
-			this.sortKey = buildSortKey(name, numerator, denominator, displayAsPercentage, displayAsDuration);
+			this.formatAsPercent = formatAsPercent;
+			this.sortKey = buildSortKey(name, numerator, denominator, formatAsPercent);
 		}
 		
-		private static String buildSortKey(String name, String numerator, String denominator, boolean displayAsPercentage,
-			boolean displayAsDuration) {
-			return name + "|" + numerator + "|" + denominator + "|" + Boolean.toString(displayAsPercentage) +
-					"|" + Boolean.toString(displayAsDuration);
+		private static String buildSortKey(String name, String numerator, String denominator, boolean formatAsPercent) {
+			return name + "|" + numerator + "|" + denominator + "|" + Boolean.toString(formatAsPercent);
 		}
 		
-		private static final Pattern RATIO_PATTERN = Pattern.compile("([^\\=]+)\\=([^\\/]+)\\/(.+)");
+		private static final Pattern RATIO_PATTERN = Pattern.compile("([^\\=]+)\\=([^\\/]+)\\/([^(]+)(.*)");
 		
 		private static SnapShotRatioImpl parse(String value) {
 			SnapShotRatioImpl result = null;
@@ -275,9 +270,10 @@ public class MBeanQueryBuilder {
 				String name = m.group(1).trim();
 				String numerator = m.group(2).trim();
 				String denominator = m.group(3).trim();
+				String extraParameters = m.group(4).trim();
 				
 				if (!name.isEmpty() && !numerator.isEmpty() && !denominator.isEmpty()) {
-					result = new SnapShotRatioImpl(name, numerator, denominator, false, false);
+					result = new SnapShotRatioImpl(name, numerator, denominator, extraParameters.equals("(formatAsPercent=true)"));
 				}
 			}
 			
@@ -300,13 +296,8 @@ public class MBeanQueryBuilder {
 		}
 
 		@Override
-		public boolean isDisplayAsPercentage() {
-			return displayAsPercentage;
-		}
-
-		@Override
-		public boolean isDisplayAsDuration() {
-			return displayAsDuration;
+		public boolean isFormatAsPercent() {
+			return formatAsPercent;
 		}
 
 		@Override
@@ -334,7 +325,7 @@ public class MBeanQueryBuilder {
 		@Override
 		public String toString() {
 			return "SnapShotRatioImpl [name=" + name + ", numerator=" + numerator + ", denominator=" + denominator
-					+ ", displayAsPercentage=" + displayAsPercentage + ", displayAsDuration=" + displayAsDuration + "]";
+					+ ", formatAsPercent=" + formatAsPercent +  "]";
 		}
 	}
 }

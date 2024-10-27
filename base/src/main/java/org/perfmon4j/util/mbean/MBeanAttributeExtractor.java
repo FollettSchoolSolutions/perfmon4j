@@ -443,9 +443,10 @@ class MBeanAttributeExtractor {
 			if (d.getOutputType().equals(OutputType.RATIO)) {
 				SnapShotRatio ratio = ((RatioDatumDefinition)d).getSnapShotRatio();
 				
-				allData.put(ratio.getName(), resolveRatio(d,
+				allData.put(d.getName(), resolveRatio(d,
 						allData.get(ratio.getNumerator()),
-						allData.get(ratio.getDenominator())));
+						allData.get(ratio.getDenominator()),
+						ratio.isFormatAsPercent()));
 			}
 		}
 
@@ -463,7 +464,7 @@ class MBeanAttributeExtractor {
 		return result.toArray(new MBeanDatum<?>[]{});
 	}
 	
-	MBeanDatum<Double> resolveRatio(DatumDefinition def, MBeanDatum<?> numerator, MBeanDatum<?> denominator) {
+	MBeanDatum<Double> resolveRatio(DatumDefinition def, MBeanDatum<?> numerator, MBeanDatum<?> denominator, boolean formatAsPercent) {
 		Double ratio = null;
 		
 		if (numerator != null && denominator != null) {
@@ -472,6 +473,9 @@ class MBeanAttributeExtractor {
 			
 			if (n != null && d != null) {
 				ratio = Double.valueOf(MiscHelper.safeDivide(n.longValue(), d.longValue()));
+				if (formatAsPercent) {
+					ratio *= 100;
+				}
 			} 
 		}
 		return new MBeanDatumImpl<>(def, ratio);

@@ -132,22 +132,35 @@ public class MBeanInstanceData extends SnapShotData implements GeneratedData, Pe
 		}
 		
 		for (DatumDefinition def : datumDefinition) {
-			String attributeName = def.getName();
-			switch (def.getOutputType()) {
-				case COUNTER: {
-					MBeanDatum<?> datumBefore = initialData.get(attributeName);
-					MBeanDatum<?> datumAfter = finalData.get(attributeName);
-					result.add(datumAfter.toPerfMonObservableDatum(datumBefore, durationMillis));
-				}
-				break;
-
-				case GAUGE:
-				case STRING: 
-				default: {
-					MBeanDatum<?> datum = finalData.get(attributeName);
-					result.add(datum.toPerfMonObservableDatum());
-				}
-				break;
+			try {
+				String attributeName = def.getName();
+				switch (def.getOutputType()) {
+					case COUNTER: {
+						MBeanDatum<?> datumBefore = initialData.get(attributeName);
+						MBeanDatum<?> datumAfter = finalData.get(attributeName);
+							if (datumBefore != null && datumAfter != null) {
+								result.add(datumAfter.toPerfMonObservableDatum(datumBefore, durationMillis));
+							} else {
+								logger.logDebug("Unable to find data for attribute: " + def);
+							}
+						}
+						break;
+						
+						case RATIO:
+						case GAUGE:
+						case STRING: 
+						default: {
+						MBeanDatum<?> datum = finalData.get(attributeName);
+							if (datum != null) {
+								result.add(datum.toPerfMonObservableDatum());
+							} else {
+								logger.logDebug("Unable to find data for attribute: " + def);
+							}
+						}
+						break;
+					}
+			} catch (Exception ex) {
+				logger.logWarn("Unable to retrieve attribute: " + def, ex);
 			}
 		}
 		return result;

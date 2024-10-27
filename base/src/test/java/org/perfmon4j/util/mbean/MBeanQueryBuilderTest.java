@@ -90,6 +90,25 @@ public class MBeanQueryBuilderTest extends TestCase {
 		assertEquals("ratio.name", "rejectedPercent", ratios[1].getName());
 	}
 
+	
+	public void testFormatRatioAsPercent() throws Exception {
+		MBeanQueryBuilder builder = new MBeanQueryBuilder("jboss:threads:type=thread-pool");
+		MBeanQuery query = builder
+		.setRatios("inUseRatio=activeCount/queueSize,rejectedPercent=rejectedTaskCount/submittedTaskCount(formatAsPercent=true)")
+		.build();
+		
+		assertNotNull(query);
+		
+		SnapShotRatio ratios[] = query.getRatios();
+		assertNotNull("Should always return ratios", ratios);
+		assertEquals("ratios.length", 2, ratios.length);
+
+		// Ratios should return in Alpha order.
+		assertFalse("if not specified ratio should not be multiplied by 100 to format as percent", ratios[0].isFormatAsPercent());
+		assertTrue("You can override the default format as percent by adding a parameter to the ratio", ratios[1].isFormatAsPercent());
+	}
+	
+	
 	public void testRatioHasVaildName() throws Exception {
 		MBeanQueryBuilder builder = new MBeanQueryBuilder("jboss:threads:type=thread-pool");
 		MBeanQuery query = builder.setCounters("rejectedTaskCount,submittedTaskCount,spinMissCount,completedTaskCount")

@@ -253,7 +253,9 @@ public class XMLConfigurationParser extends DefaultHandler {
                     // Must supply a counters or gauges attribute
                     String gaugesAttr = atts.getValue("gauges");
                     String countersAttr = atts.getValue("counters");
-                    validateArg(name, "gauges OR counters", MiscHelper.mergeStrings(gaugesAttr, countersAttr));
+                    String ratiosAttr = atts.getValue("ratios");
+                    validateArg(name, "gauges or counters or ratios", MiscHelper.mergeStrings(gaugesAttr, countersAttr, ratiosAttr));
+                    
                     
                     String domainAttr = MiscHelper.blankToNull(atts.getValue("domain"));
                     String instanceKeyAttr = MiscHelper.blankToNull(atts.getValue("instanceKey"));
@@ -264,7 +266,8 @@ public class XMLConfigurationParser extends DefaultHandler {
                     	.setDisplayName(nameAttr)
                     	.setInstanceKey(instanceKeyAttr)
                     	.setCounters(countersAttr)
-                    	.setGauges(gaugesAttr);
+                    	.setGauges(gaugesAttr)
+                    	.setRatios(ratiosAttr);
                     try {
 	                    currentMBeanSnapShotMonitor = new MBeanSnapShotMonitorVO(builder.build(), enabled);
 	                    currentState = STATE_IN_MBEAN_SNAP_SHOT_MONITOR;
