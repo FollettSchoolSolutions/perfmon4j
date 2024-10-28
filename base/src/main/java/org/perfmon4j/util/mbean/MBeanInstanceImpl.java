@@ -42,7 +42,7 @@ class MBeanInstanceImpl implements MBeanInstance {
 	}
 	
 	@Override
-	public MBeanDatum[] extractAttributes() throws MBeanQueryException {
+	public MBeanDatum<?>[] extractAttributes() throws MBeanQueryException {
 		return extractor.extractAttributes();
 	}
 

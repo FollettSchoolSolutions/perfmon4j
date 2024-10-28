@@ -163,38 +163,37 @@ class MBeanAttributeExtractor {
 	}
 	
 	public static final class MBeanDatumImpl<T> implements MBeanDatum<T> {
-		private final String name;
-		private final String displayName;
-		private final OutputType type;
-		private final AttributeType attributeType;
+		private final DatumDefinition datumDefinition;
 		private final T value;
 		
-		MBeanDatumImpl(DatumDefinition dd, T value) {
-			this.name = dd.getName();
-			this.displayName = dd.getDisplayName();
-			this.type = dd.getOutputType();
-			this.attributeType = dd.getAttributeType();
+		MBeanDatumImpl(DatumDefinition datumDefinition, T value) {
+			this.datumDefinition = datumDefinition;
 			this.value = value;
 		}
+
+		@Override
+		public DatumDefinition getDatumDefinition() {
+			return datumDefinition;
+		}		
 		
 		@Override
 		public AttributeType getAttributeType() {
-			return attributeType;
+			return datumDefinition.getAttributeType();
 		}
 		
 		@Override
 		public String getName() {
-			return name;
+			return datumDefinition.getName();
 		}
 
 		@Override
 		public String getDisplayName() {
-			return displayName;
+			return datumDefinition.getDisplayName();
 		}
 		
 		@Override
 		public OutputType getOutputType() {
-			return type;
+			return datumDefinition.getOutputType();
 		}
 
 		@Override

@@ -4,6 +4,7 @@ import javax.management.MBeanAttributeInfo;
 
 import org.perfmon4j.PerfMonObservableDatum;
 import org.perfmon4j.instrument.snapshot.Delta;
+import org.perfmon4j.util.mbean.MBeanAttributeExtractor.DatumDefinition;
 
 public interface MBeanDatum<T> {
 	public enum OutputType {
@@ -89,6 +90,7 @@ public interface MBeanDatum<T> {
 		}
 	};
 	
+	public DatumDefinition getDatumDefinition();
 	public String getName();
 	public String getDisplayName();
 	public OutputType getOutputType();
