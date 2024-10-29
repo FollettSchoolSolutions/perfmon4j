@@ -1197,7 +1197,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
 	
     final String XML_GC_MONITOR =
             "<Perfmon4JConfig enabled='true'>" +
-            "   <appender name='inMemory' className='" + SimpleListAppender.class.getName() + "' interval='500 millis'/>" +
+            "   <appender name='inMemory' className='" + SimpleListAppender.class.getName() + "' interval='250 millis'/>" +
             "	<mBeanSnapshotMonitor name='JVMRuntime'" + 
         	"		jmxName='java.lang:type=Runtime'" + 
         	"		gauges='uptime(displayName=\"My Custom Gauge\")'>" +
@@ -1217,16 +1217,18 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
 		PerfMonConfiguration config = XMLConfigurationParser.parseXML(new StringReader(XML_GC_MONITOR));
 		PerfMon.configure(config);
         try {
-        	Thread.sleep(1000);
+        	Thread.sleep(350);
         	Appender.flushAllAppenders();
         	
         	String output = SimpleListAppender.extractOutput();
-System.out.println(output);        	
+//System.out.println(output);        	
 			assertTrue("Expected output from MemoryPool monitor", output.contains("JVMRuntime"));
 			assertTrue("Expected output from JVMThreading monitor", output.contains("JVMThreading"));
 			assertTrue("Output should have contained my custom gauge name", output.contains("My Custom Gauge"));
 			assertTrue("Output should have contained my custom counter name", output.contains("My Custom Counter"));
 			assertTrue("Output should have my Ratio", output.contains("DaemonPercent"));
+			assertTrue("Output should have my Gauge ThreadCount", output.contains("ThreadCount"));
+			assertTrue("Output should have my Gauge DaemonThreadCount", output.contains("DaemonThreadCount"));
 			
         } finally {
         	PerfMon.deInit();
