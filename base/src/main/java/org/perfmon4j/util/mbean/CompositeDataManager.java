@@ -88,15 +88,15 @@ public class CompositeDataManager {
 		return result;
 	}
 	
-	Map<String, MBeanDatum<?>> extractCompositeDataAttributes(DatumDefinition[] datumArray) throws MBeanQueryException {
+	Map<DatumDefinition, MBeanDatum<?>> extractCompositeDataAttributes(DatumDefinition[] datumArray) throws MBeanQueryException {
 		Map<String, CompositeDataWrapper> wrapperMap = new HashMap<String, CompositeDataWrapper>(); 
-		Map<String, MBeanDatum<?>> result = new HashMap<String, MBeanDatum<?>>();
+		Map<DatumDefinition, MBeanDatum<?>> result = new HashMap<DatumDefinition, MBeanDatum<?>>();
 		
 		for (DatumDefinition def : datumArray) {
 			if (def.isCompositeAttribute()) {
 				CompositeDataWrapper wrapper = getOrCreateCompositeWrapper(wrapperMap, def.getParentName());
 				if (wrapper != null) {
-					result.put(def.getName(), wrapper.getMBeanDatum(def));
+					result.put(def, wrapper.getMBeanDatum(def));
 				}
 			}
 		}

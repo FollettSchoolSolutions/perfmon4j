@@ -272,6 +272,11 @@ class MBeanAttributeExtractor {
 			}
 			return PerfMonObservableDatum.newDatum(getDisplayName(), deltaValue);
 		}
+
+		@Override
+		public String toString() {
+			return "MBeanDatumImpl [datumDefinition=" + datumDefinition + ", value=" + value + "]";
+		}
 	}
 	
 	static class DatumDefinition {
@@ -354,7 +359,7 @@ class MBeanAttributeExtractor {
 
 		@Override
 		public String toString() {
-			return "DatumDefinition [type=" + type + ", attributeType=" + attributeType + ", displayName=" + displayName
+			return this.getClass().getSimpleName() + " [type=" + type + ", attributeType=" + attributeType + ", displayName=" + displayName
 					+ ", name=" + name + ", parentName=" + parentName + "]";
 		}
 	}
@@ -375,7 +380,7 @@ class MBeanAttributeExtractor {
 	MBeanDatum<?>[] extractAttributes() throws MBeanQueryException {
 		CompositeDataManager dataManager = new CompositeDataManager(mBeanServerFinder, objectName);
 
-		Map<String, MBeanDatum<?>> allData = dataManager.extractCompositeDataAttributes(datumDefinition);
+		Map<DatumDefinition, MBeanDatum<?>> allData = dataManager.extractCompositeDataAttributes(datumDefinition);
 		for (DatumDefinition d : datumDefinition) {
 			if (!d.isCompositeAttribute() && !d.getOutputType().equals(OutputType.RATIO)) {
 				try {
@@ -384,50 +389,50 @@ class MBeanAttributeExtractor {
 					switch (d.getAttributeType()) {
 						case NATIVE_SHORT:
 						case SHORT:
-							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Short)value));
+							allData.put(d, new MBeanDatumImpl<>(d, (Short)value));
 							break;
 							
 						case NATIVE_INTEGER:
 						case INTEGER:
-							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Integer)value));
+							allData.put(d, new MBeanDatumImpl<>(d, (Integer)value));
 							break;
 							
 						case NATIVE_LONG:
 						case LONG:
-							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Long)value));
+							allData.put(d, new MBeanDatumImpl<>(d, (Long)value));
 							break;
 	
 						case NATIVE_FLOAT:
 						case FLOAT:
-							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Float)value));
+							allData.put(d, new MBeanDatumImpl<>(d, (Float)value));
 							break;
 	
 						case NATIVE_DOUBLE:
 						case DOUBLE:
-							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Double)value));
+							allData.put(d, new MBeanDatumImpl<>(d, (Double)value));
 							break;
 		
 						case NATIVE_BOOLEAN:
 						case BOOLEAN:
-							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Boolean)value));
+							allData.put(d, new MBeanDatumImpl<>(d, (Boolean)value));
 							break;
 	
 						case NATIVE_CHARACTER:
 						case CHARACTER:
-							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Character)value));
+							allData.put(d, new MBeanDatumImpl<>(d, (Character)value));
 							break;
 							
 						case NATIVE_BYTE:
 						case BYTE:
-							allData.put(d.getName(), new MBeanDatumImpl<>(d, (Byte)value));
+							allData.put(d, new MBeanDatumImpl<>(d, (Byte)value));
 							break;
 							
 						case STRING:
 						default:
 							if (value == null || value instanceof String) {
-								allData.put(d.getName(), new MBeanDatumImpl<>(d, (String)value));
+								allData.put(d, new MBeanDatumImpl<>(d, (String)value));
 							} else {
-								allData.put(d.getName(), new MBeanDatumImpl<>(d, value.toString()));
+								allData.put(d, new MBeanDatumImpl<>(d, value.toString()));
 							}
 					}
 				} catch (InstanceNotFoundException | AttributeNotFoundException | ReflectionException
@@ -442,9 +447,9 @@ class MBeanAttributeExtractor {
 			if (d.getOutputType().equals(OutputType.RATIO)) {
 				SnapShotRatio ratio = ((RatioDatumDefinition)d).getSnapShotRatio();
 				
-				allData.put(d.getName(), resolveRatio(d,
-						allData.get(ratio.getNumerator()),
-						allData.get(ratio.getDenominator()),
+				allData.put(d, resolveRatio(d,
+						findElementForRatioCalculation(allData, ratio.getNumerator()),
+						findElementForRatioCalculation(allData, ratio.getDenominator()),
 						ratio.isFormatAsPercent()));
 			}
 		}
@@ -460,7 +465,26 @@ class MBeanAttributeExtractor {
 			}
 		}
 		
-		return result.toArray(new MBeanDatum<?>[]{});
+		return result.toArray(new MBeanDatum<?>[]{});		
+		
+	}
+	
+	
+	/**
+	 * A OutputType.VOID indicate a data element that is used for calculation.  For
+	 * example a numerator or denominator or a Ratio.
+	 * 
+	 * @param allData
+	 * @param name
+	 * @return
+	 */
+	MBeanDatum<?> findElementForRatioCalculation(Map<DatumDefinition, MBeanDatum<?>> allData, String name) {
+		for (MBeanDatum<?> d : allData.values()) {
+			if (d.getName().equals(name) && d.getOutputType().equals(OutputType.VOID)) {
+				return d;
+			}
+		}
+		return null;
 	}
 	
 	MBeanDatum<Double> resolveRatio(DatumDefinition def, MBeanDatum<?> numerator, MBeanDatum<?> denominator, boolean formatAsPercent) {

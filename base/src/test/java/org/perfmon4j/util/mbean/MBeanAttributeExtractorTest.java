@@ -432,36 +432,55 @@ public class MBeanAttributeExtractorTest extends TestCase {
 
 	public void testExtractRatio() throws Exception { 	
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
-		MBeanQuery query = builder.setRatios("longRatio=nativeLong/long").build();
+		MBeanQuery query = builder
+				.setCounters("nativeLong,long")  // Make sure the "VOID" types used to calculate the ratio do NOT replace Counters or Gauges.
+				.setRatios("longRatio=nativeLong/long").build();
 
 		MBeanAttributeExtractor extractor = new MBeanAttributeExtractor(mBeanServerFinder, objectName, query);
 		MBeanDatum<?>[] data = extractor.extractAttributes();
 		
 		assertNotNull(data);
-		assertEquals("Expected number of data elements", 1, data.length);
+//		for (MBeanDatum<?> d : data) {
+//		System.out.println(d);
+//		}		
+		assertEquals("Expected number of data elements", 3, data.length);
 		
-		assertEquals("datum name", "longRatio", data[0].getName());
-		assertEquals("datum attribute type", AttributeType.DOUBLE, data[0].getAttributeType());
-		assertEquals("datum output type", OutputType.RATIO, data[0].getOutputType());
-		assertEquals("datum value", Double.valueOf(0.5d), data[0].getValue());
+		MBeanDatum<?> ratio = findDatum(data, "longRatio", OutputType.RATIO);
+		assertNotNull("Should have returned the Ratio", ratio);
+		assertEquals("datum attribute type", AttributeType.DOUBLE, ratio.getAttributeType());
+		assertEquals("datum value", Double.valueOf(0.5d), ratio.getValue());
+		
+		assertNotNull("'long' was defined both as a Counter and a denominator in the Ratio. The Counter must also be returned", 
+				findDatum(data, "long", OutputType.COUNTER));
+		assertNotNull("'nativeLong' was defined both as a Counter and a numinator in the Ratio. The Counter must also be returned", 
+				findDatum(data, "long", OutputType.COUNTER));
 	}
 
 	public void testExtractRatio_WithCompositeObject() throws Exception { 	
 		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
-		MBeanQuery query = builder.setRatios("failedRatio=compositeData.failed/compositeData.completed").build();
+		MBeanQuery query = builder
+			.setCounters("compositeData.failed,compositeData.completed")
+			.setRatios("failedRatio=compositeData.failed/compositeData.completed").build();
 
 		MBeanAttributeExtractor extractor = new MBeanAttributeExtractor(mBeanServerFinder, objectName, query);
 		MBeanDatum<?>[] data = extractor.extractAttributes();
 		
 		assertNotNull(data);
-		assertEquals("Expected number of data elements", 1, data.length);
+//		for (MBeanDatum<?> d : data) {
+//			System.out.println(d);
+//		}		
+		assertEquals("Expected number of data elements", 3, data.length);
+		MBeanDatum<?> ratio = findDatum(data, "failedRatio", OutputType.RATIO);
 		
-		assertEquals("datum name", "failedRatio", data[0].getName());
-		assertEquals("datum attribute type", AttributeType.DOUBLE, data[0].getAttributeType());
-		assertEquals("datum output type", OutputType.RATIO, data[0].getOutputType());
-		assertEquals("datum value", Double.valueOf(0.2d), data[0].getValue());
+		assertNotNull("Should have returned the Ratio", ratio);
+		assertEquals("datum attribute type", AttributeType.DOUBLE, ratio.getAttributeType());
+		assertEquals("datum value", Double.valueOf(0.2d), ratio.getValue());
+
+		assertNotNull("'compositeData.completed' was defined both as a Counter and a denominator in the Ratio. The Counter must also be returned", 
+				findDatum(data, "compositeData.completed", OutputType.COUNTER));
+		assertNotNull("'compositeData.failed' was defined both as a Counter and a numinator in the Ratio. The Counter must also be returned", 
+				findDatum(data, "compositeData.failed", OutputType.COUNTER));
 	}
-	
 	
 	private MBeanDatum<?> buildMBeanDatum(String attributeName, AttributeType attributeType, Object value) {
 		return new MBeanAttributeExtractor.MBeanDatumImpl<>(buildDatumDefinition(attributeName, attributeType), value);
@@ -489,11 +508,16 @@ public class MBeanAttributeExtractorTest extends TestCase {
 		return null;
 	}
 	
-	
 	private MBeanDatum<?> findDatum(MBeanDatum<?>[] data, String name) {
+		return findDatum(data, name, null);
+	}
+	
+	private MBeanDatum<?> findDatum(MBeanDatum<?>[] data, String name, OutputType outputType) {
 		for (MBeanDatum<?> d : data) {
 			if (name.equalsIgnoreCase(d.getName())) {
-				return d;
+				if (outputType == null || outputType.equals(d.getOutputType())) {
+					return d;
+				}
 			}
 		}
 		return null;
