@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -20,6 +21,7 @@ public class MBeanQueryBuilder {
 	private final Set<String> counters = new TreeSet<String>();
 	private final Set<String> gauges = new TreeSet<String>();
 	private final Set<SnapShotRatioImpl> ratios = new TreeSet<SnapShotRatioImpl>();
+	private RegExFilter instanceValueFilter = null;
 	
 	public MBeanQueryBuilder(String baseJMXName) {
 		this.baseJMXName = baseJMXName;
@@ -27,7 +29,7 @@ public class MBeanQueryBuilder {
 	
 	public MBeanQuery build() throws Exception {
 		return new MBeanQueryImpl(domain, baseJMXName, displayName, instanceKey, counters.toArray(new String[] {}),
-			gauges.toArray(new String[] {}), ratios.toArray(new SnapShotRatio[] {}));
+			gauges.toArray(new String[] {}), ratios.toArray(new SnapShotRatio[] {}), instanceValueFilter);
 	}
 
 	public String getDomain() {
@@ -114,7 +116,16 @@ public class MBeanQueryBuilder {
 		return this;
 	}
 	
-	private static class MBeanQueryImpl implements MBeanQuery {
+	public MBeanQueryBuilder setInstanceValueFilter(String regEx) {
+		try {
+			instanceValueFilter = new RegExFilter(regEx);
+		} catch (InvalidPatternSyntaxException e) {
+			logger.logWarn("Skipping invalid instanceValueFilter: \"" + regEx + "\" Error: " + e.getMessage());
+		}
+		return this;
+	}	
+	
+	/** package level **/ static class MBeanQueryImpl implements MBeanQuery {
 		private final String domain;
 		private final String baseJMXName;
 		private final String displayName;
@@ -123,8 +134,11 @@ public class MBeanQueryBuilder {
 		private final String[] gauges;
 		private final SnapShotRatio[] ratios;
 		private final String signature;
+		private final RegExFilter instanceValueFilter;
+
 		
-		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges, SnapShotRatio[] ratios) throws Exception {
+		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges, 
+			SnapShotRatio[] ratios,	RegExFilter instanceValueFilter) throws Exception {
 			this.domain = domain;
 			this.baseJMXName = baseJMXName;
 			this.displayName = displayName == null || displayName.isBlank() ? baseJMXName : displayName;
@@ -133,6 +147,7 @@ public class MBeanQueryBuilder {
 			this.gauges = (gauges != null) ? gauges : new String[] {};
 			this.ratios = (ratios != null) ? ratios : new SnapShotRatio[] {};
 			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceKey, counters, gauges, ratios));
+			this.instanceValueFilter = instanceValueFilter;
 		}
 		
 		private static String buildComparableKey(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges,
@@ -229,10 +244,16 @@ public class MBeanQueryBuilder {
 		}
 		
 		@Override
+		public RegExFilter getInstanceValueFilter() {
+			return instanceValueFilter;
+		}
+
+		@Override
 		public String toString() {
 			return "MBeanQueryImpl [domain=" + domain + ", baseJMXName=" + baseJMXName + ", displayName=" + displayName
 					+ ", instanceKey=" + instanceKey + ", counters=" + MiscHelper.toString(counters) + ", gauges="
-					+ MiscHelper.toString(gauges) + ", ratios=" + ratiosToString(ratios) + "]";
+					+ MiscHelper.toString(gauges) + ", ratios=" + ratiosToString(ratios) 
+					+ ", instanceValueFilter=" + (instanceValueFilter != null ? instanceValueFilter.toString() : "") + "]";
 		}
 	}
 	
@@ -326,6 +347,37 @@ public class MBeanQueryBuilder {
 		public String toString() {
 			return "SnapShotRatioImpl [name=" + name + ", numerator=" + numerator + ", denominator=" + denominator
 					+ ", formatAsPercent=" + formatAsPercent +  "]";
+		}
+	}
+	
+	public static final class RegExFilter {
+		private final String rawPattern;
+		private final Pattern compiledPattern;
+		
+		private RegExFilter(String rawPattern) throws InvalidPatternSyntaxException {
+			this.rawPattern = rawPattern;
+			try {
+				this.compiledPattern = Pattern.compile(rawPattern);
+			} catch (PatternSyntaxException ex) {
+				throw new InvalidPatternSyntaxException(ex);
+			}
+		}
+		
+		public boolean matches(String value) {
+			return compiledPattern.matcher(value).matches();
+		}
+
+		@Override
+		public String toString() {
+			return "\"" + rawPattern + "\"";
+		}
+	}
+	
+	static final class InvalidPatternSyntaxException extends Exception {
+		private static final long serialVersionUID = 1L;
+
+		public InvalidPatternSyntaxException(PatternSyntaxException ex) {
+			super(ex);
 		}
 	}
 }

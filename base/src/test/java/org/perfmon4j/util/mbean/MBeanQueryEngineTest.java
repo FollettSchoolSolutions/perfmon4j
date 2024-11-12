@@ -94,4 +94,21 @@ public class MBeanQueryEngineTest extends TestCase {
 		assertEquals("Now with a 'full' match we should find it", 
 				1, result.getInstances().length);
 	}
+	
+	public void testFilterByInstanceName() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME + ",name=OldGen"));
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME + ",name=Eden"));
+		mBeanServer.registerMBean(new TestExample(), new ObjectName(BASE_OBJECT_NAME + ",name=Bogus"));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder
+			.setInstanceKey("name")	
+			.setInstanceValueFilter("OldGen|Eden")
+			.setCounters("nextValue")
+			.build();
+		
+		MBeanQueryResult result = engine.doQuery(query);
+		assertNotNull("Should never return null", result);
+		assertEquals("Expected number of instances", 2, result.getInstances().length);
+	}
 }

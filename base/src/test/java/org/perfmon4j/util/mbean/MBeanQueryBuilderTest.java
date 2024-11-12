@@ -1,5 +1,7 @@
 package org.perfmon4j.util.mbean;
 
+import org.perfmon4j.util.mbean.MBeanQueryBuilder.MBeanQueryImpl;
+
 import junit.framework.TestCase;
 
 public class MBeanQueryBuilderTest extends TestCase {
@@ -108,7 +110,6 @@ public class MBeanQueryBuilderTest extends TestCase {
 		assertTrue("You can override the default format as percent by adding a parameter to the ratio", ratios[1].isFormatAsPercent());
 	}
 	
-	
 	public void testRatioHasVaildName() throws Exception {
 		MBeanQueryBuilder builder = new MBeanQueryBuilder("jboss:threads:type=thread-pool");
 		MBeanQuery query = builder.setCounters("rejectedTaskCount,submittedTaskCount,spinMissCount,completedTaskCount")
@@ -118,5 +119,27 @@ public class MBeanQueryBuilderTest extends TestCase {
 		assertEquals("Ratio name must be provided and must contain non white-space characters", 0, query.getRatios().length);
 	}
 
-
+	public void testInstanceValueFilter() throws Exception {
+		MBeanQueryBuilder builder = new MBeanQueryBuilder("java.lang:type=GarbageCollector");
+		MBeanQueryImpl query = (MBeanQueryImpl)builder
+			.setInstanceKey("name")
+			.setInstanceValueFilter(".*Old.*")
+			.setCounters("collectionCount,collectionTime")
+			.build();
+		
+		assertTrue("Should match the 'G1 Old Generation' collector", query.getInstanceValueFilter().matches("G1 Old Generation"));
+		assertFalse("Should NOT match the 'G1 Young Generation' collector", query.getInstanceValueFilter().matches("G1 Young Generation"));
+	}
+	
+	public void testInstanceValueFilterPatternIgnored() throws Exception {
+		MBeanQueryBuilder builder = new MBeanQueryBuilder("java.lang:type=GarbageCollector");
+		MBeanQueryImpl query = (MBeanQueryImpl)builder
+			.setInstanceKey("name")
+			.setInstanceValueFilter("(*") // Invalid regex. 
+			.setCounters("collectionCount,collectionTime")
+			.build();
+		
+		assertNull("Should not include a filter since regEx was bad", query.getInstanceValueFilter());
+	}
+	
 }
