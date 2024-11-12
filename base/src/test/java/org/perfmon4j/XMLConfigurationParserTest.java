@@ -42,6 +42,7 @@ import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 import org.perfmon4j.util.mbean.MBeanInstance;
 import org.perfmon4j.util.mbean.MBeanQuery;
+import org.perfmon4j.util.mbean.MBeanQueryBuilder.RegExFilter;
 
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -1068,6 +1069,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
             	"		domain='jboss'" + // domain is optional and typically not needed.
             	"		jmxName='jboss:threads:type=thread-pool'" + 
             	"		instanceKey='name'" +
+            	"		instanceValueFilter='Standard|Priority'" +  // Regular Expression matching the ObjectName property specified by 'instanceKey'
             	"		gauges='poolSize'" + 
             	"		counters='completedTaskCount'>" +
                 "    	<appender name='5 minute'/>" +
@@ -1088,6 +1090,10 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         assertEquals("mBeanQuery instanceKey", "name", query.getInstanceKey());
         assertEquals("mBeanQuery gauges", "poolSize", query.getGauges()[0]);
         assertEquals("mBeanQuery counters", "completedTaskCount", query.getCounters()[0]);
+        
+        RegExFilter filter = query.getInstanceValueFilter();
+        assertNotNull("Should have instanceValueFilter", filter);
+        assertTrue("instanceValueFilter regEx should match value of 'Standard'", filter.matches("Standard"));
         
         /**
          * Now check to make sure we created a SnapShot Monitor that will be 'attached'

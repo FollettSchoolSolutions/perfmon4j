@@ -117,10 +117,13 @@ public class MBeanQueryBuilder {
 	}
 	
 	public MBeanQueryBuilder setInstanceValueFilter(String regEx) {
-		try {
-			instanceValueFilter = new RegExFilter(regEx);
-		} catch (InvalidPatternSyntaxException e) {
-			logger.logWarn("Skipping invalid instanceValueFilter: \"" + regEx + "\" Error: " + e.getMessage());
+		instanceValueFilter = null;  // Clear out any previously set value.
+		if (regEx != null) {
+			try {
+				instanceValueFilter = new RegExFilter(regEx);
+			} catch (InvalidPatternSyntaxException e) {
+				logger.logWarn("Skipping invalid instanceValueFilter: \"" + regEx + "\" Error: " + e.getMessage());
+			}
 		}
 		return this;
 	}	

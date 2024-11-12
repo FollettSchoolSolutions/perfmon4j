@@ -259,12 +259,14 @@ public class XMLConfigurationParser extends DefaultHandler {
                     
                     String domainAttr = MiscHelper.blankToNull(atts.getValue("domain"));
                     String instanceKeyAttr = MiscHelper.blankToNull(atts.getValue("instanceKey"));
+                    String instanceValueFilter = MiscHelper.blankToNull(atts.getValue("instanceValueFilter"));
 
                     boolean enabled = processEnabledAttribute(atts);
                     MBeanQueryBuilder builder = new MBeanQueryBuilder(jmxNameAttr)
                     	.setDomain(domainAttr)
                     	.setDisplayName(nameAttr)
                     	.setInstanceKey(instanceKeyAttr)
+                    	.setInstanceValueFilter(instanceValueFilter)
                     	.setCounters(countersAttr)
                     	.setGauges(gaugesAttr)
                     	.setRatios(ratiosAttr);
