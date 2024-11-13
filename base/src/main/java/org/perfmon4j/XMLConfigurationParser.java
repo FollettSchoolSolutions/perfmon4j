@@ -260,6 +260,8 @@ public class XMLConfigurationParser extends DefaultHandler {
                     String domainAttr = MiscHelper.blankToNull(atts.getValue("domain"));
                     String instanceKeyAttr = MiscHelper.blankToNull(atts.getValue("instanceKey"));
                     String instanceValueFilter = MiscHelper.blankToNull(atts.getValue("instanceValueFilter"));
+                    String attributeValueFilter = MiscHelper.blankToNull(atts.getValue("attributeValueFilter"));
+                    
 
                     boolean enabled = processEnabledAttribute(atts);
                     MBeanQueryBuilder builder = new MBeanQueryBuilder(jmxNameAttr)
@@ -267,6 +269,7 @@ public class XMLConfigurationParser extends DefaultHandler {
                     	.setDisplayName(nameAttr)
                     	.setInstanceKey(instanceKeyAttr)
                     	.setInstanceValueFilter(instanceValueFilter)
+                    	.setAttributeValueFilter(attributeValueFilter)
                     	.setCounters(countersAttr)
                     	.setGauges(gaugesAttr)
                     	.setRatios(ratiosAttr);

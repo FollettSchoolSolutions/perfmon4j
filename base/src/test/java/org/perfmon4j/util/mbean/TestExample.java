@@ -12,6 +12,16 @@ import javax.management.openmbean.SimpleType;
 
 public class TestExample implements TestExampleMBean {
 	private static final AtomicLong nextValue = new AtomicLong(0);
+	
+	private final String type;
+
+	public TestExample() {
+		this("defaultType");
+	}
+	
+	public TestExample(String type) {
+		this.type = type;
+	}
 
 	@Override
 	public long getNextValue() {
@@ -106,6 +116,11 @@ public class TestExample implements TestExampleMBean {
 	@Override
 	public Object getObject() {
 		return new StringBuilder("14");
+	}
+	
+	@Override 
+	public String getType() {
+		return type;
 	}
 	
 	@Override

@@ -111,4 +111,53 @@ public class MBeanQueryEngineTest extends TestCase {
 		assertNotNull("Should never return null", result);
 		assertEquals("Expected number of instances", 2, result.getInstances().length);
 	}
+	
+	public void testFilterByAttributeValue() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample("wantThis"), new ObjectName(BASE_OBJECT_NAME + ",name=OldGen"));
+		mBeanServer.registerMBean(new TestExample("dontWantThis"), new ObjectName(BASE_OBJECT_NAME + ",name=Eden"));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder
+			.setInstanceKey("name")	
+			.setAttributeValueFilter("type=wantThis")
+			.setCounters("nextValue")
+			.build();
+		
+		MBeanQueryResult result = engine.doQuery(query);
+		assertNotNull("Should never return null", result);
+		assertEquals("Expected number of instances", 1, result.getInstances().length);
+	}
+
+	public void testFilterByAttributeValue_MatchNullAttribute() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample(null), new ObjectName(BASE_OBJECT_NAME + ",name=OldGen"));
+		mBeanServer.registerMBean(new TestExample("dontWantThis"), new ObjectName(BASE_OBJECT_NAME + ",name=Eden"));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder
+			.setInstanceKey("name")	
+			.setAttributeValueFilter("type=null")
+			.setCounters("nextValue")
+			.build();
+		
+		MBeanQueryResult result = engine.doQuery(query);
+		assertNotNull("Should never return null", result);
+		assertEquals("Expected number of instances", 1, result.getInstances().length);
+	}
+
+	public void testFilterByAttributeValue_ForgiveMissmatchedCaseOnFirstLetterOfAttributeName() throws Exception { 	
+		mBeanServer.registerMBean(new TestExample("wantThis"), new ObjectName(BASE_OBJECT_NAME + ",name=OldGen"));
+		mBeanServer.registerMBean(new TestExample("dontWantThis"), new ObjectName(BASE_OBJECT_NAME + ",name=Eden"));
+		
+		MBeanQueryBuilder builder = new MBeanQueryBuilder(BASE_OBJECT_NAME);
+		MBeanQuery query = builder
+			.setInstanceKey("name")	
+			.setAttributeValueFilter("Type=wantThis")  // There is a case miss-match here we will toggle case of first letter if we do not get a match.
+			.setCounters("nextValue")
+			.build();
+		
+		MBeanQueryResult result = engine.doQuery(query);
+		assertNotNull("Should never return null", result);
+		assertEquals("Expected number of instances", 1, result.getInstances().length);
+	}
+	
 }

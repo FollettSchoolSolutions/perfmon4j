@@ -1,6 +1,7 @@
 package org.perfmon4j.util.mbean;
 
 import org.perfmon4j.util.mbean.MBeanQueryBuilder.MBeanQueryImpl;
+import org.perfmon4j.util.mbean.MBeanQueryBuilder.NamedRegExFilter;
 
 import junit.framework.TestCase;
 
@@ -141,5 +142,30 @@ public class MBeanQueryBuilderTest extends TestCase {
 		
 		assertNull("Should not include a filter since regEx was bad", query.getInstanceValueFilter());
 	}
+
+	public void testAttributeValueFilter() throws Exception {
+		MBeanQueryBuilder builder = new MBeanQueryBuilder("java.lang:type=MemoryPool");
+		MBeanQueryImpl query = (MBeanQueryImpl)builder
+			.setInstanceKey("name")
+			.setAttributeValueFilter("type=HEAP")
+			.setCounters("Usage.used,Usage.max")
+			.build();
+		 
+		NamedRegExFilter filter = query.getAttributeValueFilter();
+		assertNotNull("Should have an attributeValueFilter", filter);
+		assertEquals("Filter should be associated with the 'type' attribute", "type", filter.getName());
+		assertTrue("Filter should match 'HEAP'", filter.matches("HEAP"));
+		assertFalse("Filter should NOT match 'NON_HEAP'", filter.matches("NON_HEAP"));
+	}
 	
+	public void testAttributeValueFilterPatternIgnored() throws Exception {
+		MBeanQueryBuilder builder = new MBeanQueryBuilder("java.lang:type=MemoryPool");
+		MBeanQueryImpl query = (MBeanQueryImpl)builder
+			.setInstanceKey("name")
+			.setAttributeValueFilter("type=(.*")  // This is a bad regEx
+			.setCounters("Usage.used,Usage.max")
+			.build();
+		
+		assertNull("Should not include a filter since regEx was bad", query.getAttributeValueFilter());
+	}
 }

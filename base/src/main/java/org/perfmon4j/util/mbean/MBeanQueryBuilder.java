@@ -13,6 +13,7 @@ import org.perfmon4j.util.MiscHelper;
 
 public class MBeanQueryBuilder {
 	private static final Logger logger = LoggerFactory.initLogger(MBeanQueryImpl.class);
+	private static final Pattern attributeValueFilterPattern = Pattern.compile("([^\\=]+)\\=(.*)");
 	
 	private final String baseJMXName;
 	private String domain = null;
@@ -22,6 +23,7 @@ public class MBeanQueryBuilder {
 	private final Set<String> gauges = new TreeSet<String>();
 	private final Set<SnapShotRatioImpl> ratios = new TreeSet<SnapShotRatioImpl>();
 	private RegExFilter instanceValueFilter = null;
+	private NamedRegExFilter attributeValueFilter = null;
 	
 	public MBeanQueryBuilder(String baseJMXName) {
 		this.baseJMXName = baseJMXName;
@@ -29,7 +31,7 @@ public class MBeanQueryBuilder {
 	
 	public MBeanQuery build() throws Exception {
 		return new MBeanQueryImpl(domain, baseJMXName, displayName, instanceKey, counters.toArray(new String[] {}),
-			gauges.toArray(new String[] {}), ratios.toArray(new SnapShotRatio[] {}), instanceValueFilter);
+			gauges.toArray(new String[] {}), ratios.toArray(new SnapShotRatio[] {}), instanceValueFilter, attributeValueFilter);
 	}
 
 	public String getDomain() {
@@ -128,6 +130,33 @@ public class MBeanQueryBuilder {
 		return this;
 	}	
 	
+	
+	/**
+	 * Parameter expected to be in the format <attribute name>=<regular expression to match attribute name>
+	 * @param value 
+	 * @return
+	 */
+	public MBeanQueryBuilder setAttributeValueFilter(String value) {
+		attributeValueFilter = null;  // Clear out any previously set value.
+		
+		if (value != null) {
+			Matcher m = attributeValueFilterPattern.matcher(value);
+			if (m.matches()) {
+				String attributeName = m.group(1);
+				String regEx = m.group(2);
+				try {
+					attributeValueFilter = new NamedRegExFilter(attributeName, regEx);
+				} catch (InvalidPatternSyntaxException e) {
+					logger.logWarn("Invalid regular expression. Skipping invalid attributeValueFilter: \"" + value + "\" Error: " + e.getMessage());
+				}
+			} else {
+				logger.logWarn("Skipping invalid value for attributeValueFilter: " + value);
+			}
+		}
+		return this;
+	}
+	
+	
 	/** package level **/ static class MBeanQueryImpl implements MBeanQuery {
 		private final String domain;
 		private final String baseJMXName;
@@ -138,10 +167,11 @@ public class MBeanQueryBuilder {
 		private final SnapShotRatio[] ratios;
 		private final String signature;
 		private final RegExFilter instanceValueFilter;
+		private final NamedRegExFilter attributeValueFilter;
 
 		
 		MBeanQueryImpl(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges, 
-			SnapShotRatio[] ratios,	RegExFilter instanceValueFilter) throws Exception {
+			SnapShotRatio[] ratios,	RegExFilter instanceValueFilter, NamedRegExFilter attributeValueFilter) throws Exception {
 			this.domain = domain;
 			this.baseJMXName = baseJMXName;
 			this.displayName = displayName == null || displayName.isBlank() ? baseJMXName : displayName;
@@ -149,12 +179,14 @@ public class MBeanQueryBuilder {
 			this.counters = (counters != null) ? counters : new String[] {};
 			this.gauges = (gauges != null) ? gauges : new String[] {};
 			this.ratios = (ratios != null) ? ratios : new SnapShotRatio[] {};
-			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceKey, counters, gauges, ratios));
 			this.instanceValueFilter = instanceValueFilter;
+			this.attributeValueFilter = attributeValueFilter;
+			this.signature =  MiscHelper.generateSHA256(buildComparableKey(this.domain, this.baseJMXName, this.displayName, this.instanceKey, counters, gauges, ratios, 
+				instanceValueFilter, attributeValueFilter));
 		}
 		
 		private static String buildComparableKey(String domain, String baseJMXName, String displayName, String instanceKey, String[] counters, String[] gauges,
-			SnapShotRatio[] ratios) {
+			SnapShotRatio[] ratios, RegExFilter instanceValueFilter, NamedRegExFilter attributeValueFilter) {
 			String result = MBeanQuery.class.getName() + "|" + baseJMXName + "|" + displayName;
 			
 			if (domain != null) {
@@ -168,6 +200,13 @@ public class MBeanQueryBuilder {
 			result += "|counters=" + MiscHelper.toString(counters);
 			result += "|gauges=" + MiscHelper.toString(gauges);
 			result += "|ratios=" + ratiosToString(ratios);
+			
+			if (instanceValueFilter != null) {
+				result += "|instanceValueFilter=" + instanceValueFilter.toString();
+			}
+			if (attributeValueFilter != null) {
+				result += "|attributeValueFilter=" + attributeValueFilter.toString();
+			}
 			
 			return result;
 		}
@@ -252,12 +291,19 @@ public class MBeanQueryBuilder {
 		}
 
 		@Override
+		public NamedRegExFilter getAttributeValueFilter() {
+			return attributeValueFilter;
+		}
+		
+		@Override
 		public String toString() {
 			return "MBeanQueryImpl [domain=" + domain + ", baseJMXName=" + baseJMXName + ", displayName=" + displayName
 					+ ", instanceKey=" + instanceKey + ", counters=" + MiscHelper.toString(counters) + ", gauges="
 					+ MiscHelper.toString(gauges) + ", ratios=" + ratiosToString(ratios) 
-					+ ", instanceValueFilter=" + (instanceValueFilter != null ? instanceValueFilter.toString() : "") + "]";
+					+ ", instanceValueFilter=" + (instanceValueFilter != null ? instanceValueFilter.toString() : "")
+					+ ", attributeValueFilter=" + (attributeValueFilter != null ? attributeValueFilter.toString() : "") + "]";
 		}
+
 	}
 	
 	static SnapShotRatio normalize(SnapShotRatio ratio, String newNumerator, String newDenominator) {
@@ -353,7 +399,7 @@ public class MBeanQueryBuilder {
 		}
 	}
 	
-	public static final class RegExFilter {
+	public static class RegExFilter {
 		private final String rawPattern;
 		private final Pattern compiledPattern;
 		
@@ -373,6 +419,27 @@ public class MBeanQueryBuilder {
 		@Override
 		public String toString() {
 			return "\"" + rawPattern + "\"";
+		}
+	}
+	
+	/**
+	 * Used to specify a filter on based on a named attribute of an MBean.
+	 */
+	public static class NamedRegExFilter extends RegExFilter{
+		private final String name;
+		
+		private NamedRegExFilter(String name, String rawPattern) throws InvalidPatternSyntaxException {
+			super(rawPattern);
+			this.name = name;
+		}
+		
+		public String getName() {
+			return name;
+		}
+
+		@Override
+		public String toString() {
+			return name + "=" + super.toString();
 		}
 	}
 	

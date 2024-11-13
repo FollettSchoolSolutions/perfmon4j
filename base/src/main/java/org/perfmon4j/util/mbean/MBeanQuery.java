@@ -1,5 +1,6 @@
 package org.perfmon4j.util.mbean;
 
+import org.perfmon4j.util.mbean.MBeanQueryBuilder.NamedRegExFilter;
 import org.perfmon4j.util.mbean.MBeanQueryBuilder.RegExFilter;
 
 public interface MBeanQuery extends Comparable<MBeanQuery>{
@@ -12,5 +13,6 @@ public interface MBeanQuery extends Comparable<MBeanQuery>{
 	public SnapShotRatio[] getRatios();
 	
 	public RegExFilter getInstanceValueFilter();
+	public NamedRegExFilter getAttributeValueFilter();
 	public String getSignature(); // Returns a unique SHA256 that represents a canonical version of this Query.
 }

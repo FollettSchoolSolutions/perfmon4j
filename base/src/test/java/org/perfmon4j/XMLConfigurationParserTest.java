@@ -42,6 +42,7 @@ import org.perfmon4j.util.MedianCalculator;
 import org.perfmon4j.util.ThresholdCalculator;
 import org.perfmon4j.util.mbean.MBeanInstance;
 import org.perfmon4j.util.mbean.MBeanQuery;
+import org.perfmon4j.util.mbean.MBeanQueryBuilder.NamedRegExFilter;
 import org.perfmon4j.util.mbean.MBeanQueryBuilder.RegExFilter;
 
 import junit.framework.TestSuite;
@@ -1070,6 +1071,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
             	"		jmxName='jboss:threads:type=thread-pool'" + 
             	"		instanceKey='name'" +
             	"		instanceValueFilter='Standard|Priority'" +  // Regular Expression matching the ObjectName property specified by 'instanceKey'
+            	"		attributeValueFilter='type=Regular.*'" +  // <mBeanAttributName>=<regular expression matching attributeValue>
             	"		gauges='poolSize'" + 
             	"		counters='completedTaskCount'>" +
                 "    	<appender name='5 minute'/>" +
@@ -1094,6 +1096,12 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         RegExFilter filter = query.getInstanceValueFilter();
         assertNotNull("Should have instanceValueFilter", filter);
         assertTrue("instanceValueFilter regEx should match value of 'Standard'", filter.matches("Standard"));
+        
+        NamedRegExFilter namedFilter = query.getAttributeValueFilter();
+        assertNotNull("Should have attributeValueFilter", namedFilter);
+        assertEquals("Expected attributeValueFilter attibute name", "type", namedFilter.getName());
+        assertTrue("attributeValueFilter regEx should match value of 'Regular Type", namedFilter.matches("Regular type"));
+        
         
         /**
          * Now check to make sure we created a SnapShot Monitor that will be 'attached'

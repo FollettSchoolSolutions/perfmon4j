@@ -33,5 +33,7 @@ public interface TestExampleMBean {
 	public String getString();
 	public Object getObject();
 	
+	public String getType();
+	
 	public CompositeData getCompositeData() throws OpenDataException;
 }
