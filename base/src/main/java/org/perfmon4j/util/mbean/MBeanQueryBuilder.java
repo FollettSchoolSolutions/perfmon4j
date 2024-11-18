@@ -342,8 +342,12 @@ public class MBeanQueryBuilder {
 				String denominator = m.group(3).trim();
 				String extraParameters = m.group(4).trim();
 				
+				// For formatAsPercent allow (true) to be optionally included in quotes (single or double).
+				extraParameters = extraParameters.replace("\"true\"", "true").replace("'true'", "true");
+				
 				if (!name.isEmpty() && !numerator.isEmpty() && !denominator.isEmpty()) {
-					result = new SnapShotRatioImpl(name, numerator, denominator, extraParameters.equals("(formatAsPercent=true)"));
+					result = new SnapShotRatioImpl(name, numerator, denominator, 
+							extraParameters.equals("(formatAsPercent=true)"));
 				}
 			}
 			

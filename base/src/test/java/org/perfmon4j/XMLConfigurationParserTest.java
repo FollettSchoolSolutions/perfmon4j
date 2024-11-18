@@ -1156,7 +1156,7 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
                 "   <appender name='5 minute' className='org.SpecialAppender' interval='5 min'/>" +
                 "	<mBeanSnapshotMonitor name='WildflyThreadPool'" + 
             	"		jmxName='jboss:threads:type=thread-pool'" + 
-            	"		ratios='inUsePercent=inUse/poolSize(formatAsPercent=true)'>" +
+            	"		ratios='inUsePercent=inUse/poolSize(formatAsPercent=\"true\")'>" +
                 "    	<appender name='5 minute'/>" +
             	"	</mBeanSnapshotMonitor>" +                		
                 "</Perfmon4JConfig>";        
