@@ -105,13 +105,13 @@ public class QueryToInstanceSnapShotTest extends TestCase {
 	public void testNewQueryInstance() throws Exception {
 		MBeanQuery query = mockQuery(true);
 
-		QueryToInstanceSnapShot snapShot = QueryToInstanceSnapShot.newQueryToInstanceSnapShot(query, mockRegistrar); 
+		QueryToInstanceSnapShot snapShot = QueryToInstanceSnapShot.newQueryToInstanceSnapShot(query, mockRegistrar, mockQueryRunner); 
 		assertTrue("Expected a 'SingleQueryToInstance' object", snapShot instanceof QueryToInstanceSnapShot.SingleQueryToInstance);
 		
 		when(query.getInstanceKey()).thenReturn("name");
 		query = mockQuery(false);
 		
-		snapShot = QueryToInstanceSnapShot.newQueryToInstanceSnapShot(query, mockRegistrar); 
+		snapShot = QueryToInstanceSnapShot.newQueryToInstanceSnapShot(query, mockRegistrar, mockQueryRunner); 
 		assertTrue("Expected a 'MultiQueryToInstance' object", snapShot instanceof QueryToInstanceSnapShot.MultiQueryToInstance);
 	}
 

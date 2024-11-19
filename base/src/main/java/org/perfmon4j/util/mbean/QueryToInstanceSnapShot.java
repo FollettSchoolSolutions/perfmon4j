@@ -19,7 +19,7 @@ public abstract class QueryToInstanceSnapShot {
 	
 	public interface MBeanInstanceToSnapShotRegistrar {
 		public void registerSnapShot(MBeanInstance instance);
-		public void deRegisterSnapShot(MBeanInstance instane);
+		public void deRegisterSnapShot(MBeanInstance instance);
 	}	
 
 	protected QueryToInstanceSnapShot(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar, MBeanQueryRunner queryRunner) {
@@ -36,9 +36,6 @@ public abstract class QueryToInstanceSnapShot {
 		return queryRunner.doQuery(query);
 	}
 
-	/* package */ static QueryToInstanceSnapShot newQueryToInstanceSnapShot(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar) {
-		return newQueryToInstanceSnapShot(query, registrar, new MBeanQueryRunnerImpl());
-	}
 	/* package */ static QueryToInstanceSnapShot newQueryToInstanceSnapShot(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar, MBeanQueryRunner queryRunner) {
 		if (query.getInstanceKey() == null) {
 			return new SingleQueryToInstance(query, registrar, queryRunner);
@@ -103,14 +100,6 @@ public abstract class QueryToInstanceSnapShot {
 				registrar.deRegisterSnapShot(instance);
 			}
 			instances.clear();
-		}
-	}
-	
-	private static class MBeanQueryRunnerImpl implements MBeanQueryRunner {
-		@Override
-		public MBeanQueryResult doQuery(MBeanQuery query) throws MBeanQueryException {
-			MBeanQueryEngine queryEngine = new MBeanQueryEngine(new MBeanServerFinderImpl(query.getDomain()));
-			return queryEngine.doQuery(query);
 		}
 	}
 }
