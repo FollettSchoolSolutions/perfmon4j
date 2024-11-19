@@ -1223,7 +1223,13 @@ public class XMLConfigurationParserTest extends PerfMonTestCase {
         	"		gauges='ThreadCount,DaemonThreadCount'" +
         	"		ratios='DaemonPercent=daemonThreadCount/threadCount(formatAsPercent=true)'>" +
             "    	<appender name='inMemory'/>" +
-        	"	</mBeanSnapshotMonitor>" +                		
+        	"	</mBeanSnapshotMonitor>" +      
+            "	<mBeanSnapshotMonitor name='GarbageCollector'" + 
+        	"		jmxName='java.lang:type=GarbageCollector'" + 
+        	"		instanceKey='name'" + 
+        	"		counters='CollectionTime(displayName=\"collectionMillis\"),CollectionCount(displayName=\"numCollections\")'>" +
+            "    	<appender name='inMemory'/>" +
+        	"	</mBeanSnapshotMonitor>" +      
             "</Perfmon4JConfig>";    
 
 

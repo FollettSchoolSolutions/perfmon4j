@@ -78,5 +78,11 @@ class MBeanInstanceImpl implements MBeanInstance {
 	public String getEffectiveClassName() {
 		return effectiveClassName;
 	}
+
+	@Override
+	public String toString() {
+		return "MBeanInstanceImpl [name=" + name + ", objectName=\"" + objectName + "\"]";
+	}
+	
 }
 

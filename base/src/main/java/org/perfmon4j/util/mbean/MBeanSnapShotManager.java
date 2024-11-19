@@ -12,6 +12,7 @@ import org.perfmon4j.PerfMon;
 import org.perfmon4j.instrument.snapshot.GenerateSnapShotException;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
+import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.mbean.QueryToInstanceSnapShot.MBeanInstanceToSnapShotRegistrar;
 import org.perfmon4j.util.mbean.QueryToInstanceSnapShot.MBeanQueryRunner;
 
@@ -92,7 +93,12 @@ public class MBeanSnapShotManager implements MBeanInstanceToSnapShotRegistrar, M
 	@Override
 	public void registerSnapShot(MBeanInstance instance) {
 		try {
-			registry.register(instance);
+			String instanceName = instance.getInstanceName();
+			if (MiscHelper.isBlankOrNull(instanceName)) {
+				registry.register(instance, true);
+			} else {
+				registry.register(instance, instanceName, true);
+			}
 		} catch (GenerateSnapShotException e) {
 			logger.logWarn("Error registering MBeanSnapShot: " + instance);
 		}
@@ -100,7 +106,12 @@ public class MBeanSnapShotManager implements MBeanInstanceToSnapShotRegistrar, M
 
 	@Override
 	public void deRegisterSnapShot(MBeanInstance instance) {
-		registry.deRegister(instance);
+		String instanceName = instance.getInstanceName();
+		if (MiscHelper.isBlankOrNull(instanceName)) {
+			registry.deRegister(instance);
+		} else {
+			registry.deRegister(instance, instanceName);
+		}
 	}
 	
 	@Override

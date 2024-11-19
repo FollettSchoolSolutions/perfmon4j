@@ -2,6 +2,7 @@ package org.perfmon4j.util.mbean;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
@@ -11,6 +12,7 @@ public abstract class QueryToInstanceSnapShot {
 	protected final MBeanQuery query;
 	protected final MBeanInstanceToSnapShotRegistrar registrar;
 	protected final MBeanQueryRunner queryRunner;
+	protected AtomicInteger refreshCount = new AtomicInteger(0);
 	
 
 	public interface MBeanQueryRunner {
@@ -22,21 +24,26 @@ public abstract class QueryToInstanceSnapShot {
 		public void deRegisterSnapShot(MBeanInstance instance);
 	}	
 
-	protected QueryToInstanceSnapShot(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar, MBeanQueryRunner queryRunner) {
+	private QueryToInstanceSnapShot(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar, MBeanQueryRunner queryRunner) {
 		this.query = query;
 		this.registrar = registrar;
 		this.queryRunner = queryRunner;
 	}
 	
-	public abstract void refresh();
-	public abstract void deInit();
+	public void refresh() {
+		refreshCount.incrementAndGet();
+	}
+	
+	public void deInit() {
+		refreshCount.set(0);
+	}
 	
 	
 	protected MBeanQueryResult doQuery() throws MBeanQueryException {
 		return queryRunner.doQuery(query);
 	}
 
-	/* package */ static QueryToInstanceSnapShot newQueryToInstanceSnapShot(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar, MBeanQueryRunner queryRunner) {
+	static QueryToInstanceSnapShot newQueryToInstanceSnapShot(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar, MBeanQueryRunner queryRunner) {
 		if (query.getInstanceKey() == null) {
 			return new SingleQueryToInstance(query, registrar, queryRunner);
 		} else {
@@ -44,7 +51,7 @@ public abstract class QueryToInstanceSnapShot {
 		}
 	}
 	
-	/* package */ static class SingleQueryToInstance extends QueryToInstanceSnapShot {
+	static class SingleQueryToInstance extends QueryToInstanceSnapShot {
 		private MBeanInstance instance = null;
 
 		private SingleQueryToInstance(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar, MBeanQueryRunner queryRunner) {
@@ -52,12 +59,14 @@ public abstract class QueryToInstanceSnapShot {
 		}
 		
 		public synchronized void refresh() {
+			super.refresh();
 			if (instance == null) {
 				try {
 					MBeanQueryResult result = doQuery();
 					if (result.getInstances().length > 0) {
 						instance = result.getInstances()[0];
 						registrar.registerSnapShot(instance);
+						logger.logDebug("Found and registered instance: " + instance + " on refreshCount: " +  refreshCount.get());
 					}
 				} catch (MBeanQueryException e) {
 					logger.logDebug("Error execting query: " + query, e);
@@ -70,10 +79,11 @@ public abstract class QueryToInstanceSnapShot {
 				registrar.deRegisterSnapShot(instance);
 				instance = null;
 			}
+			super.deInit();
 		}
 	}
 	
-	/* package */ static class MultiQueryToInstance extends QueryToInstanceSnapShot {
+	static class MultiQueryToInstance extends QueryToInstanceSnapShot {
 		private final Map<String, MBeanInstance> instances = new HashMap<String, MBeanInstance>();
 
 		private MultiQueryToInstance(MBeanQuery query, MBeanInstanceToSnapShotRegistrar registrar, MBeanQueryRunner queryRunner) {
@@ -81,6 +91,7 @@ public abstract class QueryToInstanceSnapShot {
 		}
 		
 		public synchronized void refresh() {
+			super.refresh();
 			try {
 				MBeanQueryResult result = doQuery();
 				for (MBeanInstance instance : result.getInstances()) {
@@ -88,6 +99,7 @@ public abstract class QueryToInstanceSnapShot {
 					if (!instances.containsKey(instanceName)) {
 						instances.put(instanceName, instance);
 						registrar.registerSnapShot(instance);
+						logger.logDebug("Found and registered instance: " + instance + " on refreshCount: " +  refreshCount.get());
 					}
 				}
 			} catch (MBeanQueryException e) {
@@ -100,6 +112,7 @@ public abstract class QueryToInstanceSnapShot {
 				registrar.deRegisterSnapShot(instance);
 			}
 			instances.clear();
+			super.deInit();
 		}
 	}
 }
