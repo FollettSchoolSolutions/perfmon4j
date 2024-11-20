@@ -25,6 +25,12 @@ https://github.com/FollettSchoolSolutions/perfmon4j/wiki/MBeanSnapShotMonitor
 due to clock slewing.  This was seen once in a test environment, though the 
 exact cause is uncertain.
 
+- Fixed a VERY rare issue where PerfMonTimer.start() could end up in a recursive loop.
+This occurred due to an interaction with another Java instrumentation agent. Now
+PerfMonTimer.start() contains recursion protection. This recursion prevention can
+be disabled by adding the System Property "org.perfmon4j.PerfMonTimer.DisableRecursionPrevention=true"
+on JVM startup.
+
 ** 2.1.0 - 8/20/24
 - Javaagent parameters can now be included in the bootConfiguration setting of
 	the perfmonconfig.xml.
