@@ -406,6 +406,20 @@ public class MiscHelperTest extends PerfMonTestCase {
 		assertNull("Both parameters are null then null will be returned", MiscHelper.isNull(null, null));
 	}
 	
+	public void testGenerateSHA256() throws Exception {
+		assertEquals("Expected SHA256", "x74e2QL7jdTUiZfGRS9dflCfvNvigIsWvPTtzkwH0U4=", 
+			MiscHelper.generateSHA256("This is a test"));
+	}
+	
+	public void testMergeStrings() {
+		String a = "a";
+		String b = null;
+		String c = "c";
+				
+		assertEquals("By default null strings are ignored", "ac", MiscHelper.mergeStrings(a, b, c));
+		assertEquals("Expected to embed \"null\" whent not ignoring null strings", "anullc", MiscHelper.mergeStrings(false, a, b, c));
+	}
+	
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();

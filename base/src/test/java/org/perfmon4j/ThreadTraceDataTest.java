@@ -77,6 +77,18 @@ public class ThreadTraceDataTest extends SQLTest {
             "********************************************************************************", data.toAppenderString());
     }
 
+    /*----------------------------------------------------------------------------*/
+    public void testReplaceNegativeDurationsWithZero() throws Exception {
+        ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE + (SECOND) + 1, 0);
+        data.setEndTime(MIDNIGHT + HOUR + MINUTE + SECOND - 1);
+    
+        assertEquals("\r\n********************************************************************************\r\n" +
+            "+-01:01:01:001 (0) com.perfmon4j.Test.test\r\n" +
+            "+-01:01:00:999 com.perfmon4j.Test.test\r\n" +
+            "********************************************************************************", data.toAppenderString());
+    }
+    
+    
 /*----------------------------------------------------------------------------*/
     public void testNestedToAppenderString() throws Exception {
         ThreadTraceData data = new ThreadTraceData(new UniqueThreadTraceTimerKey("com.perfmon4j.Test.test"), MIDNIGHT + HOUR + MINUTE, 0);

@@ -77,7 +77,7 @@ jobs:
 
       - name: Publish release artifacts
         if:  ${{ fromJSON(env.DO_PUBLISH) }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "Assembled-binary-and-source-zip-files"
           path: "./target/perfmon4j*.zip"

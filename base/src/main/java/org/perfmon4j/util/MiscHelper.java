@@ -26,14 +26,18 @@ import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -168,6 +172,30 @@ public class MiscHelper {
     }
     public static String getMillisDisplayable(long millis) {
     	return getMillisDisplayable(millis, " ");
+    }
+    
+    public static boolean isBlankOrNull(String value) {
+    	return value == null || value.isBlank();
+    }
+
+    public static String mergeStrings(String... values) {
+    	return mergeStrings(true, values);
+    }
+
+    public static String mergeStrings(boolean ignoreNulls, String... values) {
+    	String result = "";
+    	
+    	for (String v : values) {
+    		if (!ignoreNulls || v != null) {
+    			result += v;
+    		}
+    	}
+    	
+    	return result;
+    }
+    
+    public static String blankToNull(String value) {
+    	return isBlankOrNull(value) ? null : value; 
     }
 
     public static String getMillisDisplayable(long millis, String whitespaceCharacter) {
@@ -643,6 +671,20 @@ public class MiscHelper {
 		return result;
 	}
 	
+	public static String toString(String[] values) {
+		String result = "";
+		
+		if (values != null && values.length > 0) {
+			for (int i = 0; i < values.length; i++) {
+				result += values[i];
+				if (i < values.length) {
+					result += ",";
+				}
+			}
+		}
+		return result;
+	}
+	
 	public static String getDefaultSystemName(boolean includeCWDHash) {
 		String result = defaultSystemName[0];
 		
@@ -759,5 +801,39 @@ public class MiscHelper {
 	 */
 	public static <T> T isNull(T value, T returnIfValueIsNull) {
 		return value != null ? value : returnIfValueIsNull;
+	}
+	
+	
+	/**
+	 * Generates a base64 encoded SHA256 Hash of the input text.
+	 * @param text
+	 * @return
+	 * @throws Exception
+	 */
+	public static String generateSHA256(String text) throws Exception {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(text.getBytes("UTF-8"));
+            return Base64.getEncoder().encodeToString(hash);
+		} catch (NoSuchAlgorithmException|IllegalStateException|UnsupportedEncodingException  e) {
+			throw new Exception("Unable to generate SHA256 of text: " + text, e);
+		}
+	}
+	
+	public static String toggleCaseOfFirstLetter(String s) {
+	    if (s == null || s.isEmpty()) {
+	        return s;
+	    }
+	    
+	    // Get the first character
+	    char firstChar = s.charAt(0);
+	    
+	    // Change the case of the first character
+	    char newFirstChar = Character.isUpperCase(firstChar) 
+	        ? Character.toLowerCase(firstChar) 
+	        : Character.toUpperCase(firstChar);
+	    
+	    // Combine the new first character with the rest of the string
+	    return newFirstChar + s.substring(1);
 	}
 } 

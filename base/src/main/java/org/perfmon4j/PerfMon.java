@@ -57,6 +57,8 @@ import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.SingletonTracker;
 import org.perfmon4j.util.ThresholdCalculator;
+import org.perfmon4j.util.mbean.MBeanQuery;
+import org.perfmon4j.util.mbean.MBeanSnapShotManager;
 
 
 public class PerfMon {
@@ -1306,6 +1308,8 @@ public class PerfMon {
     	configure(XMLConfigurationParser.parseXML(new StringReader(stringXML)));
     }
     
+    private static MBeanSnapShotManager mBeanSnapShotManager = null;
+    
 /*----------------------------------------------------------------------------*/    
     public static void configure(PerfMonConfiguration config) throws InvalidConfigException {
         // First flush all active appenders..
@@ -1320,6 +1324,19 @@ public class PerfMon {
         MonitorConfig monitorConfigs[] = config.getMonitorConfigArray();
         Map<String, ThresholdCalculator> thresholdMap = new HashMap<String, ThresholdCalculator>(); 
         Map<String, ActiveThreadMonitor> activeThreadMonMap = new HashMap<String, ActiveThreadMonitor>(); 
+        
+        // Process and Register MBeanQueries 
+        Set<MBeanQuery> querys = config.getMBeanQueryArray();
+        
+        if (!querys.isEmpty()) {
+        	if (mBeanSnapShotManager == null) {
+        		mBeanSnapShotManager = new MBeanSnapShotManager();
+        	}
+    		mBeanSnapShotManager.updateSnapShotsFromConfig(querys);
+        } else if (mBeanSnapShotManager != null) {
+        	mBeanSnapShotManager.deInit();
+        	mBeanSnapShotManager = null;
+        }
         
         AppenderToMonitorMapper.Builder builder = new AppenderToMonitorMapper.Builder();
         for (MonitorConfig monitorConfig : monitorConfigs) {
