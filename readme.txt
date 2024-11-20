@@ -16,7 +16,7 @@ Follett Software
 1391 Corporate Drive
 McHenry, IL 60050
 
-** 2.2.0 TBD
+** 2.2.0 - 11/20/24
 - Added new feature to monitor JMX MBeans using a MBeanSnapShotMonitor.  Documentation
 for how to configure this in your perfmon4j configuration can be found here:
 https://github.com/FollettSchoolSolutions/perfmon4j/wiki/MBeanSnapShotMonitor
