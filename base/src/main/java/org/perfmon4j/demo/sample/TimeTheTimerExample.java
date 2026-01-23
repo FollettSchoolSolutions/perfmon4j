@@ -137,7 +137,7 @@ class TimeTheTimerExample {
         long timingsPerMS = (1000000)/(avgNanos == 0 ? 1 : avgNanos);
         
         return String.format("%,d total, %,.5f milliseconds, %,d nanoseconds, %,d timings/milli-second", 
-            new Long(durationNanos), new Double(avgMillis), new Long(avgNanos), new Long(timingsPerMS));
+            Long.valueOf(durationNanos), Double.valueOf(avgMillis), Long.valueOf(avgNanos), Long.valueOf(timingsPerMS));
     }
     
     static void outputTimer(String timerDesc, TimeTheTimerRunnable runnable, long baseline) throws InvalidConfigException, InterruptedException {
@@ -192,7 +192,7 @@ class TimeTheTimerExample {
         runSample(new AnnotationTimer());
 
         long baseline = runSample(new NoTimer());
-        System.out.println(String.format(NUM_THREADS + " threads - noTimer %,d", new Long(baseline)));
+        System.out.println(String.format(NUM_THREADS + " threads - noTimer %,d", Long.valueOf(baseline)));
         
         outputTimer("basicTimer", new BasicTimer(), baseline);
         outputTimer("nestedBasicTimer", new NestedBasicTimer(), baseline);

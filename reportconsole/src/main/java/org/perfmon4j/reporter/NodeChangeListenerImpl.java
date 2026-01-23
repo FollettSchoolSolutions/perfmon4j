@@ -22,7 +22,7 @@ public class NodeChangeListenerImpl implements P4JConnectionList.NodeChangedList
 		app.closeConnectionAction.setEnabled(list.getChildCount() > 0);
 	}
 
-	public void nodeChanged(P4JTreeNode newNode, P4JTreeNode oldNode) {
+	public void nodeChanged(P4JTreeNode<?,?> newNode, P4JTreeNode<?,?> oldNode) {
 		IntervalCategory c = IntervalCategory.safeCast(newNode) ;
 		boolean enabled = (c != null && c.getDatabaseID() != null);
 		

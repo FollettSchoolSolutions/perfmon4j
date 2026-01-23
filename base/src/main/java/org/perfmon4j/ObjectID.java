@@ -76,7 +76,7 @@ public class ObjectID {
     }
     
     private Integer generateHashCode() {
-        return new Integer(className.hashCode() + getAttributeString().hashCode());
+        return Integer.valueOf(className.hashCode() + getAttributeString().hashCode());
     }
     
     public boolean equals(Object obj) {

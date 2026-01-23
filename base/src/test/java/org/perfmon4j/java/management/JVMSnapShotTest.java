@@ -83,24 +83,24 @@ public class JVMSnapShotTest extends SQLTest {
     	long start = System.currentTimeMillis();
     	long end = start + 60000;
     	
-    	Mockito.when(data.getStartTime()).thenReturn(new Long(start));
-    	Mockito.when(data.getStartTime()).thenReturn(new Long(end));
-    	Mockito.when(data.getClassesLoaded()).thenReturn(new Integer(500000));
-       	Mockito.when(data.getDuration()).thenReturn(new Long(60000));
+    	Mockito.when(data.getStartTime()).thenReturn(Long.valueOf(start));
+    	Mockito.when(data.getStartTime()).thenReturn(Long.valueOf(end));
+    	Mockito.when(data.getClassesLoaded()).thenReturn(Integer.valueOf(500000));
+       	Mockito.when(data.getDuration()).thenReturn(Long.valueOf(60000));
        	Mockito.when(data.getTotalLoadedClassCount()).thenReturn(new Delta(500, 1000, 60000));
        	Mockito.when(data.getUnloadedClassCount()).thenReturn(new Delta(550, 1100, 60000));
        	Mockito.when(data.getCompilationTime()).thenReturn(new Delta(60000, 200000, 60000));
        	Mockito.when(data.getCompilationTimeActive()).thenReturn(Boolean.TRUE);
-       	Mockito.when(data.getHeapMemUsed()).thenReturn(new Long(1000 * 255)); 
-       	Mockito.when(data.getHeapMemCommitted()).thenReturn(new Long(1000 * 612));
-       	Mockito.when(data.getHeapMemMax()).thenReturn(new Long(1000 * 750));
-       	Mockito.when(data.getNonHeapMemUsed()).thenReturn(new Long(1000 * 60));
-       	Mockito.when(data.getNonHeapMemCommitted()).thenReturn(new Long(1000 * 70));
-       	Mockito.when(data.getNonHeapMemMax()).thenReturn(new Long(1000 * 100));
-       	Mockito.when(data.getPendingFinalization()).thenReturn(new Long(512));
-       	Mockito.when(data.getSystemLoadAverage()).thenReturn(new Double(43.65));
-       	Mockito.when(data.getThreadCount()).thenReturn(new Integer(712));
-       	Mockito.when(data.getDaemonThreadCount()).thenReturn(new Integer(212));
+       	Mockito.when(data.getHeapMemUsed()).thenReturn(Long.valueOf(1000 * 255)); 
+       	Mockito.when(data.getHeapMemCommitted()).thenReturn(Long.valueOf(1000 * 612));
+       	Mockito.when(data.getHeapMemMax()).thenReturn(Long.valueOf(1000 * 750));
+       	Mockito.when(data.getNonHeapMemUsed()).thenReturn(Long.valueOf(1000 * 60));
+       	Mockito.when(data.getNonHeapMemCommitted()).thenReturn(Long.valueOf(1000 * 70));
+       	Mockito.when(data.getNonHeapMemMax()).thenReturn(Long.valueOf(1000 * 100));
+       	Mockito.when(data.getPendingFinalization()).thenReturn(Long.valueOf(512));
+       	Mockito.when(data.getSystemLoadAverage()).thenReturn(Double.valueOf(43.65));
+       	Mockito.when(data.getThreadCount()).thenReturn(Integer.valueOf(712));
+       	Mockito.when(data.getDaemonThreadCount()).thenReturn(Integer.valueOf(212));
        	Mockito.when(data.getThreadsStarted()).thenReturn(new Delta(654, 712, 60000));
        	Mockito.when(data.getProcessCpuLoad()).thenReturn(4.0);
        	Mockito.when(data.getSystemCpuLoad()).thenReturn(5.0);
@@ -205,7 +205,7 @@ public class JVMSnapShotTest extends SQLTest {
     	JVMSnapShot.SQLWriter writer = new JVMSnapShot.SQLWriter();
     	JVMData data = createMockJVMData();
     	
-       	Mockito.when(data.getSystemLoadAverage()).thenReturn(new Double(-1));
+       	Mockito.when(data.getSystemLoadAverage()).thenReturn(Double.valueOf(-1));
     	writer.writeToSQLInternal(conn, "mydb", data, 1, 0.0);
 
         final String VALIDATE_SQL = "SELECT " +

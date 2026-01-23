@@ -84,8 +84,8 @@ public class GlobalRequestProcessorMonitorImplTest extends SQLTest {
     	long start = System.currentTimeMillis();
     	long end = start + 60000;
     	
-    	Mockito.when(data.getStartTime()).thenReturn(new Long(start));
-    	Mockito.when(data.getStartTime()).thenReturn(new Long(end));
+    	Mockito.when(data.getStartTime()).thenReturn(Long.valueOf(start));
+    	Mockito.when(data.getStartTime()).thenReturn(Long.valueOf(end));
     	Mockito.when(data.getInstanceName()).thenReturn("HTTP");
     	
     	Mockito.when(data.getRequestCount()).thenReturn(new Delta(0, 60000, 60000));

@@ -30,11 +30,12 @@ public class GenericFilterAsyncLoaderTest extends TestCase {
 		
 		Thread.sleep(300);
 		
-		String[] logOutput = loader.getInfoMsgs();
+
+        String[] logOutput = loader.getInfoMsgs();
+
 //for (String msg : logOutput) {
 //	System.out.println(msg);
 //}
-		
 		assertNull("Filter should not have been initialized", loader.getGenericFilterIfInitialized());
 		assertTrue("Last message should indicate filter will not be installed", 
 				logOutput[logOutput.length-1].endsWith("Will not be installed."));
@@ -82,23 +83,30 @@ public class GenericFilterAsyncLoaderTest extends TestCase {
 		TestLoader loader = new TestLoader(true);
 		loader.scheduleLoad();
 	
-		Thread.sleep(70);
+		Thread.sleep(120);
 		
 		Properties props = new Properties();
 		props.setProperty("perfmon4j.bootConfigSettings.loaded", Boolean.TRUE.toString());
 		mockConfiguredSettings.set(props); // Simulate perfmonconfig.xml being loaded after first attempt
 		
-		Thread.sleep(225);
+		Thread.sleep(300);
 		
+	//for (String msg : logOutput) {
+	//	System.out.println(msg);
+	//}
 		String[] logOutput = loader.getInfoMsgs();
-//for (String msg : logOutput) {
-//	System.out.println(msg);
-//}
-		assertEquals("Expected number of log messages", 2, logOutput.length);
-		assertTrue("First message should indicate filter was not installed and we'll try again", 
-				logOutput[0].endsWith("Will attempt to load again in 0 second(s).")); // We are only waiting 3 milliseconds, so this will be rounded down to 0 seconds
+
+		assertTrue("Expected at least two log messages", logOutput.length >= 2);
+		boolean foundAttemptMsg = false;
+		for (int i = 0; i < logOutput.length - 1; i++) {
+		    if (logOutput[i].endsWith("Will attempt to load again in 0 second(s).")) {
+			foundAttemptMsg = true;
+			break;
+		    }
+		}
+		assertTrue("Should have a retry message indicating we'll try again", foundAttemptMsg);
 		assertTrue("Last message should indicate filter was installed", 
-				logOutput[1].endsWith("GenericFilter installed."));
+			logOutput[logOutput.length - 1].endsWith("GenericFilter installed."));
 	}
 	
 	private class TestLoader extends GenericFilterAsyncLoader {

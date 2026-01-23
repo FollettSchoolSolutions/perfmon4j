@@ -559,7 +559,7 @@ public abstract class SQLAppender extends SystemNameAndGroupsAppender {
 			String s = (dbSchema == null) ? "" : (dbSchema + ".");
 			result = JDBCHelper.simpleGetOrCreate(this.getConnection(), s + "P4JSystem", 
 					"SystemID", "SystemName", getSystemName());
-			systemID = new Long(result);
+			systemID = Long.valueOf(result);
 		}
 		
 		return result;

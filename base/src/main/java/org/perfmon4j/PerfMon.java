@@ -231,7 +231,7 @@ public class PerfMon {
     	startStopReadLock = startStopWriteLock = new ReentrantLock();
         
     	this.name = parent == null ? ROOT_MONITOR_NAME : name;
-        monitorID = new Long(++nextMonitorID);
+        monitorID = Long.valueOf(++nextMonitorID);
         
         this.parent = parent;
         if (parent != null) {
@@ -1521,7 +1521,7 @@ public class PerfMon {
             }
 	    	startStopWriteLock.lock();
 	        try {
-	            startTime = new Long(MiscHelper.currentTimeWithMilliResolution());
+	            startTime = Long.valueOf(MiscHelper.currentTimeWithMilliResolution());
 	        } finally {
 	        	startStopWriteLock.unlock();
 	        }

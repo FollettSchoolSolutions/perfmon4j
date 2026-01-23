@@ -48,13 +48,13 @@ public class ByteFormatterTest extends PerfMonTestCase {
     
     public void testFormat() {
     	ByteFormatter formatter = new ByteFormatter();
-    	assertEquals("124 bytes", formatter.format(new Long(124)));
-    	assertEquals("10.488 KB", formatter.format(new Long(10740)));
-    	assertEquals("102398.976 KB", formatter.format(new Long(104856551)));
-    	assertEquals("100.542 MB", formatter.format(new Long(105425928)));
-    	assertEquals("100.542 MB", formatter.format(new Long(105425928)));
-    	assertEquals("102297.452 MB", formatter.format(new Long(107266653028L)));
-    	assertEquals("100.002 GB", formatter.format(new Long(107375905943L)));
+    	assertEquals("124 bytes", formatter.format(Long.valueOf(124)));
+    	assertEquals("10.488 KB", formatter.format(Long.valueOf(10740)));
+    	assertEquals("102398.976 KB", formatter.format(Long.valueOf(104856551)));
+    	assertEquals("100.542 MB", formatter.format(Long.valueOf(105425928)));
+    	assertEquals("100.542 MB", formatter.format(Long.valueOf(105425928)));
+    	assertEquals("102297.452 MB", formatter.format(Long.valueOf(107266653028L)));
+    	assertEquals("100.002 GB", formatter.format(Long.valueOf(107375905943L)));
     }
     
 /*----------------------------------------------------------------------------*/    

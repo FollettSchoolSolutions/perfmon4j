@@ -9,7 +9,7 @@ import java.util.Map;
 
 import javax.swing.tree.TreeNode;
 
-public abstract class P4JTreeNode<P extends P4JTreeNode, T extends P4JTreeNode> extends Object implements TreeNode {
+public abstract class P4JTreeNode<P extends P4JTreeNode<?,?>, T extends P4JTreeNode<?,?>> extends Object implements TreeNode {
 	protected P parent = null;
 	
 	public static enum Type {
@@ -35,7 +35,7 @@ public abstract class P4JTreeNode<P extends P4JTreeNode, T extends P4JTreeNode> 
 		return name;
 	}
 	
-	public Enumeration<T> children() {
+	public Enumeration<? extends TreeNode> children() {
 		return Collections.enumeration(children);
 	}
 

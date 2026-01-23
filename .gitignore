@@ -2,6 +2,9 @@ target
 .project
 .settings
 
+# IDE and tool-specific files
+.vscode/
+
 hystrix/\.classpath
 
 hystrix/derby\.log
@@ -24,3 +27,4 @@ genericfilter/.classpath
 quarkus2x/.classpath
 
 quarkus3x/.classpath
+.claude/settings.local.json

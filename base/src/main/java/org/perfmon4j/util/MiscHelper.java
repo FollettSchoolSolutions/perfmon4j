@@ -90,7 +90,7 @@ public class MiscHelper {
                quoteForRegEx(key) + "=(\\d++)");
             Matcher matcher = pattern.matcher(sourceString);
             if (matcher.find()) {
-                result = new Integer(matcher.group(1));
+                result = Integer.valueOf(matcher.group(1));
             }
         }
         return result;
@@ -113,7 +113,7 @@ public class MiscHelper {
     
             if (intervalComponents.length > 0) {
                 try {
-                    long    value = new Long(intervalComponents[0]).longValue();
+                    long    value = Long.valueOf(intervalComponents[0]).longValue();
             
                     if (value == 0) {   // special case for 0; use default value
                         result = defaultValue;
@@ -262,7 +262,7 @@ public class MiscHelper {
 
     /*----------------------------------------------------------------------------*/    
     static public String formatTimeAsString(long value) {
-        return formatTimeAsString(new Long(value));
+        return formatTimeAsString(Long.valueOf(value));
         
     }
     
@@ -287,7 +287,7 @@ public class MiscHelper {
 
  /*----------------------------------------------------------------------------*/    
     static public String formatDateTimeAsString(long v, boolean includeMillis) {
-        return formatDateTimeAsString(new Long(v), includeMillis, false);
+        return formatDateTimeAsString(Long.valueOf(v), includeMillis, false);
     }
    
  /*----------------------------------------------------------------------------*/    
@@ -297,7 +297,7 @@ public class MiscHelper {
     
 /*----------------------------------------------------------------------------*/    
     static public String formatDateTimeAsString(long v, boolean includeMillis, boolean includeParens) {
-        return formatDateTimeAsString(new Long(v), includeMillis, includeParens);
+        return formatDateTimeAsString(Long.valueOf(v), includeMillis, includeParens);
     }
     
 /*----------------------------------------------------------------------------*/    
@@ -368,7 +368,7 @@ public class MiscHelper {
 	}
 
 	public static String formatTextDataLine(int labelLength, String label, float value, String suffix, int precision) {
-		return formatTextDataLine(labelLength, label, String.format("%."+ precision + "f%s", new Float(value), suffix));
+		return formatTextDataLine(labelLength, label, String.format("%."+ precision + "f%s", Float.valueOf(value), suffix));
 	}
 	
 	public static  ObjectName appendWildCard(ObjectName base) {

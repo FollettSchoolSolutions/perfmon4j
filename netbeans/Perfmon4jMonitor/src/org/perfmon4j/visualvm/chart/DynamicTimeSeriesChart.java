@@ -132,7 +132,7 @@ public class DynamicTimeSeriesChart extends JPanel implements FieldManager.Field
                 dValue *= factor;
 
                 dValue = Math.max(0.0d, dValue);
-                result = new Double(Math.min(100.0, dValue));
+                result = Double.valueOf(Math.min(100.0, dValue));
             }
             return result;
         }

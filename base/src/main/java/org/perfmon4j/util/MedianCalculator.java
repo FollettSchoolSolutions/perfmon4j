@@ -106,7 +106,7 @@ public class MedianCalculator {
             value = Math.round((double)value / factor);
         }
         
-        final Long key = new Long(value);
+        final Long key = Long.valueOf(value);
 
         synchronized(lockToken) {
             OccuranceCount count = valueMap.get(key);
@@ -201,7 +201,7 @@ public class MedianCalculator {
                     }
                 }
             }
-            result.result = new Double((resultA.doubleValue() + resultB.doubleValue()) / 2 * factor);
+            result.result = Double.valueOf((resultA.doubleValue() + resultB.doubleValue()) / 2 * factor);
         }
         return result;
     }
