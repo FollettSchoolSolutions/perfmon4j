@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "id": "1",
+      "directory": "agent-api",
+      "output_file": "CLAUDE.md",
+      "status": "done",
+      "analyzed_at": "2026-01-23T18:59:36Z"
+    },
+    {
+      "id": "2",
+      "directory": "base",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:13:50Z"
+    },
+    {
+      "id": "3",
+      "directory": "utils",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:16:00Z"
+    },
+    {
+      "id": "4",
+      "directory": "dbupgrader",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:18:00Z"
+    },
+    {
+      "id": "5",
+      "directory": "reportconsole",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:09:11Z"
+    },
+    {
+      "id": "6",
+      "directory": "genericfilter",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:18:15Z"
+    },
+    {
+      "id": "7",
+      "directory": "servlet",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:09:45Z"
+    },
+    {
+      "id": "8",
+      "directory": "tomcat7",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:11:56.897282Z"
+    },
+    {
+      "id": "9",
+      "directory": "wildfly8",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:15:00Z"
+    },
+    {
+      "id": "10",
+      "directory": "quarkus2x",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:12:46Z"
+    },
+    {
+      "id": "11",
+      "directory": "quarkus3x",
+      "output_file": "CLAUDE.md",
+      "status": "completed",
+      "analyzed_at": "2026-01-23T19:17:30Z"
+    }
+  ]
+}

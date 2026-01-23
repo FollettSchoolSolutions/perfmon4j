@@ -4,7 +4,6 @@ target
 
 # IDE and tool-specific files
 .vscode/
-.claude/
 
 hystrix/\.classpath
 
@@ -28,3 +27,4 @@ genericfilter/.classpath
 quarkus2x/.classpath
 
 quarkus3x/.classpath
+.claude/settings.local.json

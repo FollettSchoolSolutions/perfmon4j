@@ -2,19 +2,15 @@ package org.perfmon4j.reporter.model;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.util.StringTokenizer;
 
 import org.jfree.data.time.Minute;
 import org.jfree.data.time.TimeSeries;
 import org.perfmon4j.reporter.gui.ToolTipInfo;
 import org.perfmon4j.util.JDBCHelper;
-import org.perfmon4j.util.MiscHelper;
 import org.perfmon4j.util.vo.ResponseInfo;
 
 public class IntervalCategory extends Category<IntervalCategory> implements ToolTipInfo {
