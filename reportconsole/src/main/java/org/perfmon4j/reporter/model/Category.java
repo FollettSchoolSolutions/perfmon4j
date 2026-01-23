@@ -1,7 +1,7 @@
 package org.perfmon4j.reporter.model;
 
 
-public class Category<T extends P4JTreeNode> extends P4JTreeNode<P4JTreeNode, T> {
+public class Category<T extends P4JTreeNode<?,?>> extends P4JTreeNode<P4JTreeNode<?,?>, T> {
 	public Category(String name) {
 		super(name, true);
 	}

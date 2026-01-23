@@ -216,7 +216,7 @@ public class App extends JFrame {
         toolBar.add(newConnectionAction.buildToolBarButton());
         toolBar.add(closeConnectionAction.buildToolBarButton());
         toolBar.add(new JToolBar.Separator());
-        toolBar.add(selectConnection = new JComboBox(new SetBasedComboBoxModel<P4JTreeNode>()));
+        toolBar.add(selectConnection = new JComboBox(new SetBasedComboBoxModel<P4JTreeNode<?,?>>()));
 		cp.add(toolBar, BorderLayout.PAGE_START);
 		closeConnectionAction.setEnabled(false);
 		

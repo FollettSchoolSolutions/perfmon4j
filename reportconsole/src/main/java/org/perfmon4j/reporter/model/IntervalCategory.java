@@ -115,7 +115,7 @@ public class IntervalCategory extends Category<IntervalCategory> implements Tool
 		return new TimeSeries[]{throughput, avgDur};
 	}
 	
-	public static IntervalCategory safeCast(P4JTreeNode node) {
+	public static IntervalCategory safeCast(P4JTreeNode<?,?> node) {
 		if (node instanceof IntervalCategory) {
 			return (IntervalCategory)node;
 		} else {

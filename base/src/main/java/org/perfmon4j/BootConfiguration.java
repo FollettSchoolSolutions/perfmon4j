@@ -23,11 +23,9 @@ package org.perfmon4j;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Vector;
 
 import org.perfmon4j.util.BeanHelper;
 import org.perfmon4j.util.BeanHelper.UnableToSetAttributeException;

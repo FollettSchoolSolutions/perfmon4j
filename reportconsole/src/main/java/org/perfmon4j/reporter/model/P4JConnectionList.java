@@ -5,14 +5,14 @@ import java.util.Iterator;
 import java.util.Set;
 
 
-public class P4JConnectionList extends P4JTreeNode<P4JTreeNode, P4JConnection> {
+public class P4JConnectionList extends P4JTreeNode<P4JTreeNode<?,?>, P4JConnection> {
 	public static interface NodeChangedListener {
 		public void connectionChanged(P4JConnection newConnection, P4JConnection oldConnection);
-		public void nodeChanged(P4JTreeNode newNode, P4JTreeNode oldNode);
+		public void nodeChanged(P4JTreeNode<?,?> newNode, P4JTreeNode<?,?> oldNode);
 	}
 	
 	private P4JConnection activeConnection = null;
-	private P4JTreeNode activeNode = null;
+	private P4JTreeNode<?,?> activeNode = null;
 	private Set<NodeChangedListener> listeners = new HashSet<NodeChangedListener>();
 	
 	public P4JConnectionList() {
@@ -29,7 +29,7 @@ public class P4JConnectionList extends P4JTreeNode<P4JTreeNode, P4JConnection> {
 		return activeConnection;
 	}
 
-	public P4JTreeNode getActiveNode() {
+	public P4JTreeNode<?,?> getActiveNode() {
 		return activeNode;
 	}
 	
@@ -49,8 +49,8 @@ public class P4JConnectionList extends P4JTreeNode<P4JTreeNode, P4JConnection> {
 		listeners.remove(listener);
 	}
 	
-	public void setActiveNode(P4JTreeNode node) {
-		P4JTreeNode oldNode = activeNode;
+	public void setActiveNode(P4JTreeNode<?,?> node) {
+		P4JTreeNode<?,?> oldNode = activeNode;
 		P4JConnection oldConnection = activeConnection;
 		
 		activeNode = node;
@@ -76,7 +76,7 @@ public class P4JConnectionList extends P4JTreeNode<P4JTreeNode, P4JConnection> {
 		}
 	}
 
-	private static boolean nodesMatch(P4JTreeNode a, P4JTreeNode b) {
+	private static boolean nodesMatch(P4JTreeNode<?,?> a, P4JTreeNode<?,?> b) {
 		return (a == null ? b == null : a.equals(b));
 	}
 
@@ -92,7 +92,7 @@ public class P4JConnectionList extends P4JTreeNode<P4JTreeNode, P4JConnection> {
 		}
 	}
 	
-	private void fireNodeChangeEvent(P4JTreeNode newNode, P4JTreeNode oldNode) {
+	private void fireNodeChangeEvent(P4JTreeNode<?,?> newNode, P4JTreeNode<?,?> oldNode) {
 		Iterator<NodeChangedListener> itr = listeners.iterator();
 		while (itr.hasNext()) {
 			itr.next().nodeChanged(newNode, oldNode);

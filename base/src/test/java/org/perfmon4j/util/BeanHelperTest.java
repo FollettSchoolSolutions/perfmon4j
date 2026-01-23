@@ -103,9 +103,9 @@ public class BeanHelperTest extends PerfMonTestCase {
         TestObject to = new TestObject();
         
         BeanHelper.setValue(to, "floatValue", "100.1");
-        assertEquals(Float.valueOf(100.1), Float.valueOf(to.floatValue));
+        assertEquals(Float.valueOf(100.1f), Float.valueOf(to.floatValue));
 
-        validateRoundTrip(to, "floatValue", Float.valueOf(100.1));
+        validateRoundTrip(to, "floatValue", Float.valueOf(100.1f));
     }
     
 /*----------------------------------------------------------------------------*/
@@ -159,6 +159,7 @@ public class BeanHelperTest extends PerfMonTestCase {
     }
     
 /*----------------------------------------------------------------------------*/
+    
     private static class TestObject {
         private String value;
         private Integer integerValue;
@@ -173,83 +174,103 @@ public class BeanHelperTest extends PerfMonTestCase {
         private byte byteValue;
         private boolean booleanValue;
         
+        @SuppressWarnings("unused")
         public void setValue(String value) {
             this.value = value;
         }
         
+        @SuppressWarnings("unused")
         public void setIntegerValue(Integer integerValue) {
             this.integerValue = integerValue;
         }
         
+        @SuppressWarnings("unused")
         public void setIntValue(int intValue) {
             this.intValue = intValue;
         }
         
+        @SuppressWarnings("unused")
         public void setLongValue(long longValue) {
             this.longValue = longValue;
         }
     
+        @SuppressWarnings("unused")
         public void setDoubleValue(double doubleValue) {
             this.doubleValue = doubleValue;
         }
         
+        @SuppressWarnings("unused")
         public void setFloatValue(float floatValue) {
             this.floatValue = floatValue;
         }
 
+        @SuppressWarnings("unused")
         public void setCharValue(char charValue) {
             this.charValue = charValue;
         }
         
+        @SuppressWarnings("unused")
         public void setShortValue(short shortValue) {
             this.shortValue = shortValue;
         }
         
+        @SuppressWarnings("unused")
         public void setBooleanValue(boolean booleanValue) {
             this.booleanValue = booleanValue;
         }
         
+        @SuppressWarnings("unused")
         public void setByteValue(byte byteValue) {
             this.byteValue = byteValue;
         }
 
-		public String getValue() {
+		@SuppressWarnings("unused")
+        public String getValue() {
 			return value;
 		}
 
-		public Integer getIntegerValue() {
+		@SuppressWarnings("unused")
+        public Integer getIntegerValue() {
 			return integerValue;
 		}
 
-		public int getIntValue() {
+		@SuppressWarnings("unused")
+        public int getIntValue() {
 			return intValue;
 		}
 
-		public long getLongValue() {
+		@SuppressWarnings("unused")
+        public long getLongValue() {
 			return longValue;
 		}
 
-		public float getFloatValue() {
+		@SuppressWarnings("unused")
+        public float getFloatValue() {
 			return floatValue;
 		}
 
-		public double getDoubleValue() {
+		@SuppressWarnings("unused")
+        public double getDoubleValue() {
 			return doubleValue;
 		}
 
-		public char getCharValue() {
+		@SuppressWarnings("unused")
+        public char getCharValue() {
 			return charValue;
 		}
 
-		public short getShortValue() {
+		@SuppressWarnings("unused")
+        public short getShortValue() {
 			return shortValue;
 		}
 
-		public byte getByteValue() {
+		@SuppressWarnings("unused")
+        public byte getByteValue() {
 			return byteValue;
 		}
 
-		public boolean isBooleanValue() {
+		@SuppressWarnings("unused")
+        public boolean isBooleanValue() {
 			return booleanValue;
 		}
         
