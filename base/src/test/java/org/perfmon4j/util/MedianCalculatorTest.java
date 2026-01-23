@@ -143,7 +143,7 @@ public class MedianCalculatorTest extends PerfMonTestCase {
         MedianCalculator.MedianResult result = calc.getMedian();
         assertEquals("Median should be designated as overflow", MedianCalculator.OVERFLOW_HIGH, 
             result.getOverflowFlag());
-        assertEquals("Median should be designated as overflow", new Double(2.0), 
+        assertEquals("Median should be designated as overflow", Double.valueOf(2.0), 
             result.getResult());
         
         

@@ -56,7 +56,7 @@ public class ThresholdCalculator {
         while (tokenizer.hasMoreTokens()) {
             String nextToken = tokenizer.nextToken();
             long converted = MiscHelper.convertIntervalStringToMillis(nextToken, -1);
-            list.add(new Long(converted));
+            list.add(Long.valueOf(converted));
         }
 
         long result[] = new long[list.size()];

@@ -451,7 +451,7 @@ public class JavassistRuntimeTimerInjector extends RuntimeTimerInjector {
                         if (PerfMonTimerTransformer.monitorsForRedefinedClasses != null) {
                             for (int i = 0; i < PerfMonTimerTransformer.monitorsForRedefinedClasses.length; i++) {
                                 if (PerfMonTimerTransformer.monitorsForRedefinedClasses[i] == null) {
-                                    offsetInStaticMonitorArray = new Integer(i);
+                                    offsetInStaticMonitorArray = Integer.valueOf(i);
                                     PerfMonTimerTransformer.monitorsForRedefinedClasses[i] = new org.perfmon4j.PerfMon[numTimers];
                                     break;
                                 }

@@ -56,7 +56,7 @@ public class ReportSQLConnection extends P4JConnection {
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("SELECT CategoryID, CategoryName FROM P4JCategory");
 			while (rs.next()) {
-				Long databaseID = new Long(rs.getLong(1));
+				Long databaseID = Long.valueOf(rs.getLong(1));
 				String name = rs.getString(2);
 				
 				IntervalCategory.getOrCreate(c, name, databaseID, this);

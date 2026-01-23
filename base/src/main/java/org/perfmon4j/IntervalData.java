@@ -571,11 +571,11 @@ public class IntervalData implements PerfMonObservableData {
 	                " (SQL)Std. Dev............ %.2f\r\n" +
 	                " (SQL)Max Duration........ %d %s\r\n" +
 	                " (SQL)Min Duration........ %d %s\r\n",
-	                new Double(getAverageSQLDuration()),
-	                new Double(getSQLStdDeviation()),
-	                new Long(getMaxSQLDuration()), 
+	                Double.valueOf(getAverageSQLDuration()),
+	                Double.valueOf(getSQLStdDeviation()),
+	                Long.valueOf(getMaxSQLDuration()),
 	                formatTimeDataSet(timeMaxSQLDurationSet),
-	                new Long(getMinSQLDuration()),
+	                Long.valueOf(getMinSQLDuration()),
 	                formatTimeDataSet(timeMinSQLDurationSet)
 	            );
         }

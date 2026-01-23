@@ -267,7 +267,7 @@ public class ParseTextAppenderLogTest extends TestCase {
 		vo.setMaxActiveThreads(1);
 		vo.setThroughput(2.22);
 		vo.setAverageDuration(3.33);
-		vo.setMedianDuration(new Double(4.44));
+		vo.setMedianDuration(Double.valueOf(4.44));
 		vo.setStandardDeviation(8.88);
 		vo.setMaxDuration(9);
 		vo.setMinDuration(10);

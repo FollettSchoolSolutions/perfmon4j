@@ -77,11 +77,11 @@ public class ThreadPoolMonitorImplTest extends SQLTest {
     	long start = System.currentTimeMillis();
     	long end = start + 60000;
     	
-    	Mockito.when(data.getStartTime()).thenReturn(new Long(start));
-    	Mockito.when(data.getStartTime()).thenReturn(new Long(end));
+    	Mockito.when(data.getStartTime()).thenReturn(Long.valueOf(start));
+    	Mockito.when(data.getStartTime()).thenReturn(Long.valueOf(end));
     	Mockito.when(data.getInstanceName()).thenReturn("HTTP");
-    	Mockito.when(data.getCurrentThreadsBusy()).thenReturn(new Long(25));
-    	Mockito.when(data.getCurrentThreadCount()).thenReturn(new Long(125));
+    	Mockito.when(data.getCurrentThreadsBusy()).thenReturn(Long.valueOf(25));
+    	Mockito.when(data.getCurrentThreadCount()).thenReturn(Long.valueOf(125));
 
     	writer.writeToSQL(conn, "p4j", data, 1);
 

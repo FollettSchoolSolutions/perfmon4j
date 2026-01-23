@@ -72,7 +72,7 @@ public class BeanHelperTest extends PerfMonTestCase {
         TestObject to = new TestObject();
         
         BeanHelper.setValue(to, "integerValue", "100");
-        assertEquals("to.integerValue", new Integer(100), to.integerValue);
+        assertEquals("to.integerValue", Integer.valueOf(100), to.integerValue);
 
         validateRoundTrip(to, "integerValue", Integer.valueOf(100));
     }
@@ -103,9 +103,9 @@ public class BeanHelperTest extends PerfMonTestCase {
         TestObject to = new TestObject();
         
         BeanHelper.setValue(to, "floatValue", "100.1");
-        assertEquals(new Float(100.1), new Float(to.floatValue));
+        assertEquals(Float.valueOf(100.1), Float.valueOf(to.floatValue));
 
-        validateRoundTrip(to, "floatValue", new Float(100.1));
+        validateRoundTrip(to, "floatValue", Float.valueOf(100.1));
     }
     
 /*----------------------------------------------------------------------------*/
@@ -113,7 +113,7 @@ public class BeanHelperTest extends PerfMonTestCase {
         TestObject to = new TestObject();
         
         BeanHelper.setValue(to, "doubleValue", "100.1");
-        assertEquals(new Double(100.1), new Double(to.doubleValue));
+        assertEquals(Double.valueOf(100.1), Double.valueOf(to.doubleValue));
 
         validateRoundTrip(to, "doubleValue", Double.valueOf(100));
     }

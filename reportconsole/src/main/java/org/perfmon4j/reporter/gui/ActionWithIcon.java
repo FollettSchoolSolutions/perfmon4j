@@ -23,7 +23,7 @@ public abstract class ActionWithIcon extends AbstractAction {
 		super(text, buildIconOrNull(iconPath));
 		
 		this.toolTipText = toolTipText;
-		this.mnemonic = new Integer(mnemonic);
+		this.mnemonic = Integer.valueOf(mnemonic);
 	}
 	
 	public JMenuItem buildMenuItem() {

@@ -41,13 +41,13 @@ public class ByteFormatter extends NumberFormatter {
 		if (v < BYTE_LIMIT) {
 			result = v + " bytes";
 		} else if (v < KB_LIMIT) {
-			value = new Double(((double)v)/KB);
+			value = Double.valueOf(((double)v)/KB);
 			result = String.format("%.3f KB", value);
 		} else if (v < MB_LIMIT) {
-			value = new Double(((double)v)/MB);
+			value = Double.valueOf(((double)v)/MB);
 			result = String.format("%.3f MB", value);
 		} else {
-			value = new Double(((double)v)/GB);
+			value = Double.valueOf(((double)v)/GB);
 			result = String.format("%.3f GB", value);
 		}
 		
