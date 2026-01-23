@@ -5,9 +5,9 @@ public class Category<T extends P4JTreeNode<?,?>> extends P4JTreeNode<P4JTreeNod
 	public Category(String name) {
 		super(name, true);
 	}
-	
+    
 	public void addCategory(T c) {
-		c.setParent(this);
+		((P4JTreeNode) c).setParent(this);
 		addChild(c);
 	}
 	

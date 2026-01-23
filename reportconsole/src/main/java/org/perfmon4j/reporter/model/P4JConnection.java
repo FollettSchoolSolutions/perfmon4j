@@ -11,8 +11,8 @@ public class P4JConnection extends P4JTreeNode<P4JConnectionList, P4JTreeNode<?,
 	
 	@SuppressWarnings("unchecked")
 	public void addCategory(P4JTreeNode<?,?> c) {
-		c.setParent(this);
-		addChild(c);
+		((P4JTreeNode)c).setParent(this);
+		addChild((P4JTreeNode<?,?>)c);
 	}
 	
 	void setParent(P4JConnectionList parent) {

@@ -35,7 +35,7 @@ public abstract class P4JTreeNode<P extends P4JTreeNode<?,?>, T extends P4JTreeN
 		return name;
 	}
 	
-	public Enumeration<T> children() {
+	public Enumeration<? extends TreeNode> children() {
 		return Collections.enumeration(children);
 	}
 
