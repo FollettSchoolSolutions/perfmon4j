@@ -1,54 +1,29 @@
 package org.perfmon4j.reporter;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.beans.PropertyChangeListener;
 import java.sql.SQLException;
-import java.util.Enumeration;
-import java.util.Map;
-
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextField;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.border.EtchedBorder;
-import javax.swing.event.TreeModelListener;
-import javax.swing.tree.TreeModel;
-import javax.swing.tree.TreeNode;
-import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.XYPlot;
@@ -59,15 +34,12 @@ import org.perfmon4j.reporter.controller.Controller;
 import org.perfmon4j.reporter.gui.AEDConnectionDialog;
 import org.perfmon4j.reporter.gui.ActionWithIcon;
 import org.perfmon4j.reporter.gui.CustomTreeCellRenderer;
-import org.perfmon4j.reporter.model.Category;
 import org.perfmon4j.reporter.model.IntervalCategory;
 import org.perfmon4j.reporter.model.P4JConnection;
 import org.perfmon4j.reporter.model.P4JConnectionList;
 import org.perfmon4j.reporter.model.Model;
 import org.perfmon4j.reporter.model.P4JTreeNode;
 import org.perfmon4j.reporter.model.SetBasedComboBoxModel;
-
-import net.miginfocom.swing.MigLayout;
 
 public class App extends JFrame {
 	private static App app;
