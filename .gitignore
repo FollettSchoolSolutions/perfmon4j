@@ -2,6 +2,10 @@ target
 .project
 .settings
 
+# IDE and tool-specific files
+.vscode/
+.claude/
+
 hystrix/\.classpath
 
 hystrix/derby\.log
