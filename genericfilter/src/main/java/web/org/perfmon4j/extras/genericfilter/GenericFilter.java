@@ -85,7 +85,7 @@ public abstract class GenericFilter {
 	
 	
 	private static final String CONTENT_TYPE = "Content-Type";
-    private static final Pattern passwordParamPattern = Pattern.compile("[\\?|\\&]{1}password\\=([^\\&\\;]*)");
+    private static final Pattern passwordParamPattern = Pattern.compile("[\\?\\&][^\\&\\;\\=]*password\\=([^\\&\\;]*)", Pattern.CASE_INSENSITIVE);
 
 	protected GenericFilter(FilterParams params) {
 		this.baseFilterCategory = params.getBaseFilterCategory();
