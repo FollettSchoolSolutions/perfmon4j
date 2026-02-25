@@ -85,7 +85,21 @@ public abstract class GenericFilter {
 	
 	
 	private static final String CONTENT_TYPE = "Content-Type";
-    private static final Pattern passwordParamPattern = Pattern.compile("[\\?\\&][^\\&\\;\\=]*password\\=([^\\&\\;]*)", Pattern.CASE_INSENSITIVE);
+    static final String PASSWORD_PATTERN_SYSTEM_PROPERTY = "PERFMON4J_FILTER_PASSWORD_PATTERN";
+    private static final String DEFAULT_PASSWORD_PATTERN = "[\\?\\&][^\\&\\;\\=]*password\\=([^\\&\\;]*)";
+    private static final Pattern passwordParamPattern = buildPasswordParamPattern();
+
+    /* package */ static Pattern buildPasswordParamPattern() {
+        String override = System.getProperty(PASSWORD_PATTERN_SYSTEM_PROPERTY);
+        if (override != null && !override.isBlank()) {
+            try {
+                return Pattern.compile(override, Pattern.CASE_INSENSITIVE);
+            } catch (PatternSyntaxException ex) {
+                ex.printStackTrace();
+            }
+        }
+        return Pattern.compile(DEFAULT_PASSWORD_PATTERN, Pattern.CASE_INSENSITIVE);
+    }
 
 	protected GenericFilter(FilterParams params) {
 		this.baseFilterCategory = params.getBaseFilterCategory();

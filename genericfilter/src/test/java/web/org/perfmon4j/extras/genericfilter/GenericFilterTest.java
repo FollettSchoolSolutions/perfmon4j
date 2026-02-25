@@ -68,6 +68,44 @@ public class GenericFilterTest {
 		assertEquals("?word=userpassword", GenericFilter.maskPassword("?word=userpassword"), "Password suffix in value is ignored");
 	}
 
+	@Test
+	void testPasswordPatternCanBeOverriddenViaSystemProperty() {
+		String previousValue = System.getProperty(GenericFilter.PASSWORD_PATTERN_SYSTEM_PROPERTY);
+		try {
+			// Pattern that matches parameters named "secret" instead of "password"
+			System.setProperty(GenericFilter.PASSWORD_PATTERN_SYSTEM_PROPERTY,
+					"[\\?\\&][^\\&\\;\\=]*secret\\=([^\\&\\;]*)");
+			java.util.regex.Pattern customPattern = GenericFilter.buildPasswordParamPattern();
+			java.util.regex.Matcher m = customPattern.matcher("?secret=myvalue");
+			assertTrue(m.find(), "Custom pattern should match 'secret' parameter");
+			assertEquals("myvalue", m.group(1), "Custom pattern should capture the secret value");
+		} finally {
+			if (previousValue == null) {
+				System.clearProperty(GenericFilter.PASSWORD_PATTERN_SYSTEM_PROPERTY);
+			} else {
+				System.setProperty(GenericFilter.PASSWORD_PATTERN_SYSTEM_PROPERTY, previousValue);
+			}
+		}
+	}
+
+	@Test
+	void testPasswordPatternDefaultUsedWhenSystemPropertyNotSet() {
+		String previousValue = System.getProperty(GenericFilter.PASSWORD_PATTERN_SYSTEM_PROPERTY);
+		try {
+			System.clearProperty(GenericFilter.PASSWORD_PATTERN_SYSTEM_PROPERTY);
+			java.util.regex.Pattern defaultPattern = GenericFilter.buildPasswordParamPattern();
+			java.util.regex.Matcher m = defaultPattern.matcher("?password=myvalue");
+			assertTrue(m.find(), "Default pattern should match 'password' parameter");
+			assertEquals("myvalue", m.group(1), "Default pattern should capture the password value");
+		} finally {
+			if (previousValue == null) {
+				System.clearProperty(GenericFilter.PASSWORD_PATTERN_SYSTEM_PROPERTY);
+			} else {
+				System.setProperty(GenericFilter.PASSWORD_PATTERN_SYSTEM_PROPERTY, previousValue);
+			}
+		}
+	}
+
 
 	public static class SimpleAppender extends Appender {
 		private static SimpleAppender appender = null;
