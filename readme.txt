@@ -17,6 +17,9 @@ Follett Software
 McHenry, IL 60050
 
 ** 2.2.1 - TBD
+- The GenericFilter now masks query parameters containing "password" in the parameter name
+  before writing to the log. The default regex pattern can be overridden by setting the
+  system property PERFMON4J_FILTER_PASSWORD_PATTERN to a custom regular expression.
 
 ** 2.2.0 - 11/20/24
 - Added new feature to monitor JMX MBeans using a MBeanSnapShotMonitor.  Documentation
