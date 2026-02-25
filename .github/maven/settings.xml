@@ -5,21 +5,13 @@
 <!-- The github action will copy this file into the ~/,m2/settings.xml location. -->
 
   <servers>
-    <!-- Server for OSSRH (OSS Repository Hosting) -->
+    <!-- Server for Maven Central Portal (central.sonatype.com) -->
     <server>
-      <id>ossrh</id>
-      <username>${ossrh.userName}</username>
-      <password>${ossrh.password}</password>
+      <id>central</id>
+      <username>${central.userName}</username>
+      <password>${central.password}</password>
     </server>
   </servers>
 
-  <mirrors>
-    <!-- Mirror configuration -->
-    <mirror>
-      <id>central</id>
-      <mirrorOf>central</mirrorOf>
-      <url>https://repo.maven.apache.org/maven2</url>
-    </mirror>
-  </mirrors>
 
 </settings>

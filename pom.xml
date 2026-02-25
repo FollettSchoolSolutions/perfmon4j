@@ -32,19 +32,6 @@
 		<url>https://github.com/FollettSchoolSolutions/perfmon4j</url>
 	</scm>
 
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<name>OSS Sonatype Repository Hosting Snapshots</name>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<name>OSS Sonatype Repository Hosting</name>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-	</distributionManagement>
-
 	<modules>
 		<module>agent-api</module>
 		<module>dbupgrader</module>
@@ -105,7 +92,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
-						<version>1.6</version>
+						<version>3.2.7</version>
 						<executions>
 							<execution>
 								<id>sign-artifacts</id>
@@ -120,8 +107,6 @@
 								<arg>--batch</arg>
 								<arg>--pinentry-mode</arg>
 								<arg>loopback</arg>
-								<arg>--passphrase</arg>
-								<arg>${gpg.passphrase}</arg>
 							</gpgArguments>
 						</configuration>
 					</plugin>
@@ -129,18 +114,19 @@
 			</build>
 		</profile>
 		<profile>
-			<!-- This profile must be activated along with the release profile To 
+			<!-- This profile must be activated along with the release profile To
 				activate add "-P release,mvnCentral" to the maven command line -->
 			<id>mvnCentral</id>
 			<build>
 				<plugins>
 					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-deploy-plugin</artifactId>
-						<version>3.0.0-M1</version>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
+						<version>0.10.0</version>
+						<extensions>true</extensions>
 						<configuration>
-							<repositoryId>ossrh</repositoryId>
-							<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+							<publishingServerId>central</publishingServerId>
+							<autoPublish>true</autoPublish>
 						</configuration>
 					</plugin>
 				</plugins>
