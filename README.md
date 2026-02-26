@@ -15,6 +15,10 @@ Perfmon4j is a Java Instrumentation agent used to monitor performance in product
 [ ![Download](https://api.bintray.com/packages/fss-development/Perfmon4j/Release/images/download.svg) ](https://bintray.com/fss-development/Perfmon4j/Release/_latestVersion)
 
 
+## Publishing
+For instructions on publishing artifacts to Maven Central, including required GitHub secrets
+and how to generate credentials, see the [Maven Central Publishing Guide](.github/maven/MAVEN_CENTRAL_PUBLISHING.md).
+
 ## License
 Perfmon4j is released under The GNU Lesser General Public License, [version 3.0](http://opensource.org/licenses/LGPL-3.0)
 
