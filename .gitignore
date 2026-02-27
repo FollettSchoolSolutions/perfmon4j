@@ -3,7 +3,13 @@ target
 .settings
 
 # IDE and tool-specific files
-.vscode/
+
+# VS Code — exclude everything by default, opt-in shared files
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
 
 hystrix/\.classpath
 

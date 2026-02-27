@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Build, Deploy, Start, Attach",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 8787,
+            "preLaunchTask": "Build, Deploy and Start WildFly"
+        },
+        {
+            "type": "java",
+            "name": "Deploy, Start, Attach",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 8787,
+            "preLaunchTask": "Deploy and Start WildFly"
+        }
+    ]
+}
