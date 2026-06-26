@@ -25,6 +25,17 @@ curl https://api.example-llm.com/v1/complete \
   -d '{"model":"claude-2","prompt":"Summarize the following...","max_tokens":300}'
 ```
 
+Consistency
+-----------
+Consistency across the project matters: file/skill naming conventions, code style,
+directory layout, changelog format, and documentation patterns should match what
+already exists. Before adding something new, look at how similar things are already
+named and structured, and follow that pattern.
+
+If the user (or a request) breaks with an established convention — for example using
+camelCase for a skill file when the existing ones are kebab-case — point it out and
+recommend the consistent alternative rather than silently following along.
+
 Prompting guidance
 ------------------
 - Be explicit: include the role (system/instruction), desired format, length limits, and examples when useful.
