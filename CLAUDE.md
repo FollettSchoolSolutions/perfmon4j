@@ -55,4 +55,33 @@ Further reading
 ---------------
 - Refer to your chosen provider's official docs for up-to-date endpoints, SDKs, and best practices.
 
+Project Wiki Publishing
+-----------------------
+This project's documentation wiki lives in **two separate git repositories** that are kept in sync **manually**. A wiki change is not complete until it has been applied to both.
+
+1. **Source copy — the `wiki/` folder in this repo.** Wiki pages are authored here as plain Markdown files (e.g. `wiki/Configuring-the-Java-Agent.md`) and committed to the `develop` branch like any other source file. This copy is browsable in the source tree but does **not** render on GitHub's Wiki tab.
+2. **Published copy — the separate GitHub Wiki repo.** The Wiki tab is backed by a distinct repository, `git@github.com:FollettSchoolSolutions/perfmon4j.wiki.git` (default branch `master`). Only pages pushed here appear at `https://github.com/FollettSchoolSolutions/perfmon4j/wiki/<Page-Name>`.
+
+To publish or update a wiki page:
+
+```
+# 1. Author/commit the page in the main repo's wiki/ folder (on develop)
+git add wiki/<Page-Name>.md
+git commit -m "..."
+git push origin develop
+
+# 2. Mirror it into the GitHub Wiki repo so it renders on the Wiki tab
+git clone git@github.com:FollettSchoolSolutions/perfmon4j.wiki.git /tmp/p4j-wiki
+cp wiki/<Page-Name>.md /tmp/p4j-wiki/
+cd /tmp/p4j-wiki
+git add <Page-Name>.md
+git commit -m "..."
+git push origin master
+```
+
+Notes:
+- **Wiki URLs omit the `.md` extension** — GitHub renders pages, it does not serve raw `.md` files. The file `Configuring-the-Java-Agent.md` is reached at `.../wiki/Configuring-the-Java-Agent`.
+- Because the two copies are synced by hand, they can drift. When editing an existing page, update **both** repos.
+- `_Sidebar.md` (in the wiki repo) controls the wiki navigation sidebar but does not list every page; new pages still appear in the wiki's automatic "Pages" list without a sidebar entry.
+
 Maintainers: update this file if the project adopts a specific provider or if integration details change.
