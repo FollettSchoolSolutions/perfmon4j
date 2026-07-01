@@ -127,6 +127,13 @@
 						<configuration>
 							<publishingServerId>central</publishingServerId>
 							<autoPublish>true</autoPublish>
+							<!-- Exclude the legacy jbossweb7 extras module from Central.
+							     It depends on org.jboss.web:jbossweb (not on Central) via a
+							     system-scoped vendored jar, which the Central Portal rejects.
+							     excludeArtifacts matches on artifactId. -->
+							<excludeArtifacts>
+								<excludeArtifact>perfmon4j-jbossweb7</excludeArtifact>
+							</excludeArtifacts>
 						</configuration>
 					</plugin>
 				</plugins>
