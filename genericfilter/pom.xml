@@ -18,13 +18,13 @@
 <dependencies>
 
 	<dependency>
-		<groupId>${project.groupId}</groupId>
+		<groupId>org.perfmon4j</groupId>
 		<version>${project.version}</version>
 		<artifactId>perfmon4j-agent-api</artifactId>
 	</dependency>
 
 	<dependency>
-		<groupId>${project.groupId}</groupId>
+		<groupId>org.perfmon4j</groupId>
 		<version>${project.version}</version>
 		<artifactId>perfmon4j</artifactId>
 		<scope>test</scope>

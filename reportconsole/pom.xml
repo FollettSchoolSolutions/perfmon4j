@@ -26,7 +26,7 @@
 	
 	<dependencies>
 		<dependency>
-			<groupId>${project.groupId}</groupId>
+			<groupId>org.perfmon4j</groupId>
 			<version>${project.version}</version>
 			<artifactId>perfmon4j</artifactId>
 			<scope>compile</scope>
