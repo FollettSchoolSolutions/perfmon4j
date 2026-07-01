@@ -17,9 +17,15 @@ Follett Software
 McHenry, IL 60050
 
 ** 2.2.1 - TBD
-- The GenericFilter now masks query parameters containing "password" in the parameter name
-  before writing to the log. The default regex pattern can be overridden by setting the
-  system property PERFMON4J_FILTER_PASSWORD_PATTERN to a custom regular expression.
+- The GenericFilter and the WildFly HandlerImpl now mask query parameters whose name
+  contains "password" (case-insensitive) before writing the request to the log. The
+  default regex pattern can be overridden by setting the system property
+  PERFMON4J_FILTER_PASSWORD_PATTERN to a custom regular expression.
+
+- Upgraded the embedded Javassist library from 3.29.0-GA to 3.30.2-GA so the agent
+  can instrument code running under JDK 21. The older version threw a
+  NullPointerException while writing instrumented classes on JDK 21, which prevented
+  some agent API classes (e.g. SingletonTracker) from being attached to the agent.
 
 ** 2.2.0 - 11/20/24
 - Added new feature to monitor JMX MBeans using a MBeanSnapShotMonitor.  Documentation
