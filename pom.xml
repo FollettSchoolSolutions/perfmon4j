@@ -167,6 +167,37 @@
 				</configuration>
 				<executions />
 			</plugin>
+
+			<!-- Publish a self-contained POM for every module. The Central Portal
+			     validator inspects each artifact's raw POM and does not honor
+			     metadata inherited from the parent, so the "ossrh" flatten mode
+			     inlines the required name/description/url/license/developers/scm
+			     (and resolves coordinates like ${project.groupId}) into each
+			     deployed .flattened-pom.xml. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>flatten-maven-plugin</artifactId>
+				<version>1.6.0</version>
+				<configuration>
+					<flattenMode>ossrh</flattenMode>
+				</configuration>
+				<executions>
+					<execution>
+						<id>flatten</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>flatten</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>flatten.clean</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>clean</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
