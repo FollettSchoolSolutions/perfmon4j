@@ -10,6 +10,16 @@
 	<artifactId>perfmon4j-jbossweb7</artifactId>
 	<packaging>jar</packaging>
 	<name>Perfmon4j jbossweb7 Extras</name>
+
+	<properties>
+		<!-- This module compiles against org.jboss.web:jbossweb, a legacy JBoss Web
+		     artifact that is not available on Maven Central and is pinned here via a
+		     vendored jar with system scope. The Central Portal rejects system-scoped
+		     dependencies, so this module is excluded from Central publishing. It is
+		     still built and tested normally; it is simply not deployed to Central. -->
+		<maven.deploy.skip>true</maven.deploy.skip>
+	</properties>
+
 	<build>
 		<plugins>
 		</plugins>
