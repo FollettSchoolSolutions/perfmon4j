@@ -53,8 +53,13 @@ short-lived `release/<version>` branch so the non-SNAPSHOT commit only ever reac
 3. Cut the release on a dedicated branch (keeps the non-SNAPSHOT commit off `develop`):
    - `git checkout -b release/<version> develop`
    - `mvn versions:set -DnewVersion=<version> -DgenerateBackupPoms=false`
-   - In `readme.txt`, date-stamp the change log: change `** <version> - TBD` to
-     `** <version> - MM/DD/YY` (today's date). Change ONLY that header line.
+   - In `readme.txt`, date-stamp the change log. The top-most block MUST read
+     `** <version> - TBD`, where `<version>` exactly matches the release version being
+     cut. If the header version does NOT match (e.g. it reads `2.2.0` while releasing
+     `2.2.1`, or is already dated instead of `TBD`), STOP and report — the change log is
+     out of sync with the release; do not date-stamp or commit. Otherwise change only that
+     header line's `TBD` to `MM/DD/YY` (today's date); leave the version and all body text
+     untouched.
    - `git commit -am "Release <version>"`
 4. Publish by landing on `master` (this triggers the Central deploy):
    - `git checkout master && git merge --no-ff release/<version>`
