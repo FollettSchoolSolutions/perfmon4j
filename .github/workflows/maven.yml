@@ -49,14 +49,14 @@ jobs:
 
     steps:
       - name: Checking out the code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setting up Java
         # Will setup java and add our signing key to gpg keyvault
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '11'
-          distribution: 'adopt'
+          distribution: 'temurin'
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
 
       - name: Set up Maven settings
