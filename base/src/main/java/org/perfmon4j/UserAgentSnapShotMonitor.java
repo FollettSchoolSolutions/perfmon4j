@@ -130,7 +130,7 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
                 for (int i = 0; i < data.length && (offsetToUse == null); i++) {
                     if (data[i] == null) {
                         data[i] = this;
-                        offsetToUse = new Integer(i);
+                        offsetToUse = Integer.valueOf(i);
                     }
                 } 
                 offset = offsetToUse;
@@ -167,8 +167,8 @@ public class UserAgentSnapShotMonitor extends SnapShotMonitor {
                 "%s\r\n" +
                 "%s -> %s\r\n", 
                 getName(),
-                MiscHelper.formatTimeAsString(new Long(startTime)),
-                MiscHelper.formatTimeAsString(new Long(stopTime))));
+                MiscHelper.formatTimeAsString(Long.valueOf(startTime)),
+                MiscHelper.formatTimeAsString(Long.valueOf(stopTime))));
     
             Iterator itr = userAgentMap.entrySet().iterator();    
             while (itr.hasNext()) {

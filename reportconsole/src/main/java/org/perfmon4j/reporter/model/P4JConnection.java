@@ -1,7 +1,7 @@
 package org.perfmon4j.reporter.model;
 
 
-public class P4JConnection extends P4JTreeNode<P4JConnectionList, P4JTreeNode> {
+public class P4JConnection extends P4JTreeNode<P4JConnectionList, P4JTreeNode<?,?>> {
 	private final String url;
 	
 	public P4JConnection(String url) {
@@ -9,9 +9,10 @@ public class P4JConnection extends P4JTreeNode<P4JConnectionList, P4JTreeNode> {
 		this.url = url;
 	}
 	
-	public void addCategory(P4JTreeNode c) {
-		c.setParent(this);
-		addChild(c);
+	@SuppressWarnings("unchecked")
+	public void addCategory(P4JTreeNode<?,?> c) {
+		((P4JTreeNode)c).setParent(this);
+		addChild((P4JTreeNode<?,?>)c);
 	}
 	
 	void setParent(P4JConnectionList parent) {

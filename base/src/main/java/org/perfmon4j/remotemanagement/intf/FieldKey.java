@@ -237,15 +237,15 @@ public class FieldKey implements Comparable<FieldKey>{
 		
 		if (INTEGER_TYPE.equals(fieldType)) {
 			if (!(obj instanceof Integer)) {
-				result = new Integer(((Number)obj).intValue());
+				result = Integer.valueOf(((Number)obj).intValue());
 			}
 		} else if (LONG_TYPE.equals(fieldType) || TIMESTAMP_TYPE.equals(fieldType)) {
 			if (!(obj instanceof Long)) {
-				result = new Long(((Number)obj).longValue());
+				result = Long.valueOf(((Number)obj).longValue());
 			}
 		} else if (DOUBLE_TYPE.equals(fieldType)) {
 			if (!(obj instanceof Double)) {
-				result = new Double(((Number)obj).doubleValue());
+				result = Double.valueOf(((Number)obj).doubleValue());
 			}
 		} else if (STRING_TYPE.equals(fieldType) ) {
 			if (!(obj instanceof String)) {

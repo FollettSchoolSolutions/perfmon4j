@@ -180,9 +180,9 @@ public class PerfMonFilter implements Filter {
         	
 	        PerfMonTimer timer = startTimerForRequest(request);
 	        if (outputRequestAndDuration) {
-	        	localStartTime = new Long(MiscHelper.currentTimeWithMilliResolution());
+	        	localStartTime = Long.valueOf(MiscHelper.currentTimeWithMilliResolution());
 	        	if (SQLTime.isEnabled()) {
-	        		localSQLStartTime = new Long(SQLTime.getSQLTime());
+	        		localSQLStartTime = Long.valueOf(SQLTime.getSQLTime());
 	        	}
 	        }
 	        try {

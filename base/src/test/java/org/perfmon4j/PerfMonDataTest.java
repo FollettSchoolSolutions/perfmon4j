@@ -41,7 +41,7 @@ public class PerfMonDataTest extends PerfMonTestCase {
         IntervalData data = new IntervalData(null, fiveMinutesAgo, null, null, now);
         data.setTotalCompletions(5*60);
         
-        assertEquals("throughPutPerMinute", new Double(60.00), new Double(data.getThroughputPerMinute()));
+        assertEquals("throughPutPerMinute", Double.valueOf(60.00), Double.valueOf(data.getThroughputPerMinute()));
     }
 
     

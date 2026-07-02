@@ -28,6 +28,7 @@ import org.perfmon4j.PerfMonTestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
+
 public class ServletPathTransformerTest extends PerfMonTestCase {
     public static final String TEST_ALL_TEST_TYPE = "UNIT";
 
@@ -38,7 +39,8 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
 
 /*----------------------------------------------------------------------------*/    
     public void testBuildWithEmptyString() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("");
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("");
     	
     	assertNotNull("Should have a transformer", t);
     	assertEquals("Should not have any transformations", 0, t.getNumTransforms());
@@ -47,18 +49,19 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     }
 
     /*----------------------------------------------------------------------------*/    
-    public void testBuildWithNull() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer(null);
-    	
-    	assertNotNull("Should have a transformer", t);
-    	assertEquals("Should not have any transformations", 0, t.getNumTransforms());
+	public void testBuildWithNull() throws Exception {
+		ServletPathTransformer t = ServletPathTransformer.newTransformer(null);
+		
+		assertNotNull("Should have a transformer", t);
+		assertEquals("Should not have any transformations", 0, t.getNumTransforms());
 
-    	assertEquals("WebRequest.circulation.checkout_do", t.transformToCategory("/circulation/checkout.do"));
-    }
+		assertEquals("WebRequest.circulation.checkout_do", t.transformToCategory("/circulation/checkout.do"));
+	}
     
     /*----------------------------------------------------------------------------*/    
     public void testBuildWithGarbage() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("=>aike7b,aa*sd8,=>asdo933,98sr");
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("=>aike7b,aa*sd8,=>asdo933,98sr");
     	
     	assertNotNull("Should have a transformer", t);
     	assertEquals("Should not have any transformations", 0, t.getNumTransforms());
@@ -68,7 +71,8 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
 
     /*----------------------------------------------------------------------------*/    
     public void testBuildBlankString() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("   ");
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("   ");
     	
     	assertNotNull("Should have a transformer", t);
     	assertEquals("Should not have any transformations", 0, t.getNumTransforms());
@@ -77,8 +81,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     }
     
     /*----------------------------------------------------------------------------*/    
-    public void testLiteralTransformation() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/a/b/ => /");
+    @SuppressWarnings("deprecation")
+	public void testLiteralTransformation() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/a/b/ => /");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -87,8 +93,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     }
     
     /*----------------------------------------------------------------------------*/    
-    public void testAstriskTransformation() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/*/ => /");
+    @SuppressWarnings("deprecation")
+	public void testAstriskTransformation() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/*/ => /");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -97,8 +105,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     }
     
     /*----------------------------------------------------------------------------*/    
-    public void testTrailingAstriskTransformation() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/saas*/ => /");
+    @SuppressWarnings("deprecation")
+	public void testTrailingAstriskTransformation() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/saas*/ => /");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -109,8 +119,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     }
 
     /*----------------------------------------------------------------------------*/    
-    public void testLeadingAstriskTransformation() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/*001/ => /");
+    @SuppressWarnings("deprecation")
+	public void testLeadingAstriskTransformation() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/*001/ => /");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -121,8 +133,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     }
 
     /*----------------------------------------------------------------------------*/    
-    public void testEmbeddedAstriskTransformation() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/s*1/ => /");
+    @SuppressWarnings("deprecation")
+	public void testEmbeddedAstriskTransformation() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/s*1/ => /");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -133,8 +147,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     }
     
     /*----------------------------------------------------------------------------*/    
-    public void testEmbeddedQuestionMarkTransformation() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/saas?001/ => /");
+    @SuppressWarnings("deprecation")
+	public void testEmbeddedQuestionMarkTransformation() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/saas?001/ => /");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -145,8 +161,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     }
     
     /*----------------------------------------------------------------------------*/    
-    public void testAstriskAndQuestionMarkTransformation() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/*_00?/ => /");
+    @SuppressWarnings("deprecation")
+	public void testAstriskAndQuestionMarkTransformation() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/*_00?/ => /");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -158,8 +176,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
 
     
     /*----------------------------------------------------------------------------*/    
-    public void testMultipleTransformations() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/saas_001/ => /,/context/saas_002/ => /different/");
+    @SuppressWarnings("deprecation")
+	public void testMultipleTransformations() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/context/saas_001/ => /,/context/saas_002/ => /different/");
     	
     	assertEquals("Num transformations expected", 2, t.getNumTransforms());
     	
@@ -175,8 +195,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
      * The ** wild card includes any path character, like the *, but also includes the path separator /
      * @throws Exception
      */
-    public void testReplaceWithDoubleWildcard() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/images/**/image.png => /static, /passthrough/*/image.png => /static");
+    @SuppressWarnings("deprecation")
+	public void testReplaceWithDoubleWildcard() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/images/**/image.png => /static, /passthrough/*/image.png => /static");
     	
     	assertEquals("Num transformations expected", 2, t.getNumTransforms());
     	
@@ -186,8 +208,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     			t.transform("/passthrough/context/saas_001/image.png"));
     }
     
-    public void testDoubleWildcardWithSingleWildCard() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/images/**/*.png => /static");
+    @SuppressWarnings("deprecation")
+	public void testDoubleWildcardWithSingleWildCard() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/images/**/*.png => /static");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -201,8 +225,10 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
      * You can separate multiple patterns with a | character
      * @throws Exception
      */
-    public void testMultiplePatterns() throws Exception {
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("**.png|**.jpg|**.jpeg => /static");
+    @SuppressWarnings("deprecation")
+	public void testMultiplePatterns() throws Exception {
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("**.png|**.jpg|**.jpeg => /static");
     	
     	assertEquals("Num transformations expected", 1, t.getNumTransforms());
     	
@@ -339,10 +365,12 @@ public class ServletPathTransformerTest extends PerfMonTestCase {
     
     
     /*----------------------------------------------------------------------------*/    
-    public void testTransformationAlwaysStartsWithBackslash() throws Exception {
+    @SuppressWarnings("deprecation")
+	public void testTransformationAlwaysStartsWithBackslash() throws Exception {
     	// In this example our replacement will fail to ensure the the pattern
     	// will start with a / we will add one if it is missing
-    	ServletPathTransformer t = ServletPathTransformer.newTransformer("/image/** => staticcontent");
+    	@SuppressWarnings("deprecation")
+		ServletPathTransformer t = ServletPathTransformer.newTransformer("/image/** => staticcontent");
     	
     	assertEquals("Should automatically append the / if it is missing", "/staticcontent", 
     			t.transform("/image/icons/home.ico"));

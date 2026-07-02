@@ -48,7 +48,7 @@ public class MaxThroughput {
     
     public String toString() {
         return String.format("%.2f (%s -> %s)",
-            new Double(throughputPerMinute), 
+            Double.valueOf(throughputPerMinute),
             MiscHelper.formatDateTimeAsString(startMillis),
             MiscHelper.formatDateTimeAsString(endMillis));
     }

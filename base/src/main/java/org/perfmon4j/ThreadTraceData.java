@@ -229,14 +229,14 @@ public class ThreadTraceData implements PerfMonData, SQLWriteable {
 			stmtInsert.setLong(index++, data.getEndTime() - data.getStartTime());
 			Long sqlTimeVal = null;
 			if (SQLTime.isEnabled()) {
-				sqlTimeVal = new Long(Math.max(0, sqlEndTime - sqlStartTime));
+				sqlTimeVal = Long.valueOf(Math.max(0, sqlEndTime - sqlStartTime));
 			}
 			stmtInsert.setObject(index++, sqlTimeVal, Types.INTEGER);
 
 			stmtInsert.execute();
 			rs = stmtInsert.getGeneratedKeys();
 			rs.next();
-			myRowID = new Long(rs.getLong(1));
+			myRowID = Long.valueOf(rs.getLong(1));
 		} finally {
 			JDBCHelper.closeNoThrow(rs);
 			JDBCHelper.closeNoThrow(stmtInsert);

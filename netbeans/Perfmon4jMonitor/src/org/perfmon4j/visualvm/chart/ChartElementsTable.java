@@ -264,9 +264,9 @@ public class ChartElementsTable extends JPanel implements
                 }
             }
             this.lastValue = lastValue;
-            this.minValue = new Double(tmpMinValue);
-            this.maxValue = new Double(tmpMaxValue);
-            this.avgValue = new Double(total / (double) count);
+            this.minValue = Double.valueOf(tmpMinValue);
+            this.maxValue = Double.valueOf(tmpMaxValue);
+            this.avgValue = Double.valueOf(total / (double) count);
         }
     }
 
@@ -318,7 +318,7 @@ public class ChartElementsTable extends JPanel implements
                 FieldKey field = itr.next();
                 ElementWrapper wrapper = fieldsMap.get(field);
                 if (wrapper != null) {
-                    Number value = new Double(0.0d);
+                    Number value = Double.valueOf(0.0d);
                     Object obj = data.get(field);
                     if (obj != null && obj instanceof Number) {
                         value = (Number) obj;
@@ -353,7 +353,7 @@ public class ChartElementsTable extends JPanel implements
         if (value != null
                 && (value instanceof Float || value instanceof Double)) {
             double v = value.doubleValue();
-            value = new Double((double) Math.round(v * 100) / 100);
+            value = Double.valueOf((double) Math.round(v * 100) / 100);
         }
 
         return value;
@@ -444,7 +444,7 @@ public class ChartElementsTable extends JPanel implements
                     case 6:
                         return roundIfNeeded(w.data.minValue);
                     case 7:
-                        return new Float(w.element.getFactor());
+                        return Float.valueOf(w.element.getFactor());
                     case 8:
                         return Boolean.valueOf(w.element.isVisibleInChart());
                 }

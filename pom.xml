@@ -6,7 +6,7 @@
 
 	<groupId>org.perfmon4j</groupId>
 	<artifactId>perfmon4j-project</artifactId>
-	<version>2.2.0</version>
+	<version>2.2.1</version>
 	<packaging>pom</packaging>
 
 	<name>org.perfmon4j:perfmon4j-project</name>
@@ -31,19 +31,6 @@
 		<developerConnection>git@github.com:FollettSchoolSolutions/perfmon4j.git</developerConnection>
 		<url>https://github.com/FollettSchoolSolutions/perfmon4j</url>
 	</scm>
-
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<name>OSS Sonatype Repository Hosting Snapshots</name>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<name>OSS Sonatype Repository Hosting</name>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-	</distributionManagement>
 
 	<modules>
 		<module>agent-api</module>
@@ -105,7 +92,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
-						<version>1.6</version>
+						<version>3.2.7</version>
 						<executions>
 							<execution>
 								<id>sign-artifacts</id>
@@ -120,8 +107,6 @@
 								<arg>--batch</arg>
 								<arg>--pinentry-mode</arg>
 								<arg>loopback</arg>
-								<arg>--passphrase</arg>
-								<arg>${gpg.passphrase}</arg>
 							</gpgArguments>
 						</configuration>
 					</plugin>
@@ -129,18 +114,26 @@
 			</build>
 		</profile>
 		<profile>
-			<!-- This profile must be activated along with the release profile To 
+			<!-- This profile must be activated along with the release profile To
 				activate add "-P release,mvnCentral" to the maven command line -->
 			<id>mvnCentral</id>
 			<build>
 				<plugins>
 					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-deploy-plugin</artifactId>
-						<version>3.0.0-M1</version>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
+						<version>0.10.0</version>
+						<extensions>true</extensions>
 						<configuration>
-							<repositoryId>ossrh</repositoryId>
-							<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+							<publishingServerId>central</publishingServerId>
+							<autoPublish>true</autoPublish>
+							<!-- Exclude the legacy jbossweb7 extras module from Central.
+							     It depends on org.jboss.web:jbossweb (not on Central) via a
+							     system-scoped vendored jar, which the Central Portal rejects.
+							     excludeArtifacts matches on artifactId. -->
+							<excludeArtifacts>
+								<excludeArtifact>perfmon4j-jbossweb7</excludeArtifact>
+							</excludeArtifacts>
 						</configuration>
 					</plugin>
 				</plugins>
@@ -149,6 +142,15 @@
 	</profiles>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>3.2.5</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -172,21 +174,67 @@
 				</configuration>
 				<executions />
 			</plugin>
+
+			<!-- Publish a self-contained POM for every module. The Central Portal
+			     validator inspects each artifact's raw POM and does not honor
+			     metadata inherited from the parent, so the "ossrh" flatten mode
+			     inlines the required name/description/url/license/developers/scm
+			     (and resolves coordinates like ${project.groupId}) into each
+			     deployed .flattened-pom.xml. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>flatten-maven-plugin</artifactId>
+				<version>1.6.0</version>
+				<configuration>
+					<flattenMode>ossrh</flattenMode>
+				</configuration>
+				<executions>
+					<execution>
+						<id>flatten</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>flatten</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>flatten.clean</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>clean</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
 	<properties>
-		<javassist.version>3.29.0-GA</javassist.version>
+		<javassist.version>3.30.2-GA</javassist.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<DERBY_VERSION>10.10.2.0</DERBY_VERSION>
 		<LOG4J_VERSION>1.2.14</LOG4J_VERSION>
+		<junit.jupiter.version>5.11.4</junit.jupiter.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>3.8.1</version>
+			<version>4.13.2</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>${junit.jupiter.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.vintage</groupId>
+			<artifactId>junit-vintage-engine</artifactId>
+			<version>${junit.jupiter.version}</version>
 			<scope>test</scope>
 		</dependency>
 

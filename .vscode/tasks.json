@@ -1,0 +1,141 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build perfmon4j (skip tests)",
+            "type": "shell",
+            "command": "mvn clean package -DskipTests",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "close": false
+            },
+            "problemMatcher": "$maven"
+        },
+        {
+            "label": "Run test method at cursor (base)",
+            "detail": "Select the test method name in the editor, then run. Runs that single JUnit method via Maven (setUp/tearDown still run).",
+            "type": "shell",
+            "command": "mvn test -pl base \"-Dtest=${fileBasenameNoExtension}#${selectedText}\"",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "close": false
+            },
+            "problemMatcher": "$maven"
+        },
+        {
+            "label": "Run test class in active file (base)",
+            "detail": "Runs all test methods in the test class of the currently open file via Maven.",
+            "type": "shell",
+            "command": "mvn test -pl base \"-Dtest=${fileBasenameNoExtension}\"",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "close": false
+            },
+            "problemMatcher": "$maven"
+        },
+        {
+            "label": "Start WildFly (debug, suspend=n)",
+            "type": "shell",
+            "windows": {
+                "command": "$env:JAVA_OPTS = '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8787'; Set-Location ($env:WILDFLY_HOME + '\\bin'); .\\standalone.bat"
+            },
+            "linux": {
+                "command": "JAVA_OPTS=\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8787\" $WILDFLY_HOME/bin/standalone.sh"
+            },
+            "osx": {
+                "command": "JAVA_OPTS=\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8787\" $WILDFLY_HOME/bin/standalone.sh"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^.*$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "Starting WildFly",
+                    "endsPattern": "WFLYSRV0025"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "label": "WildFly",
+                "focus": false
+            }
+        },
+        {
+            "label": "Deploy to WildFly",
+            "type": "shell",
+            "windows": {
+                "command": "$v = ([xml](Get-Content 'pom.xml')).project.version; Copy-Item \".\\base\\target\\perfmon4j-$v.jar\" ($env:WILDFLY_HOME + '\\standalone\\lib\\ext\\perfmon4j.jar'); Copy-Item \".\\wildfly8\\target\\perfmon4j-wildfly8-$v.jar\" ($env:WILDFLY_HOME + '\\modules\\system\\layers\\base\\io\\undertow\\core\\main\\perfmon4j-wildfly8.jar')"
+            },
+            "linux": {
+                "command": "v=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) && cp ${workspaceFolder}/base/target/perfmon4j-$v.jar $WILDFLY_HOME/standalone/lib/ext/perfmon4j.jar && cp ${workspaceFolder}/wildfly8/target/perfmon4j-wildfly8-$v.jar $WILDFLY_HOME/modules/system/layers/base/io/undertow/core/main/perfmon4j-wildfly8.jar"
+            },
+            "osx": {
+                "command": "v=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) && cp ${workspaceFolder}/base/target/perfmon4j-$v.jar $WILDFLY_HOME/standalone/lib/ext/perfmon4j.jar && cp ${workspaceFolder}/wildfly8/target/perfmon4j-wildfly8-$v.jar $WILDFLY_HOME/modules/system/layers/base/io/undertow/core/main/perfmon4j-wildfly8.jar"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "close": false
+            }
+        },
+        {
+            "label": "Build, Deploy and Start WildFly",
+            "dependsOn": [
+                "Build perfmon4j (skip tests)",
+                "Deploy to WildFly",
+                "Start WildFly (debug, suspend=y — wait for debugger)"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        },
+        {
+            "label": "Deploy and Start WildFly",
+            "dependsOn": [
+                "Deploy to WildFly",
+                "Start WildFly (debug, suspend=y — wait for debugger)"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        },
+        {
+            "label": "Start WildFly (debug, suspend=y — wait for debugger)",
+            "type": "shell",
+            "windows": {
+                "command": "$ws = $PWD; $v = ([xml](Get-Content 'pom.xml')).project.version; $env:JAVA_OPTS = '-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8787 -javaagent:' + $ws + '\\base\\target\\perfmon4j-' + $v + '.jar'; Set-Location ($env:WILDFLY_HOME + '\\bin'); .\\standalone.bat"
+            },
+            "linux": {
+                "command": "JAVA_OPTS=\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8787 -javaagent:${workspaceFolder}/base/target/perfmon4j-$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout).jar\" $WILDFLY_HOME/bin/standalone.sh"
+            },
+            "osx": {
+                "command": "JAVA_OPTS=\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8787 -javaagent:${workspaceFolder}/base/target/perfmon4j-$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout).jar\" $WILDFLY_HOME/bin/standalone.sh"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^.*$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "Listening for transport",
+                    "endsPattern": "Listening for transport"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "label": "WildFly",
+                "focus": false
+            }
+        }
+    ]
+}

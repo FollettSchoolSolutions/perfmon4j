@@ -67,6 +67,6 @@ public class TreeListener implements HierarchyListener, ComponentListener, Mouse
 
 	public void valueChanged(TreeSelectionEvent e) {
 		Object node = e.getNewLeadSelectionPath().getLastPathComponent();
-		Model.getModel().getConnectionList().setActiveNode((P4JTreeNode)node);
+		Model.getModel().getConnectionList().setActiveNode((P4JTreeNode<?,?>)node);
 	}
 }

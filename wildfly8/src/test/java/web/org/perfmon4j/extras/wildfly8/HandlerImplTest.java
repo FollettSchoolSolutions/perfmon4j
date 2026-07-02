@@ -65,7 +65,37 @@ public class HandlerImplTest extends TestCase {
 		assertEquals("Password in value is ignored", "?word=password", HandlerImpl.maskPassword("?word=password"));
 		assertEquals("Work with ; separator", "?password=*******;x=y", HandlerImpl.maskPassword("?password=dave;x=y"));
 	}
-	
+
+	public void testMaskPasswordWithMixedCaseInQueryString() {
+		assertEquals("Password only parameter", "?Password=*******", HandlerImpl.maskPassword("?Password=dave"));
+	}
+
+	public void testMaskParameterEndingWithPassword() {
+		assertEquals("Parameter ending with password", "?userPassword=*******", HandlerImpl.maskPassword("?userPassword=dave"));
+		assertEquals("Second parameter ending with password", "?user=dave&userPassword=*******", HandlerImpl.maskPassword("?user=dave&userPassword=dave"));
+		assertEquals("Middle parameter ending with password", "?userPassword=*******&time=now", HandlerImpl.maskPassword("?userPassword=dave&time=now"));
+		assertEquals("Mixed case parameter ending with password", "?UserPassword=*******", HandlerImpl.maskPassword("?UserPassword=dave"));
+		assertEquals("Password suffix in value is ignored", "?word=userpassword", HandlerImpl.maskPassword("?word=userpassword"));
+	}
+
+	public void testPasswordPatternCanBeOverriddenViaSystemProperty() {
+		String previousValue = System.getProperty(HandlerImpl.PASSWORD_PATTERN_SYSTEM_PROPERTY);
+		try {
+			System.setProperty(HandlerImpl.PASSWORD_PATTERN_SYSTEM_PROPERTY,
+					"[\\?\\&][^\\&\\;\\=]*secret\\=([^\\&\\;]*)");
+			java.util.regex.Pattern customPattern = HandlerImpl.buildPasswordParamPattern();
+			java.util.regex.Matcher m = customPattern.matcher("?secret=myvalue");
+			assertTrue("Custom pattern should match 'secret' parameter", m.find());
+			assertEquals("Custom pattern should capture the secret value", "myvalue", m.group(1));
+		} finally {
+			if (previousValue == null) {
+				System.clearProperty(HandlerImpl.PASSWORD_PATTERN_SYSTEM_PROPERTY);
+			} else {
+				System.setProperty(HandlerImpl.PASSWORD_PATTERN_SYSTEM_PROPERTY, previousValue);
+			}
+		}
+	}
+
 	public static class SimpleAppender extends Appender {
 		private static SimpleAppender appender = null; 
 		

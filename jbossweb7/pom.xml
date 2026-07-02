@@ -4,12 +4,20 @@
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>2.2.0</version>
+		<version>2.2.1</version>
 	</parent>
   
 	<artifactId>perfmon4j-jbossweb7</artifactId>
 	<packaging>jar</packaging>
 	<name>Perfmon4j jbossweb7 Extras</name>
+
+	<!-- This module compiles against org.jboss.web:jbossweb, a legacy JBoss Web
+	     artifact that is not on Maven Central and is pinned via a vendored jar with
+	     system scope (see the dependency below). The Central Portal rejects
+	     system-scoped dependencies, so this module is excluded from Central
+	     publishing via the central-publishing-maven-plugin's excludeArtifacts list
+	     in the root pom's mvnCentral profile. It is still built and tested normally. -->
+
 	<build>
 		<plugins>
 		</plugins>
@@ -24,7 +32,7 @@
 	</dependency>
     
 	<dependency>
-		<groupId>${project.groupId}</groupId>
+		<groupId>org.perfmon4j</groupId>
 		<version>${project.version}</version>
 		<artifactId>perfmon4j</artifactId>
 		<scope>compile</scope>

@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>2.2.0</version>
+		<version>2.2.1</version>
 	</parent>
   
 	<artifactId>perfmon4j-generic-filter</artifactId>
@@ -18,13 +18,13 @@
 <dependencies>
 
 	<dependency>
-		<groupId>${project.groupId}</groupId>
+		<groupId>org.perfmon4j</groupId>
 		<version>${project.version}</version>
 		<artifactId>perfmon4j-agent-api</artifactId>
 	</dependency>
 
 	<dependency>
-		<groupId>${project.groupId}</groupId>
+		<groupId>org.perfmon4j</groupId>
 		<version>${project.version}</version>
 		<artifactId>perfmon4j</artifactId>
 		<scope>test</scope>

@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.perfmon4j</groupId>
 		<artifactId>perfmon4j-project</artifactId>
-		<version>2.2.0</version>
+		<version>2.2.1</version>
 	</parent>
   
 	<artifactId>perfmon4j-tomcat7</artifactId>
@@ -24,14 +24,14 @@
 	</dependency>
     
 	<dependency>
-		<groupId>${project.groupId}</groupId>
+		<groupId>org.perfmon4j</groupId>
 		<version>${project.version}</version>
 		<artifactId>perfmon4j</artifactId>
 		<scope>compile</scope>
 	</dependency>
 
 	<dependency>
-		<groupId>${project.groupId}</groupId>
+		<groupId>org.perfmon4j</groupId>
 		<version>${project.version}</version>
 		<artifactId>perfmon4j-servlet</artifactId>
 		<scope>compile</scope>
@@ -53,8 +53,8 @@
 	
 	<dependency>
 		<groupId>org.mockito</groupId>
-		<artifactId>mockito-all</artifactId>
-		<version>1.8.0</version>
+		<artifactId>mockito-core</artifactId>
+		<version>5.3.0</version>
 		<scope>test</scope>
 	</dependency>
 </dependencies>

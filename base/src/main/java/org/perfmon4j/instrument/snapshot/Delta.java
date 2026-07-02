@@ -76,27 +76,27 @@ public class Delta {
 	}
 	
 	public Long getInitalValue_Object() {
-		return new Long(initialValue);
+		return Long.valueOf(initialValue);
 	}
 	
 	public Long getFinalValue_object() {
-		return new Long(finalValue);
+		return Long.valueOf(finalValue);
 	}
 	
 	public Long getDelta_object() {
-		return new Long(finalValue - initialValue);
+		return Long.valueOf(finalValue - initialValue);
 	}
 	
 	public Double getDeltaPerMinute_object() {
-		return new Double(deltaPerMinute);
+		return Double.valueOf(deltaPerMinute);
 	}
 
 	public Double getDeltaPerSecond_object() {
-		return new Double(deltaPerSecond);
+		return Double.valueOf(deltaPerSecond);
 	}
 	
 	public Double getDurationMillis_object() {
-		return new Double(durationMillis);
+		return Double.valueOf(durationMillis);
 	}
 
 	@Override

@@ -100,13 +100,13 @@ public class MemoryPoolSnapShotTest extends SQLTest {
     	long start = System.currentTimeMillis();
     	long end = start + 60000;
     	
-    	Mockito.when(data.getStartTime()).thenReturn(new Long(start));
-    	Mockito.when(data.getStartTime()).thenReturn(new Long(end));
+    	Mockito.when(data.getStartTime()).thenReturn(Long.valueOf(start));
+    	Mockito.when(data.getStartTime()).thenReturn(Long.valueOf(end));
     	Mockito.when(data.getInstanceName()).thenReturn("Heap");
-    	Mockito.when(data.getInit()).thenReturn(new Long(1000 * 32));
-    	Mockito.when(data.getUsed()).thenReturn(new Long(1000 * 24));
-    	Mockito.when(data.getCommitted()).thenReturn(new Long(1000 * 36));
-    	Mockito.when(data.getMax()).thenReturn(new Long(1000 * 64));
+    	Mockito.when(data.getInit()).thenReturn(Long.valueOf(1000 * 32));
+    	Mockito.when(data.getUsed()).thenReturn(Long.valueOf(1000 * 24));
+    	Mockito.when(data.getCommitted()).thenReturn(Long.valueOf(1000 * 36));
+    	Mockito.when(data.getMax()).thenReturn(Long.valueOf(1000 * 64));
     	Mockito.when(data.getType()).thenReturn("My type");
     	
     	writer.writeToSQL(conn, "mydb", data, 1);
