@@ -75,7 +75,7 @@ public class LoggerFactory {
 	 * are loaded, it will dynamically chose the best available framework.
 	 * It will switch to the preferred framework when it becomes available.
 	 * 
-	 * @return one of the following "stdout", "java", "log4j"
+	 * @return one of the following "stdout", "java", "log4j", "log4j2", "jboss"
 	 */
 	public static String getLoggingFramework() {
 		String result = "stdout";
@@ -86,6 +86,10 @@ public class LoggerFactory {
 			Logger delegate = defaultWrapper.getDelegate();
 			if (delegate instanceof Log4JLogger) {
 				result = "log4j";
+			} else if (delegate instanceof Log4J2Logger) {
+				result = "log4j2";
+			} else if (delegate instanceof JBossLogger) {
+				result = "jboss";
 			} else if (delegate instanceof JavaLoggingLogger) {
 				result = "java";
 			}
