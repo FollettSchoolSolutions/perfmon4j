@@ -16,6 +16,8 @@ Follett Software
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 2.2.2 - TBD
+
 ** 2.2.1 - 07/01/26
 - The GenericFilter and the WildFly HandlerImpl now mask query parameters whose name
   contains "password" (case-insensitive) before writing the request to the log. The
