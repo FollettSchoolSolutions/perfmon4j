@@ -172,6 +172,16 @@ using javassist.  Now Perfmon4j dynamically loads javassist.jar in a separate cl
 			<scope>test</scope>
 		</dependency>
 
+		<!-- JBoss Logging is used only to unit test JBossLogger. Perfmon4j.jar
+			 binds to it reflectively at runtime and carries no compile-time
+			 dependency on it. Keep test-scoped. -->
+		<dependency>
+			<groupId>org.jboss.logging</groupId>
+			<artifactId>jboss-logging</artifactId>
+			<version>${JBOSS_LOGGING_VERSION}</version>
+			<scope>test</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.perfmon4j</groupId>
 			<version>${project.version}</version>
