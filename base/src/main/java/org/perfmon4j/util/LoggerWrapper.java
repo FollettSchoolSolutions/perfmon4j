@@ -31,6 +31,7 @@ class LoggerWrapper implements Logger {
 	private final String category;
 
 	static private final String PREFERRED_LOGGER_LOG4J = "log4j";
+	static private final String PREFERRED_LOGGER_LOG4J2 = "log4j2";
 	static private final String PREFERRED_LOGGER_JAVA_LOGGING = "java";
 	static private final String PREFERRED_LOGGER_SYSTEM_OUT = "stdout";
 	static private final String PREFERRED_LOGGER_AUTO = "auto";
@@ -41,6 +42,7 @@ class LoggerWrapper implements Logger {
 	static private final int JAVA_LOGGING = 2;
 	static private final int STDOUT_LOGGING = 3;
 	static private final int AUTO_LOGGING = 4;
+	static private final int LOG4J2_LOGGING = 5;
 
 	static private final int perferredLogging;
 
@@ -65,9 +67,13 @@ class LoggerWrapper implements Logger {
 
 		
 		if (tmp == null
-				&& MiscHelper.isRunningInJBossAppServer() 
+				&& MiscHelper.isRunningInJBossAppServer()
 				&& "org.jboss.logmanager.LogManager".equals( System.getProperty("java.util.logging.manager"))) {
-			tmp = PREFERRED_LOGGER_LOG4J;
+			// Historically we forced Log4j (1.x) here. Newer JBoss/WildFly releases
+			// no longer expose the Log4j 1.x facade, so use AUTO to prefer Log4j 1.x
+			// for backwards compatibility but fall through to Log4j 2.x (and finally
+			// jboss-logmanager via java.util.logging) when 1.x is unavailable.
+			tmp = PREFERRED_LOGGER_AUTO;
 		}
 		
 		if (tmp == null) {
@@ -96,6 +102,10 @@ class LoggerWrapper implements Logger {
 			perferredLogging = LOG4J_LOGGING;
 			System.out
 					.println("PerfMon4j will output logging to Log4j when service is available.");
+		} else if (PREFERRED_LOGGER_LOG4J2.equalsIgnoreCase(PREFERRED_LOGGER)) {
+			perferredLogging = LOG4J2_LOGGING;
+			System.out
+					.println("PerfMon4j will output logging to Log4j 2.x when service is available.");
 		} else if (PREFERRED_LOGGER_JAVA_LOGGING
 				.equalsIgnoreCase(PREFERRED_LOGGER)) {
 			perferredLogging = JAVA_LOGGING;
@@ -108,8 +118,8 @@ class LoggerWrapper implements Logger {
 		} else if (PREFERRED_LOGGER_AUTO.equalsIgnoreCase(PREFERRED_LOGGER)) {
 			perferredLogging = AUTO_LOGGING;
 			System.err
-					.println("PerfMon4j will output log to stdout until log4j OR java.util.logging service becomes available.\r\n"
-							+ "To specify a logging type set system property PerfMon4j.preferredLogger=[log4j|java|stdout]");
+					.println("PerfMon4j will output log to stdout until log4j, log4j2 OR java.util.logging service becomes available.\r\n"
+							+ "To specify a logging type set system property PerfMon4j.preferredLogger=[log4j|log4j2|java|stdout]");
 		} else {
 			System.err
 					.println("Unrecognized system property: \"PerfMon4j.preferredLogger="
@@ -122,6 +132,7 @@ class LoggerWrapper implements Logger {
 	private boolean forceEnableInfo = LoggerFactory.isDefaultDebugEnabled();
 	private boolean forceEnableDebug = LoggerFactory.isDefaultDebugEnabled();
 	private Logger log4jDelegate = null;
+	private Logger log4j2Delegate = null;
 	private Logger javaLoggerDelegate = null;
 
 	Logger getDelegate() {
@@ -130,15 +141,21 @@ class LoggerWrapper implements Logger {
 
 	private Logger getDelegate(int mode) {
 		Logger result = null;
-		
+
 		// Very important!!!  If the logging operation is occurring
-		// while we are actively instrumenting objects, we don't 
+		// while we are actively instrumenting objects, we don't
 		// want any other classloading going on.
 		if (InstrumentationRecursionPreventor.allowThreadInLogging()) {
 			if (mode == LOG4J_LOGGING) {
 				result = log4jDelegate;
 				if (result == null) {
 					result = log4jDelegate = Log4JLogger.getLogger(category,
+							forceEnableInfo, forceEnableDebug);
+				}
+			} else if (mode == LOG4J2_LOGGING) {
+				result = log4j2Delegate;
+				if (result == null) {
+					result = log4j2Delegate = Log4J2Logger.getLogger(category,
 							forceEnableInfo, forceEnableDebug);
 				}
 			} else if (mode == JAVA_LOGGING) {
@@ -148,7 +165,12 @@ class LoggerWrapper implements Logger {
 							category, forceEnableInfo, forceEnableDebug);
 				}
 			} else if (mode == AUTO_LOGGING) {
+				// Prefer the legacy Log4j 1.x binding for backwards compatibility,
+				// then Log4j 2.x, then java.util.logging.
 				result = getDelegate(LOG4J_LOGGING);
+				if (result == null) {
+					result = getDelegate(LOG4J2_LOGGING);
+				}
 				if (result == null) {
 					result = getDelegate(JAVA_LOGGING);
 				}
@@ -163,6 +185,7 @@ class LoggerWrapper implements Logger {
 	
 	private void markDelegateSuspect() {
 		log4jDelegate = null;
+		log4j2Delegate = null;
 		javaLoggerDelegate = null;
 	}
 

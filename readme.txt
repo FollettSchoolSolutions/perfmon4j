@@ -17,6 +17,14 @@ Follett Software
 McHenry, IL 60050
 
 ** 2.2.2 - TBD
+- Perfmon4j can now bind its internal logging to the Log4j 2.x API
+  (org.apache.logging.log4j) in addition to the legacy Log4j 1.x API. The Log4j
+  1.x binding is still preferred when present for backwards compatibility; when
+  it is unavailable (e.g. newer WildFly/JBoss releases that no longer expose the
+  Log4j 1.x facade) Perfmon4j now falls through to Log4j 2.x, then to
+  java.util.logging. This restores Perfmon4j log output under WildFly 33. The
+  logging framework can still be forced via the system property
+  PerfMon4j.preferredLogger=[log4j|log4j2|java|stdout].
 
 ** 2.2.1 - 07/01/26
 - The GenericFilter and the WildFly HandlerImpl now mask query parameters whose name
