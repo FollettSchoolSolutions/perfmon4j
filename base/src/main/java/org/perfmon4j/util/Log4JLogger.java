@@ -37,6 +37,7 @@ class Log4JLogger implements Logger {
 	static private Method warnMethod = null;
 	static private Method warnMethodWithThrow = null;
 	static private Method infoMethod = null;
+	static private Method infoMethodWithThrow = null;
 	static private Method debugMethod = null;
 	static private Method debugMethodWithThrow = null;
 	static private Method debugEnabledMethod = null;
@@ -112,6 +113,8 @@ class Log4JLogger implements Logger {
 								OBJECT_THROWABLE_PARAMS);
 						infoMethod = tmpLoggerClazz.getMethod("info",
 								OBJECT_PARAMS);
+						infoMethodWithThrow = tmpLoggerClazz.getMethod("info",
+								OBJECT_THROWABLE_PARAMS);
 						debugMethod = tmpLoggerClazz.getMethod("debug",
 								OBJECT_PARAMS);
 						debugMethodWithThrow = tmpLoggerClazz.getMethod(
@@ -270,7 +273,7 @@ class Log4JLogger implements Logger {
 
 	public void logInfo(String msg, Throwable th) {
 		try {
-			errorMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
+			infoMethodWithThrow.invoke(loggerObject, new Object[] { msg, th });
 		} catch (Exception ex) {
 			handleReflectionException(ex);
 		}
