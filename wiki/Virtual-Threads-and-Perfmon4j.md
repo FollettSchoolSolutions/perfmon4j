@@ -17,6 +17,8 @@ This page explains the two virtual-thread concerns that apply to a monitoring ag
 - [How Perfmon4j's Hot Path Is Built](#how-perfmon4js-hot-path-is-built)
 - [`synchronized` on Application Threads — Risk Map](#synchronized-on-application-threads--risk-map)
 - [The Reactive Path Is the Main Surface](#the-reactive-path-is-the-main-surface)
+- [Measured Results (JDK 21)](#measured-results-jdk-21)
+  - [Why the Reactive Lock Was Not Converted to a ReentrantLock](#why-the-reactive-lock-was-not-converted-to-a-reentrantlock)
 - [How to Diagnose Pinning in Your Deployment](#how-to-diagnose-pinning-in-your-deployment)
   - [JFR (recommended, JDK 21+)](#jfr-recommended-jdk-21)
   - [`-Djdk.tracePinnedThreads` (JDK 21–23)](#-djdktracepinnedthreads-jdk-2123)
@@ -93,6 +95,51 @@ The nested `ReactiveContext` locks (`mutableMemberDataLockToken`, `activeThreadL
 
 ---
 
+## Measured Results (JDK 21)
+
+The analysis above was validated empirically with the
+[`VirtualThreadStressTester`](https://github.com/FollettSchoolSolutions/perfmon4j/blob/develop/stress-test/VirtualThreadStressTester.java)
+harness (see the `stress-test/` folder) on JDK 21 (Temurin 21.0.4, 8 cores), driving **2,000
+concurrent virtual threads** through `PerfMonTimer.start`/`stop` while a JFR listener counted
+`jdk.VirtualThreadPinned` events:
+
+| scenario | throughput | start latency | pins |
+|----------|-----------:|--------------:|-----:|
+| virtual / non-reactive | ~350k ops/s | ~6 µs | **0** |
+| virtual / reactive | ~283k ops/s | ~12 µs | **0** |
+| virtual / PIN CONTROL (`synchronized` + blocking sleep) | ~350 ops/s | — | **~2,900** |
+
+Two conclusions:
+
+1. **Perfmon4j does not pin virtual threads.** Both timer paths recorded zero pinning events,
+   while the deliberately-pinning control scenario recorded thousands — which proves the
+   detector works and the zeros are real. The reactive path's `synchronized` critical sections
+   are short and never block, so they never pin.
+2. **The reactive path's ~20% overhead is contention, not pinning** — every start/stop funnels
+   through the single global `bindToken` monitor.
+
+### Why the Reactive Lock Was Not Converted to a ReentrantLock
+
+The obvious "make it Loom-safe" change is to replace `synchronized(bindToken)` with a
+`java.util.concurrent` `ReentrantLock` (which never pins). Measured, this made things **~2×
+worse**:
+
+| reactive path | throughput | start latency |
+|---------------|-----------:|--------------:|
+| `synchronized` (current) | ~283k ops/s | ~12–20 µs |
+| `ReentrantLock` | ~125k ops/s | ~4,500 µs |
+
+Under heavy contention a `ReentrantLock` *parks* (unmounts) the losing virtual thread, and the
+scheduler must later remount it — enormous churn with 2,000 threads queued on one lock. A short
+`synchronized` section instead resolves via brief native spinning **without** unmounting, and
+never pins because nothing blocks while it is held. **The bottleneck is contention on a single
+global lock, not the lock's type** — so the real optimization is to reduce that contention
+(per-context locking, a concurrent registry map, a fast-path owner check), which would benefit
+either lock type. Until then, `synchronized` is retained deliberately (see the comment on
+`bindToken` in `ReactiveContextManager`).
+
+---
+
 ## How to Diagnose Pinning in Your Deployment
 
 Reading the code tells you *where* to look; only measurement tells you whether it actually pins under your workload. Prefer empirical evidence.
@@ -126,8 +173,9 @@ To force the issue rather than wait for it, run an instrumented method on many v
 
 ## Current Status Summary
 
+- **Measured: zero pinning.** Under 2,000 virtual threads on JDK 21, both the non-reactive and reactive timer paths produced **0** `jdk.VirtualThreadPinned` events (see [Measured Results](#measured-results-jdk-21)).
 - **Non-reactive interval timing** — Already virtual-thread friendly. The main critical section uses `ReentrantLock`; the only per-invocation `synchronized` is the short, non-blocking, disableable `MonitorThreadTracker`.
-- **Reactive timing** — The largest `synchronized` surface on application threads, routed through a single global lock. The primary hardening and contention-reduction target.
+- **Reactive timing** — The largest `synchronized` surface on application threads, routed through a single global lock. Its ~20% overhead is *contention*, not pinning; the fix is contention reduction, **not** a lock-type swap (a `ReentrantLock` measured ~2× slower here). The primary future optimization target.
 - **ThreadLocal usage** — Pervasive and correct, but a footprint consideration at very high virtual-thread counts.
 - **JDK 24+** — `synchronized` pinning is eliminated by JEP 491; the concern is scoped to JDK 21–23.
 - **Build target** — Perfmon4j currently compiles for Java 11 and has no virtual-thread–specific code paths.

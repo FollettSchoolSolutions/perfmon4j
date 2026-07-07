@@ -27,6 +27,12 @@ McHenry, IL 60050
   java.util.logging. The framework can still be forced via the system property
   PerfMon4j.preferredLogger=[jboss|log4j|log4j2|java|stdout].
 
+- Reduced allocation overhead on the reactive timer start/stop path
+  (org.perfmon4j.reactive.ReactiveContextManager). Previously a debug-log
+  description string, along with its backing argument arrays, was built on
+  every reactive PerfMonTimer start/stop regardless of whether debug logging
+  was enabled. It is now only built when debug logging is active.
+
 ** 2.2.1 - 07/01/26
 - The GenericFilter and the WildFly HandlerImpl now mask query parameters whose name
   contains "password" (case-insensitive) before writing the request to the log. The
