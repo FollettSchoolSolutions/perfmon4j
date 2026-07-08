@@ -382,8 +382,12 @@ public abstract class JMXSnapShotProxyFactory {
 		 public boolean isInstanceName() {
 			 return false;
 		 }
+
+		 public boolean outputAsTag() {
+			 return false;
+		 }
 	 }
-		 
+
 	 private static class SnapShotCounterVO implements SnapShotCounter {
 		 private final SnapShotCounter.Display preferredDisplay;
 		 private final Class<? extends NumberFormatter> formatter;
