@@ -992,7 +992,13 @@ System.out.println(appenderString);
     	public StringBuffer getStringBuffer() {
     		return STRING_BUFFER;
     	}
-    	
+
+    	@SnapShotString(outputAsTag=true)
+    	public String getTaggedStringValue() {
+    		return "This is a tagged string";
+    	}
+
+
     	@SnapShotCounter
     	public int getSearchCacheHits() {
     		return searchCacheHits;
@@ -1095,6 +1101,7 @@ System.out.println(appenderString);
 		@SuppressWarnings("unchecked")
 		PerfMonObservableDatum<String> stringDatum = (PerfMonObservableDatum<String>)PerfMonObservableDatum.findObservationByFieldName("stringValue", observations);
 	  	assertFalse("String is not a numeric datum", stringDatum.isNumeric());
+	  	assertFalse("outputAsTag should default to false", stringDatum.isOutputAsTag());
 
 	  	// Validate the StringBuffer
 	  	validateObservation(observations, "stringBuffer", "This is a StringBuffer");
@@ -1102,6 +1109,13 @@ System.out.println(appenderString);
 		PerfMonObservableDatum<StringBuffer> stringBufferDatum = (PerfMonObservableDatum<StringBuffer>)PerfMonObservableDatum.findObservationByFieldName("stringBuffer", observations);
 	  	assertFalse("StringBuffer is not a numeric datum", stringBufferDatum.isNumeric());
 	  	assertEquals("The StringBuffer should be the complexObject", SimpleObservationProvider.STRING_BUFFER, stringBufferDatum.getComplexObject());
+	  	assertFalse("outputAsTag should default to false", stringBufferDatum.isOutputAsTag());
+
+	  	// Validate a @SnapShotString(outputAsTag=true)
+	  	validateObservation(observations, "taggedStringValue", "This is a tagged string");
+		@SuppressWarnings("unchecked")
+		PerfMonObservableDatum<String> taggedStringDatum = (PerfMonObservableDatum<String>)PerfMonObservableDatum.findObservationByFieldName("taggedStringValue", observations);
+	  	assertTrue("Should be flagged as outputAsTag", taggedStringDatum.isOutputAsTag());
     }
 
     @SnapShotProvider

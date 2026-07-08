@@ -246,29 +246,49 @@ public class PerfMonObservableDatumTest extends TestCase {
 		PerfMonObservableDatum<String> obv = PerfMonObservableDatum.newDatum("FieldName", "This is my string");
 		assertFalse("isDelta",  obv.isDelta());
 		assertFalse("isRatio",  obv.isRatio());
-		assertNull("should be no numeric value", obv.getValue());		
+		assertNull("should be no numeric value", obv.getValue());
 		assertEquals("String itself is the \"complexValue\"", "This is my string", obv.getComplexObject());
 		assertEquals("toString", "This is my string", obv.toString());
 		assertFalse("isNumeric", obv.isNumeric());
 		assertFalse("inputWasNull", obv.getInputValueWasNull());
+		assertFalse("outputAsTag should default to false", obv.isOutputAsTag());
 		assertEquals("FieldName", obv.getFieldName());
 		assertEquals("FieldName", obv.getDefaultDisplayName());
 	}
-	
-	
+
+	public void testStringOutputAsTag() {
+		PerfMonObservableDatum<String> obv = PerfMonObservableDatum.newDatum("FieldName", "This is my string", true);
+		assertEquals("String itself is the \"complexValue\"", "This is my string", obv.getComplexObject());
+		assertEquals("toString", "This is my string", obv.toString());
+		assertFalse("isNumeric", obv.isNumeric());
+		assertTrue("outputAsTag should be honored", obv.isOutputAsTag());
+	}
+
+
 	public void testRandomComplexObject() {
 		StringBuilder complexObject = new StringBuilder("This is from a StringBuilder");
-		
+
 		PerfMonObservableDatum<StringBuilder> obv = PerfMonObservableDatum.newDatum("FieldName", complexObject);
 		assertFalse("isDelta",  obv.isDelta());
 		assertFalse("isRatio",  obv.isRatio());
-		assertNull("should be no numeric value", obv.getValue());		
+		assertNull("should be no numeric value", obv.getValue());
 		assertEquals("StringBuilder should be the complex object", complexObject, obv.getComplexObject());
 		assertEquals("Should be the value of the toString from the complex object", "This is from a StringBuilder", obv.toString());
 		assertFalse("isNumeric", obv.isNumeric());
 		assertFalse("inputWasNull", obv.getInputValueWasNull());
+		assertFalse("outputAsTag should default to false", obv.isOutputAsTag());
 		assertEquals("FieldName", obv.getFieldName());
 		assertEquals("FieldName", obv.getDefaultDisplayName());
+	}
+
+	public void testRandomComplexObjectOutputAsTag() {
+		StringBuilder complexObject = new StringBuilder("This is from a StringBuilder");
+
+		PerfMonObservableDatum<StringBuilder> obv = PerfMonObservableDatum.newDatum("FieldName", complexObject, true);
+		assertEquals("StringBuilder should be the complex object", complexObject, obv.getComplexObject());
+		assertEquals("Should be the value of the toString from the complex object", "This is from a StringBuilder", obv.toString());
+		assertFalse("isNumeric", obv.isNumeric());
+		assertTrue("outputAsTag should be honored for arbitrary objects too", obv.isOutputAsTag());
 	}
 	
 	public void testNullComplexObject() {

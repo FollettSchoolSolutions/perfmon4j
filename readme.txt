@@ -33,6 +33,13 @@ McHenry, IL 60050
   every reactive PerfMonTimer start/stop regardless of whether debug logging
   was enabled. It is now only built when debug logging is active.
 
+- Added an optional outputAsTag attribute to @SnapShotString (defaults to
+  false). When set to true, InfluxAppender writes the value as an InfluxDB
+  tag instead of a field, letting monitor authors flag low-cardinality
+  string dimensions in code rather than via appender configuration.
+  Appenders without tag support are unaffected and continue to treat the
+  value as an ordinary string.
+
 ** 2.2.1 - 07/01/26
 - The GenericFilter and the WildFly HandlerImpl now mask query parameters whose name
   contains "password" (case-insensitive) before writing the request to the log. The

@@ -122,12 +122,17 @@ public class AnnotationTransformerTest extends TestCase {
 		public boolean isInstanceName() {
 			return true;
 		}
+
+		public boolean outputAsTag() {
+			return true;
+		}
 	};
-	
+
 	public void testSnapShotString() {
-		SnapShotString impl = t.transform(SnapShotString.class, snapShotString); 
+		SnapShotString impl = t.transform(SnapShotString.class, snapShotString);
 		assertNotNull(impl);
 		assertTrue("Should be flagged as an instance name", impl.isInstanceName());
+		assertTrue("Should be flagged as outputAsTag", impl.outputAsTag());
 		assertEquals("Should use default formatter", SnapShotStringFormatter.class, impl.formatter());
 	}
 

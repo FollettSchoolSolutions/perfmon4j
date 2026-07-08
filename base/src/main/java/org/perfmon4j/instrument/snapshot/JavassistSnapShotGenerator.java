@@ -265,10 +265,10 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 		logger.logDebug("Appending to provideData: " + appendToProvider);
 		providerBody.append(appendToProvider);
 		
-		String appendToGetObservations = " result.add(org.perfmon4j.PerfMonObservableDatum.newDatum(\"" + fieldName + "\", " 
-				+ method.getName() + "()));\r\n";
+		String appendToGetObservations = " result.add(org.perfmon4j.PerfMonObservableDatum.newDatum(\"" + fieldName + "\", "
+				+ method.getName() + "(), " + Boolean.toString(stringAnnotation.outputAsTag()) + "));\r\n";
 		logger.logDebug("Appending to getObservations: " + appendToGetObservations);
-		getObservationsBody.append(appendToGetObservations);		
+		getObservationsBody.append(appendToGetObservations);
 
 		String appendToAppenderString = " stringFormatter = org.perfmon4j.instrument.SnapShotStringFormatter.newInstance(\"" + stringAnnotation.formatter().getName() + "\");\r\n" +
 				"result +=  stringFormatter.format(25, \"" + fieldName + "\", " + fieldName + ");\r\n";
