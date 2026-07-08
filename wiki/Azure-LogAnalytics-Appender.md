@@ -10,8 +10,8 @@ Example configuration:
 
 ```xml
 <appender name='loganalytics' className='org.perfmon4j.azure.LogAnalyticsAppender' interval='1 minute'>
-   <attribute name='customerID'>1c4c1516-d3c2-4889-bg16-6eedd52e6702</attribute>
-   <attribute name='sharedKey'>LKgjl2YjpzKsX8H+vlVB2jPKOoRN6lvCol6TNxcu5dH9OUQgNbQxGORbvtV53PplS9eue0NcRxSGybT8+In+Yw==</attribute>
+   <attribute name='customerID'>00000000-0000-0000-0000-000000000000</attribute>
+   <attribute name='sharedKey'>REPLACE_WITH_YOUR_WORKSPACE_SHARED_KEY==</attribute>
 </appender>
 ```
 

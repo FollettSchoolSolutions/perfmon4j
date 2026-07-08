@@ -23,7 +23,7 @@ Example configuration (2.x API - Perfmon4j 1.6.1 or greater):
    <attribute name='baseURL'>http://myinfluxdb.my.org:8086</attribute>
    <attribute name='org'>perfmon4j.org</attribute>
    <attribute name='bucket'>perfmon4j/one_week</attribute>
-   <attribute name='token'>OMCOsFtoN4-OtST9aL56z4MSASGq7LN55cuTFNjB8w6l1l0EOJoRvWXl-OPwBlH4N0SoD7ZqRClygaz35va3g==</attribute>
+   <attribute name='token'>REPLACE_WITH_YOUR_API_TOKEN==</attribute>
 </appender>
 ```
 
