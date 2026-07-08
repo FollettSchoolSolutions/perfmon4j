@@ -20,6 +20,21 @@ public class ReactiveContextManager {
 	private static final ReactiveContextsVO EMPTY_CONTEXTS_VO = new ReactiveContextsVO(EMPTY_CONTEXT_ARRAY);
 	
 	/** GLOBAL Members - Start **/
+	/**
+	 * Guards globalContextMap and the cross-manager transfer of ReactiveContext
+	 * ownership.
+	 *
+	 * NOTE: This is intentionally a synchronized-monitor token rather than a
+	 * java.util.concurrent Lock. The guarded critical sections are short and never
+	 * block (in-memory map operations only), so they do not pin a virtual thread's
+	 * carrier -- stress testing measured 0 jdk.VirtualThreadPinned events on this
+	 * path. Swapping to a ReentrantLock actually REGRESSED virtual-thread throughput
+	 * ~2x: under heavy contention a ReentrantLock parks/unmounts the losing virtual
+	 * thread (scheduler churn), whereas a short synchronized section resolves via
+	 * brief native spinning without unmounting. The real cost here is contention on
+	 * a single global lock, not the lock's type.
+	 * See wiki/Virtual-Threads-and-Perfmon4j.md.
+	 */
 	private static final Serializable bindToken = new Serializable() {
 		private static final long serialVersionUID = 1L;
 	};
@@ -107,7 +122,7 @@ public class ReactiveContextManager {
 	 * @return
 	 */
 	public Object getPayload(String contextID, Long monitorID, ContextPayloadConstructor payloadConstructor) {
-		String methodLine = buildMethodCallDebugLine("getPayload", 
+		String methodLine = !logger.isDebugEnabled() ? null : buildMethodCallDebugLine("getPayload", 
 				new String[] {"contextID", "monitorID", "payloadConstructor"}, 
 				new Object[] {contextID, monitorID, payloadConstructor != null ? "(included=true)" : "(included=false)"});
 
@@ -121,7 +136,7 @@ public class ReactiveContextManager {
 				if (result == null && payloadConstructor != null) {
 					result = payloadConstructor.buildPayload(context);
 					context.addPayload(monitorID, result);
-					if (logger.isDebugEnabled()) {
+					if (methodLine != null) {
 						logger.logDebug(methodLine + " has initialized the payload."); 
 					}
 				}
@@ -152,7 +167,7 @@ public class ReactiveContextManager {
 	 * @return returns the deletedPayload.
 	 */
 	public Object deletePayload(String contextID, Long monitorID) {
-		String methodLine = buildMethodCallDebugLine("deletePayload", 
+		String methodLine = !logger.isDebugEnabled() ? null : buildMethodCallDebugLine("deletePayload", 
 				new String[] {"contextID", "monitorID"}, 
 				new Object[] {contextID, monitorID});
 		Object result = null;
@@ -191,14 +206,14 @@ public class ReactiveContextManager {
 				activeOwner.managerContextMap.remove(contextID);
 				context.setActiveOwner(null);
 
-				if (logger.isDebugEnabled()) {
+				if (methodLine != null) {
 					logger.logDebug(methodLine + " has removed context."); 
 				}
 			} else if (!this.equals(context.getActiveOwner())){
 				// Since the context is still holding meaningful data,
 				// transfer ownership to the calling thread
 				moveContextToCurrentThread(context);
-				if (logger.isDebugEnabled()) {
+				if (methodLine != null) {
 					logger.logDebug(methodLine + " has moved context from " + buildThreadNameForContext(context)); 
 				}
 			}
@@ -217,7 +232,7 @@ public class ReactiveContextManager {
 				globalContextMap.put(contextID, context);
 				activeContextFlag.set(globalContextMap.size());
 				
-				if (logger.isDebugEnabled()) {
+				if (methodLine != null) {
 					logger.logDebug(methodLine + " is initializing global context.");
 				}
 			}
@@ -232,7 +247,7 @@ public class ReactiveContextManager {
 	 */
 	public void moveContext(String contextID) {
 		if (contextID != null) {
-			String methodLine = buildMethodCallDebugLine("moveContext", 
+			String methodLine = !logger.isDebugEnabled() ? null : buildMethodCallDebugLine("moveContext", 
 					new String[] {"contextID"}, 
 					new Object[] {contextID});
 			
@@ -240,11 +255,13 @@ public class ReactiveContextManager {
 				ReactiveContext context = globalContextMap.get(contextID);
 				if (context == null) {
 					// This might not be a problem.  The context may have simply been completed.
-					logger.logDebug(methodLine +  "Context not found, unable to move to Thread.");
+					if (methodLine != null) {
+						logger.logDebug(methodLine +  "Context not found, unable to move to Thread.");
+					}
 				} else {
 					if (!this.equals(context.getActiveOwner())) {
 						moveContextToCurrentThread(context);
-						if (logger.isDebugEnabled()) {
+						if (methodLine != null) {
 							String threadNameForContext = buildThreadNameForContext(context);
 							logger.logDebug(methodLine + " has moved context from " + threadNameForContext); 
 						}
@@ -256,7 +273,7 @@ public class ReactiveContextManager {
 	
 	public void dissociateContextFromThread(String contextID) {
 		if (contextID != null) {
-			String methodLine = buildMethodCallDebugLine("dissociateContextFromThread", 
+			String methodLine = !logger.isDebugEnabled() ? null : buildMethodCallDebugLine("dissociateContextFromThread", 
 					new String[] {"contextID"}, 
 					new Object[] {contextID});
 			
@@ -270,7 +287,7 @@ public class ReactiveContextManager {
 					managerContextMap.remove(contextID);
 					cachedContexts = null;
 					
-					if (logger.isDebugEnabled()) {
+					if (methodLine != null) {
 						logger.logDebug(methodLine +  "Context dissociated from thread. Context is now orphaned.");		
 					}
 				} else {
@@ -389,7 +406,7 @@ public class ReactiveContextManager {
 	}
 	
 	public void pushValidator(ThreadTraceConfig.TriggerValidator validator,  String contextID) {
-		String methodLine = buildMethodCallDebugLine("pushValidator", 
+		String methodLine = !logger.isDebugEnabled() ? null : buildMethodCallDebugLine("pushValidator", 
 				new String[] {"contextID"}, 
 				new Object[] {contextID});
 		
@@ -399,7 +416,7 @@ public class ReactiveContextManager {
 	}
 	
 	public void popValidator(String contextID) {
-		String methodLine = buildMethodCallDebugLine("popValidator", 
+		String methodLine = !logger.isDebugEnabled() ? null : buildMethodCallDebugLine("popValidator", 
 				new String[] {"contextID"}, 
 				new Object[] {contextID});
 		
@@ -409,7 +426,7 @@ public class ReactiveContextManager {
 			context.popTriggerValidator();
 			moveOrRemoveContextAfterDataChange(context, methodLine);
 		} else {
-			logger.logWarn("Warning attempt to pop TriggerValidator off a non-existant context: " + methodLine);
+			logger.logWarn("Warning attempt to pop TriggerValidator off a non-existant context: " + (methodLine != null ? methodLine : ""));
 		}
 	}
 	
