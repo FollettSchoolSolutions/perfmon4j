@@ -2,6 +2,7 @@
 [![Build](https://github.com/FollettSchoolSolutions/perfmon4j/actions/workflows/maven.yml/badge.svg?branch=develop)](https://github.com/FollettSchoolSolutions/perfmon4j/actions/workflows/maven.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/org.perfmon4j/perfmon4j.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.perfmon4j/perfmon4j)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![Wiki](https://img.shields.io/badge/docs-wiki-blue.svg)](https://github.com/FollettSchoolSolutions/perfmon4j/wiki)
 
 Perfmon4j is a Java instrumentation agent for monitoring performance in production
 application servers. It uses bytecode instrumentation to inject timers into your code and
