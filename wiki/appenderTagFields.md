@@ -61,5 +61,5 @@ Appenders without a concept of tags (e.g. `TextAppender`, `SQLAppender`)
 ignore the flag and continue to treat the value as an ordinary string.
 
 ## See also
-- [Perfmon4j Influx Appender](Perfmon4j-Influx-Appender.md)
-- [Perfmon4j API and Agent Architecture](Perfmon4j-API-and-Agent-Architecture.md)
+- [Perfmon4j Influx Appender](Perfmon4j-Influx-Appender)
+- [Perfmon4j API and Agent Architecture](Perfmon4j-API-and-Agent-Architecture)

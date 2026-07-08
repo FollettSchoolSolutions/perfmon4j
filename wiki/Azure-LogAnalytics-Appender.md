@@ -24,10 +24,10 @@ Common Attributes
 | sharedKey | See this [Microsoft Page](https://docs.microsoft.com/en-us/rest/api/loganalytics/workspace%20shared%20keys/getsharedkeys) for information on how to retrieve a shared key using OAuth2 | Yes | |
 | azureResourceID | An azure resource identifier to be associated with each log event | No | This could be an azure Identifier associated with the Virtual Machine or Container hosting the JVM |
 | groups* | Stored as a key attribute pair with associated with each data element | No | |
-| subCategorySplitter | Define a regular expression to break output into category/subCategory. See: [Sub Category Splitter](Sub-Category-Splitter.md) | No | |
+| subCategorySplitter | Define a regular expression to break output into category/subCategory. See: [Sub Category Splitter](Sub-Category-Splitter) | No | |
 
 \* The LogAnalyticsAppender only supports a single group value. If multiple groups are specified (comma separated) only the first group is used.
 
 ## See also
-- [Sub Category Splitter](Sub-Category-Splitter.md)
-- [Perfmon4j Influx Appender](Perfmon4j-Influx-Appender.md)
+- [Sub Category Splitter](Sub-Category-Splitter)
+- [Perfmon4j Influx Appender](Perfmon4j-Influx-Appender)

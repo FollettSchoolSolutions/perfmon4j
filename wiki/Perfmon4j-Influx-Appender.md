@@ -35,8 +35,8 @@ Common Attributes
 | baseURL | The url of the InfluxDb server including protocol, domain and port | Yes | Example: http://172.28.2.112:8086 |
 | groups* | Stored as a key attribute pair with associated with each data element | No | The group specified will be recorded as a key value pair along with each measurement (i.e "group=my group name") |
 | connectTimeoutMillis | The connection timeout used on the post request | No | Default value: 2500 |
-| subCategorySplitter | Define a regular expression to break output into category/subCategory. | No | See: [Sub Category Splitter](Sub-Category-Splitter.md) |
-| tagFields | Define monitored fields that should be treated as tags instead of fields when being written to certain Time-Series data stores | No | See: [Appender Tag Fields](appenderTagFields.md) - Added in Perfmon4j 2.0.0 |
+| subCategorySplitter | Define a regular expression to break output into category/subCategory. | No | See: [Sub Category Splitter](Sub-Category-Splitter) |
+| tagFields | Define monitored fields that should be treated as tags instead of fields when being written to certain Time-Series data stores | No | See: [Appender Tag Fields](appenderTagFields) - Added in Perfmon4j 2.0.0 |
 
 Legacy Attributes (InfluxDb 1.x)
 --------------------------------
@@ -67,8 +67,8 @@ InfluxDb 2.x API Attributes (Perfmon4j 1.6.1 or greater)
 
 `@SnapShotString` fields can be flagged `outputAsTag=true` so InfluxAppender
 writes them as InfluxDB tags without needing a `tagFields` appender
-attribute. See [Appender Tag Fields](appenderTagFields.md) for details.
+attribute. See [Appender Tag Fields](appenderTagFields) for details.
 
 ## See also
-- [Appender Tag Fields](appenderTagFields.md)
-- [Sub Category Splitter](Sub-Category-Splitter.md)
+- [Appender Tag Fields](appenderTagFields)
+- [Sub Category Splitter](Sub-Category-Splitter)

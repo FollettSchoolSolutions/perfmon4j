@@ -316,4 +316,4 @@ This pattern combines activation and the `enabled` attribute so an InfluxDB appe
 
 **Resolution order:** local properties → JVM system properties (`-D`) → OS environment variables.
 
-> See also: [Configuring the Java Agent](Configuring-the-Java-Agent.md) for command-line agent parameters and the overall structure of `perfmonconfig.xml`.
+> See also: [Configuring the Java Agent](Configuring-the-Java-Agent) for command-line agent parameters and the overall structure of `perfmonconfig.xml`.

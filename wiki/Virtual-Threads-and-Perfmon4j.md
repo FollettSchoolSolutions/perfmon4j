@@ -187,4 +187,4 @@ To force the issue rather than wait for it, run an instrumented method on many v
 
 ---
 
-> See also: [Configuring the Java Agent](Configuring-the-Java-Agent.md) and [Configuration Properties & Conditional Activation](Configuration-Properties-and-Conditional-Activation.md).
+> See also: [Configuring the Java Agent](Configuring-the-Java-Agent) and [Configuration Properties & Conditional Activation](Configuration-Properties-and-Conditional-Activation).

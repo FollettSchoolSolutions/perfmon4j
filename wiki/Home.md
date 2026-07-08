@@ -24,31 +24,31 @@ Perfmon4j should not be confused with a profiler. While profilers are typically 
 
 ## Getting Started
 
-* [Configuring the Java Agent](Configuring-the-Java-Agent.md)
-* [Configuration Properties and Conditional Activation](Configuration-Properties-and-Conditional-Activation.md)
+* [Configuring the Java Agent](Configuring-the-Java-Agent)
+* [Configuration Properties and Conditional Activation](Configuration-Properties-and-Conditional-Activation)
 * [Perfmon4j Configuration Examples](Perfmon4j-Configuration-Examples)
 * [Perfmon4j Demo](Perfmon4j-Demo)
 
 ## Architecture
 
-* [Perfmon4j API and Agent Architecture](Perfmon4j-API-and-Agent-Architecture.md) — how the `agent-api` stub classes and the `base` agent implementation connect at runtime
-* [Virtual Threads and Perfmon4j](Virtual-Threads-and-Perfmon4j.md)
+* [Perfmon4j API and Agent Architecture](Perfmon4j-API-and-Agent-Architecture) — how the `agent-api` stub classes and the `base` agent implementation connect at runtime
+* [Virtual Threads and Perfmon4j](Virtual-Threads-and-Perfmon4j)
 
 ## Appenders
 
 * [Appender Configuration](Appender-Configuration)
-* [Appender Tag Fields](appenderTagFields.md)
-* [Perfmon4j Influx Appender](Perfmon4j-Influx-Appender.md)
-* [Azure LogAnalytics Appender](Azure-LogAnalytics-Appender.md)
+* [Appender Tag Fields](appenderTagFields)
+* [Perfmon4j Influx Appender](Perfmon4j-Influx-Appender)
+* [Azure LogAnalytics Appender](Azure-LogAnalytics-Appender)
 * [SQL Appender Configuration](SQL-Appender-Configuration)
-* [Sub Category Splitter](Sub-Category-Splitter.md)
+* [Sub Category Splitter](Sub-Category-Splitter)
 
 ## Monitoring Components
 
-* [ActiveThreadMonitor](ActiveThreadMonitor.md)
-* [ExceptionTracker](ExceptionTracker.md)
-* [MBeanSnapShotMonitor](MBeanSnapShotMonitor.md)
-* [Interval Monitor Pattern Definition](Interval-Monitor-Pattern-Definition.md)
+* [ActiveThreadMonitor](ActiveThreadMonitor)
+* [ExceptionTracker](ExceptionTracker)
+* [MBeanSnapShotMonitor](MBeanSnapShotMonitor)
+* [Interval Monitor Pattern Definition](Interval-Monitor-Pattern-Definition)
 * [Thread Trace Configuration Samples](Thread-Trace-Configuration-Samples)
 
 ## SQL / Database

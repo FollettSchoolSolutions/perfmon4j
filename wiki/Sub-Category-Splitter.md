@@ -35,5 +35,5 @@ Below is a partial example configuration file that shows how to apply the sub ca
 5. You can define multiple patterns in the supplied regular expression. For example the following pattern would match categories that start with `WebRequest.*` OR `DistrictResource.*`: `(DistrictResource\.(.*))|(WebRequest\.(.*))`
 
 ## See also
-- [Perfmon4j Influx Appender](Perfmon4j-Influx-Appender.md)
-- [Azure LogAnalytics Appender](Azure-LogAnalytics-Appender.md)
+- [Perfmon4j Influx Appender](Perfmon4j-Influx-Appender)
+- [Azure LogAnalytics Appender](Azure-LogAnalytics-Appender)

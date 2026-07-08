@@ -317,5 +317,5 @@ there rather than re-deriving it from the transformer source.
 
 ## See Also
 
-- [Configuring the Java Agent](Configuring-the-Java-Agent.md)
-- [Configuration Properties & Conditional Activation](Configuration-Properties-and-Conditional-Activation.md)
+- [Configuring the Java Agent](Configuring-the-Java-Agent)
+- [Configuration Properties & Conditional Activation](Configuration-Properties-and-Conditional-Activation)
