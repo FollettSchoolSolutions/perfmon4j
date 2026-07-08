@@ -237,7 +237,7 @@ public class InfluxAppender extends SystemNameAndGroupsAppender {
 		int numDataElements = 0;
 		for(PerfMonObservableDatum<?> datum : ((PerfMonObservableData) data).getObservations()) {
 			String fieldName = datum.getFieldName();
-			if (TagField.isTagField(category, fieldName, getTagFields())) {
+			if (datum.isOutputAsTag() || TagField.isTagField(category, fieldName, getTagFields())) {
 				tags.append(",")
 					.append(decorateMeasurementForInflux(fieldName))
 					.append("=")

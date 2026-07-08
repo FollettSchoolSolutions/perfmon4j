@@ -23,7 +23,8 @@ public class PerfMonObservableDatum<T> {
 	private final String stringValue;
 	private final boolean isNumeric;
 	private final boolean isDateTime;
-	
+	private final boolean outputAsTag;
+
 
 	static public PerfMonObservableDatum<Boolean> newDatum(String fieldName, boolean value) {
 		return newDatum(fieldName, Boolean.valueOf(value));
@@ -87,7 +88,11 @@ public class PerfMonObservableDatum<T> {
 	
 	
 	static public <X extends Object> PerfMonObservableDatum<X> newDatum(String fieldName, X value) {
-		return new PerfMonObservableDatum<X>(fieldName, value);
+		return newDatum(fieldName, value, false);
+	}
+
+	static public <X extends Object> PerfMonObservableDatum<X> newDatum(String fieldName, X value, boolean outputAsTag) {
+		return new PerfMonObservableDatum<X>(fieldName, value, outputAsTag);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -108,6 +113,7 @@ public class PerfMonObservableDatum<T> {
 		this.stringValue = buildStringValue(this.value);
 		this.isNumeric = true;
 		this.isDateTime = false;
+		this.outputAsTag = false;
 	}
 
 	private PerfMonObservableDatum(String fieldName, Number value) {
@@ -126,6 +132,7 @@ public class PerfMonObservableDatum<T> {
 		this.stringValue = buildStringValue(value);
 		this.isNumeric = true;
 		this.isDateTime = false;
+		this.outputAsTag = false;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -150,6 +157,7 @@ public class PerfMonObservableDatum<T> {
 		this.complexObject = (T)value;
 		this.isNumeric = false;
 		this.isDateTime = isDateTime;
+		this.outputAsTag = false;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -174,8 +182,9 @@ public class PerfMonObservableDatum<T> {
 		this.stringValue = buildStringValue(this.value);
 		this.isNumeric = true;
 		this.isDateTime = false;
+		this.outputAsTag = false;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private PerfMonObservableDatum(String fieldName, Delta value, boolean formatAsPerSecond) {
 		super();
@@ -202,11 +211,12 @@ public class PerfMonObservableDatum<T> {
 		this.stringValue = buildStringValue(this.value);
 		this.isNumeric = true;
 		this.isDateTime = false;
+		this.outputAsTag = false;
 	}
-	
-	
+
+
 	@SuppressWarnings("unchecked")
-	private PerfMonObservableDatum(String fieldName, Object value) {
+	private PerfMonObservableDatum(String fieldName, Object value, boolean outputAsTag) {
 		super();
 		if (value == null) {
 			this.inputWasNull = true;
@@ -222,6 +232,7 @@ public class PerfMonObservableDatum<T> {
 		this.complexObject = (T)value;
 		this.isNumeric = false;
 		this.isDateTime = false;
+		this.outputAsTag = outputAsTag;
 	}
 
 	
@@ -284,6 +295,10 @@ public class PerfMonObservableDatum<T> {
 
 	public boolean isDateTime() {
 		return isDateTime;
+	}
+
+	public boolean isOutputAsTag() {
+		return outputAsTag;
 	}
 
 	/**

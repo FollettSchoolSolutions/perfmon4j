@@ -154,6 +154,42 @@ public class InfluxAppenderTest extends TestCase {
 	}
 
 
+	/**
+	 * A PerfMonObservableDatum flagged outputAsTag=true (e.g. from a
+	 * @SnapShotString(outputAsTag=true)) should be written as a tag even
+	 * though its field name is not configured via setTagFields(...).
+	 */
+	public void testBuildDataLineHonorsOutputAsTagAttribute() {
+		appender.setSystemNameBody("MySystemName");
+		appender.setUseDefaultTagFields(false);
+
+		Set<PerfMonObservableDatum<?>> set = new HashSet<PerfMonObservableDatum<?>>();
+		set.add(PerfMonObservableDatum.newDatum("throughput", 25));
+		set.add(PerfMonObservableDatum.newDatum("region", "us-east-1", true));
+		Mockito.when(mockData.getObservations()).thenReturn(set);
+
+		assertEquals("MyCategory,system=MySystemName,region=us-east-1 throughput=25i 1",
+			appender.buildPostDataLine(mockData));
+	}
+
+	/**
+	 * Like the config-driven TagField mechanism, outputAsTag should bypass the
+	 * numericOnly filter (which only excludes non-numeric FIELDS, not tags).
+	 */
+	public void testBuildDataLineOutputAsTagBypassesNumericOnly() {
+		appender.setSystemNameBody("MySystemName");
+		appender.setUseDefaultTagFields(false);
+		appender.setNumericOnly(true);
+
+		Set<PerfMonObservableDatum<?>> set = new HashSet<PerfMonObservableDatum<?>>();
+		set.add(PerfMonObservableDatum.newDatum("throughput", 25));
+		set.add(PerfMonObservableDatum.newDatum("region", "us-east-1", true));
+		Mockito.when(mockData.getObservations()).thenReturn(set);
+
+		assertEquals("MyCategory,system=MySystemName,region=us-east-1 throughput=25i 1",
+			appender.buildPostDataLine(mockData));
+	}
+
 	public void testBuildDataLine_NoData() {
 		appender.setSystemNameBody("MySystemName");
 		appender.setGroups("MyGroup");
