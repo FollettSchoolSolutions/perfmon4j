@@ -138,6 +138,11 @@ global lock, not the lock's type** — so the real optimization is to reduce tha
 either lock type. Until then, `synchronized` is retained deliberately (see the comment on
 `bindToken` in `ReactiveContextManager`).
 
+> This contention-reduction work is tracked as a future enhancement in
+> [issue #59](https://github.com/FollettSchoolSolutions/perfmon4j/issues/59). It is a
+> performance enhancement only — not required for virtual-thread correctness (the path
+> already records zero pinning events).
+
 ---
 
 ## How to Diagnose Pinning in Your Deployment
@@ -175,7 +180,7 @@ To force the issue rather than wait for it, run an instrumented method on many v
 
 - **Measured: zero pinning.** Under 2,000 virtual threads on JDK 21, both the non-reactive and reactive timer paths produced **0** `jdk.VirtualThreadPinned` events (see [Measured Results](#measured-results-jdk-21)).
 - **Non-reactive interval timing** — Already virtual-thread friendly. The main critical section uses `ReentrantLock`; the only per-invocation `synchronized` is the short, non-blocking, disableable `MonitorThreadTracker`.
-- **Reactive timing** — The largest `synchronized` surface on application threads, routed through a single global lock. Its ~20% overhead is *contention*, not pinning; the fix is contention reduction, **not** a lock-type swap (a `ReentrantLock` measured ~2× slower here). The primary future optimization target.
+- **Reactive timing** — The largest `synchronized` surface on application threads, routed through a single global lock. Its ~20% overhead is *contention*, not pinning; the fix is contention reduction, **not** a lock-type swap (a `ReentrantLock` measured ~2× slower here). The primary future optimization target, tracked in [issue #59](https://github.com/FollettSchoolSolutions/perfmon4j/issues/59).
 - **ThreadLocal usage** — Pervasive and correct, but a footprint consideration at very high virtual-thread counts.
 - **JDK 24+** — `synchronized` pinning is eliminated by JEP 491; the concern is scoped to JDK 21–23.
 - **Build target** — Perfmon4j currently compiles for Java 11 and has no virtual-thread–specific code paths.
