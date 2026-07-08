@@ -1,70 +1,46 @@
-# CLAUDE — Usage & Integration Guidelines
+# perfmon4j
 
-Purpose
--------
-This document provides concise instructions for integrating with Claude-style LLM providers, plus usage recommendations, safety and privacy guidance, and example requests. It is intended as a quick-reference for contributors and maintainers.
+## Overview
+- Java instrumentation agent for monitoring application performance in production servers, via bytecode injection of timers (no code changes required to instrument existing methods)
+- Multi-module Maven project: a core agent (`base`), a zero-dependency stub API app code can compile against (`agent-api`), and a set of application-server / framework integration modules
+- Collects interval metrics (throughput, response time, active threads, SQL time) and point-in-time snapshots (JVM/JMX/custom), writing them to pluggable appenders (text log, JDBC database, InfluxDB, Azure Log Analytics)
+- Published to Maven Central under the `org.perfmon4j` group id; see [README.md](README.md) for installation and [readme.txt](readme.txt) for the full version changelog
+- Primary consumers: Java web applications and application servers (Tomcat, WildFly, Quarkus) that need low-overhead production performance monitoring
 
-Setup
------
-- Store your API key in an environment variable (recommended):
+## Module Layout
+- `agent-api/` — no-op stub classes (`api.org.perfmon4j.agent.*`) application code compiles against directly; rewritten in place by the javaagent when attached, otherwise runs as harmless no-ops. Zero-dependency, test-scope-only dependency of `base`. See `agent-api/CLAUDE.md`.
+- `base/` — the real implementation: `PerfMon`/`PerfMonTimer` core, Javassist-based bytecode instrumentation, snapshot generation, appenders, reactive-context support. See `base/CLAUDE.md`.
+- `dbupgrader/` — Liquibase-based schema upgrade tool for the SQL appender's database.
+- `genericfilter/`, `servlet/`, `tomcat7/`, `wildfly8/`, `quarkus2x/`, `quarkus3x/` — application-server and framework integration modules (servlet filters, valves, Quarkus extensions).
+- `reportconsole/` — standalone reporting UI for SQL-appender-collected data.
+- `utils/` — standalone CLI utilities for parsing/visualizing TextAppender log output.
+- Each module has its own `CLAUDE.md` with module-specific architecture, patterns, and anti-patterns — consult it before making changes inside that module.
+- See [Perfmon4j API and Agent Architecture](wiki/Perfmon4j-API-and-Agent-Architecture.md) for how `agent-api` and `base` connect at runtime.
 
-```
-export CLAUDE_API_KEY="your_api_key_here"
-```
+## Architecture & Patterns
+- Root `pom.xml` defines the version directly (not inherited from a parent BOM) and lists all modules; bump it here when cutting a release
+- Gitflow branching: `develop` (integration branch, always releasable-ish), `master` (released code only), `feature/<Name>` branches merged into `develop` with `--no-ff` and a descriptive merge commit, `release/<version>` branches cut from `develop` for release stabilization
+- This is a sole-maintainer repo — direct pushes to `develop`/`master` bypassing branch-protection PR requirements are expected and normal, not a mistake to flag
+- CI builds/tests/publishes via GitHub Actions (`.github/workflows/maven.yml`); releases publish to Maven Central from the `master`-branch run specifically (a tag-only run skips publish)
 
-- Use your provider's official client library when possible. When calling the HTTP API directly, set the required auth header (e.g., `Authorization: Bearer <key>` or `x-api-key`).
+## Stack Best Practices
+- Java 11 baseline; per-module `CLAUDE.md` files note where a module needs a newer JDK (e.g. the `stress-test/` virtual-thread harness requires JDK 21+ and is deliberately excluded from the Java 11 Maven build)
+- JUnit 3-style tests (`extends TestCase`, methods named `testXxx`) throughout — do not introduce `@Test`-annotated JUnit 4/5-style tests
+- Full test suite (`mvn test` from `base/`) requires system properties for external jars (`JAVASSIST_JAR`, `DERBY_EMBEDDED_DRIVER`, `LOG4J_JAR`) — these are already wired into the surefire config in `base/pom.xml`, so plain `mvn test` works if the local Maven repo has those artifacts
+- `readme.txt`'s top `** <version> - TBD` block tracks unreleased functional changes merged to `develop`; add a bullet there for any user-visible change (see the `update-change-log` skill)
 
-Quick curl example
-------------------
-The exact endpoint and parameters depend on your provider and chosen model. Example (replace endpoint and header as required by your provider):
+## Anti-Patterns
+- Don't assume the `agent-api`/`base` split is a single generic mechanism — it's four distinct attach/rewrite paths (see the architecture wiki page); a fix or pattern that applies to one does not automatically apply to the others
+- Don't let `agent-api` depend on anything at runtime, or add non-test dependencies to it from `base` — it must work from the root classloader before any application class is visible
+- Don't hand-edit only one copy of a `@SnapShot*` annotation — `agent-api` and `base` each keep an independent copy that must be kept attribute-compatible by hand (no build-time sync); see `AnnotationTransformer` in `base`
+- Don't edit only one copy of a wiki page — see "Project Wiki Publishing" below
+- Never use `-uall` with `git status` (can cause memory issues on this repo's size)
 
-```
-curl https://api.example-llm.com/v1/complete \
-  -H "Authorization: Bearer $CLAUDE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"claude-2","prompt":"Summarize the following...","max_tokens":300}'
-```
-
-Consistency
------------
-Consistency across the project matters: file/skill naming conventions, code style,
-directory layout, changelog format, and documentation patterns should match what
-already exists. Before adding something new, look at how similar things are already
-named and structured, and follow that pattern.
-
-If the user (or a request) breaks with an established convention — for example using
-camelCase for a skill file when the existing ones are kebab-case — point it out and
-recommend the consistent alternative rather than silently following along.
-
-Prompting guidance
-------------------
-- Be explicit: include the role (system/instruction), desired format, length limits, and examples when useful.
-- Use short, focused prompts for precise tasks; use multi-turn context when you need stateful interactions.
-- Prefer constrained output formats (JSON, CSV, YAML) when parsing responses programmatically.
-- Include an explicit instruction to refuse disallowed requests if you need the model to enforce policy.
-
-Privacy & Safety
-----------------
-- Do not send secrets, private keys, or sensitive user data unless you have a clear privacy strategy and encryption in transit + access controls.
-- Sanitize or redact personally identifiable information (PII) before sending if possible.
-- Verify outputs for safety-critical actions; do not rely solely on model responses for authorization, billing, or other high-risk flows.
-
-Cost & Rate Limits
-------------------
-- Be mindful of token/billing costs: batch requests and limit max tokens where appropriate.
-- Implement exponential backoff and retries for transient errors; respect provider rate-limit headers.
-
-Compliance & Licensing
----------------------
-- Check and comply with the chosen provider's terms of service and acceptable use policies before production use.
-
-Troubleshooting & Reporting
----------------------------
-- If you encounter unexpected behavior or cost spikes, capture the request/response (with sensitive data redacted) and open an issue describing the model, endpoint, prompt, and timestamps.
-
-Further reading
----------------
-- Refer to your chosen provider's official docs for up-to-date endpoints, SDKs, and best practices.
+## Commands & Scripts
+- **Build everything**: `mvn clean install` from the repo root
+- **Build/test a single module**: `mvn clean install` from that module's directory (e.g. `base/`)
+- **Cut a release**: see the `cut-release` skill and `.github/maven/MAVEN_CENTRAL_PUBLISHING.md`
+- **Update the changelog**: see the `update-change-log` skill (edits `readme.txt`'s top `TBD` block)
 
 Project Wiki Publishing
 -----------------------
@@ -94,5 +70,6 @@ Notes:
 - **Wiki URLs omit the `.md` extension** — GitHub renders pages, it does not serve raw `.md` files. The file `Configuring-the-Java-Agent.md` is reached at `.../wiki/Configuring-the-Java-Agent`.
 - Because the two copies are synced by hand, they can drift. When editing an existing page, update **both** repos.
 - `_Sidebar.md` (in the wiki repo) controls the wiki navigation sidebar but does not list every page; new pages still appear in the wiki's automatic "Pages" list without a sidebar entry.
+- `wiki/Home.md` is the landing page for both copies — keep it updated with a link to every page when adding or removing one.
 
-Maintainers: update this file if the project adopts a specific provider or if integration details change.
+Maintainers: update this file as the module layout, branching convention, or release process changes.
