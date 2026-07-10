@@ -22,10 +22,16 @@
   one MBean on the platform MBeanServer of the same JVM - no code inside the Hawtio WAR
   itself needs to change.
 - `PluginRegistrationListener` (`@WebListener`) does exactly that at deploy time, and
-  derives `Url` from `ServletContext.getContextPath() + "/remoteEntry.js"` rather than a
-  hardcoded host/port - it's origin-relative, so the browser resolves it against whatever
-  host/port this WAR happens to be deployed under, and it keeps working if this WAR is
-  renamed or redeployed under a different context path.
+  derives `Url` from `ServletContext.getContextPath()` alone (no hardcoded host/port) -
+  it's origin-relative, so the browser resolves it against whatever host/port this WAR
+  happens to be deployed under, and it keeps working if this WAR is renamed or redeployed
+  under a different context path.
+  - `Url` must be the plugin's BASE path, not the path to `remoteEntry.js` itself - the
+    Module Federation loader (`@module-federation/utilities`) appends `/remoteEntry.js` (or
+    whatever the optional `RemoteEntryFileName` attribute says) on its own. Setting `Url` to
+    `<contextPath>/remoteEntry.js` (an earlier version of this class did exactly that)
+    produces a doubled `.../remoteEntry.js/remoteEntry.js` 404 in the browser - confirmed
+    against a real deployment.
 - `getScope()`/`getModule()` in `Perfmon4jHawtioPlugin` **must** stay in sync with
   `hawtio-plugin/webpack.config.js`'s `ModuleFederationPlugin` `name`/`exposes` values.
 

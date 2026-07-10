@@ -25,6 +25,11 @@ import jakarta.servlet.annotation.WebListener;
  * The Url attribute is derived from this webapp's own context path rather than hardcoded,
  * so it keeps working under whatever context path/host/port this WAR happens to be deployed
  * at - it doesn't need to know or guess the deployment's hostname.
+ *
+ * Url must be the plugin's BASE path, not the path to remoteEntry.js itself - Hawtio's
+ * Module Federation loader (@module-federation/utilities) appends "/remoteEntry.js" (or
+ * whatever RemoteEntryFileName says, default "remoteEntry.js") to Url on its own. Passing
+ * the full file path here produces a doubled ".../remoteEntry.js/remoteEntry.js" 404.
  */
 @WebListener
 public class PluginRegistrationListener implements ServletContextListener {
@@ -36,7 +41,7 @@ public class PluginRegistrationListener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent sce) {
 		try {
 			objectName = new ObjectName(OBJECT_NAME);
-			String url = sce.getServletContext().getContextPath() + "/remoteEntry.js";
+			String url = sce.getServletContext().getContextPath();
 
 			MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
 			if (mBeanServer.isRegistered(objectName)) {
