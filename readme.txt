@@ -16,6 +16,8 @@ Follett Software
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 2.2.3 - TBD
+
 ** 2.2.2 - 07/09/26
 - Perfmon4j can now bind its internal logging to the JBoss Logging facade
   (org.jboss.logging) and to the Log4j 2.x API (org.apache.logging.log4j), in
