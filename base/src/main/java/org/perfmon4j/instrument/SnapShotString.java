@@ -30,5 +30,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface SnapShotString {
 	public Class<? extends SnapShotStringFormatter> formatter() default SnapShotStringFormatter.class;
-	public boolean isInstanceName() default false; 
+	public boolean isInstanceName() default false;
+	public boolean outputAsTag() default false;
 }

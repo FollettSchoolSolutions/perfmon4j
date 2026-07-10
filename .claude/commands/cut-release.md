@@ -67,6 +67,12 @@ short-lived `release/<version>` branch so the non-SNAPSHOT commit only ever reac
    - `git push origin master --tags`
    - Watch the resulting Actions run to completion. The "Publish to Maven Central" step
      must succeed. If it fails, STOP and report — do not proceed to the version bump.
+   - GOTCHA: pushing the branch and the tag produces TWO `push`-event Actions runs for
+     the same commit. The TAG run (its `head_branch` is the tag name, e.g. `v<version>`)
+     SKIPS the publish step because a tag ref is not `/master`; only the BRANCH run
+     (`head_branch == master`) actually publishes. Verify the publish step on the
+     master-branch run — do not be fooled by the tag run reporting green with publish
+     "skipped".
 5. Verify the artifact is live on Central before continuing (it may take a few minutes):
    - Check https://central.sonatype.com or
      `https://repo1.maven.org/maven2/org/perfmon4j/perfmon4j/<version>/`.

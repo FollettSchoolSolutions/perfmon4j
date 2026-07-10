@@ -26,17 +26,28 @@ import java.lang.annotation.Target;
 
 /**
  * This class serves as an alias for the SnapShotString Annotation
- * implemented in the perfmon4j agent. 
- * 
+ * implemented in the perfmon4j agent.
+ *
  * The alias provides a simplified implementation using only default
  * values for the following attributes:
  * 	formatter = SnapShotStringFormatter.class
- * 
+ *
+ * outputAsTag is passed through to the base annotation as-is; it is not
+ * defaulted away like formatter.
+ *
  * @author perfmon
  *
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface SnapShotString {
-	public boolean isInstanceName() default false; 
+	public boolean isInstanceName() default false;
+
+	/**
+	 * When true, appenders that support tag semantics (e.g. InfluxAppender)
+	 * will serialize this value as a tag rather than a field. Appenders
+	 * without tag support ignore this and treat the value as a normal
+	 * string. Defaults to false, preserving existing behavior.
+	 */
+	public boolean outputAsTag() default false;
 }

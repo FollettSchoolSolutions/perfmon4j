@@ -16,6 +16,30 @@ Follett Software
 1391 Corporate Drive
 McHenry, IL 60050
 
+** 2.2.2 - 07/09/26
+- Perfmon4j can now bind its internal logging to the JBoss Logging facade
+  (org.jboss.logging) and to the Log4j 2.x API (org.apache.logging.log4j), in
+  addition to the legacy Log4j 1.x API. This restores Perfmon4j log output under
+  newer JBoss/WildFly releases (e.g. WildFly 33) that no longer expose a working
+  Log4j 1.x facade. When auto-detecting, Perfmon4j now prefers, in order: JBoss
+  Logging (only when running inside a JBoss/WildFly server, where it routes
+  natively to the server log), then Log4j 2.x, then Log4j 1.x, then
+  java.util.logging. The framework can still be forced via the system property
+  PerfMon4j.preferredLogger=[jboss|log4j|log4j2|java|stdout].
+
+- Reduced allocation overhead on the reactive timer start/stop path
+  (org.perfmon4j.reactive.ReactiveContextManager). Previously a debug-log
+  description string, along with its backing argument arrays, was built on
+  every reactive PerfMonTimer start/stop regardless of whether debug logging
+  was enabled. It is now only built when debug logging is active.
+
+- Added an optional outputAsTag attribute to @SnapShotString (defaults to
+  false). When set to true, InfluxAppender writes the value as an InfluxDB
+  tag instead of a field, letting monitor authors flag low-cardinality
+  string dimensions in code rather than via appender configuration.
+  Appenders without tag support are unaffected and continue to treat the
+  value as an ordinary string.
+
 ** 2.2.1 - 07/01/26
 - The GenericFilter and the WildFly HandlerImpl now mask query parameters whose name
   contains "password" (case-insensitive) before writing the request to the log. The

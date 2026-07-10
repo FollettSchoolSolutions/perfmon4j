@@ -207,9 +207,13 @@ public class LaunchRunnableInVM {
     		} else if (part.contains("derby")) {
     			// Add derby classes for SQLAppender tests...
     			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 
-    		} else if (part.contains("log4j")) {
-    			// Add log4j classes for log4j tests....
-    			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 
+    		} else if (part.contains("log4j")
+    				&& !part.contains("log4j-api") && !part.contains("log4j-core")) {
+    			// Add the legacy Log4j 1.x jar for the log4j tests. Deliberately
+    			// exclude the Log4j 2.x api/core test jars: these launched-VM tests
+    			// configure and assert on Log4j 1.x output, and leaking Log4j 2.x onto
+    			// the child classpath would cause Perfmon4j to bind to it instead.
+    			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR;
     		} else if (part.contains("perfmon4j"+ File.separator + "agent-api")) {
     			// Add perfmon4j agent.
     			myClassPath += quoteIfNeeded(part) + PATH_SEPERATOR; 

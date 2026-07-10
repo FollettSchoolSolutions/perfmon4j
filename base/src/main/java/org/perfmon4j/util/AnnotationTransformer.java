@@ -277,13 +277,17 @@ public class AnnotationTransformer {
 					public boolean isInstanceName() {
 						return AnnotationTransformer.getNamedProperty(an, "isInstanceName", Boolean.FALSE).booleanValue();
 					}
+
+					public boolean outputAsTag() {
+						return AnnotationTransformer.getNamedProperty(an, "outputAsTag", Boolean.FALSE).booleanValue();
+					}
 				};
 	    	}
 	    	return null;
 		}
     }
-    
-    
+
+
     private static class RatioWorker implements Worker<SnapShotRatio> {
 		public SnapShotRatio transform(final Annotation an) {
 	    	if (an.annotationType().getName().equals(API_SNAP_SHOT_RATIO)) {
