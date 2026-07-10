@@ -1,0 +1,93 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.perfmon4j</groupId>
+		<artifactId>perfmon4j-project</artifactId>
+		<version>2.2.3-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>perfmon4j-hawtio-plugin-webapp</artifactId>
+	<name>perfmon4j-hawtio-plugin-webapp</name>
+	<packaging>war</packaging>
+
+	<!--
+		This module is NOT listed in the root pom.xml's <modules> - like hawtio-plugin/
+		itself, it is deliberately kept out of the main Maven reactor so that a plain
+		`mvn clean install` from the repo root doesn't require Node.js. Build it
+		explicitly: mvn -f hawtio-plugin-webapp/pom.xml clean package
+	-->
+
+	<properties>
+		<hawtio.plugin.dir>${project.basedir}/../hawtio-plugin</hawtio.plugin.dir>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>jakarta.servlet</groupId>
+			<artifactId>jakarta.servlet-api</artifactId>
+			<version>5.0.0</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>perfmon4j-hawtio-plugin</finalName>
+		<plugins>
+			<!-- Builds the hawtio-plugin npm/TypeScript project (see ../hawtio-plugin)
+			     and packages its dist/ output as this WAR's static content, using
+			     whatever npm is already on the PATH (no separate Node.js download). -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.4.1</version>
+				<executions>
+					<execution>
+						<id>npm-install</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>npm</executable>
+							<workingDirectory>${hawtio.plugin.dir}</workingDirectory>
+							<arguments>
+								<argument>install</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>npm-build</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>npm</executable>
+							<workingDirectory>${hawtio.plugin.dir}</workingDirectory>
+							<arguments>
+								<argument>run</argument>
+								<argument>build</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>3.4.0</version>
+				<configuration>
+					<!-- No web.xml - PluginRegistrationListener is registered via @WebListener -->
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+					<webResources>
+						<resource>
+							<directory>${hawtio.plugin.dir}/dist</directory>
+						</resource>
+					</webResources>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>
