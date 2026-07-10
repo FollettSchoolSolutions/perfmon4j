@@ -6,8 +6,8 @@
   JMX MBean, by selecting which attributes to monitor as gauges/counters
 - Sprint 1 only: generates a read-only XML snippet for the user to paste into
   `perfmonconfig.xml`. It does not modify the running JVM, and requires zero changes to the
-  `base` module. See the Sprint 1 spec for the full scope and backlog of deferred features
-  (live dynamic push, ratios, instance fan-out, formatters).
+  `base` module. See [ROADMAP.md](ROADMAP.md) for what's deferred (live dynamic push,
+  ratios, instance fan-out, formatters, an MBean search/select picker) and why.
 - This is a TypeScript/React/npm project, **not** a Maven module — it is not listed in the
   root `pom.xml`'s `<modules>`, mirroring the existing `stress-test/` precedent of a
   top-level directory with independent tooling that Maven/CI never sees.
