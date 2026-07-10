@@ -1,0 +1,41 @@
+{
+  "name": "perfmon4j-hawtio-plugin",
+  "version": "0.1.0",
+  "description": "Hawtio plugin for authoring perfmon4j mBeanSnapshotMonitor config from a live JMX MBean",
+  "private": true,
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hawtio/react": "^2.3.0-pre.1",
+    "@patternfly/react-core": "^6.4.0",
+    "@patternfly/react-icons": "^6.4.0",
+    "@patternfly/react-table": "^6.4.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "css-loader": "^7.1.4",
+    "html-webpack-plugin": "^5.6.6",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.4.1",
+    "style-loader": "^4.0.0",
+    "ts-jest": "^29.4.11",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.105.4",
+    "webpack-cli": "^7.0.0",
+    "webpack-dev-server": "^5.2.5"
+  },
+  "overrides": {
+    "@module-federation/utilities": "3.1.83"
+  }
+}
