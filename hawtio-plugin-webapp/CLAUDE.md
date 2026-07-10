@@ -44,6 +44,19 @@
 - `maven-war-plugin`'s `webResources` pulls `../hawtio-plugin/dist/**` (the webpack output,
   including `remoteEntry.js`) straight into the WAR root as static content.
 
+## Anti-Patterns
+- **Never put these classes under `org.perfmon4j.*`.** They live in
+  `com.follett.perfmon4j.hawtioplugin` deliberately. On any JVM where the real perfmon4j
+  javaagent is attached, `org.perfmon4j` is commonly listed in that WildFly instance's
+  `-Djboss.modules.system.pkgs=...` (confirmed against a real deployment - see
+  `wrapper.conf`'s `wrapper.java.additional.11`), which makes JBoss Modules treat
+  `org.perfmon4j.*` as a reserved system package: it refuses to load ANY class under that
+  package from a deployment's own `WEB-INF/classes` and only looks in the system
+  classloader. The first version of this module used `org.perfmon4j.hawtioplugin` and
+  failed deployment with `ClassNotFoundException: org.perfmon4j.hawtioplugin.<Class>` even
+  though the class was verifiably present and valid inside the WAR - the exception is
+  misleading; it looks like a packaging bug but is actually this namespace reservation.
+
 ## Commands & Scripts
 - **Build**: `mvn -f hawtio-plugin-webapp/pom.xml clean package` (from repo root) or
   `mvn clean package` (from this directory) - produces
@@ -51,7 +64,10 @@
 - **Deploy**: copy `target/perfmon4j-hawtio-plugin.war` into the servlet container's
   deployments folder (e.g. WildFly's `standalone/deployments/`) alongside the existing
   Hawtio console WAR - same JVM, same platform MBeanServer.
-- **Verify it registered**: after deploy, hit `<hawtio-context>/plugin` (e.g.
-  `/hawtio/plugin`) directly - the JSON response should include an entry with
-  `"Scope":"perfmon4jHawtioPlugin"`. Reload the Hawtio page in the browser to pick it up
-  (the plugin list is fetched once at page bootstrap, not polled).
+- **Verify it registered**: after deploy, hit `<hawtio-context>/plugin` directly - the
+  JSON response should include an entry with `"Scope":"perfmon4jHawtioPlugin"`. The
+  context path is whatever the Hawtio console WAR's own `jboss-web.xml` `<context-root>`
+  says (NOT necessarily derived from its filename - e.g. a WAR renamed to
+  `destiny-console.war` may still have a `context-root` of `/destiny-console`, unrelated to
+  the rename). Reload the Hawtio page in the browser to pick it up (the plugin list is fetched
+  once at page bootstrap, not polled).

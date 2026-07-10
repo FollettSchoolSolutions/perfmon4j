@@ -1,4 +1,4 @@
-package org.perfmon4j.hawtioplugin;
+package com.follett.perfmon4j.hawtioplugin;
 
 import java.lang.management.ManagementFactory;
 
@@ -13,6 +13,14 @@ import jakarta.servlet.annotation.WebListener;
  * Registers this deployment as a discoverable Hawtio remote plugin by registering an MBean
  * on the platform MBeanServer, which io.hawt.web.plugin.PluginServlet (bundled with the
  * hawtio-war distribution deployed elsewhere in this same JVM) queries for at request time.
+ *
+ * This package deliberately lives OUTSIDE org.perfmon4j.* - on JVMs where the real perfmon4j
+ * javaagent is attached, org.perfmon4j is typically listed in jboss.modules.system.pkgs (or
+ * an equivalent parent-first classloading reservation), which makes JBoss Modules refuse to
+ * load ANY class under that package from a deployment's own WEB-INF/classes - it only looks
+ * in the system classloader, where a brand-new class like this one doesn't exist, producing a
+ * ClassNotFoundException for a class that is plainly present in the WAR. See
+ * hawtio-plugin-webapp/CLAUDE.md for the full diagnosis.
  *
  * The Url attribute is derived from this webapp's own context path rather than hardcoded,
  * so it keeps working under whatever context path/host/port this WAR happens to be deployed

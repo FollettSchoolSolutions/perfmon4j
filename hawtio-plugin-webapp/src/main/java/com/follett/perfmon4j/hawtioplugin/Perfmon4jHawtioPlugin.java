@@ -1,4 +1,4 @@
-package org.perfmon4j.hawtioplugin;
+package com.follett.perfmon4j.hawtioplugin;
 
 public class Perfmon4jHawtioPlugin implements Perfmon4jHawtioPluginMBean {
 	private final String url;

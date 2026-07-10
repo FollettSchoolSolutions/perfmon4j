@@ -1,4 +1,4 @@
-package org.perfmon4j.hawtioplugin;
+package com.follett.perfmon4j.hawtioplugin;
 
 /**
  * Attribute names here (Url, Scope, Module) are dictated by io.hawt.web.plugin.PluginServlet
