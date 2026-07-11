@@ -17,6 +17,12 @@ see each module's `CLAUDE.md` instead; this file shouldn't duplicate that.
   discoverable Hawtio remote plugin via a JMX MBean - see that module's `CLAUDE.md` for
   the two real deployment bugs found and fixed along the way (an `org.perfmon4j` package
   namespace collision, and a doubled `remoteEntry.js` URL).
+- **perfmon4j self-management MBean (plumbing) shipped**: `base` now registers a
+  read-only JMX MBean (`org.perfmon4j:type=SelfManagement`, attribute `Version`) when the
+  `PerfMon` class loads, and the plugin has an "About" nav item that reads it via Jolokia
+  (`jolokiaService.readAttribute`) - the first small step toward the "Live dynamic push"
+  backlog item below. No write/exec JMX operations were added; see the new Jolokia ACL
+  backlog bullet.
 
 ## Backlog
 
@@ -33,10 +39,27 @@ Roughly in the order they'd most improve the plugin - not a committed sequence.
   that same live data is realistic. Would feed straight into the existing
   `readMBeanAttributes.ts` - no change needed there.
 - **Live dynamic push to a running JVM.** Add a way to apply the monitor immediately
-  instead of only generating a copy-paste snippet, via a new perfmon4j self-management
-  MBean in `base` (perfmon4j registers no MBeans of its own today). Per earlier
-  discussion: this should **add** a "push live" option alongside the XML snippet, not
-  replace it - the XML is still needed so the monitor survives a JVM restart.
+  instead of only generating a copy-paste snippet. The prerequisite self-management
+  MBean now exists in `base` (`org.perfmon4j.selfmanagement.SelfManagement`, read-only
+  today) - this backlog item is now specifically about adding write/exec capability to
+  it (e.g. an "apply mBeanSnapshotMonitor config now" operation), which is a materially
+  different risk profile than the read-only `Version` attribute shipped so far (see the
+  Jolokia ACL bullet immediately below - it should land before or alongside any
+  write-capable operation on this MBean). Per earlier discussion: this should **add** a
+  "push live" option alongside the XML snippet, not replace it - the XML is still needed
+  so the monitor survives a JVM restart.
+- **Jolokia ACL policy file (`jolokia-access.xml`).** Deferred so far. Confirmed via
+  repo-wide search: there is currently no Jolokia policy file anywhere in this
+  deployment, which means Jolokia defaults to fully open read/write/exec access to every
+  MBean in the target JVM - a pre-existing condition, not something the self-management
+  MBean or About box introduced (both only perform a read). Becomes materially more
+  important once anything write/exec-capable is exposed (see "Live dynamic push" above)
+  - should land before or alongside that. Also needs a real delivery mechanism resolved:
+  Jolokia's policy file has to live on the classpath of whatever WAR runs the actual
+  Jolokia servlet, which in the current deployment (destiny-console) is the vanilla,
+  third-party `io.hawt:hawtio-war`, not a WAR this repo builds - likely via a WildFly
+  deployment-overlay rather than repackaging that WAR, but unconfirmed against a real
+  instance.
 - **`ratios` support** (computed numerator/denominator attributes), matching the
   `mBeanSnapshotMonitor` grammar's `ratios='name=numerator/denominator'` syntax.
 - **Multi-instance fan-out** - `instanceKey`/`instanceValueFilter`/`attributeValueFilter`,

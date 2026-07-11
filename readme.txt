@@ -17,6 +17,11 @@ Follett Software
 McHenry, IL 60050
 
 ** 2.2.3 - TBD
+- Perfmon4j now registers a small, read-only JMX MBean of its own
+  (org.perfmon4j:type=SelfManagement, exposing a Version attribute) when the
+  PerfMon class loads. This is the first step toward broader self-management
+  support (see the in-progress hawtio-plugin Hawtio console integration) and
+  requires no configuration.
 
 ** 2.2.2 - 07/09/26
 - Perfmon4j can now bind its internal logging to the JBoss Logging facade

@@ -48,6 +48,7 @@ import org.perfmon4j.reactive.ReactiveContext;
 import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.selfmanagement.SelfManagement;
 import org.perfmon4j.util.ActiveThreadMonitor;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.FailSafeTimerTask;
@@ -155,6 +156,17 @@ public class PerfMon {
         System.setProperty(PERFMON4J_VERSION, getImplementationVersion());
         System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
         System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015,2019 Follett School Solutions, Inc");
+
+        // Registration is best-effort and must never fail PerfMon's static init - the
+        // whole agent depends on this class initializing successfully. A second PerfMon
+        // class-load under a different classloader in the same JVM is expected and
+        // handled inside SelfManagement.registerMBean() itself; this outer catch is one
+        // more layer of defense against anything unexpected.
+        try {
+        	SelfManagement.registerMBean(logger);
+        } catch (Throwable t) {
+        	logger.logWarn("Unexpected failure registering perfmon4j self-management MBean", t);
+        }
 
     	if (USE_LEGACY_MONITOR_MAP_LOCK) {
     		System.out.println("***Perfmon4j Using Legacy Monitor Map Lock***");

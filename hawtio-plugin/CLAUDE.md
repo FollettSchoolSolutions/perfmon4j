@@ -30,6 +30,15 @@
   standalone `<Hawtio>` console with this plugin registered, so the plugin can be exercised
   with `npm start` against a real Jolokia-enabled JVM without needing a separate Hawtio
   checkout. It is not part of what ships to users (see README's "Installing" section).
+- `dev-target/` — a standalone Java program (`TargetMain.java` + `run.sh`) that loads `base`'s
+  compiled classes and attaches a Jolokia javaagent, so `npm start` has a real perfmon4j JVM
+  to talk to without needing WildFly. See "Local dev harness against a real JVM" below.
+- `webpack.config.js`'s `devServer` block carries several fixes discovered getting `npm start`
+  working end-to-end against a real JVM for the first time since Sprint 1 (nobody had
+  exercised it that far before) — a broken transitive-dependency alias
+  (`@thumbmarkjs/thumbmarkjs`), auth stub routes (`/auth/login`, `/user`), and a `/jolokia`
+  proxy. Each has an inline comment explaining what it works around and why; read those before
+  touching this block, and see "Local dev harness against a real JVM" below for the full story.
 
 ## Key findings from building this against hawtio-react (v2.3.0-pre.1) source
 - **No tab-injection extension point exists** in the built-in JMX plugin. Its MBean detail
@@ -45,6 +54,36 @@
   JSON array of `{url, scope, module}`. There is no `hawtconfig.json` field and no in-console
   "add custom plugin" UI action for this — see `README.md` for what that means for
   installation.
+- The bare `npm start` dev harness has no backend, which breaks several things `@hawtio/react`
+  assumes exist, all traced by reading its bundled `dist/*.js` source directly (no source maps
+  shipped for `node_modules`, so this took actual reverse-engineering — see `webpack.config.js`
+  inline comments for the exact code paths):
+  - Its auth bootstrap (`ConfigManager.initialize()`) falls back to a built-in "Form
+    Authentication" login screen when `GET auth/config/login` 404s. `LoginService.login()`
+    treats *any* HTTP 200 from `POST auth/login` as success without checking the body, and a
+    successful login triggers a full page reload that re-checks `GET user` (expects a 200
+    response whose JSON body is the username string itself, e.g. `"admin"`) to decide
+    `isLogin`. Both are stubbed in `devServer.setupMiddlewares`.
+  - The "Connect" nav item hides itself unless `GET proxy/enabled` succeeds (a feature this
+    harness doesn't have) — **not fixed**, just avoided: `jolokiaService` separately
+    auto-discovers a Jolokia agent by probing a fixed list of same-origin paths
+    (`JOLOKIA_PATHS`: `jolokia`, `/hawtio/jolokia`, `/jolokia` — none with a trailing slash),
+    which `devServer.proxy` satisfies by forwarding those to a real agent. No Connect
+    connection is ever actually established in this dev harness.
+  - If that auto-discovery fails, `jolokiaService` silently falls back to an inert
+    `DummyJolokia` client whose `request()` never calls its success/error callback at all — any
+    Jolokia call (ours or Hawtio's own built-in plugins') then hangs forever with **zero**
+    network request ever firing, which looks exactly like a frontend bug but is entirely a
+    same-origin-discovery problem.
+  - The standalone `jolokia-jvm` 1.x agent line (as opposed to `jolokia-agent-jvm` 2.x) has two
+    further gotchas for this specific use case: its embedded HTTP server 404s
+    ("No context found for request") on any request without a trailing slash, unlike a real
+    servlet-mapped deployment (worked around by `pathRewrite` always appending one); and its
+    response format doesn't fully match what this project's newer `jolokia.js` client (bundled
+    in `@hawtio/react` `2.3.0-pre.1`) expects for read requests specifically — the HTTP
+    response is correct on the wire, but `jolokiaService.readAttribute()` still resolves with
+    `undefined`. Use `org.jolokia:jolokia-agent-jvm:2.x:jar:javaagent` for local testing, not
+    the old `jolokia-jvm` artifact.
 
 ## Stack Best Practices
 - TypeScript + React + PatternFly v6, built with webpack's `ModuleFederationPlugin`,
@@ -66,3 +105,20 @@
 - **Production build**: `npm run build` (outputs `dist/remoteEntry.js` and chunks)
 - **Local dev harness**: `npm start` (serves a full standalone Hawtio console with this
   plugin registered at `http://localhost:3001/`)
+
+### Local dev harness against a real JVM (no WildFly needed)
+`npm start` alone serves the console shell, but the plugin needs a real JVM with perfmon4j
+attached and a Jolokia agent to actually exercise MBean reads. `dev-target/` provides a
+throwaway one:
+1. Build `base` first: `mvn clean install` (or `mvn compile`) from `base/`.
+2. `dev-target/run.sh [port]` (defaults to port 8778) — compiles and runs a tiny standalone
+   Java process (`TargetMain.java`) against `base/target/classes`, with a Jolokia javaagent
+   attached. It auto-picks the newest `org.jolokia:jolokia-agent-jvm:*:javaagent` jar in the
+   local `~/.m2` repo; fetch one first if none is present (see the script's header comment —
+   **must** be the 2.x `jolokia-agent-jvm` line, not the old `jolokia-jvm` 1.x artifact; see
+   "Key findings" above for why).
+3. `npm start` — its `devServer.proxy` config forwards `/jolokia` and `/hawtio/jolokia`
+   straight to that target JVM automatically, so the plugin's Jolokia auto-discovery finds it
+   with no manual "Connect" step.
+4. Hitting a login screen on first load is expected in this bare harness (see "Key findings"
+   above) — any non-empty username/password gets past it.
