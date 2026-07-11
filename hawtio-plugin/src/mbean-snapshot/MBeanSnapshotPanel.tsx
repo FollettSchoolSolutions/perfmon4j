@@ -13,6 +13,7 @@ import React, { useState } from 'react'
 import { readMBeanAttributes } from '../jolokia/readMBeanAttributes'
 import { AttributeSelectionTable } from './AttributeSelectionTable'
 import { generateSnapshotXml } from './generateSnapshotXml'
+import { MBeanTreePicker } from './MBeanTreePicker'
 import { AttributeRow, Classification } from './types'
 
 export const MBeanSnapshotPanel: React.FunctionComponent = () => {
@@ -58,21 +59,19 @@ export const MBeanSnapshotPanel: React.FunctionComponent = () => {
       <Content>
         <Content component='h1'>perfmon4j: Define JMXSnapShot Monitor</Content>
         <Content component='p'>
-          Enter the ObjectName of a JMX MBean you are already viewing in this console, choose which attributes
-          perfmon4j should snapshot-monitor, and copy the generated XML into your perfmonconfig.xml. This does not
-          modify the running JVM.
+          Select the MBean you want to monitor from the tree below, choose which attributes perfmon4j should
+          snapshot-monitor, and copy the generated XML into your perfmonconfig.xml. This does not modify the running
+          JVM.
         </Content>
       </Content>
 
       <Form>
-        <FormGroup label='MBean ObjectName' isRequired fieldId='objectName'>
-          <TextInput
-            id='objectName'
-            value={objectName}
-            onChange={(_, value) => setObjectName(value)}
-            placeholder='java.lang:type=ClassLoading'
-          />
+        <FormGroup label='Selected MBean ObjectName' isRequired fieldId='objectName'>
+          <TextInput id='objectName' value={objectName} readOnlyVariant='default' placeholder='Select an MBean from the tree below' />
         </FormGroup>
+
+        <MBeanTreePicker selectedObjectName={objectName} onSelectMBean={name => setObjectName(name)} />
+
         <Button variant='secondary' onClick={loadAttributes} isDisabled={objectName.trim().length === 0}>
           Load attributes
         </Button>

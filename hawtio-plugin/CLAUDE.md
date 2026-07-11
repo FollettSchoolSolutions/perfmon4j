@@ -28,6 +28,11 @@
   `base/src/main/java/org/perfmon4j/XMLConfigurationParser.java`'s `mBeanSnapshotMonitor`
   handling (required `name`/`jmxName`, at least one of gauges/counters/ratios).
 - `src/mbean-snapshot/MBeanSnapshotPanel.tsx` / `AttributeSelectionTable.tsx` — the React UI.
+- `src/mbean-snapshot/MBeanTreePicker.tsx` — searchable/filterable MBean tree, composed by
+  `MBeanSnapshotPanel`, built from `@hawtio/react`'s `workspace.getTree()`/`MBeanNode`/
+  `MBeanTree` and PatternFly's `TreeView`/`PluginTreeViewToolbar`. Only tree nodes with an
+  `objectName` (real MBeans, gated via `mbeanTreeHelpers.ts`'s `isMBeanLeaf`) are
+  selectable; domain/type grouping nodes just expand/collapse.
 - `src/jolokia/readMBeanAttributes.ts` — given an ObjectName, returns the MBean's flat scalar
   attributes (name + JMX type) via `@hawtio/react`'s `workspace.findMBeans(...)`. Composite/
   tabular attributes (e.g. dotted paths like `Usage.max`) are filtered out — deferred.

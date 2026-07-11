@@ -23,21 +23,18 @@ see each module's `CLAUDE.md` instead; this file shouldn't duplicate that.
   (`jolokiaService.readAttribute`) - the first small step toward the "Live dynamic push"
   backlog item below. No write/exec JMX operations were added; see the new Jolokia ACL
   backlog bullet.
+- **MBean search/select picker shipped**: the "paste an ObjectName" text field is now a
+  searchable/filterable MBean tree (`MBeanTreePicker.tsx`), built from `@hawtio/react`'s
+  `workspace.getTree()`/`MBeanNode`/`MBeanTree` and PatternFly's `TreeView` +
+  `PluginTreeViewToolbar`. Selecting a real MBean (a tree node with an `objectName`)
+  populates a now-read-only ObjectName field feeding the unchanged `readMBeanAttributes.ts`;
+  clicking a domain/type grouping node shows an inline hint instead. No changes were needed
+  to `readMBeanAttributes.ts` or downstream attribute-selection/XML-generation code.
 
 ## Backlog
 
 Roughly in the order they'd most improve the plugin - not a committed sequence.
 
-- **MBean search/select picker.** Replace the current "paste an ObjectName" text field
-  with a searchable/filterable MBean tree or list embedded in our own plugin page.
-  Confirmed feasible: hawtio-react's built-in JMX tree view has no extension point for
-  injecting a tab into it (`JmxContent.tsx` hardcodes its tab list), and its tree UI
-  component isn't exported publicly - but `@hawtio/react` *does* publicly export
-  `workspace.getTree()` and `MBeanNode` (which already implements PatternFly's
-  `TreeViewDataItem` and has a `.flatten()` method giving every ObjectName in the tree),
-  so a self-built search/tree picker using PatternFly's `TreeView`/`SearchInput` against
-  that same live data is realistic. Would feed straight into the existing
-  `readMBeanAttributes.ts` - no change needed there.
 - **Live dynamic push to a running JVM.** Add a way to apply the monitor immediately
   instead of only generating a copy-paste snippet. The prerequisite self-management
   MBean now exists in `base` (`org.perfmon4j.selfmanagement.SelfManagement`, read-only
