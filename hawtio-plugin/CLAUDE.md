@@ -13,6 +13,11 @@
   top-level directory with independent tooling that Maven/CI never sees.
 - Packaged as a Hawtio Module Federation remote plugin (see `README.md`) — it is loaded
   into a user's own existing Hawtio console, not shipped as a standalone console.
+- A prior generation of this idea shipped as a NetBeans-based VisualVM plugin
+  (`netbeans/Perfmon4jMonitor/`, RMI-based, not JMX/Jolokia). See
+  [../netbeans/Perfmon4jMonitor/LEGACY_VISUALVM_FEATURES.md](../netbeans/Perfmon4jMonitor/LEGACY_VISUALVM_FEATURES.md)
+  for the use cases it served — useful background when scoping future features here, even
+  though its code isn't directly portable (wrong transport, and most of it is write/exec).
 
 ## Architecture & Patterns
 - `src/mbean-snapshot/index.ts` — plugin entry point, exposed via Module Federation as
