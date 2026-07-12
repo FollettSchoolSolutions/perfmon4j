@@ -17,6 +17,9 @@ Follett Software
 McHenry, IL 60050
 
 ** 2.2.3 - TBD
+- Bumped the dbupgrader tool's Liquibase dependency from 3.6.1 to 4.8.0,
+  resolving CVE-2022-0839. As of Liquibase 4.x, it no longer bundles slf4j/
+  logback transitively, so dbupgrader now declares those directly.
 
 ** 2.2.2 - 07/09/26
 - Perfmon4j can now bind its internal logging to the JBoss Logging facade
