@@ -212,7 +212,7 @@
 		<javassist.version>3.30.2-GA</javassist.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<DERBY_VERSION>10.10.2.0</DERBY_VERSION>
-		<LOG4J_VERSION>1.2.14</LOG4J_VERSION>
+		<LOG4J_VERSION>1.2.26</LOG4J_VERSION>
 		<LOG4J2_VERSION>2.23.1</LOG4J2_VERSION>
 		<JBOSS_LOGGING_VERSION>3.6.1.Final</JBOSS_LOGGING_VERSION>
 		<junit.jupiter.version>5.11.4</junit.jupiter.version>
@@ -240,9 +240,14 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- log4j:log4j never released a patched version past 1.2.17 (long EOL).
+			 reload4j is Apache Logging Services' own recommended drop-in replacement -
+			 a fork of that same 1.2.17 codebase with only the vulnerable internals
+			 patched, keeping the identical org.apache.log4j.* package/API so nothing
+			 that compiles against log4j 1.x (e.g. base's demo classes) needs to change. -->
 		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
+			<groupId>ch.qos.reload4j</groupId>
+			<artifactId>reload4j</artifactId>
 			<version>${LOG4J_VERSION}</version>
 			<scope>provided</scope>
 		</dependency>
