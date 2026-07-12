@@ -63,7 +63,17 @@
   - `pushSessionAttributesOnNDC` - CSV list of session attribute names to push to NDC
   - `pushClientInfoOnNDC` - Push client IP and X-Forwarded-For to NDC
   - `servletPathTransformationPattern` - Pattern for transforming servlet paths
-- **Dependency Scope**: perfmon4j and Undertow dependencies are "provided" scope
+- **Dependency Scope**: perfmon4j and Undertow dependencies are "provided" scope. The
+  `undertow-core`/`undertow-servlet` pins (1.0.16.Final) are intentionally kept at the
+  oldest WildFly 8-era API surface - this is a compile-time-only dependency (the real jar
+  comes from whatever WildFly server perfmon4j is deployed into), so the pin exists to keep
+  the compiled `HandlerWrapper`/`HttpHandler` classes binary-compatible with an actual
+  WildFly 8 runtime. GitHub Dependabot flags many CVEs against this pin, but bumping to the
+  versions it suggests (up to 2.2.39.Final, since the Undertow 1.x line is long EOL) would
+  compile in API calls that don't exist in a real WildFly 8 deployment - i.e. it would
+  *break* this module for its actual target servers, not fix a real exposure. These alerts
+  are dismissed on GitHub with that rationale rather than resolved by a version bump - see
+  `tomcat7/CLAUDE.md` for the equivalent Tomcat situation.
 - **JBoss Repository**: Requires JBoss Nexus repository for Undertow artifacts
 
 ## Commands & Scripts

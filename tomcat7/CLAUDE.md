@@ -53,6 +53,16 @@
 - Delta vs. Gauge: Counters use `Delta` for rate calculations, gauges use raw `long` values
 
 ## Security & Configuration
+- `pom.xml` intentionally pins `org.apache.tomcat:tomcat-catalina` at `provided` scope to
+  `7.0.2`, the oldest 7.x API surface - this is a compile-time-only dependency (the real
+  jar comes from whatever Tomcat 7 server perfmon4j is deployed into), and the pin exists
+  so the compiled Valve classes stay binary-compatible with actual Tomcat 7 deployments.
+  GitHub Dependabot flags many CVEs against this pin, but bumping it to the versions
+  Dependabot suggests (up to 9.0.118, since the 7.0.x line is long EOL and receives no
+  further patches) would compile in Tomcat 9 API calls that don't exist in a real Tomcat 7
+  runtime - i.e. it would *break* this module for its actual target servers, not fix a real
+  exposure. These alerts are dismissed on GitHub with that rationale rather than resolved
+  by a version bump - see `wildfly8/CLAUDE.md` for the equivalent Undertow situation.
 - No environment variables or secrets required - configuration via Tomcat server.xml
 - Valve configuration properties (set in server.xml `<Valve>` element):
   - `baseFilterCategory`: Base category for monitor naming (default: `PerfMonFilter.BASE_FILTER_CATEGORY`)
