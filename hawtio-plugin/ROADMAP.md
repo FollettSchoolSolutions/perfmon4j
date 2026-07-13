@@ -45,6 +45,21 @@ Roughly in the order they'd most improve the plugin - not a committed sequence.
   write-capable operation on this MBean). Per earlier discussion: this should **add** a
   "push live" option alongside the XML snippet, not replace it - the XML is still needed
   so the monitor survives a JVM restart.
+- **Expose the legacy VisualVM RMI interface's data via a new JMX MBean.** The old
+  NetBeans/VisualVM plugin (`netbeans/Perfmon4jMonitor/`, see
+  `LEGACY_VISUALVM_FEATURES.md`) browsed interval/snapshot monitors, read live field data,
+  and scheduled thread traces over RMI
+  (`org.perfmon4j.remotemanagement.intf.RemoteInterface`/`RemoteInterfaceExt1`, implemented
+  by `RemoteImpl`). Confirmed feasible to re-expose that functionality as a new JMX MBean
+  instead (Jolokia can invoke JMX operations, not just read attributes - same mechanism
+  hawtio's built-in JMX plugin already uses) following the `SelfManagement` MBean's
+  registration pattern, calling the same underlying `ExternalAppender`/`PerfMon` methods
+  `RemoteImpl` already delegates to rather than proxying RMI itself. Undecided: keep
+  `RemoteInterface`'s session/subscribe model as-is, or redesign statelessly for a web
+  client (thread-trace scheduling stays inherently stateful either way). Like "Live dynamic
+  push" above, most of this surface is write/exec (subscribe, schedule/unschedule thread
+  trace, connect/disconnect all mutate server-side state), so the Jolokia ACL policy bullet
+  below should land before or alongside it.
 - **Jolokia ACL policy file (`jolokia-access.xml`).** Deferred so far. Confirmed via
   repo-wide search: there is currently no Jolokia policy file anywhere in this
   deployment, which means Jolokia defaults to fully open read/write/exec access to every
