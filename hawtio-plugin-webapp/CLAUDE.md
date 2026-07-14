@@ -74,6 +74,6 @@
   JSON response should include an entry with `"Scope":"perfmon4jHawtioPlugin"`. The
   context path is whatever the Hawtio console WAR's own `jboss-web.xml` `<context-root>`
   says (NOT necessarily derived from its filename - e.g. a WAR renamed to
-  `destiny-console.war` may still have a `context-root` of `/destiny-console`, unrelated to
+  `my-console.war` may still have a `context-root` of `/my-console`, unrelated to
   the rename). Reload the Hawtio page in the browser to pick it up (the plugin list is fetched
   once at page bootstrap, not polled).
