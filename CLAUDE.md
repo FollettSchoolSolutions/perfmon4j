@@ -14,6 +14,11 @@
 - `genericfilter/`, `servlet/`, `tomcat7/`, `wildfly8/`, `quarkus2x/`, `quarkus3x/` — application-server and framework integration modules (servlet filters, valves, Quarkus extensions).
 - `reportconsole/` — standalone reporting UI for SQL-appender-collected data.
 - `utils/` — standalone CLI utilities for parsing/visualizing TextAppender log output.
+- `visualvm-plugin/` — VisualVM console plugin exposing live perfmon4j interval/snapshot
+  monitors, ad-hoc charting, and thread-trace scheduling over the agent's RMI remote-management
+  interface. A NetBeans Platform module built via `nbm-maven-plugin`, resolving the VisualVM/
+  NetBeans Platform APIs from Maven Central — like `stress-test/`, it is not listed in root
+  `pom.xml`'s `<modules>` and has its own independent build. See `visualvm-plugin/CLAUDE.md`.
 - Each module has its own `CLAUDE.md` with module-specific architecture, patterns, and anti-patterns — consult it before making changes inside that module.
 - See [Perfmon4j API and Agent Architecture](wiki/Perfmon4j-API-and-Agent-Architecture.md) for how `agent-api` and `base` connect at runtime.
 

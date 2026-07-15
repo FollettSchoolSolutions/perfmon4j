@@ -20,9 +20,9 @@
  */
 package org.perfmon4j.visualvm;
 
-import com.sun.tools.visualvm.application.Application;
-import com.sun.tools.visualvm.core.ui.DataSourceView;
-import com.sun.tools.visualvm.core.ui.components.DataViewComponent;
+import org.graalvm.visualvm.application.Application;
+import org.graalvm.visualvm.core.ui.DataSourceView;
+import org.graalvm.visualvm.core.ui.components.DataViewComponent;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;

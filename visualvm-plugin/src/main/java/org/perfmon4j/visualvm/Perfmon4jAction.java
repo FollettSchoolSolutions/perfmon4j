@@ -22,8 +22,8 @@ package org.perfmon4j.visualvm;
 
 
 
-import com.sun.tools.visualvm.core.ui.actions.SingleDataSourceAction;
-import com.sun.tools.visualvm.host.Host;
+import org.graalvm.visualvm.core.ui.actions.SingleDataSourceAction;
+import org.graalvm.visualvm.host.Host;
 import java.awt.event.ActionEvent;
 import javax.swing.Action;
 import javax.swing.JOptionPane;

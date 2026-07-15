@@ -24,6 +24,7 @@ import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -114,13 +115,15 @@ public class MainWindow extends javax.swing.JPanel {
 
         intervalMonitorFieldTree.addMouseListener(new MonitorTreeMouseAdapter(this, true));
         intervalMonitorFieldTree.setToolTipText(toolTipOptions);
+        installFieldTooltip(intervalMonitorFieldTree, toolTipOptions);
 
         model = (DefaultTreeModel) snapShotMonitorTreeField.getModel();
         rootSnapShotMonitors = new MonitorKeyWrapper(model, null, "Snapshot Monitors");
         model.setRoot(rootSnapShotMonitors);
-        
+
         snapShotMonitorTreeField.addMouseListener(new MonitorTreeMouseAdapter(this, false));
         snapShotMonitorTreeField.setToolTipText(toolTipOptions);
+        installFieldTooltip(snapShotMonitorTreeField, toolTipOptions);
         refreshMonitors();
         
         int numRootChildren = rootIntervalMonitors.getChildCount();
@@ -134,6 +137,25 @@ public class MainWindow extends javax.swing.JPanel {
             snapShotMonitorTreeField.expandPath(new TreePath(
                     model.getPathToRoot(rootSnapShotMonitors.getChildAt(i))));
         }
+    }
+
+    // Swing tooltips are static per-component (JComponent.getToolTipText(MouseEvent) just
+    // returns whatever setToolTipText() last set), so a MouseMotionListener that recomputes
+    // the text as the cursor moves over different nodes is the standard way to get dynamic,
+    // per-node tooltips on a plain JTree without subclassing it.
+    private static void installFieldTooltip(final JTree tree, final String defaultTooltip) {
+        tree.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                TreePath path = tree.getPathForLocation(e.getX(), e.getY());
+                MonitorKeyWrapper wrapper = path == null ? null : (MonitorKeyWrapper) path.getLastPathComponent();
+                if (wrapper != null && wrapper.getMonitorKey() != null) {
+                    tree.setToolTipText("Right-click to add a field from this monitor to the chart");
+                } else {
+                    tree.setToolTipText(defaultTooltip);
+                }
+            }
+        });
     }
 
     public JFrame getParentFrame() {
