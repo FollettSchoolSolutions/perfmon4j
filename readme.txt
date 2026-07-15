@@ -23,6 +23,16 @@ McHenry, IL 60050
   support (see the in-progress hawtio-plugin Hawtio console integration) and
   requires no configuration.
 
+- Added a new org.perfmon4j:type=RemoteManagement JMX MBean, registered
+  alongside SelfManagement when the PerfMon class loads. It re-exposes the
+  monitor-browsing functionality of the legacy VisualVM RMI remote-management
+  interface (connect/disconnect, listing interval and snapshot monitors and
+  their fields, subscribing to fields, and polling current values) so it can
+  be driven over JMX/Jolokia instead of RMI. It shares session state with the
+  existing RMI interface, so both can be used concurrently. Thread-trace
+  scheduling and the legacy Ext1 dynamic-monitor-creation operations are not
+  yet included.
+
 - Bumped the dbupgrader tool's Liquibase dependency from 3.6.1 to 4.8.0,
   resolving CVE-2022-0839. As of Liquibase 4.x, it no longer bundles slf4j/
   logback transitively, so dbupgrader now declares those directly.

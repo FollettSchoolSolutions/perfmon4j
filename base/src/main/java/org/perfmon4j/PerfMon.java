@@ -48,6 +48,7 @@ import org.perfmon4j.reactive.ReactiveContext;
 import org.perfmon4j.reactive.ReactiveContextManager;
 import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
+import org.perfmon4j.remotemanagement.jmx.RemoteManagement;
 import org.perfmon4j.selfmanagement.SelfManagement;
 import org.perfmon4j.util.ActiveThreadMonitor;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
@@ -166,6 +167,12 @@ public class PerfMon {
         	SelfManagement.registerMBean(logger);
         } catch (Throwable t) {
         	logger.logWarn("Unexpected failure registering perfmon4j self-management MBean", t);
+        }
+
+        try {
+        	RemoteManagement.registerMBean(logger);
+        } catch (Throwable t) {
+        	logger.logWarn("Unexpected failure registering perfmon4j remote-management MBean", t);
         }
 
     	if (USE_LEGACY_MONITOR_MAP_LOCK) {
