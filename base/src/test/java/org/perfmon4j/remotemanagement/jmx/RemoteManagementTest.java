@@ -40,11 +40,8 @@ import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
-import org.perfmon4j.util.Logger;
-import org.perfmon4j.util.LoggerFactory;
 
 public class RemoteManagementTest extends PerfMonTestCase {
-	private final Logger logger = LoggerFactory.initLogger(RemoteManagementTest.class);
 
 	public RemoteManagementTest(String name) {
 		super(name);
@@ -56,8 +53,8 @@ public class RemoteManagementTest extends PerfMonTestCase {
 	}
 
 	public void testRegisterMBeanIsIdempotent() throws Exception {
-		RemoteManagement.registerMBean(logger);
-		RemoteManagement.registerMBean(logger);
+		RemoteManagement.registerMBean();
+		RemoteManagement.registerMBean();
 
 		MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 		ObjectName objectName = new ObjectName(RemoteManagement.OBJECT_NAME);

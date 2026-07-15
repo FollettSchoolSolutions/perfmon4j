@@ -44,7 +44,6 @@ import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 import org.perfmon4j.remotemanagement.intf.UnableToParseKeyException;
-import org.perfmon4j.util.Logger;
 
 /**
  * perfmon4j's remote-management MBean. Registered once, on a best-effort
@@ -216,14 +215,21 @@ public final class RemoteManagement implements RemoteManagementMBean {
 		}
 	}
 
-	public static void registerMBean(Logger logger) {
+	// Deliberately logs via System.err rather than org.perfmon4j.util.Logger: this runs
+	// from PerfMon's static initializer, at -javaagent premain time, before an app
+	// server's own logging (or java.util.logging.LogManager) can safely be touched -
+	// see LoggerWrapper's own diagnostics for the same reasoning. A log call here that
+	// falls through Logger's auto-detection to java.util.logging can permanently pin
+	// the JDK's default LogManager ahead of e.g. WildFly's org.jboss.logmanager,
+	// breaking that server's own logging subsystem boot later.
+	public static void registerMBean() {
 		try {
 			ObjectName objectName = new ObjectName(OBJECT_NAME);
 			MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 			if (server.isRegistered(objectName)) {
 				// Expected on a second class-load of PerfMon under a different
 				// classloader in the same JVM - not an error.
-				logger.logInfo("perfmon4j remote-management MBean already registered "
+				System.err.println("perfmon4j remote-management MBean already registered "
 					+ "(likely a second PerfMon class-load under a different classloader) - skipping.");
 				return;
 			}
@@ -231,11 +237,12 @@ public final class RemoteManagement implements RemoteManagementMBean {
 		} catch (InstanceAlreadyExistsException ex) {
 			// Race: two classloaders' static initializers both saw isRegistered() == false
 			// before either completed registerMBean(). Same benign explanation as above.
-			logger.logInfo("perfmon4j remote-management MBean registration race - "
+			System.err.println("perfmon4j remote-management MBean registration race - "
 				+ "already registered by another classloader.");
 		} catch (Exception ex) {
 			// Registration is best-effort - it must never break PerfMon's static init.
-			logger.logWarn("Unable to register perfmon4j remote-management MBean", ex);
+			System.err.println("Unable to register perfmon4j remote-management MBean: " + ex);
+			ex.printStackTrace();
 		}
 	}
 }

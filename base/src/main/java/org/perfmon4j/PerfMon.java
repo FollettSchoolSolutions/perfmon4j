@@ -163,16 +163,25 @@ public class PerfMon {
         // class-load under a different classloader in the same JVM is expected and
         // handled inside SelfManagement.registerMBean() itself; this outer catch is one
         // more layer of defense against anything unexpected.
+        //
+        // Logged via System.err rather than the logger field: this runs at -javaagent
+        // premain time, before an app server's own logging (or java.util.logging.
+        // LogManager) can safely be touched - a logger.log*() call here can fall through
+        // Logger's auto-detection to java.util.logging and permanently pin the JDK's
+        // default LogManager ahead of e.g. WildFly's org.jboss.logmanager, breaking that
+        // server's own logging subsystem boot later.
         try {
-        	SelfManagement.registerMBean(logger);
+        	SelfManagement.registerMBean();
         } catch (Throwable t) {
-        	logger.logWarn("Unexpected failure registering perfmon4j self-management MBean", t);
+        	System.err.println("Unexpected failure registering perfmon4j self-management MBean: " + t);
+        	t.printStackTrace();
         }
 
         try {
-        	RemoteManagement.registerMBean(logger);
+        	RemoteManagement.registerMBean();
         } catch (Throwable t) {
-        	logger.logWarn("Unexpected failure registering perfmon4j remote-management MBean", t);
+        	System.err.println("Unexpected failure registering perfmon4j remote-management MBean: " + t);
+        	t.printStackTrace();
         }
 
     	if (USE_LEGACY_MONITOR_MAP_LOCK) {
