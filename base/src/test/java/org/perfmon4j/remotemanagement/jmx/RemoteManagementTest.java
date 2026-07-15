@@ -36,6 +36,7 @@ import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.RemoteImpl;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
+import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
@@ -180,6 +181,71 @@ public class RemoteManagementTest extends PerfMonTestCase {
 
 			FieldKey expectedKey = new FieldKey(threadTraceKey, "stack", FieldKey.STRING_TYPE);
 			assertEquals(expectedKey.toString(), fields[0]);
+		} finally {
+			mgmt.disconnect(sessionID);
+		}
+	}
+
+	/**
+	 * Mirrors RemoteImplTest.testScheduleThreadTrace's exact three-poll sequence:
+	 * pending (no data captured yet) -&gt; real captured stack data -&gt; gone (delivered
+	 * exactly once, then cleared).
+	 */
+	public void testScheduleThreadTrace() throws Exception {
+		FieldKey key = new FieldKey(MonitorKey.newThreadTraceKey("jmx.my.monitor"), "stack", FieldKey.STRING_TYPE);
+
+		RemoteManagement mgmt = new RemoteManagement();
+		String sessionID = mgmt.connect(ManagementVersion.VERSION);
+		try {
+			mgmt.scheduleThreadTrace(sessionID, key.toString());
+
+			Map<String, Object> map = mgmt.getData(sessionID);
+			String traceData = (String)map.get(key.toString());
+			assertNotNull("traceData", traceData);
+			assertEquals(FieldKey.THREAD_TRACE_PENDING, traceData);
+
+			PerfMonTimer timer = PerfMonTimer.start("jmx.my.monitor");
+			PerfMonTimer.stop(PerfMonTimer.start("jmx.internal"));
+			PerfMonTimer.stop(timer);
+
+			map = mgmt.getData(sessionID);
+			traceData = (String)map.get(key.toString());
+			assertFalse("Should have thread trace data", traceData.equals(FieldKey.THREAD_TRACE_PENDING));
+
+			map = mgmt.getData(sessionID);
+			traceData = (String)map.get(key.toString());
+			assertNull("Trace is now done", traceData);
+		} finally {
+			mgmt.disconnect(sessionID);
+		}
+	}
+
+	public void testUnScheduleThreadTrace() throws Exception {
+		FieldKey key = new FieldKey(MonitorKey.newThreadTraceKey("jmx.unschedule.monitor"), "stack", FieldKey.STRING_TYPE);
+
+		RemoteManagement mgmt = new RemoteManagement();
+		String sessionID = mgmt.connect(ManagementVersion.VERSION);
+		try {
+			mgmt.scheduleThreadTrace(sessionID, key.toString());
+			assertTrue("Should be pending", mgmt.getData(sessionID).containsKey(key.toString()));
+
+			mgmt.unScheduleThreadTrace(sessionID, key.toString());
+			assertFalse("Should no longer be scheduled", mgmt.getData(sessionID).containsKey(key.toString()));
+		} finally {
+			mgmt.disconnect(sessionID);
+		}
+	}
+
+	public void testScheduleThreadTraceOnNonThreadTraceKeyThrowsInvalidMonitorType() throws Exception {
+		FieldKey key = new FieldKey(MonitorKey.newIntervalKey("jmx.not.a.threadtrace"), "AverageDuration", FieldKey.LONG_TYPE);
+
+		RemoteManagement mgmt = new RemoteManagement();
+		String sessionID = mgmt.connect(ManagementVersion.VERSION);
+		try {
+			mgmt.scheduleThreadTrace(sessionID, key.toString());
+			fail("Should have thrown InvalidMonitorTypeException");
+		} catch (InvalidMonitorTypeException ex) {
+			// Expected.
 		} finally {
 			mgmt.disconnect(sessionID);
 		}

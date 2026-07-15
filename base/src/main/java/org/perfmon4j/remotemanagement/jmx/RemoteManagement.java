@@ -38,6 +38,7 @@ import org.perfmon4j.remotemanagement.ExternalAppender;
 import org.perfmon4j.remotemanagement.MonitorKeyWithFields;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
 import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
+import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.ManagementVersion;
 import org.perfmon4j.remotemanagement.intf.MonitorKey;
 import org.perfmon4j.remotemanagement.intf.MonitorNotFoundException;
@@ -190,6 +191,28 @@ public final class RemoteManagement implements RemoteManagementMBean {
 	private void copyToResultMap(Map<FieldKey, Object> from, Map<String, Object> to) {
 		for (Map.Entry<FieldKey, Object> entry : from.entrySet()) {
 			to.put(entry.getKey().toString(), entry.getValue());
+		}
+	}
+
+	@Override
+	public void scheduleThreadTrace(String sessionID, String fieldKey)
+			throws SessionNotFoundException, InvalidMonitorTypeException {
+		try {
+			FieldKey key = FieldKey.parse(fieldKey);
+			ExternalAppender.scheduleThreadTrace(sessionID, key);
+		} catch (UnableToParseKeyException e) {
+			throw new IllegalArgumentException("Unable to parse key: " + fieldKey, e);
+		}
+	}
+
+	@Override
+	public void unScheduleThreadTrace(String sessionID, String fieldKey)
+			throws SessionNotFoundException, InvalidMonitorTypeException {
+		try {
+			FieldKey key = FieldKey.parse(fieldKey);
+			ExternalAppender.unScheduleThreadTrace(sessionID, key);
+		} catch (UnableToParseKeyException e) {
+			throw new IllegalArgumentException("Unable to parse key: " + fieldKey, e);
 		}
 	}
 

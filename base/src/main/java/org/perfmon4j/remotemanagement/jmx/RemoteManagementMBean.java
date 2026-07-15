@@ -23,6 +23,7 @@ package org.perfmon4j.remotemanagement.jmx;
 import java.util.Map;
 
 import org.perfmon4j.remotemanagement.intf.IncompatibleClientVersionException;
+import org.perfmon4j.remotemanagement.intf.InvalidMonitorTypeException;
 import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
 
 /**
@@ -32,17 +33,18 @@ import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
  * "RemoteManagement", to satisfy the JMX Standard MBean naming convention.
  * <p>
  * This is a JMX/Jolokia-reachable re-exposure of the same monitor-browsing
- * functionality the legacy RMI interface
+ * and thread-trace functionality the legacy RMI interface
  * (org.perfmon4j.remotemanagement.intf.RemoteInterface) provides, backed by
  * the same session-based subscription model in
  * org.perfmon4j.remotemanagement.ExternalAppender - a session created here is
  * visible to, and shares state with, a session created over RMI, and vice
  * versa.
  * <p>
- * This first pass covers only the monitor-tree-browsing surface (connect,
- * disconnect, getMonitors, getFieldsForMonitor, subscribe, getData).
- * Thread-trace scheduling and the RemoteInterfaceExt1 dynamic-child-creation
- * operations are deliberately not included yet.
+ * This covers the monitor-tree-browsing surface (connect, disconnect,
+ * getMonitors, getFieldsForMonitor, subscribe, getData) plus thread-trace
+ * scheduling (scheduleThreadTrace, unScheduleThreadTrace). The
+ * RemoteInterfaceExt1 dynamic-child-creation operations are deliberately not
+ * included yet.
  */
 public interface RemoteManagementMBean {
 	String connect(String clientVersion) throws IncompatibleClientVersionException;
@@ -56,4 +58,10 @@ public interface RemoteManagementMBean {
 	void subscribe(String sessionID, String[] fieldKeys) throws SessionNotFoundException;
 
 	Map<String, Object> getData(String sessionID) throws SessionNotFoundException;
+
+	void scheduleThreadTrace(String sessionID, String fieldKey)
+			throws SessionNotFoundException, InvalidMonitorTypeException;
+
+	void unScheduleThreadTrace(String sessionID, String fieldKey)
+			throws SessionNotFoundException, InvalidMonitorTypeException;
 }
