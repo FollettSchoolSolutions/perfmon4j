@@ -20,16 +20,16 @@
  */
 package org.perfmon4j.visualvm;
 
-import com.sun.tools.visualvm.application.Application;
-import com.sun.tools.visualvm.application.jvm.Jvm;
-import com.sun.tools.visualvm.application.jvm.JvmFactory;
-import com.sun.tools.visualvm.core.model.Model;
-import com.sun.tools.visualvm.tools.attach.AttachModel;
-import com.sun.tools.visualvm.tools.attach.AttachModelFactory;
-import com.sun.tools.visualvm.tools.jmx.JmxModel;
-import com.sun.tools.visualvm.tools.jmx.JmxModelFactory;
-import com.sun.tools.visualvm.tools.sa.SaModel;
-import com.sun.tools.visualvm.tools.sa.SaModelFactory;
+import org.graalvm.visualvm.application.Application;
+import org.graalvm.visualvm.application.jvm.Jvm;
+import org.graalvm.visualvm.application.jvm.JvmFactory;
+import org.graalvm.visualvm.core.model.Model;
+import org.graalvm.visualvm.tools.attach.AttachModel;
+import org.graalvm.visualvm.tools.attach.AttachModelFactory;
+import org.graalvm.visualvm.tools.jmx.JmxModel;
+import org.graalvm.visualvm.tools.jmx.JmxModelFactory;
+import org.graalvm.visualvm.tools.sa.SaModel;
+import org.graalvm.visualvm.tools.sa.SaModelFactory;
 import java.util.Map;
 import java.util.Properties;
 import java.util.WeakHashMap;
