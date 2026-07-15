@@ -79,12 +79,28 @@ see each module's `CLAUDE.md` instead; this file shouldn't duplicate that.
   to chart; deliberately does not register `SNAPSHOT`-type monitors there, since
   doing so needs Javassist on the classpath which the bare dev harness doesn't have
   (a pre-existing dev-harness limitation, not something this feature needed to fix).
-  **Caveat**: the backend data path (connect/getMonitors/getFieldsForMonitor/
-  subscribe/getData/unsubscribe/disconnect) was verified end-to-end against a real
-  Jolokia agent, matching the exact call sequence the UI makes, but the rendered UI
-  itself was not exercised in a real browser (no headless browser was available in
-  the authoring environment) - a manual `npm start` pass is recommended before
-  treating this as fully verified.
+  **Verified working end-to-end in a real browser** (headless Chromium via
+  Playwright, added as a devDependency for this - see `run` skill's playwright.md
+  pattern), against the `dev-target/` harness: nav item renders, monitor search/
+  picker works, adding a field subscribes and the Latest Value column updates live,
+  the chart renders a real line with sane axes, and removing a field both clears it
+  from the UI and drops the server-side subscription. This actual-browser pass
+  caught two real bugs invisible to a backend-only (Jolokia-call-sequence) check:
+  1. **Stale-session race under React 18 StrictMode.** The dev harness's
+     `bootstrap.tsx` wraps in `<React.StrictMode>`, which double-invokes effects in
+     development; `useRemoteManagementChart`'s connect/poll effect used a shared
+     `mountedRef` instead of this codebase's established per-invocation `cancelled`
+     local-variable convention (see `MBeanTreePicker.tsx`), so the first (stale)
+     effect invocation's session leaked and raced the second for which one actually
+     ended up polled - `getMonitors()` and `getData()` could land on different
+     sessions. Fixed: each effect invocation now tracks its own cancellation and
+     disconnects any session it obtains after being cancelled.
+  2. **Degenerate y-axis for a flat data series.** Victory computed a near-zero-
+     width y-domain for a perfectly constant series (e.g. the dev-target demo
+     loop's `AverageDuration`), rendering absurdly over-precise axis labels and an
+     "Infinity is an invalid CSS width" console warning. Fixed by computing an
+     explicit y-domain with a sensible minimum pad instead of relying on Victory's
+     default heuristic.
   - Deliberately deferred to a follow-up, not built in this first cut: non-numeric
     fields routed to a flat value table, per-series color/visibility customization
     or y-axis normalization (v1 uses a single shared y-axis and PatternFly's default
