@@ -23,8 +23,8 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.release>21</maven.compiler.release>
-		<netbeans.version>RELEASE300</netbeans.version>
+		<maven.compiler.release>11</maven.compiler.release>
+		<netbeans.version>RELEASE220</netbeans.version>
 		<visualvm.version>2.2</visualvm.version>
 		<perfmon4j.version>2.2.2</perfmon4j.version>
 	</properties>

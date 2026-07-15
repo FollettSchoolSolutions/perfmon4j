@@ -24,7 +24,7 @@ RMI, so the target JVM must have perfmon4j's remote-management port enabled.
 | Requirement | Detail |
 |--------------|--------|
 | Target JVM | Running with the perfmon4j agent attached and remote management enabled via `-p<port>` or `-pAUTO`. See [Configuring the Java Agent](Configuring-the-Java-Agent)'s "Remote Management" section — the plugin can't connect without this. |
-| Build JDK | JDK 21 or newer, to build the plugin itself (independent of whatever JDK your monitored application runs on). |
+| Build JDK | JDK 11 or newer, to build the plugin itself (independent of whatever JDK your monitored application runs on). |
 | Maven | Any recent Maven 3.x, to run the plugin's build. |
 
 There's no published, pre-built download of the plugin yet — building it from source (Step 2) is
@@ -42,13 +42,12 @@ from the [official VisualVM site](https://visualvm.github.io/download.html). It'
 
 ## Step 2 — Build the perfmon4j plugin
 
-Clone the perfmon4j repository if you haven't already, then build the `visualvm-plugin/` module
-with a JDK 21+ `JAVA_HOME`:
+Clone the perfmon4j repository if you haven't already, then build the `visualvm-plugin/` module:
 
 ```
 git clone git@github.com:FollettSchoolSolutions/perfmon4j.git
 cd perfmon4j/visualvm-plugin
-JAVA_HOME=/path/to/jdk-21 mvn clean install
+mvn clean install
 ```
 
 This produces `target/nbm/visualvm-plugin-<version>.nbm` — the installable plugin file.
@@ -86,3 +85,12 @@ JVM isn't advertising a reachable remote-management port:
 - Confirm the port is actually reachable from the machine running VisualVM. By default this is a
   localhost-only connection; monitoring a JVM on a remote host may require additional network/RMI
   configuration.
+
+**Installer shows warnings like "The plugin `<X> API` is requested in version >= A.B but only C.D
+was found," and the plugin doesn't install.** This means the `.nbm` you built was compiled against
+a newer NetBeans Platform release than the one bundled in your VisualVM install — the plugin's
+build pins an exact NetBeans Platform version to match a specific VisualVM release, and that pin
+can fall behind (or ahead of) whatever VisualVM version you actually downloaded. Make sure you're
+building from the latest `visualvm-plugin/` on the `develop` branch, and if the warning still
+appears, please report it (include the exact VisualVM version and the full warning text) so the
+build's version pin can be corrected.
