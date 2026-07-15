@@ -61,10 +61,19 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
   const subscribedFieldsRef = useRef<FieldDescriptor[]>([])
   const intervalHandleRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const establishSessionRef = useRef<() => void>(() => {})
-  const mountedRef = useRef(true)
 
   useEffect(() => {
-    mountedRef.current = true
+    // A per-invocation local flag, not a ref - React 18 StrictMode double-invokes
+    // this effect in development (mount -> cleanup -> mount again), and a single
+    // ref shared across both invocations would let the FIRST invocation's cleanup
+    // get silently un-done by the SECOND invocation resetting it back to "alive",
+    // causing the first invocation's in-flight connect()/subscribeFields() calls to
+    // race the second's and corrupt sessionIdRef/intervalHandleRef with whichever
+    // one happens to resolve last (this was an actual observed bug: two connect()
+    // calls firing, with getData() polling landing on a different session than
+    // getMonitors() used). Mirrors the per-effect `cancelled` flag convention already
+    // used elsewhere in this plugin (see MBeanTreePicker.tsx/AboutPanel.tsx).
+    let cancelled = false
 
     function stopPolling() {
       if (intervalHandleRef.current !== null) {
@@ -75,10 +84,10 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
 
     async function poll() {
       const sessionID = sessionIdRef.current
-      if (!sessionID) return
+      if (!sessionID || cancelled) return
       try {
         const data = await remoteManagementClient.getData(sessionID)
-        if (!mountedRef.current) return
+        if (cancelled) return
         const now = Date.now()
         setSeries(prev =>
           prev.map(entry => {
@@ -89,7 +98,7 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
           }),
         )
       } catch (e) {
-        if (!mountedRef.current) return
+        if (cancelled) return
         const classified = classifyConnectionError(e)
         if (classified.kind === 'exec-denied' || classified.kind === 'incompatible-version') {
           // Retrying can't succeed for either of these - surface as a terminal error.
@@ -110,10 +119,17 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
     }
 
     async function establishSession() {
+      if (cancelled) return
       setConnectionError(null)
       try {
         const sessionID = await remoteManagementClient.connect()
-        if (!mountedRef.current) return
+        if (cancelled) {
+          // This effect invocation was cleaned up while connect() was in flight -
+          // nobody else knows about this session, so disconnect it ourselves rather
+          // than leaking it (it would otherwise sit until its 5-minute idle timeout).
+          remoteManagementClient.disconnect(sessionID).catch(() => undefined)
+          return
+        }
         sessionIdRef.current = sessionID
         if (subscribedFieldsRef.current.length > 0) {
           await remoteManagementClient.subscribeFields(
@@ -121,14 +137,17 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
             subscribedFieldsRef.current.map(f => f.fieldKey),
           )
         }
-        if (!mountedRef.current) return
+        if (cancelled) {
+          remoteManagementClient.disconnect(sessionID).catch(() => undefined)
+          return
+        }
         setStatus('connected')
         stopPolling()
         intervalHandleRef.current = setInterval(() => {
           void poll()
         }, pollMs)
       } catch (e) {
-        if (!mountedRef.current) return
+        if (cancelled) return
         setStatus('disconnected')
         setConnectionError(classifyConnectionError(e))
       }
@@ -143,7 +162,7 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
     void establishSession()
 
     return () => {
-      mountedRef.current = false
+      cancelled = true
       stopPolling()
       const sessionID = sessionIdRef.current
       if (sessionID) {

@@ -30,6 +30,21 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
 
   const now = Date.now()
 
+  // Victory computes its own y-domain from the data range when none is given, but
+  // for a perfectly flat series (min === max - e.g. a monitor under constant load,
+  // exactly the case a bare dev-target demo loop produces) that degenerates to a
+  // near-zero-width domain, which renders absurdly over-precise axis labels (and is
+  // also what triggered a Victory "Infinity is an invalid value for width" console
+  // warning, observed with a single-point series before this fix). Computing an
+  // explicit domain with a sensible minimum pad avoids depending on Victory's own
+  // heuristic for this edge case.
+  const allValues = series.flatMap(s => s.points.map(p => p.value))
+  const minValue = allValues.length > 0 ? Math.min(...allValues) : 0
+  const maxValue = allValues.length > 0 ? Math.max(...allValues) : 1
+  const valueRange = maxValue - minValue
+  const yPadding = valueRange > 0 ? valueRange * 0.1 : Math.max(Math.abs(maxValue) * 0.1, 1)
+  const yDomain: [number, number] = [minValue - yPadding, maxValue + yPadding]
+
   return (
     <Chart
       ariaTitle='perfmon4j live chart'
@@ -38,7 +53,7 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
       legendPosition='bottom'
       themeColor={ChartThemeColor.multiUnordered}
       scale={{ x: 'time', y: 'linear' }}
-      domain={{ x: [now - windowMs, now] }}
+      domain={{ x: [now - windowMs, now], y: yDomain }}
       height={300}
       width={800}
       padding={{ top: 20, bottom: 75, left: 60, right: 30 }}
