@@ -57,6 +57,39 @@ see each module's `CLAUDE.md` instead; this file shouldn't duplicate that.
   translation needed. `RemoteInterfaceExt1`'s dynamic-child-creation operations remain
   unported (see Backlog). This is `base`-module plumbing only - no `hawtio-plugin` UI
   consumes this MBean yet.
+- **"perfmon4j Chart" nav item shipped** on `feature/HawtioPluginSprint1`: a third nav
+  item (`src/chart/`) where a user browses perfmon4j's interval/snapshot monitors via
+  the `RemoteManagement` MBean, picks one or more numeric fields, and watches their
+  live values plot over a rolling 5-minute window (`@patternfly/react-charts`, added
+  as an explicit dependency - previously only resolved transitively via
+  `@hawtio/react`'s peerDependency). Polls on its own independent `setInterval`
+  cadence (default 5s) rather than `jolokiaService.register()`'s shared console-wide
+  scheduler, so its granularity can't be silently slowed by an unrelated change to
+  Hawtio's own Preferences page. Handles `subscribe()`'s full-replacement contract
+  (always resends the complete field list, confirmed in `RemoteManagement.java`) and
+  transparently reconnects + resubscribes on any unrecognized poll failure (a
+  `SessionNotFoundException` from the 5-minute idle timeout can't be reliably
+  distinguished by text alone - `jolokiaService.execute()` doesn't forward the
+  exception class name - so any unclassified failure is treated as a reconnect
+  candidate). This is the plugin's first UI feature built on write/exec JMX
+  operations (`connect`/`subscribe`/`getData`/`disconnect`), which is why the
+  "Graceful degradation" backlog item below is now concrete rather than
+  speculative. Also required a small `dev-target/TargetMain.java` addition (a
+  background `PerfMonTimer` loop) so the local dev harness has real `INTERVAL` data
+  to chart; deliberately does not register `SNAPSHOT`-type monitors there, since
+  doing so needs Javassist on the classpath which the bare dev harness doesn't have
+  (a pre-existing dev-harness limitation, not something this feature needed to fix).
+  **Caveat**: the backend data path (connect/getMonitors/getFieldsForMonitor/
+  subscribe/getData/unsubscribe/disconnect) was verified end-to-end against a real
+  Jolokia agent, matching the exact call sequence the UI makes, but the rendered UI
+  itself was not exercised in a real browser (no headless browser was available in
+  the authoring environment) - a manual `npm start` pass is recommended before
+  treating this as fully verified.
+  - Deliberately deferred to a follow-up, not built in this first cut: non-numeric
+    fields routed to a flat value table, per-series color/visibility customization
+    or y-axis normalization (v1 uses a single shared y-axis and PatternFly's default
+    auto-assigned theme colors), save/load of the chart layout to a file, and any
+    thread-trace integration (`scheduleThreadTrace`/`unScheduleThreadTrace`).
 
 ## Backlog
 
@@ -82,17 +115,19 @@ Roughly in the order they'd most improve the plugin - not a committed sequence.
   Like "Live dynamic push" above, this is write/exec - it raises the stakes of the host's
   own Jolokia hardening (see "Jolokia access-control resolved as out of scope" under
   Status above), though it opens no new access path of its own.
-- **Graceful degradation when Jolokia write/exec access is unavailable.** `base` now
-  ships two write/exec-capable surfaces a future plugin feature could call into - "Live
-  dynamic push" (not yet built) and the already-shipped RemoteManagement MBean (see
-  Status above, no plugin UI consumes it yet). Once any plugin feature calls into either,
-  a write/exec Jolokia call can fail specifically because the *deploying organization's
-  own* ACL (`jolokia-access.xml`, a role-based restriction, etc.) allows reads but denies
-  writes/exec - a legitimate, expected configuration, not a bug. The plugin should detect
-  that failure mode distinctly (rather than surfacing it as a generic error) and degrade
-  gracefully: fall back to the read-only/XML-snippet experience with a visible notice that
-  live-push/write functionality is unavailable because the connected Jolokia endpoint is
-  read-only.
+- **Graceful degradation when Jolokia write/exec access is unavailable.** No longer
+  speculative: the "perfmon4j Chart" nav item (see Status above) is a real, shipped
+  consumer of write/exec JMX operations (`connect`/`subscribe`/`getData`/`disconnect`
+  on `RemoteManagement`), alongside the still-unbuilt "Live dynamic push" feature. A
+  write/exec Jolokia call can fail specifically because the *deploying organization's
+  own* ACL (`jolokia-access.xml`, a role-based restriction, etc.) allows reads but
+  denies writes/exec - a legitimate, expected configuration, not a bug. The Chart
+  screen's `useRemoteManagementChart` hook already classifies this distinctly as an
+  `'exec-denied'` connection-error kind (see `remoteManagementErrors.ts`) and shows a
+  dedicated `Alert` explaining the likely cause rather than a generic error - but it
+  still just dead-ends there with a Retry button; it doesn't fall back to any
+  degraded-but-useful read-only experience. That fallback UX (and doing the same for
+  "Live dynamic push" once built) is what remains open here.
 - **`ratios` support** (computed numerator/denominator attributes), matching the
   `mBeanSnapshotMonitor` grammar's `ratios='name=numerator/denominator'` syntax.
 - **Multi-instance fan-out** - `instanceKey`/`instanceValueFilter`/`attributeValueFilter`,

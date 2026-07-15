@@ -20,9 +20,13 @@
   though its code isn't directly portable (wrong transport, and most of it is write/exec).
 
 ## Architecture & Patterns
-- `src/mbean-snapshot/index.ts` — plugin entry point, exposed via Module Federation as
-  `./plugin` (see `webpack.config.js`). Registers a standalone top-level nav item via
-  `hawtio.addPlugin(...)`.
+- `src/plugin.ts` — the plugin's sole composition root, exposed via Module Federation
+  as `./plugin` (see `webpack.config.js`). Every nav item this plugin registers is
+  wired up from here (`src/mbean-snapshot`, `src/about`, `src/chart`), plus the
+  `configManager.addProductInfo(...)` call. Each nav item's own `index.ts` has no
+  Module Federation entry of its own — only `src/plugin.ts` does.
+- `src/mbean-snapshot/index.ts` — registers the `mBeanSnapshotMonitor`-authoring nav
+  item via `hawtio.addPlugin(...)`.
 - `src/mbean-snapshot/generateSnapshotXml.ts` — pure function, zero React/Jolokia
   dependencies, `{monitorName, jmxName, gauges, counters} -> XML string`. Validation mirrors
   `base/src/main/java/org/perfmon4j/XMLConfigurationParser.java`'s `mBeanSnapshotMonitor`
@@ -36,6 +40,18 @@
 - `src/jolokia/readMBeanAttributes.ts` — given an ObjectName, returns the MBean's flat scalar
   attributes (name + JMX type) via `@hawtio/react`'s `workspace.findMBeans(...)`. Composite/
   tabular attributes (e.g. dotted paths like `Usage.max`) are filtered out — deferred.
+- `src/chart/` — the "perfmon4j Chart" nav item (live field charting via the `base`
+  module's `RemoteManagement` MBean; see ROADMAP.md Status for the feature summary).
+  `useRemoteManagementChart.ts` owns the session/poll/reconnect lifecycle;
+  `monitorKey.ts`/`rollingSeries.ts` are pure, Jest-tested logic (parsing monitor/field
+  key strings, rolling-window trimming), following the same "keep pure logic
+  dependency-free" convention as `generateSnapshotXml.ts`. `src/jolokia/
+  remoteManagementClient.ts` is the Jolokia-calling wrapper around the MBean's
+  operations; its error classification is split into a separate dependency-free
+  `remoteManagementErrors.ts` specifically so it stays Jest-testable — importing
+  `jolokiaService` (transitively, via `@patternfly/react-core`) pulls in CSS imports
+  Jest's default transform can't parse, which is also why `readMBeanAttributes.ts`/
+  `readPerfmon4jVersion.ts` have never had test files of their own.
 - `src/index.ts` / `src/bootstrap.tsx` — a **local dev harness only**. It bootstraps a full
   standalone `<Hawtio>` console with this plugin registered, so the plugin can be exercised
   with `npm start` against a real Jolokia-enabled JVM without needing a separate Hawtio

@@ -17,7 +17,7 @@ module.exports = (_, args) => {
         filename: 'remoteEntry.js',
         // The key in `exposes` corresponds to 'module' passed to HawtioPlugin.
         exposes: {
-          './plugin': './src/mbean-snapshot',
+          './plugin': './src/plugin',
         },
         shared: {
           react: { singleton: true, requiredVersion: dependencies['react'] },
@@ -26,6 +26,7 @@ module.exports = (_, args) => {
           '@hawtio/react': { singleton: true, requiredVersion: dependencies['@hawtio/react'] },
           '@patternfly/react-core': { singleton: true, requiredVersion: dependencies['@patternfly/react-core'] },
           '@patternfly/react-table': { singleton: true, requiredVersion: dependencies['@patternfly/react-table'] },
+          '@patternfly/react-charts': { singleton: true, requiredVersion: dependencies['@patternfly/react-charts'] },
         },
       }),
       new HtmlWebpackPlugin({

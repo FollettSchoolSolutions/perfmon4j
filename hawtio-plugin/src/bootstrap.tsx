@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { plugin } from './mbean-snapshot'
+import { plugin } from './plugin'
 
 // Local development harness only - mirrors hawtio-sample-plugin-ts's bootstrap so
 // this plugin can be exercised standalone against a real Jolokia-enabled JVM via
