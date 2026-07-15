@@ -56,3 +56,7 @@ Perfmon4j should not be confused with a profiler. While profilers are typically 
 * [Create or Upgrade Perfmon4j SQL Database](Create-or-Upgrade-Perfmon4j-SQL-Database)
 * [How to Deploy Perfmon4j Datasource](How-to-Deploy-Perfmon4j-Datasource)
 * [How to Monitor individual methods within the JDBC driver with -eSQL](How-to-Monitor-individual-methods-within-the-JDBC-driver)
+
+## Tools
+
+* [Installing the VisualVM Plugin](Installing-the-VisualVM-Plugin)

@@ -16,6 +16,11 @@
 - `utils/` — standalone CLI utilities for parsing/visualizing TextAppender log output.
 - `hawtio-plugin/` — Hawtio console plugin for authoring perfmon4j `mBeanSnapshotMonitor` config from a live JMX MBean. TypeScript/React/npm project, **not** a Maven module — like `stress-test/`, it is not listed in root `pom.xml`'s `<modules>` and has its own independent build tooling. See `hawtio-plugin/ROADMAP.md` for current status and backlog.
 - `hawtio-plugin-webapp/` — thin WAR that self-hosts `hawtio-plugin/`'s built bundle and registers it as a discoverable Hawtio remote plugin via a JMX MBean, so it can be dropped into an existing Hawtio deployment with no rebuild. A real Maven module (`packaging=war`) but, like `hawtio-plugin/`, deliberately not listed in root `pom.xml`'s `<modules>` since building it needs Node.js.
+- `visualvm-plugin/` — VisualVM console plugin exposing live perfmon4j interval/snapshot
+  monitors, ad-hoc charting, and thread-trace scheduling over the agent's RMI remote-management
+  interface. A NetBeans Platform module built via `nbm-maven-plugin`, resolving the VisualVM/
+  NetBeans Platform APIs from Maven Central — like `stress-test/`, it is not listed in root
+  `pom.xml`'s `<modules>` and has its own independent build. See `visualvm-plugin/CLAUDE.md`.
 - Each module has its own `CLAUDE.md` with module-specific architecture, patterns, and anti-patterns — consult it before making changes inside that module.
 - See [Perfmon4j API and Agent Architecture](wiki/Perfmon4j-API-and-Agent-Architecture.md) for how `agent-api` and `base` connect at runtime.
 

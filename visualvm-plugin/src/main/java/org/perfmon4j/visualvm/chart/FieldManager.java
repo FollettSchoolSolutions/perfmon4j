@@ -20,7 +20,7 @@
  */
 package org.perfmon4j.visualvm.chart;
 
-import com.sun.tools.visualvm.core.options.GlobalPreferences;
+import org.graalvm.visualvm.core.options.GlobalPreferences;
 import java.util.prefs.PreferenceChangeEvent;
 import java.util.prefs.PreferenceChangeListener;
 
