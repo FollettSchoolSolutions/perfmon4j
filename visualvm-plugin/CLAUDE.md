@@ -21,6 +21,8 @@
   instead (so it's reachable from a browser via Jolokia/Hawtio, since RMI isn't). That doesn't
   change anything here — this module remains the RMI-based UI and is fully functional against
   any running perfmon4j agent with its RMI listener enabled.
+- See `ROADMAP.md` for what's next (signing the `.nbm`, modern charting options, release/snapshot
+  distribution) and why.
 
 ## Architecture & Patterns
 - `Installer.java` — `ModuleInstall` entry point; registers/unregisters
