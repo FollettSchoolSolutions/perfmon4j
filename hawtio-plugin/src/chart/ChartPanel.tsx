@@ -1,4 +1,4 @@
-import { Alert, Button, Content, PageSection, Spinner } from '@patternfly/react-core'
+import { Alert, Button, Content, Spinner } from '@patternfly/react-core'
 import React from 'react'
 import { LiveChart } from './LiveChart'
 import { MonitorFieldPicker } from './MonitorFieldPicker'
@@ -22,7 +22,7 @@ export const ChartPanel: React.FunctionComponent = () => {
     useRemoteManagementChart()
 
   return (
-    <PageSection hasBodyWrapper={false}>
+    <>
       <Content>
         <Content component='h1'>perfmon4j: Live Chart</Content>
         <Content component='p'>
@@ -60,6 +60,6 @@ export const ChartPanel: React.FunctionComponent = () => {
       <SubscribedFieldsTable series={series} onRemove={removeField} />
 
       <LiveChart series={series} windowMs={DEFAULT_WINDOW_MS} />
-    </PageSection>
+    </>
   )
 }

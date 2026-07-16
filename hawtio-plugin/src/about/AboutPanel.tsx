@@ -1,4 +1,4 @@
-import { Alert, Content, PageSection, Spinner } from '@patternfly/react-core'
+import { Alert, Content, Spinner } from '@patternfly/react-core'
 import React, { useEffect, useState } from 'react'
 import { readPerfmon4jVersion } from '../jolokia/readPerfmon4jVersion'
 
@@ -22,7 +22,7 @@ export const AboutPanel: React.FunctionComponent = () => {
   }, [])
 
   return (
-    <PageSection hasBodyWrapper={false}>
+    <>
       <Content>
         <Content component='h1'>About perfmon4j</Content>
       </Content>
@@ -36,6 +36,6 @@ export const AboutPanel: React.FunctionComponent = () => {
           {state.message}
         </Alert>
       )}
-    </PageSection>
+    </>
   )
 }

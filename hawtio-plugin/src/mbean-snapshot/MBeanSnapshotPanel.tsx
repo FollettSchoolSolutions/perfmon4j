@@ -5,7 +5,6 @@ import {
   ClipboardCopyVariant,
   Form,
   FormGroup,
-  PageSection,
   TextInput,
   Content,
 } from '@patternfly/react-core'
@@ -55,7 +54,7 @@ export const MBeanSnapshotPanel: React.FunctionComponent = () => {
   }
 
   return (
-    <PageSection hasBodyWrapper={false}>
+    <>
       <Content>
         <Content component='h1'>perfmon4j: Define JMXSnapShot Monitor</Content>
         <Content component='p'>
@@ -104,6 +103,6 @@ export const MBeanSnapshotPanel: React.FunctionComponent = () => {
           </FormGroup>
         )}
       </Form>
-    </PageSection>
+    </>
   )
 }
