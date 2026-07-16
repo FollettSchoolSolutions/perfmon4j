@@ -158,35 +158,43 @@ public class PerfMon {
         System.setProperty(PERFMON4J_CWD_HASH, Integer.toString(MiscHelper.hashCodeForCWD));
         System.setProperty(PERFMON4J_COPYRIGHT, "Copyright (c) 2015,2019 Follett School Solutions, Inc");
 
-        // Registration is best-effort and must never fail PerfMon's static init - the
-        // whole agent depends on this class initializing successfully. A second PerfMon
-        // class-load under a different classloader in the same JVM is expected and
-        // handled inside SelfManagement.registerMBean() itself; this outer catch is one
-        // more layer of defense against anything unexpected.
-        //
-        // Logged via System.err rather than the logger field: this runs at -javaagent
-        // premain time, before an app server's own logging (or java.util.logging.
-        // LogManager) can safely be touched - a logger.log*() call here can fall through
-        // Logger's auto-detection to java.util.logging and permanently pin the JDK's
-        // default LogManager ahead of e.g. WildFly's org.jboss.logmanager, breaking that
-        // server's own logging subsystem boot later.
-        try {
-        	SelfManagement.registerMBean();
-        } catch (Throwable t) {
-        	System.err.println("Unexpected failure registering perfmon4j self-management MBean: " + t);
-        	t.printStackTrace();
+        // Registering these MBeans calls ManagementFactory.getPlatformMBeanServer(),
+        // whose very first invocation in a JVM builds a PlatformLoggingMXBean - which,
+        // as a pure side effect of the JDK's *own* internals (nothing we log ourselves),
+        // triggers java.util.logging.LogManager's static initializer. At -javaagent
+        // premain time (before jboss-modules has set up the module path), a custom
+        // LogManager named by "java.util.logging.manager" - e.g.
+        // org.jboss.logmanager.LogManager - isn't yet resolvable, so JUL silently falls
+        // back to the JDK's default LogManager, permanently pinning the wrong one for the
+        // JVM's life and breaking that app server's own logging subsystem boot later
+        // (WFLYLOG0078). Same root cause class (something touches java.util.logging
+        // before jboss-modules is ready) and same mitigation as
+        // XMLConfigurator.start()'s deferred initial config load for this exact
+        // JBoss/WildFly condition - delay registration to give the app server time to
+        // install its own LogManager first.
+        long mbeanRegistrationDelayMillis = 0;
+        if ("org.jboss.logmanager.LogManager".equals(System.getProperty("java.util.logging.manager"))) {
+        	System.err.println("org.jboss.logmanager.LogManager found. Will delay perfmon4j "
+        		+ "self-management/remote-management MBean registration to allow JBoss/WildFly "
+        		+ "time to load its LogManager first.");
+        	mbeanRegistrationDelayMillis = Integer.getInteger(
+        		"Perfmon4j.mbeanRegistrationDelayMillisForJBossLogManager", 5000).longValue();
         }
 
-        try {
-        	RemoteManagement.registerMBean();
-        } catch (Throwable t) {
-        	System.err.println("Unexpected failure registering perfmon4j remote-management MBean: " + t);
-        	t.printStackTrace();
+        if (mbeanRegistrationDelayMillis <= 0) {
+        	registerManagementMBeans();
+        } else {
+        	utilityTimer.schedule(new FailSafeTimerTask() {
+        		@Override
+        		public void failSafeRun() {
+        			registerManagementMBeans();
+        		}
+        	}, mbeanRegistrationDelayMillis);
         }
 
     	if (USE_LEGACY_MONITOR_MAP_LOCK) {
     		System.out.println("***Perfmon4j Using Legacy Monitor Map Lock***");
-    		
+
     		ReentrantLock lock = new ReentrantLock();
     		mapMonitorReadLock = mapMonitorWriteLock = lock;
     	} else {
@@ -195,7 +203,29 @@ public class PerfMon {
     		mapMonitorWriteLock = lock.writeLock();
     	}
     }
-    
+
+    // Registration is best-effort and must never fail PerfMon's static init/startup -
+    // the whole agent depends on this class initializing successfully. A second PerfMon
+    // class-load under a different classloader in the same JVM is expected and handled
+    // inside SelfManagement.registerMBean() itself; these outer catches are one more
+    // layer of defense against anything unexpected. Logged via System.err rather than
+    // the logger field - see the caller's comment for why.
+    private static void registerManagementMBeans() {
+    	try {
+    		SelfManagement.registerMBean();
+    	} catch (Throwable t) {
+    		System.err.println("Unexpected failure registering perfmon4j self-management MBean: " + t);
+    		t.printStackTrace();
+    	}
+
+    	try {
+    		RemoteManagement.registerMBean();
+    	} catch (Throwable t) {
+    		System.err.println("Unexpected failure registering perfmon4j remote-management MBean: " + t);
+    		t.printStackTrace();
+    	}
+    }
+
     private static final Set<String> monitorsWithThreadTraceConfigAttached = Collections.synchronizedSet(new HashSet<String>());
     
     private final Long monitorID;
