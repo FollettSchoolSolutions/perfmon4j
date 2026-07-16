@@ -5,29 +5,30 @@ Sprint-ready engineering tasks derived from
 spike's Sequence section. Owner column left blank for a sole-maintainer repo.
 
 Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
-(`ChartPanel`, `LiveChart`, `MonitorFieldPicker`, `SubscribedFieldsTable`,
-`useRemoteManagementChart`, pure `monitorKey`/`rollingSeries`) and the shell is
-`src/Perfmon4jPanel.tsx`. Backend ops are on `org.perfmon4j:type=RemoteManagement`
-(`base`), wrapped by `src/jolokia/remoteManagementClient.ts`.
+(`ChartPanel`, `LiveChart`, `MonitorTree`, `AddFieldModal`, `SubscribedFieldsTable`,
+`useRemoteManagementChart`, pure `monitorKey`/`monitorTree`/`rollingSeries`) and the
+shell is `src/Perfmon4jPanel.tsx`. Backend ops are on
+`org.perfmon4j:type=RemoteManagement` (`base`), wrapped by
+`src/jolokia/remoteManagementClient.ts`.
 
 ### Work breakdown
 
-| ID  | Title                                       | Slice | Effort | Depends on |
-|-----|---------------------------------------------|-------|--------|------------|
-| T1  | Split-pane Monitoring layout scaffold       | A     | M      | —          |
-| T2  | Left pane: persistent monitor tree + Refresh| A     | M      | T1         |
-| T3  | Right pane: chart-over-tabbed-detail shell  | A     | M      | T1         |
-| T4  | Tree row actions (kebab): Add field to chart| A     | S      | T2, T3     |
-| T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         |
-| T6  | Per-series color assignment + customization | B     | M      | T3         |
-| T7  | Per-series visibility toggle                | B     | S      | T3, T6     |
-| T8  | Thread-trace client + queue state hook      | C     | M      | —          |
-| T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     |
-| T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     |
-| T11 | Thread-trace result viewer tab              | C     | S      | T10        |
-| T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          |
-| T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    |
-| T14 | Save / load chart dashboard to file         | D     | M      | T6, T7     |
+| ID  | Title                                       | Slice | Effort | Depends on | Status |
+|-----|---------------------------------------------|-------|--------|------------|--------|
+| T1  | Split-pane Monitoring layout scaffold       | A     | M      | —          | Done   |
+| T2  | Left pane: persistent monitor tree + Refresh| A     | M      | T1         | Done (see note) |
+| T3  | Right pane: chart-over-tabbed-detail shell  | A     | M      | T1         |        |
+| T4  | Tree row actions (kebab): Add field to chart| A     | S      | T2, T3     | Add-field item done; Schedule Thread Trace / Force dynamic creation items remain (T9/T13) |
+| T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         |        |
+| T6  | Per-series color assignment + customization | B     | M      | T3         |        |
+| T7  | Per-series visibility toggle                | B     | S      | T3, T6     |        |
+| T8  | Thread-trace client + queue state hook      | C     | M      | —          |        |
+| T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     |        |
+| T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     |        |
+| T11 | Thread-trace result viewer tab              | C     | S      | T10        |        |
+| T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          |        |
+| T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    |        |
+| T14 | Save / load chart dashboard to file         | D     | M      | T6, T7     |        |
 
 ### Tasks
 
@@ -46,6 +47,17 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Test plan:** Playwright smoke (tab renders, no overlay); manual resize.
 - **Observability:** n/a (client UI).
 - **Docs:** Note new layout in `hawtio-plugin/CLAUDE.md` architecture bullet.
+- **Note (done):** New `MonitoringLayout.tsx` uses PatternFly's responsive
+  `Grid`/`GridItem` (`span={12} md={3}` / `span={12} md={9}`) rather than a
+  resizable `JSplitPane` equivalent — stacks below the `md` breakpoint
+  (768px), comfortably inside the ≥1024px/≤720px acceptance thresholds.
+  `LiveChart` renders a fixed-width (800px) SVG, so its slot is wrapped in
+  its own `overflow-x: auto` container to keep any overflow inside the pane
+  rather than the page body. Verified in a real browser (Playwright against
+  `dev-target/`) at 600px and 1024px: `document.body.scrollWidth ===
+  window.innerWidth` at both, and the 600px shot confirms a single stacked
+  column. No PageSection/tab-overlay regression observed. `CLAUDE.md`
+  architecture-bullet update still outstanding.
 
 **T2 — Left pane: persistent monitor tree + Refresh**
 - **Description:** Promote `MonitorFieldPicker`'s browsing into a persistent
@@ -62,6 +74,33 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   filter + Refresh keeps existing series.
 - **Observability:** n/a.
 - **Docs:** Update ROADMAP Status once tree/chart split lands.
+- **Note (done):** `MonitorFieldPicker.tsx` retired outright, split into
+  `monitorTree.ts` (pure `buildMonitorTree`/`filterMonitorTree`, dot-notation
+  + multi-instance fan-out, 11 Jest tests) and `MonitorTree.tsx` (PatternFly
+  `TreeView`, root type groups auto-expanded, manual Refresh, disabled
+  empty-state when not connected). Built alongside T4's "Add field to chart"
+  kebab item (not the full T4 — Schedule Thread Trace / Force dynamic
+  creation items still wait on T9/T13): T2's own acceptance criterion
+  ("Refresh … without losing chart subscriptions") has nothing to verify
+  without *some* way to create a subscription first, so leaving the tree
+  fully decoupled from adding fields until T4 landed separately would have
+  left the branch without a working add-chart path in between. The kebab
+  action opens a new `AddFieldModal.tsx` (the field-checkbox UI lifted
+  unchanged from the old picker). Verified end-to-end in a real browser
+  (Playwright against `dev-target/`): tree renders INTERVAL monitors
+  (dot-notation nesting incl. a monitor that is simultaneously a leaf and a
+  group, e.g. `dev` under `dev.target`), Add field to chart → modal →
+  subscribe → chart/table update, and Refresh leaves the existing
+  subscription in place (`chartedRowsAfterRefresh === chartedRowsAfterAdd`).
+  SNAPSHOT root doesn't appear against `dev-target` since that harness
+  deliberately registers no SNAPSHOT monitors (pre-existing, documented
+  limitation, not exercised by this task). One real bug caught only by
+  browser verification: `TreeView`'s `allExpanded` prop *overrides* every
+  item's own `defaultExpanded` rather than falling back to it — passing the
+  literal `false` state used elsewhere in this codebase (`MBeanTreePicker`'s
+  same pattern) forced the whole tree collapsed regardless of per-item
+  settings. Fixed by leaving `allExpanded` as `undefined` until the user
+  explicitly toggles the toolbar's Expand/Collapse-all.
 
 **T3 — Right pane: chart-over-tabbed-detail shell**
 - **Description:** Move `LiveChart` to the top-right pane; add a bottom-right
@@ -90,6 +129,19 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Test plan:** Playwright: kebab → Add → field charts; axe check on menu.
 - **Observability:** n/a.
 - **Docs:** —
+- **Note (partially done):** Built alongside T2 (see its note) since T2's own
+  acceptance criteria needed a working add-field path to verify against.
+  Only the "Add field to chart…" item exists so far — it opens
+  `AddFieldModal.tsx` rather than subscribing directly, since a monitor can
+  have several numeric fields and the old picker's checkbox-selection UX was
+  worth keeping. Kebab currently appears on every monitor node (leaf or
+  hybrid group+monitor), not on individual fields — matches this task's own
+  wording ("Add field to chart" is a per-*monitor* action that then opens a
+  field picker, consistent with the legacy VisualVM dialog). No axe-specific
+  check run yet (deferred, not blocking); manual keyboard tab-through of the
+  `MenuToggle`/`DropdownItem` wasn't separately verified. Schedule Thread
+  Trace (T9) and Force dynamic creation (T13) still need their own menu
+  items added to `MonitorRowAction` in `MonitorTree.tsx`.
 
 **T5 — Non-numeric fields → Text fields tab**
 - **Description:** Route string-valued subscribed fields to the "Text fields"
