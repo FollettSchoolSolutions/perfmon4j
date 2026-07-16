@@ -5,9 +5,10 @@ Sprint-ready engineering tasks derived from
 spike's Sequence section. Owner column left blank for a sole-maintainer repo.
 
 Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
-(`ChartPanel`, `LiveChart`, `MonitorTree`, `AddFieldModal`, `SubscribedFieldsTable`,
-`useRemoteManagementChart`, pure `monitorKey`/`monitorTree`/`rollingSeries`) and the
-shell is `src/Perfmon4jPanel.tsx`. Backend ops are on
+(`ChartPanel`, `LiveChart`, `MonitorTree`, `AddFieldModal`, `MonitoringDetailTabs`,
+`SubscribedFieldsTable`, `useRemoteManagementChart`, pure
+`monitorKey`/`monitorTree`/`rollingSeries`) and the shell is
+`src/Perfmon4jPanel.tsx`. Backend ops are on
 `org.perfmon4j:type=RemoteManagement` (`base`), wrapped by
 `src/jolokia/remoteManagementClient.ts`.
 
@@ -17,7 +18,7 @@ shell is `src/Perfmon4jPanel.tsx`. Backend ops are on
 |-----|---------------------------------------------|-------|--------|------------|--------|
 | T1  | Split-pane Monitoring layout scaffold       | A     | M      | —          | Done   |
 | T2  | Left pane: persistent monitor tree + Refresh| A     | M      | T1         | Done (see note) |
-| T3  | Right pane: chart-over-tabbed-detail shell  | A     | M      | T1         |        |
+| T3  | Right pane: chart-over-tabbed-detail shell  | A     | M      | T1         | Done   |
 | T4  | Tree row actions (kebab): Add field to chart| A     | S      | T2, T3     | Add-field item done; Schedule Thread Trace / Force dynamic creation items remain (T9/T13) |
 | T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         |        |
 | T6  | Per-series color assignment + customization | B     | M      | T3         |        |
@@ -116,6 +117,21 @@ shell is `src/Perfmon4jPanel.tsx`. Backend ops are on
   tab; remove clears both and drops the subscription.
 - **Observability:** n/a.
 - **Docs:** —
+- **Note (done):** New `MonitoringDetailTabs.tsx` wraps the existing
+  `SubscribedFieldsTable` unchanged in a "Charted fields" tab (matching the
+  established `Perfmon4jPanel`-level `Tabs`/`activeKey` convention) alongside
+  three stub tabs (Text fields / Thread traces / Trace detail), each a plain
+  `EmptyState` naming its owning future task. `SubscribedFieldsTable` itself
+  still returns `null` when empty (unchanged), so the Charted-fields tab
+  wraps it with its own small empty-state fallback rather than rendering
+  blank when nothing is charted yet. `LiveChart`'s fixed `height={300}` prop
+  meant the "chart resize in a fixed pane" risk never materialized - nothing
+  about its sizing depends on the surrounding `Tabs`. Verified end-to-end in
+  a real browser (Playwright against `dev-target/`): all four tabs present
+  and switchable, stub tabs render their placeholder text with no console
+  errors, adding a field populates both the chart legend and the
+  Charted-fields table, and removing it clears both, drops the
+  subscription, and brings the empty-state fallback back.
 
 **T4 — Tree row actions (kebab): Add field to chart**
 - **Description:** Add a per-row kebab (`Dropdown`) on tree leaves with "Add

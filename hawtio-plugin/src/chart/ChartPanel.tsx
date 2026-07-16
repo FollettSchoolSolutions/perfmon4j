@@ -1,9 +1,9 @@
 import { Alert, Button, Content, Spinner } from '@patternfly/react-core'
 import React from 'react'
 import { LiveChart } from './LiveChart'
+import { MonitoringDetailTabs } from './MonitoringDetailTabs'
 import { MonitoringLayout } from './MonitoringLayout'
 import { MonitorTree } from './MonitorTree'
-import { SubscribedFieldsTable } from './SubscribedFieldsTable'
 import { ConnectionErrorKind, useRemoteManagementChart } from './useRemoteManagementChart'
 import { DEFAULT_WINDOW_MS } from './rollingSeries'
 
@@ -61,7 +61,7 @@ export const ChartPanel: React.FunctionComponent = () => {
           />
         }
         chart={<LiveChart series={series} windowMs={DEFAULT_WINDOW_MS} />}
-        detail={<SubscribedFieldsTable series={series} onRemove={removeField} />}
+        detail={<MonitoringDetailTabs series={series} onRemoveField={removeField} />}
       />
     </>
   )
