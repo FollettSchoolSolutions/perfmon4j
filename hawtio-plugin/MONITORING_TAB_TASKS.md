@@ -21,7 +21,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T3  | Right pane: chart-over-tabbed-detail shell  | A     | M      | T1         | Done   |
 | T4  | Tree row actions (kebab): Add field to chart| A     | S      | T2, T3     | Add-field item done; Schedule Thread Trace / Force dynamic creation items remain (T9/T13) |
 | T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         | Done   |
-| T6  | Per-series color assignment + customization | B     | M      | T3         |        |
+| T6  | Per-series color assignment + customization | B     | M      | T3         | Done   |
 | T7  | Per-series visibility toggle                | B     | S      | T3, T6     |        |
 | T8  | Thread-trace client + queue state hook      | C     | M      | —          |        |
 | T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     |        |
@@ -215,6 +215,37 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Test plan:** Unit-test color-assignment helper; Playwright color change.
 - **Observability:** n/a.
 - **Docs:** —
+- **Note (done):** New pure `seriesColor.ts` (`colorForIndex`, 3 Jest tests)
+  cycles through a 5-hue palette pulled from PatternFly's own
+  `chart_color_<hue>_400` design tokens (blue/green/orange/purple/
+  red-orange - PatternFly ships no cyan/gold/teal "chart_color" family), so
+  the new explicit coloring stays visually consistent with the rest of the
+  app rather than inventing colors from scratch. Color is assigned once in
+  `addFields` (`useRemoteManagementChart.ts`) from the *current* subscribed
+  count, stored directly on each `FieldSeries` entry, and left untouched by
+  every other operation (`removeField`'s filter, `poll()`'s `...entry`
+  spreads) - this resolved the stated risk by construction: since color
+  lives on the entry itself rather than being derived from array position,
+  it can't shift when unrelated series are added/removed. `setFieldColor`
+  is a new client-only hook callback (no server call - color isn't part of
+  the RemoteManagement protocol). `LiveChart.tsx` dropped
+  `themeColor={ChartThemeColor.multiUnordered}` in favor of an explicit
+  `style={{ data: { stroke: s.color } }}` per `ChartLine` and a
+  `symbol: { fill: s.color }` per `legendData` entry - PatternFly's Chart
+  legend accepts a per-entry symbol fill for exactly this. No PatternFly
+  `ColorPicker` component exists in this version, so
+  `SubscribedFieldsTable.tsx` gained a leading "Color" column using a
+  native `<input type="color">` swatch (keyboard-operable, zero new
+  dependency, full custom-color freedom rather than palette-only).
+  `TextFieldsTable.tsx` intentionally has no color column - text fields
+  are never charted, so there's no legend entry for a color to match.
+  Verified end-to-end in a real browser (Playwright against `dev-target/`,
+  confirmed by screenshot rather than DOM/CSS scraping since Victory's
+  legend swatch markup doesn't expose a plain `fill` attribute): two fields
+  added in one action got distinct blue/green swatches matching the chart
+  legend exactly; changing one field's color via the native color input
+  updated both the table swatch and the chart legend swatch live; removing
+  the *other* field afterward left the customized field's color untouched.
 
 **T7 — Per-series visibility toggle**
 - **Description:** Add a show/hide toggle per Charted-fields row that keeps the

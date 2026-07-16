@@ -20,8 +20,17 @@ const CONNECTION_ERROR_COPY: Record<ConnectionErrorKind, string> = {
 }
 
 export const ChartPanel: React.FunctionComponent = () => {
-  const { status, connectionError, series, listMonitors, listFieldsForMonitor, addFields, removeField, retryConnect } =
-    useRemoteManagementChart()
+  const {
+    status,
+    connectionError,
+    series,
+    listMonitors,
+    listFieldsForMonitor,
+    addFields,
+    removeField,
+    setFieldColor,
+    retryConnect,
+  } = useRemoteManagementChart()
   const { chartable, textOnly } = partitionByChartability(series)
 
   return (
@@ -64,7 +73,14 @@ export const ChartPanel: React.FunctionComponent = () => {
           />
         }
         chart={<LiveChart series={chartable} windowMs={DEFAULT_WINDOW_MS} />}
-        detail={<MonitoringDetailTabs chartableSeries={chartable} textSeries={textOnly} onRemoveField={removeField} />}
+        detail={
+          <MonitoringDetailTabs
+            chartableSeries={chartable}
+            textSeries={textOnly}
+            onRemoveField={removeField}
+            onColorChange={setFieldColor}
+          />
+        }
       />
     </>
   )

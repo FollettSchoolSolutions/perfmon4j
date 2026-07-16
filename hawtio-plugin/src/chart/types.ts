@@ -32,4 +32,9 @@ export interface FieldSeries {
   points: ChartDataPoint[]
   /** A string for STRING/TIMESTAMP fields, a number for numeric ones. */
   latestValue: number | string | null
+  /** Assigned once at add-time (see seriesColor.ts) and stable thereafter -
+   * only meaningful for chartable (numeric) series, but kept on every entry
+   * for a uniform FieldSeries shape. User-changeable from the Charted-fields
+   * row (see MONITORING_TAB_TASKS.md T6). */
+  color: string
 }

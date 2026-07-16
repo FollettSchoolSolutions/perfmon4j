@@ -3,6 +3,7 @@ import * as remoteManagementClient from '../jolokia/remoteManagementClient'
 import { ExecAccessDeniedError, IncompatibleClientVersionError } from '../jolokia/remoteManagementClient'
 import { isNumericFieldType, toFieldDescriptor, toMonitorDescriptor } from './monitorKey'
 import { appendPoint, DEFAULT_MAX_POINTS, DEFAULT_WINDOW_MS, trimToWindow } from './rollingSeries'
+import { colorForIndex } from './seriesColor'
 import { FieldDescriptor, FieldSeries, MonitorDescriptor } from './types'
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
@@ -28,6 +29,9 @@ export interface UseRemoteManagementChartResult {
   /** Batched - pass every field to add in one call, not one call per field. */
   addFields: (fields: FieldDescriptor[]) => Promise<void>
   removeField: (fieldKey: string) => Promise<void>
+  /** Client-side only - no server call, since color isn't part of the
+   * RemoteManagement subscription protocol. */
+  setFieldColor: (fieldKey: string, color: string) => void
   retryConnect: () => void
 }
 
@@ -213,11 +217,19 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
     const existingKeys = new Set(subscribedFieldsRef.current.map(f => f.fieldKey))
     const newFields = fields.filter(f => !existingKeys.has(f.fieldKey))
     if (newFields.length === 0) return
+    // Colors are assigned once here, from the count of already-subscribed
+    // fields at this moment - never recomputed from an entry's later array
+    // position, so an existing field's color can't shift when others are
+    // added/removed around it (see seriesColor.ts).
+    const startColorIndex = subscribedFieldsRef.current.length
     const updated = [...subscribedFieldsRef.current, ...newFields]
     // subscribe() is full-replacement server-side - always send the complete list.
     await remoteManagementClient.subscribeFields(sessionID, updated.map(f => f.fieldKey))
     subscribedFieldsRef.current = updated
-    setSeries(prev => [...prev, ...newFields.map(field => ({ field, points: [], latestValue: null }))])
+    setSeries(prev => [
+      ...prev,
+      ...newFields.map((field, i) => ({ field, points: [], latestValue: null, color: colorForIndex(startColorIndex + i) })),
+    ])
   }, [])
 
   const removeField = useCallback(async (fieldKey: string): Promise<void> => {
@@ -229,9 +241,23 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
     setSeries(prev => prev.filter(entry => entry.field.fieldKey !== fieldKey))
   }, [])
 
+  const setFieldColor = useCallback((fieldKey: string, color: string): void => {
+    setSeries(prev => prev.map(entry => (entry.field.fieldKey === fieldKey ? { ...entry, color } : entry)))
+  }, [])
+
   const retryConnect = useCallback(() => {
     establishSessionRef.current()
   }, [])
 
-  return { status, connectionError, series, listMonitors, listFieldsForMonitor, addFields, removeField, retryConnect }
+  return {
+    status,
+    connectionError,
+    series,
+    listMonitors,
+    listFieldsForMonitor,
+    addFields,
+    removeField,
+    setFieldColor,
+    retryConnect,
+  }
 }

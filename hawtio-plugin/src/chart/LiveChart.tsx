@@ -1,4 +1,4 @@
-import { Chart, ChartAxis, ChartGroup, ChartLine, ChartThemeColor, ChartVoronoiContainer } from '@patternfly/react-charts/victory'
+import { Chart, ChartAxis, ChartGroup, ChartLine, ChartVoronoiContainer } from '@patternfly/react-charts/victory'
 import { EmptyState, EmptyStateBody } from '@patternfly/react-core'
 import React from 'react'
 import { FieldSeries } from './types'
@@ -49,9 +49,8 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
     <Chart
       ariaTitle='perfmon4j live chart'
       containerComponent={<ChartVoronoiContainer labels={({ datum }: { datum: ChartPoint }) => `${datum.name}: ${datum.y}`} />}
-      legendData={series.map(s => ({ name: s.field.label }))}
+      legendData={series.map(s => ({ name: s.field.label, symbol: { fill: s.color } }))}
       legendPosition='bottom'
-      themeColor={ChartThemeColor.multiUnordered}
       scale={{ x: 'time', y: 'linear' }}
       domain={{ x: [now - windowMs, now], y: yDomain }}
       height={300}
@@ -65,6 +64,7 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
           <ChartLine
             key={s.field.fieldKey}
             name={s.field.label}
+            style={{ data: { stroke: s.color } }}
             data={s.points.map((p): ChartPoint => ({ x: p.timestamp, y: p.value, name: s.field.label }))}
           />
         ))}
