@@ -20,7 +20,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T2  | Left pane: persistent monitor tree + Refresh| A     | M      | T1         | Done (see note) |
 | T3  | Right pane: chart-over-tabbed-detail shell  | A     | M      | T1         | Done   |
 | T4  | Tree row actions (kebab): Add field to chart| A     | S      | T2, T3     | Add-field item done; Schedule Thread Trace / Force dynamic creation items remain (T9/T13) |
-| T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         |        |
+| T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         | Done   |
 | T6  | Per-series color assignment + customization | B     | M      | T3         |        |
 | T7  | Per-series visibility toggle                | B     | S      | T3, T6     |        |
 | T8  | Thread-trace client + queue state hook      | C     | M      | —          |        |
@@ -172,6 +172,35 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   string-valued snapshot field in `dev-target`.
 - **Observability:** n/a.
 - **Docs:** ROADMAP: mark #6 done.
+- **Note (done):** New pure `fieldRouting.ts` (`partitionByChartability`, 4
+  Jest tests) routes on each field's *declared* type
+  (`isNumericFieldType(field.fieldType)`), not the runtime `getData()` value
+  shape - matching legacy VisualVM's own `FieldElement.isNumeric()`
+  (DOUBLE/LONG/INTEGER only; TIMESTAMP and STRING both route to text; see
+  `FieldElement.java`/`SelectFieldDlg.java`). This distinction mattered in
+  practice, not just in theory: `dev-target`'s real INTERVAL monitor exposes
+  `TimeStart`/`TimeStop` TIMESTAMP fields that come back from Jolokia as a
+  JS *number* (an epoch-ms long), so a naive runtime `typeof rawValue ===
+  'number'` classifier would have wrongly plotted a raw epoch value on the
+  chart - declared-metadata routing avoids that by construction. Widened
+  `FieldSeries.latestValue` to `number | string | null` and fixed
+  `useRemoteManagementChart`'s `poll()`, which previously discarded any
+  non-number value outright (`if (typeof rawValue !== 'number') return
+  entry`), so a subscribed string/timestamp field's `latestValue` would have
+  stayed `null` forever. `AddFieldModal.tsx` now lists every field type
+  instead of pre-filtering to numeric only (mirroring legacy
+  `SelectFieldDlg.java`, which also let both be selected from one dialog).
+  New `TextFieldsTable.tsx` mirrors `SubscribedFieldsTable.tsx` exactly
+  (Monitor/Field/Latest Value/Remove); `LiveChart`/`SubscribedFieldsTable`
+  needed zero changes - `ChartPanel.tsx` now partitions `series` once and
+  feeds each component only its half. Verified end-to-end in a real browser
+  (Playwright against `dev-target/`, no SNAPSHOT/STRING field available
+  there but `TimeStart` (TIMESTAMP) exercises the identical non-numeric
+  path): the Add-field modal lists all 13 fields incl. both TIMESTAMP ones;
+  a mixed numeric+TIMESTAMP selection added in one action lands one row in
+  Charted fields (charted, live) and one in Text fields (live epoch value,
+  confirmed absent from the chart legend); removing both clears each
+  independently.
 
 **T6 — Per-series color assignment + customization**
 - **Description:** Assign each series a stable color and let the user change it

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as remoteManagementClient from '../jolokia/remoteManagementClient'
 import { ExecAccessDeniedError, IncompatibleClientVersionError } from '../jolokia/remoteManagementClient'
-import { toFieldDescriptor, toMonitorDescriptor } from './monitorKey'
+import { isNumericFieldType, toFieldDescriptor, toMonitorDescriptor } from './monitorKey'
 import { appendPoint, DEFAULT_MAX_POINTS, DEFAULT_WINDOW_MS, trimToWindow } from './rollingSeries'
 import { FieldDescriptor, FieldSeries, MonitorDescriptor } from './types'
 
@@ -92,9 +92,21 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
         setSeries(prev =>
           prev.map(entry => {
             const rawValue = data[entry.field.fieldKey]
-            if (typeof rawValue !== 'number') return entry
-            const points = trimToWindow(appendPoint(entry.points, { timestamp: now, value: rawValue }), now, windowMs, maxPoints)
-            return { ...entry, points, latestValue: rawValue }
+            // Routing (chart vs. Text fields tab) is decided by the field's
+            // declared type (see fieldRouting.ts), not the runtime value -
+            // TIMESTAMP fields can come back as a numeric epoch, and that
+            // must never get appended as a chart point. Only points for a
+            // declared-numeric field get accumulated; latestValue is kept
+            // for any recognized value so the Text fields tab always has
+            // something to show.
+            if (isNumericFieldType(entry.field.fieldType) && typeof rawValue === 'number') {
+              const points = trimToWindow(appendPoint(entry.points, { timestamp: now, value: rawValue }), now, windowMs, maxPoints)
+              return { ...entry, points, latestValue: rawValue }
+            }
+            if (typeof rawValue === 'string' || typeof rawValue === 'number') {
+              return { ...entry, latestValue: rawValue }
+            }
+            return entry
           }),
         )
       } catch (e) {

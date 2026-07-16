@@ -10,7 +10,6 @@ import {
   Spinner,
 } from '@patternfly/react-core'
 import React, { useEffect, useState } from 'react'
-import { isNumericFieldType } from './monitorKey'
 import { FieldDescriptor, MonitorDescriptor } from './types'
 
 export interface AddFieldModalProps {
@@ -61,7 +60,12 @@ export const AddFieldModal: React.FunctionComponent<AddFieldModalProps> = ({
 
   if (!monitor) return null
 
-  const numericFields = fields?.filter(f => isNumericFieldType(f.fieldType)) ?? []
+  // Every field type is addable - numeric ones land on the live chart,
+  // STRING/TIMESTAMP ones land on the Text fields tab instead (see
+  // fieldRouting.ts). Both were selectable in legacy VisualVM's own
+  // "Add Field to Chart..." dialog (SelectFieldDlg.java), which routed the
+  // same way via FieldElement.isNumeric().
+  const addableFields = fields ?? []
 
   const toggleField = (fieldKey: string) => {
     setSelectedFieldKeys(prev => {
@@ -77,7 +81,7 @@ export const AddFieldModal: React.FunctionComponent<AddFieldModalProps> = ({
 
   const onAddSelected = async () => {
     setAddError(null)
-    const toAdd = numericFields.filter(f => selectedFieldKeys.has(f.fieldKey))
+    const toAdd = addableFields.filter(f => selectedFieldKeys.has(f.fieldKey))
     if (toAdd.length === 0) return
     try {
       await addFields(toAdd)
@@ -88,8 +92,8 @@ export const AddFieldModal: React.FunctionComponent<AddFieldModalProps> = ({
   }
 
   return (
-    <Modal isOpen variant='small' onClose={onClose} aria-label={`Add field to chart from ${monitor.label}`}>
-      <ModalHeader title={`Add field to chart: ${monitor.label}`} />
+    <Modal isOpen variant='small' onClose={onClose} aria-label={`Add a field from ${monitor.label}`}>
+      <ModalHeader title={`Add field: ${monitor.label}`} />
       <ModalBody>
         {loadError && <Alert variant='warning' isInline title={`Unable to load fields: ${loadError}`} />}
 
@@ -99,12 +103,12 @@ export const AddFieldModal: React.FunctionComponent<AddFieldModalProps> = ({
           </Bullseye>
         )}
 
-        {fields && numericFields.length === 0 && (
-          <Alert variant='info' isInline title={`${monitor.label} has no chartable (numeric) fields.`} />
+        {fields && addableFields.length === 0 && (
+          <Alert variant='info' isInline title={`${monitor.label} has no fields to add.`} />
         )}
 
         {fields &&
-          numericFields.map(field => (
+          addableFields.map(field => (
             <Checkbox
               key={field.fieldKey}
               id={`add-field-${field.fieldKey}`}
@@ -118,7 +122,7 @@ export const AddFieldModal: React.FunctionComponent<AddFieldModalProps> = ({
       </ModalBody>
       <ModalFooter>
         <Button variant='primary' onClick={onAddSelected} isDisabled={selectedFieldKeys.size === 0}>
-          Add selected to chart
+          Add selected
         </Button>
         <Button variant='link' onClick={onClose}>
           Cancel

@@ -1,6 +1,7 @@
 import { Alert, Button, Content, Spinner } from '@patternfly/react-core'
 import React from 'react'
 import { LiveChart } from './LiveChart'
+import { partitionByChartability } from './fieldRouting'
 import { MonitoringDetailTabs } from './MonitoringDetailTabs'
 import { MonitoringLayout } from './MonitoringLayout'
 import { MonitorTree } from './MonitorTree'
@@ -21,14 +22,16 @@ const CONNECTION_ERROR_COPY: Record<ConnectionErrorKind, string> = {
 export const ChartPanel: React.FunctionComponent = () => {
   const { status, connectionError, series, listMonitors, listFieldsForMonitor, addFields, removeField, retryConnect } =
     useRemoteManagementChart()
+  const { chartable, textOnly } = partitionByChartability(series)
 
   return (
     <>
       <Content>
         <Content component='h1'>perfmon4j: Live Chart</Content>
         <Content component='p'>
-          Browse perfmon4j&apos;s interval and snapshot monitors, pick one or more numeric fields, and watch their
-          live values plot over a rolling {DEFAULT_WINDOW_MS / 60_000}-minute window.
+          Browse perfmon4j&apos;s interval and snapshot monitors and pick one or more fields to monitor live -
+          numeric fields plot on a rolling {DEFAULT_WINDOW_MS / 60_000}-minute chart, others show their latest
+          value in the Text fields tab.
         </Content>
       </Content>
 
@@ -60,8 +63,8 @@ export const ChartPanel: React.FunctionComponent = () => {
             addFields={addFields}
           />
         }
-        chart={<LiveChart series={series} windowMs={DEFAULT_WINDOW_MS} />}
-        detail={<MonitoringDetailTabs series={series} onRemoveField={removeField} />}
+        chart={<LiveChart series={chartable} windowMs={DEFAULT_WINDOW_MS} />}
+        detail={<MonitoringDetailTabs chartableSeries={chartable} textSeries={textOnly} onRemoveField={removeField} />}
       />
     </>
   )

@@ -28,7 +28,8 @@ export interface ChartDataPoint {
 
 export interface FieldSeries {
   field: FieldDescriptor
-  /** Oldest-first, rolling-window-trimmed. */
+  /** Oldest-first, rolling-window-trimmed. Only ever populated for numeric fields. */
   points: ChartDataPoint[]
-  latestValue: number | null
+  /** A string for STRING/TIMESTAMP fields, a number for numeric ones. */
+  latestValue: number | string | null
 }

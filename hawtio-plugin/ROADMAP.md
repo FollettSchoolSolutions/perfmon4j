@@ -107,11 +107,13 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
      "Infinity is an invalid CSS width" console warning. Fixed by computing an
      explicit y-domain with a sensible minimum pad instead of relying on Victory's
      default heuristic.
-  - Deliberately deferred to a follow-up, not built in this first cut: non-numeric
-    fields routed to a flat value table, per-series color/visibility customization
-    or y-axis normalization (v1 uses a single shared y-axis and PatternFly's default
-    auto-assigned theme colors), save/load of the chart layout to a file, and any
-    thread-trace integration (`scheduleThreadTrace`/`unScheduleThreadTrace`).
+  - Deliberately deferred to a follow-up, not built in this first cut: per-series
+    color/visibility customization or y-axis normalization (v1 uses a single shared
+    y-axis and PatternFly's default auto-assigned theme colors), save/load of the
+    chart layout to a file, and any thread-trace integration
+    (`scheduleThreadTrace`/`unScheduleThreadTrace`). Non-numeric fields routed to a
+    flat value table has since shipped - see `hawtio-plugin/MONITORING_TAB_TASKS.md`
+    T5 (STRING/TIMESTAMP fields land on a "Text fields" tab instead of the chart).
 
 ## Backlog
 

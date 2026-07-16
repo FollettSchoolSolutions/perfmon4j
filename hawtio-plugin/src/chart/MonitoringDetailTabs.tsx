@@ -1,10 +1,14 @@
 import { EmptyState, EmptyStateBody, Tab, TabTitleText, Tabs } from '@patternfly/react-core'
 import React, { useState } from 'react'
 import { SubscribedFieldsTable } from './SubscribedFieldsTable'
+import { TextFieldsTable } from './TextFieldsTable'
 import { FieldSeries } from './types'
 
 export interface MonitoringDetailTabsProps {
-  series: FieldSeries[]
+  /** Numeric fields - see fieldRouting.ts's partitionByChartability. */
+  chartableSeries: FieldSeries[]
+  /** STRING/TIMESTAMP fields - never plotted, latest value only. */
+  textSeries: FieldSeries[]
   onRemoveField: (fieldKey: string) => void
 }
 
@@ -18,27 +22,36 @@ const StubTabBody: React.FunctionComponent<{ title: string; body: string }> = ({
 
 /**
  * Bottom-right tabbed detail panel (T3) - the Charted-fields tab hosts the
- * existing SubscribedFieldsTable unchanged; the other three are stubs until
- * their own tasks land (T5 non-numeric fields, T10/T11 thread traces). See
- * MONITORING_TAB_TASKS.md.
+ * existing SubscribedFieldsTable, and the Text fields tab (T5) hosts
+ * TextFieldsTable for STRING/TIMESTAMP fields, which never plot. The
+ * remaining two are stubs until their own tasks land (T10/T11 thread
+ * traces). See MONITORING_TAB_TASKS.md.
  */
-export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsProps> = ({ series, onRemoveField }) => {
+export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsProps> = ({
+  chartableSeries,
+  textSeries,
+  onRemoveField,
+}) => {
   const [activeTabKey, setActiveTabKey] = useState<DetailTabKey>('charted')
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={(_event, tabKey) => setActiveTabKey(tabKey as DetailTabKey)}>
       <Tab eventKey='charted' title={<TabTitleText>Charted fields</TabTitleText>}>
-        {series.length === 0 ? (
-          <StubTabBody title='No fields charted yet' body='Add a field to chart from the monitor tree to see it here.' />
+        {chartableSeries.length === 0 ? (
+          <StubTabBody title='No fields charted yet' body='Add a numeric field from the monitor tree to see it here.' />
         ) : (
-          <SubscribedFieldsTable series={series} onRemove={onRemoveField} />
+          <SubscribedFieldsTable series={chartableSeries} onRemove={onRemoveField} />
         )}
       </Tab>
       <Tab eventKey='text' title={<TabTitleText>Text fields</TabTitleText>}>
-        <StubTabBody
-          title='Text fields'
-          body='Non-numeric field values will be listed here (coming soon - see MONITORING_TAB_TASKS.md T5).'
-        />
+        {textSeries.length === 0 ? (
+          <StubTabBody
+            title='No text fields yet'
+            body='Add a non-numeric (string or timestamp) field from the monitor tree to see its live value here.'
+          />
+        ) : (
+          <TextFieldsTable series={textSeries} onRemove={onRemoveField} />
+        )}
       </Tab>
       <Tab eventKey='threadTraces' title={<TabTitleText>Thread traces</TabTitleText>}>
         <StubTabBody
