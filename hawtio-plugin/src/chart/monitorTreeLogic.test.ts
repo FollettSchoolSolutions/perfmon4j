@@ -1,5 +1,5 @@
 import { toMonitorDescriptor } from './monitorKey'
-import { buildMonitorTree, filterMonitorTree, MonitorTreeNode } from './monitorTree'
+import { buildMonitorTree, filterMonitorTree, MonitorTreeNode } from './monitorTreeLogic'
 
 function monitor(key: string) {
   return toMonitorDescriptor(key)

@@ -16,7 +16,7 @@ import {
 import { EllipsisVIcon, SyncAltIcon } from '@patternfly/react-icons'
 import React, { ChangeEvent, useEffect, useState } from 'react'
 import { AddFieldModal } from './AddFieldModal'
-import { buildMonitorTree, filterMonitorTree, MonitorTreeNode } from './monitorTree'
+import { buildMonitorTree, filterMonitorTree, MonitorTreeNode } from './monitorTreeLogic'
 import { FieldDescriptor, MonitorDescriptor } from './types'
 
 export interface MonitorTreeProps {

@@ -7,7 +7,7 @@ spike's Sequence section. Owner column left blank for a sole-maintainer repo.
 Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 (`ChartPanel`, `LiveChart`, `MonitorTree`, `AddFieldModal`, `MonitoringDetailTabs`,
 `SubscribedFieldsTable`, `useRemoteManagementChart`, pure
-`monitorKey`/`monitorTree`/`rollingSeries`) and the shell is
+`monitorKey`/`monitorTreeLogic`/`rollingSeries`) and the shell is
 `src/Perfmon4jPanel.tsx`. Backend ops are on
 `org.perfmon4j:type=RemoteManagement` (`base`), wrapped by
 `src/jolokia/remoteManagementClient.ts`.
@@ -76,7 +76,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Observability:** n/a.
 - **Docs:** Update ROADMAP Status once tree/chart split lands.
 - **Note (done):** `MonitorFieldPicker.tsx` retired outright, split into
-  `monitorTree.ts` (pure `buildMonitorTree`/`filterMonitorTree`, dot-notation
+  `monitorTreeLogic.ts` (pure `buildMonitorTree`/`filterMonitorTree`, dot-notation
   + multi-instance fan-out, 11 Jest tests) and `MonitorTree.tsx` (PatternFly
   `TreeView`, root type groups auto-expanded, manual Refresh, disabled
   empty-state when not connected). Built alongside T4's "Add field to chart"

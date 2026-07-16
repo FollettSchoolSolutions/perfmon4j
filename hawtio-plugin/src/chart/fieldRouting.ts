@@ -14,7 +14,7 @@ export interface FieldSeriesPartition {
  * VisualVM's "Add Field to Chart..." dialog made via `FieldElement.isNumeric()`
  * (DOUBLE/LONG/INTEGER only; TIMESTAMP and STRING both route to text). See
  * LEGACY_VISUALVM_FEATURES.md #6. Pure and dependency-free, mirroring the
- * monitorKey.ts/monitorTree.ts convention.
+ * monitorKey.ts/monitorTreeLogic.ts convention.
  */
 export function partitionByChartability(series: FieldSeries[]): FieldSeriesPartition {
   const chartable: FieldSeries[] = []
