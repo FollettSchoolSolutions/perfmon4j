@@ -6,6 +6,12 @@ Backlog and status for the perfmon4j Hawtio plugin initiative, spanning both
 hosts it). This file tracks *what's next and why* - for architecture/patterns/gotchas,
 see each module's `CLAUDE.md` instead; this file shouldn't duplicate that.
 
+The **Monitoring tab** initiative — growing the live Chart nav item into a functional
+mirror of the Swing VisualVM plugin — has its own design spike and sprint-ready work
+breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout, the
+11-feature gap analysis, and a four-slice sequence) and
+[`MONITORING_TAB_TASKS.md`](MONITORING_TAB_TASKS.md) (tasks T1–T14, milestones, NFRs).
+
 ## Status
 
 - **Sprint 1 shipped** on `feature/HawtioPluginSprint1`: a standalone Hawtio nav item
