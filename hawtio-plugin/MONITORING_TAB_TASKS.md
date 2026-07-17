@@ -22,7 +22,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T4  | Tree row actions (kebab): Add field to chart| A     | S      | T2, T3     | Add-field item done; Schedule Thread Trace / Force dynamic creation items remain (T9/T13) |
 | T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         | Done   |
 | T6  | Per-series color assignment + customization | B     | M      | T3         | Done   |
-| T7  | Per-series visibility toggle                | B     | S      | T3, T6     |        |
+| T7  | Per-series visibility toggle                | B     | S      | T3, T6     | Done   |
 | T8  | Thread-trace client + queue state hook      | C     | M      | —          |        |
 | T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     |        |
 | T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     |        |
@@ -259,6 +259,37 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Test plan:** Playwright: hide → line gone, latest value still updates.
 - **Observability:** n/a.
 - **Docs:** ROADMAP: mark #7 done.
+- **Note (done):** Added a `visible: boolean` flag to `FieldSeries` (`types.ts`,
+  defaulted `true` in `addFields`, preserved untouched by `poll()`'s `...entry`
+  spreads and by `removeField`/`setFieldColor` - same "lives on the entry
+  itself" pattern T6 established for `color`) and a client-only
+  `setFieldVisibility` callback on `useRemoteManagementChart` (no server
+  call - visibility isn't part of the RemoteManagement subscription
+  protocol, same rationale as `setFieldColor`). `LiveChart.tsx` derives a
+  `visibleSeries = series.filter(s => s.visible)` and feeds *that* to both
+  the y-domain computation and `ChartGroup`/`legendData`, so the stated risk
+  (degenerate y-domain when all visible series are flat) resolves via the
+  same existing min-pad fallback T3's fix already established - hiding down
+  to a single flat series still gets the `Math.max(Math.abs(maxValue) * 0.1,
+  1)` floor, confirmed in a real browser rather than assumed. Hidden series
+  keep polling/accumulating points (only the derived `visibleSeries` array is
+  filtered, not the underlying subscription or `points` array), so
+  re-showing needs no re-fetch. `SubscribedFieldsTable.tsx` gained a leading
+  eye/eye-slash icon-button column (native PatternFly `EyeIcon`/`EyeSlashIcon`,
+  same plain-`Button` pattern as the existing Remove column) toggling
+  `onVisibilityChange(fieldKey, !visible)`. Verified end-to-end in a real
+  browser (Playwright against `dev-target/`): two fields added in one
+  action both plot and appear in the legend; hiding one removes its line
+  *and* its legend entry while the other keeps plotting; the hidden row's
+  Latest Value cell kept updating across an additional poll cycle (confirmed
+  by re-checking the table after an extra 6s wait), proving the
+  subscription survived; re-showing restored the line and legend entry with
+  no data gap. Also confirmed, by diffing against the unmodified T6 commit
+  with the same add-two-fields flow, that a transient "Infinity is an
+  invalid CSS width" Victory console warning (visible briefly right after
+  adding fields, before the first poll populates any points) is a
+  pre-existing condition unrelated to this task, not a regression it
+  introduced - out of scope here.
 
 **T8 — Thread-trace client + queue state hook**
 - **Description:** Extend `remoteManagementClient.ts` with

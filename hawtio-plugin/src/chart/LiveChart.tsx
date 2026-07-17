@@ -28,6 +28,11 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
     )
   }
 
+  // Hidden series (T7) keep their subscription and keep accumulating points -
+  // only what's drawn/domain-fitted is filtered here, so re-showing a series
+  // doesn't need to re-fetch anything.
+  const visibleSeries = series.filter(s => s.visible)
+
   const now = Date.now()
 
   // Victory computes its own y-domain from the data range when none is given, but
@@ -38,7 +43,7 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
   // warning, observed with a single-point series before this fix). Computing an
   // explicit domain with a sensible minimum pad avoids depending on Victory's own
   // heuristic for this edge case.
-  const allValues = series.flatMap(s => s.points.map(p => p.value))
+  const allValues = visibleSeries.flatMap(s => s.points.map(p => p.value))
   const minValue = allValues.length > 0 ? Math.min(...allValues) : 0
   const maxValue = allValues.length > 0 ? Math.max(...allValues) : 1
   const valueRange = maxValue - minValue
@@ -49,7 +54,7 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
     <Chart
       ariaTitle='perfmon4j live chart'
       containerComponent={<ChartVoronoiContainer labels={({ datum }: { datum: ChartPoint }) => `${datum.name}: ${datum.y}`} />}
-      legendData={series.map(s => ({ name: s.field.label, symbol: { fill: s.color } }))}
+      legendData={visibleSeries.map(s => ({ name: s.field.label, symbol: { fill: s.color } }))}
       legendPosition='bottom'
       scale={{ x: 'time', y: 'linear' }}
       domain={{ x: [now - windowMs, now], y: yDomain }}
@@ -60,7 +65,7 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
       <ChartAxis />
       <ChartAxis dependentAxis showGrid />
       <ChartGroup>
-        {series.map(s => (
+        {visibleSeries.map(s => (
           <ChartLine
             key={s.field.fieldKey}
             name={s.field.label}

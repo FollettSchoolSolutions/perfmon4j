@@ -29,6 +29,7 @@ export const ChartPanel: React.FunctionComponent = () => {
     addFields,
     removeField,
     setFieldColor,
+    setFieldVisibility,
     retryConnect,
   } = useRemoteManagementChart()
   const { chartable, textOnly } = partitionByChartability(series)
@@ -79,6 +80,7 @@ export const ChartPanel: React.FunctionComponent = () => {
             textSeries={textOnly}
             onRemoveField={removeField}
             onColorChange={setFieldColor}
+            onVisibilityChange={setFieldVisibility}
           />
         }
       />

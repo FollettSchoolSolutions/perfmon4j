@@ -37,4 +37,9 @@ export interface FieldSeries {
    * for a uniform FieldSeries shape. User-changeable from the Charted-fields
    * row (see MONITORING_TAB_TASKS.md T6). */
   color: string
+  /** Toggled from the Charted-fields row (T7). Hides the line from LiveChart
+   * without dropping the server-side subscription - polling/points keep
+   * accumulating while hidden. Only meaningful for chartable (numeric)
+   * series, but kept on every entry for a uniform FieldSeries shape. */
+  visible: boolean
 }

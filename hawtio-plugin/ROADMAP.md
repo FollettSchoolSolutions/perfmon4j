@@ -114,6 +114,10 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
     (`scheduleThreadTrace`/`unScheduleThreadTrace`). Non-numeric fields routed to a
     flat value table has since shipped - see `hawtio-plugin/MONITORING_TAB_TASKS.md`
     T5 (STRING/TIMESTAMP fields land on a "Text fields" tab instead of the chart).
+    Per-series color (T6) and per-series visibility toggle (T7) have since shipped
+    too - see `MONITORING_TAB_TASKS.md`. Y-axis normalization, save/load, and
+    thread-trace integration remain open (see Backlog / `MONITORING_TAB_TASKS.md`
+    T8-T14).
 
 ## Backlog
 

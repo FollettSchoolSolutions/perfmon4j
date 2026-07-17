@@ -32,6 +32,9 @@ export interface UseRemoteManagementChartResult {
   /** Client-side only - no server call, since color isn't part of the
    * RemoteManagement subscription protocol. */
   setFieldColor: (fieldKey: string, color: string) => void
+  /** Client-side only - no server call; the subscription (and point
+   * accumulation) stays live while hidden, only the chart line disappears. */
+  setFieldVisibility: (fieldKey: string, visible: boolean) => void
   retryConnect: () => void
 }
 
@@ -228,7 +231,13 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
     subscribedFieldsRef.current = updated
     setSeries(prev => [
       ...prev,
-      ...newFields.map((field, i) => ({ field, points: [], latestValue: null, color: colorForIndex(startColorIndex + i) })),
+      ...newFields.map((field, i) => ({
+        field,
+        points: [],
+        latestValue: null,
+        color: colorForIndex(startColorIndex + i),
+        visible: true,
+      })),
     ])
   }, [])
 
@@ -245,6 +254,10 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
     setSeries(prev => prev.map(entry => (entry.field.fieldKey === fieldKey ? { ...entry, color } : entry)))
   }, [])
 
+  const setFieldVisibility = useCallback((fieldKey: string, visible: boolean): void => {
+    setSeries(prev => prev.map(entry => (entry.field.fieldKey === fieldKey ? { ...entry, visible } : entry)))
+  }, [])
+
   const retryConnect = useCallback(() => {
     establishSessionRef.current()
   }, [])
@@ -258,6 +271,7 @@ export function useRemoteManagementChart(options?: UseRemoteManagementChartOptio
     addFields,
     removeField,
     setFieldColor,
+    setFieldVisibility,
     retryConnect,
   }
 }

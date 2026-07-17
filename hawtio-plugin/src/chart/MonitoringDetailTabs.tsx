@@ -11,6 +11,7 @@ export interface MonitoringDetailTabsProps {
   textSeries: FieldSeries[]
   onRemoveField: (fieldKey: string) => void
   onColorChange: (fieldKey: string, color: string) => void
+  onVisibilityChange: (fieldKey: string, visible: boolean) => void
 }
 
 type DetailTabKey = 'charted' | 'text' | 'threadTraces' | 'traceDetail'
@@ -33,6 +34,7 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
   textSeries,
   onRemoveField,
   onColorChange,
+  onVisibilityChange,
 }) => {
   const [activeTabKey, setActiveTabKey] = useState<DetailTabKey>('charted')
 
@@ -42,7 +44,12 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
         {chartableSeries.length === 0 ? (
           <StubTabBody title='No fields charted yet' body='Add a numeric field from the monitor tree to see it here.' />
         ) : (
-          <SubscribedFieldsTable series={chartableSeries} onRemove={onRemoveField} onColorChange={onColorChange} />
+          <SubscribedFieldsTable
+            series={chartableSeries}
+            onRemove={onRemoveField}
+            onColorChange={onColorChange}
+            onVisibilityChange={onVisibilityChange}
+          />
         )}
       </Tab>
       <Tab eventKey='text' title={<TabTitleText>Text fields</TabTitleText>}>

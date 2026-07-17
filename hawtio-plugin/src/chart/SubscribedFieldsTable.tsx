@@ -1,5 +1,5 @@
 import { Button } from '@patternfly/react-core'
-import { TrashIcon } from '@patternfly/react-icons'
+import { EyeIcon, EyeSlashIcon, TrashIcon } from '@patternfly/react-icons'
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table'
 import React from 'react'
 import { FieldSeries } from './types'
@@ -8,12 +8,14 @@ export interface SubscribedFieldsTableProps {
   series: FieldSeries[]
   onRemove: (fieldKey: string) => void
   onColorChange: (fieldKey: string, color: string) => void
+  onVisibilityChange: (fieldKey: string, visible: boolean) => void
 }
 
 export const SubscribedFieldsTable: React.FunctionComponent<SubscribedFieldsTableProps> = ({
   series,
   onRemove,
   onColorChange,
+  onVisibilityChange,
 }) => {
   if (series.length === 0) {
     return null
@@ -23,6 +25,7 @@ export const SubscribedFieldsTable: React.FunctionComponent<SubscribedFieldsTabl
     <Table aria-label='Charted fields' variant='compact'>
       <Thead>
         <Tr>
+          <Th screenReaderText='Visible' />
           <Th screenReaderText='Color' />
           <Th>Monitor</Th>
           <Th>Field</Th>
@@ -31,8 +34,16 @@ export const SubscribedFieldsTable: React.FunctionComponent<SubscribedFieldsTabl
         </Tr>
       </Thead>
       <Tbody>
-        {series.map(({ field, latestValue, color }) => (
+        {series.map(({ field, latestValue, color, visible }) => (
           <Tr key={field.fieldKey}>
+            <Td dataLabel='Visible'>
+              <Button
+                variant='plain'
+                aria-label={visible ? `Hide ${field.label} on chart` : `Show ${field.label} on chart`}
+                icon={visible ? <EyeIcon /> : <EyeSlashIcon />}
+                onClick={() => onVisibilityChange(field.fieldKey, !visible)}
+              />
+            </Td>
             <Td dataLabel='Color'>
               {/* No PatternFly ColorPicker exists in this version - a native
                   color input is keyboard-operable, needs no extra dependency,
