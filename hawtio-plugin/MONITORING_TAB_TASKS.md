@@ -25,7 +25,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T7  | Per-series visibility toggle                | B     | S      | T3, T6     | Done   |
 | T8  | Thread-trace client + queue state hook      | C     | M      | —          | Done   |
 | T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     | Done   |
-| T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     |        |
+| T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     | Done   |
 | T11 | Thread-trace result viewer tab              | C     | S      | T10        |        |
 | T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          |        |
 | T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    |        |
@@ -423,6 +423,38 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   cancel path.
 - **Observability:** n/a.
 - **Docs:** —
+- **Note (done):** Extended T9's minimal `ThreadTraceQueueTable.tsx` with
+  View and Cancel/Delete columns rather than replacing it, as planned when
+  it was first built. Cancel is a single button/handler for both statuses
+  (labeled "Cancel" while pending, "Delete" once completed) - safe to
+  reuse because `unScheduleThreadTrace` is a harmless no-op server-side
+  once a trace has already completed (`ExternalAppender.MonitorMap
+  .unScheduleThreadTrace`'s `scheduledThreadTraces.remove(...)` returns
+  null and is a guarded no-op when the one-shot record is already gone -
+  see `threadTraceQueue.ts`'s note on completed traces), so there's no
+  need for a second code path just to distinguish the two labels. The
+  stated "in-place update without full-table reflow" risk turned out to
+  already be resolved by construction from T8/T9: each `<Tr>` is keyed by
+  `fieldKey` and `traces` is plain React state, so a poll-driven update
+  only touches the cells that actually changed (typically just the Status
+  label) rather than remounting rows - nothing new needed here to satisfy
+  it, confirmed by there being no visible flicker in manual browser
+  verification. View is disabled until a row is `completed` (a pending
+  trace has no stack yet) and, once enabled, records the selected
+  `fieldKey` and switches the detail tabs to "Trace detail" - both pieces
+  of state now live in `MonitoringDetailTabs.tsx` since the tab switch and
+  the eventual T11 viewer both need to agree on the same selection. The
+  "Trace detail" tab itself still shows a stub (now reflecting the raw
+  selected field key rather than a static message) rather than the actual
+  formatted stack - T11's explicit job, not duplicated here. Verified
+  end-to-end in a real browser (Playwright against `dev-target/`):
+  scheduled a trace with an unreachably high min-duration threshold so it
+  stays `pending` indefinitely, confirmed View is disabled and Cancel
+  removes it (table reverts to its empty state, since it was the only
+  row); scheduled a second trace with defaults, waited for it to reach
+  `completed`, confirmed View is now enabled, clicking it switches to the
+  Trace detail tab with a visible selection, then went back and confirmed
+  Delete removes the completed row.
 
 **T11 — Thread-trace result viewer tab**
 - **Description:** "Trace detail" tab showing a selected completed trace's

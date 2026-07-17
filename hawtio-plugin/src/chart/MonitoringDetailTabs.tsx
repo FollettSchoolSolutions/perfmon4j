@@ -15,6 +15,7 @@ export interface MonitoringDetailTabsProps {
   onColorChange: (fieldKey: string, color: string) => void
   onVisibilityChange: (fieldKey: string, visible: boolean) => void
   threadTraces: ThreadTraceEntry[]
+  onCancelThreadTrace: (fieldKey: string) => void
 }
 
 type DetailTabKey = 'charted' | 'text' | 'threadTraces' | 'traceDetail'
@@ -39,8 +40,18 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
   onColorChange,
   onVisibilityChange,
   threadTraces,
+  onCancelThreadTrace,
 }) => {
   const [activeTabKey, setActiveTabKey] = useState<DetailTabKey>('charted')
+  // Set by a completed row's View action (T10); consumed by the Trace detail tab
+  // once T11 fills it in - kept here (not in a child) since View's own tab switch
+  // and the eventual viewer both need to agree on the same selection.
+  const [selectedTraceFieldKey, setSelectedTraceFieldKey] = useState<string | null>(null)
+
+  const onViewTrace = (fieldKey: string) => {
+    setSelectedTraceFieldKey(fieldKey)
+    setActiveTabKey('traceDetail')
+  }
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={(_event, tabKey) => setActiveTabKey(tabKey as DetailTabKey)}>
@@ -73,13 +84,18 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
             body='Schedule a thread trace from the monitor tree to see its status here.'
           />
         ) : (
-          <ThreadTraceQueueTable traces={threadTraces} />
+          <ThreadTraceQueueTable traces={threadTraces} onView={onViewTrace} onCancel={onCancelThreadTrace} />
         )}
       </Tab>
       <Tab eventKey='traceDetail' title={<TabTitleText>Trace detail</TabTitleText>}>
         <StubTabBody
           title='Trace detail'
-          body="A selected thread trace's captured stack will render here (coming soon - see MONITORING_TAB_TASKS.md T11)."
+          body={
+            selectedTraceFieldKey
+              ? `Selected: ${selectedTraceFieldKey} - the captured stack viewer itself is coming soon (see MONITORING_TAB_TASKS.md T11).`
+              : "Select a completed trace's View action in the Thread traces tab to see its captured stack here " +
+                '(coming soon - see MONITORING_TAB_TASKS.md T11).'
+          }
         />
       </Tab>
     </Tabs>

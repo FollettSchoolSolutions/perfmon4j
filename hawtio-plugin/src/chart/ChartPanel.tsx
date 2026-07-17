@@ -50,6 +50,7 @@ export const ChartPanel: React.FunctionComponent = () => {
     connectionError: threadTraceConnectionError,
     traces: threadTraces,
     scheduleTrace,
+    cancelTrace,
     retryConnect: retryThreadTraceConnect,
   } = useThreadTraces()
 
@@ -120,6 +121,7 @@ export const ChartPanel: React.FunctionComponent = () => {
             onColorChange={setFieldColor}
             onVisibilityChange={setFieldVisibility}
             threadTraces={threadTraces}
+            onCancelThreadTrace={fieldKey => void cancelTrace(fieldKey)}
           />
         }
       />

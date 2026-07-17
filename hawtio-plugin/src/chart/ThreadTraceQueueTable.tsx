@@ -1,20 +1,30 @@
-import { Label } from '@patternfly/react-core'
+import { Button, Label } from '@patternfly/react-core'
+import { TrashIcon } from '@patternfly/react-icons'
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table'
 import React from 'react'
 import { ThreadTraceEntry } from './threadTraceQueue'
 
 export interface ThreadTraceQueueTableProps {
   traces: ThreadTraceEntry[]
+  /** Enabled only for a `completed` row - a pending trace has no stack yet. */
+  onView: (fieldKey: string) => void
+  /** Safe to call on either status - unScheduleThreadTrace() is a harmless no-op
+   * server-side once a trace has already completed (see remoteManagementClient.ts /
+   * threadTraceQueue.ts's one-shot-read note), so this always both tells the server
+   * and clears the local row, whether it reads as "Cancel" (pending) or "Delete"
+   * (completed) to the user. */
+  onCancel: (fieldKey: string) => void
 }
 
 /**
- * Minimal read-only queue listing (T9) - proves a scheduled trace shows up here as
- * "pending" and transitions to "completed", per T9's own acceptance criteria. The
- * full interactive table (per-row View/Cancel, live in-place updates as an explicit
- * concern) is T10 - this is deliberately the smaller slice this task's scope needs,
- * built as a natural base for T10 to add columns to rather than replace.
+ * Thread-trace queue listing (T9 built the read-only Monitor/Submitted/Status
+ * columns; T10 adds View/Cancel). Rows are keyed by `fieldKey`, so a poll-driven
+ * `traces` update (see useThreadTraces.ts) reconciles in place - only the cells
+ * whose values actually changed (typically just Status, Pending -> Completed) touch
+ * the DOM, not a full table remount, avoiding the reflow-flicker risk this task
+ * called out.
  */
-export const ThreadTraceQueueTable: React.FunctionComponent<ThreadTraceQueueTableProps> = ({ traces }) => {
+export const ThreadTraceQueueTable: React.FunctionComponent<ThreadTraceQueueTableProps> = ({ traces, onView, onCancel }) => {
   if (traces.length === 0) {
     return null
   }
@@ -26,6 +36,8 @@ export const ThreadTraceQueueTable: React.FunctionComponent<ThreadTraceQueueTabl
           <Th>Monitor</Th>
           <Th>Submitted</Th>
           <Th>Status</Th>
+          <Th screenReaderText='View' />
+          <Th screenReaderText='Cancel' />
         </Tr>
       </Thead>
       <Tbody>
@@ -35,6 +47,19 @@ export const ThreadTraceQueueTable: React.FunctionComponent<ThreadTraceQueueTabl
             <Td dataLabel='Submitted'>{new Date(submittedAt).toLocaleTimeString()}</Td>
             <Td dataLabel='Status'>
               <Label color={status === 'completed' ? 'green' : 'yellow'}>{status}</Label>
+            </Td>
+            <Td dataLabel='View'>
+              <Button variant='link' isInline isDisabled={status !== 'completed'} onClick={() => onView(fieldKey)}>
+                View
+              </Button>
+            </Td>
+            <Td dataLabel='Cancel'>
+              <Button
+                variant='plain'
+                aria-label={status === 'completed' ? `Delete trace for ${monitorLabel}` : `Cancel trace for ${monitorLabel}`}
+                icon={<TrashIcon />}
+                onClick={() => onCancel(fieldKey)}
+              />
             </Td>
           </Tr>
         ))}

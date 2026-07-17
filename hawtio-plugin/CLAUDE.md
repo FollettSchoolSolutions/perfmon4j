@@ -72,9 +72,12 @@
   in `MonitorTree.tsx`, INTERVAL monitors only) is `useThreadTraces`' first UI
   consumer, validated by pure `threadTraceOptionsValidation.ts` before calling
   `scheduleTrace`. `ThreadTraceQueueTable.tsx` fills the Monitoring tab's "Thread
-  traces" detail tab with a read-only pending/completed listing - deliberately
-  minimal (no per-row actions yet) so a later task can extend it rather than
-  replace it.
+  traces" detail tab with a pending/completed listing plus View (enabled once
+  `completed`) and Cancel/Delete row actions - the same handler either way, since
+  cancelling an already-completed trace is a harmless server-side no-op (see the
+  one-shot-read note above). `MonitoringDetailTabs.tsx` owns the selected-trace-
+  fieldKey state View sets and switches to - the "Trace detail" tab it lands on
+  still shows a stub pending T11's actual stack viewer.
 - `src/index.ts` / `src/bootstrap.tsx` — a **local dev harness only**. It bootstraps a full
   standalone `<Hawtio>` console with this plugin registered, so the plugin can be exercised
   with `npm start` against a real Jolokia-enabled JVM without needing a separate Hawtio
