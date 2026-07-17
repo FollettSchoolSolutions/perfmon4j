@@ -115,9 +115,13 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
     flat value table has since shipped - see `hawtio-plugin/MONITORING_TAB_TASKS.md`
     T5 (STRING/TIMESTAMP fields land on a "Text fields" tab instead of the chart).
     Per-series color (T6) and per-series visibility toggle (T7) have since shipped
-    too - see `MONITORING_TAB_TASKS.md`. Y-axis normalization, save/load, and
-    thread-trace integration remain open (see Backlog / `MONITORING_TAB_TASKS.md`
-    T8-T14).
+    too - see `MONITORING_TAB_TASKS.md`. Thread-trace integration has since shipped
+    end-to-end as well (T8-T11): scheduling (min-duration/max-depth, with real
+    input validation the legacy VisualVM dialog never had), a pending/completed
+    queue tab with View/Cancel, and a captured-stack result viewer - closing out
+    legacy features #9/#10/#11 (see `MONITORING_TAB_SPIKE.md`'s gap table). Y-axis
+    normalization and save/load remain open (see Backlog / `MONITORING_TAB_TASKS.md`
+    T14).
 
 ## Backlog
 

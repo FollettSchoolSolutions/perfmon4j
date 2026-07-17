@@ -4,6 +4,7 @@ import { SubscribedFieldsTable } from './SubscribedFieldsTable'
 import { TextFieldsTable } from './TextFieldsTable'
 import { ThreadTraceEntry } from './threadTraceQueue'
 import { ThreadTraceQueueTable } from './ThreadTraceQueueTable'
+import { TraceDetailView } from './TraceDetailView'
 import { FieldSeries } from './types'
 
 export interface MonitoringDetailTabsProps {
@@ -27,11 +28,9 @@ const StubTabBody: React.FunctionComponent<{ title: string; body: string }> = ({
 )
 
 /**
- * Bottom-right tabbed detail panel (T3) - the Charted-fields tab hosts the
- * existing SubscribedFieldsTable, and the Text fields tab (T5) hosts
- * TextFieldsTable for STRING/TIMESTAMP fields, which never plot. The
- * remaining two are stubs until their own tasks land (T10/T11 thread
- * traces). See MONITORING_TAB_TASKS.md.
+ * Bottom-right tabbed detail panel (T3) - Charted fields (SubscribedFieldsTable),
+ * Text fields (TextFieldsTable, T5), Thread traces (ThreadTraceQueueTable, T9/T10),
+ * and Trace detail (TraceDetailView, T11). See MONITORING_TAB_TASKS.md.
  */
 export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsProps> = ({
   chartableSeries,
@@ -43,15 +42,20 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
   onCancelThreadTrace,
 }) => {
   const [activeTabKey, setActiveTabKey] = useState<DetailTabKey>('charted')
-  // Set by a completed row's View action (T10); consumed by the Trace detail tab
-  // once T11 fills it in - kept here (not in a child) since View's own tab switch
-  // and the eventual viewer both need to agree on the same selection.
+  // Set by a completed row's View action (T10), consumed by TraceDetailView (T11) -
+  // kept here rather than in either child, since View's tab switch and the viewer
+  // both need to agree on the same selection.
   const [selectedTraceFieldKey, setSelectedTraceFieldKey] = useState<string | null>(null)
 
   const onViewTrace = (fieldKey: string) => {
     setSelectedTraceFieldKey(fieldKey)
     setActiveTabKey('traceDetail')
   }
+
+  // Looked up by fieldKey each render, not held as its own copy - if the selected
+  // trace is since Cancel/Delete'd from the queue (T10), this naturally reverts to
+  // null and TraceDetailView falls back to its empty state.
+  const selectedTrace = threadTraces.find(t => t.fieldKey === selectedTraceFieldKey) ?? null
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={(_event, tabKey) => setActiveTabKey(tabKey as DetailTabKey)}>
@@ -88,15 +92,7 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
         )}
       </Tab>
       <Tab eventKey='traceDetail' title={<TabTitleText>Trace detail</TabTitleText>}>
-        <StubTabBody
-          title='Trace detail'
-          body={
-            selectedTraceFieldKey
-              ? `Selected: ${selectedTraceFieldKey} - the captured stack viewer itself is coming soon (see MONITORING_TAB_TASKS.md T11).`
-              : "Select a completed trace's View action in the Thread traces tab to see its captured stack here " +
-                '(coming soon - see MONITORING_TAB_TASKS.md T11).'
-          }
-        />
+        <TraceDetailView trace={selectedTrace} />
       </Tab>
     </Tabs>
   )

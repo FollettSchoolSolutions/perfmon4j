@@ -26,7 +26,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T8  | Thread-trace client + queue state hook      | C     | M      | —          | Done   |
 | T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     | Done   |
 | T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     | Done   |
-| T11 | Thread-trace result viewer tab              | C     | S      | T10        |        |
+| T11 | Thread-trace result viewer tab              | C     | S      | T10        | Done   |
 | T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          |        |
 | T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    |        |
 | T14 | Save / load chart dashboard to file         | D     | M      | T6, T7     |        |
@@ -467,6 +467,28 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Test plan:** Playwright: View → stack text rendered.
 - **Observability:** n/a.
 - **Docs:** ROADMAP: mark #9–#11 done.
+- **Note (done):** New `TraceDetailView.tsx` renders monitor label, formatted
+  submitted time, and the raw captured stack in a plain `<pre>` wrapped in
+  its own `overflow-x: auto` container - built directly, not via
+  PatternFly's `CodeBlock`, since that component's default overflow
+  behavior for an arbitrarily-long unwrapped line wasn't verified and this
+  task's own stated risk is exactly that overflow escaping into the page
+  body. `MonitoringDetailTabs.tsx` looks the selected trace up by
+  `fieldKey` from the live `threadTraces` list on every render rather than
+  holding a separate copy - an intentional consequence of this is that
+  Cancel/Delete-ing the currently-selected trace (T10) makes the lookup
+  return `undefined` and the view falls back to its own empty state
+  automatically, with no extra code needed to handle that case. Verified
+  end-to-end in a real browser (Playwright against `dev-target/`): the
+  empty state shows before any selection; after scheduling, completing,
+  and clicking View on a trace, the detail view shows the monitor name,
+  submitted time, and non-empty stack text with `document.body.scrollWidth
+  <= window.innerWidth` (no page-level horizontal overflow); deleting the
+  selected trace from the Thread traces tab and switching back to Trace
+  detail reverts to the empty state as expected from the lookup-by-key
+  design, not a special case. This closes out Slice C (T8–T11) -
+  legacy features #9/#10/#11 (schedule/queue/view thread traces) are now
+  fully shipped end-to-end; see `MONITORING_TAB_SPIKE.md`'s gap table.
 
 **T12 — base: port RemoteInterfaceExt1 to the RemoteManagement MBean**
 - **Description:** Add `forceDynamicChildCreation`/`unForceDynamicChildCreation`
@@ -522,6 +544,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   tree + chart + charted-fields tab, reflowed from existing components.
 - **M2 (Feature-complete read-only):** Slices B + C (T5–T11) — chart polish and
   full thread-trace UX; everything reachable with read + exec Jolokia access.
+  **Reached** — T5–T11 all Done.
 - **M3 (GA):** Slice D (T12–T14) — dynamic creation, save/load, and graceful
   degradation under a write/exec-restricted Jolokia ACL.
 

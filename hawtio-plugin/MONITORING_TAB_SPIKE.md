@@ -62,9 +62,9 @@ Status legend: **Shipped** end-to-end · **Polish** (deferred work on a shipped 
 | 6  | Non-numeric field table               | ✓ `getData`                 | **Polish** — deferred                |
 | 7  | Per-field color / visibility / remove | ✓                           | **Polish** — remove only today       |
 | 8  | Save / load dashboard                 | file-based                  | **Polish** — deferred                |
-| 9  | Schedule thread trace                 | ✓ `scheduleThreadTrace` (Phase B) | **New UI** — plumbing ready    |
-| 10 | Thread-trace queue                    | ✓                           | **New UI** — plumbing ready          |
-| 11 | Thread-trace result viewer            | ✓                           | **New UI** — plumbing ready          |
+| 9  | Schedule thread trace                 | ✓ `scheduleThreadTrace` (Phase B) | **Shipped** · ScheduleThreadTraceModal (T9) |
+| 10 | Thread-trace queue                    | ✓                           | **Shipped** · ThreadTraceQueueTable (T10)   |
+| 11 | Thread-trace result viewer            | ✓                           | **Shipped** · TraceDetailView (T11)         |
 | 4  | Force dynamic monitor creation        | ✗ `RemoteInterfaceExt1` unported | **Needs base** plumbing first   |
 
 ## Sequence

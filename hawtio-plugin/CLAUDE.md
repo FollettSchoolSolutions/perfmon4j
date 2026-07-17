@@ -76,8 +76,13 @@
   `completed`) and Cancel/Delete row actions - the same handler either way, since
   cancelling an already-completed trace is a harmless server-side no-op (see the
   one-shot-read note above). `MonitoringDetailTabs.tsx` owns the selected-trace-
-  fieldKey state View sets and switches to - the "Trace detail" tab it lands on
-  still shows a stub pending T11's actual stack viewer.
+  fieldKey state View sets and switches to; `TraceDetailView.tsx` (T11) renders
+  that selection's monitor/submitted-time/captured-stack in a plain `<pre>`
+  wrapped in its own `overflow-x: auto` container (not PatternFly's `CodeBlock`,
+  whose overflow behavior for one arbitrarily-long unwrapped line wasn't
+  verified). The trace is looked up by `fieldKey` from the live `threadTraces`
+  list on every render rather than held as its own copy, so Cancel/Delete-ing the
+  selected trace makes the viewer fall back to its empty state automatically.
 - `src/index.ts` / `src/bootstrap.tsx` — a **local dev harness only**. It bootstraps a full
   standalone `<Hawtio>` console with this plugin registered, so the plugin can be exercised
   with `npm start` against a real Jolokia-enabled JVM without needing a separate Hawtio
