@@ -2,7 +2,9 @@
 
 Sprint-ready engineering tasks derived from
 [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md). Slice letters (A–D) match the
-spike's Sequence section. Owner column left blank for a sole-maintainer repo.
+spike's Sequence section; a Slice "—" task (T15) is a cross-cutting fix found after
+M2 shipped, not part of the spike's original four-slice sequence. Owner column left
+blank for a sole-maintainer repo.
 
 Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 (`ChartPanel`, `LiveChart`, `MonitorTree`, `AddFieldModal`, `MonitoringDetailTabs`,
@@ -27,9 +29,10 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     | Done   |
 | T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     | Done   |
 | T11 | Thread-trace result viewer tab              | C     | S      | T10        | Done   |
+| T15 | Persist chart/thread-trace session across nav | —   | M      | —          | Done   |
 | T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          |        |
 | T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    |        |
-| T14 | Save / load chart dashboard to file         | D     | M      | T6, T7     |        |
+| T14 | Save / load chart dashboard to file         | D     | M      | T6, T7, T15 |        |
 
 ### Tasks
 
@@ -489,6 +492,87 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   design, not a special case. This closes out Slice C (T8–T11) -
   legacy features #9/#10/#11 (schedule/queue/view thread traces) are now
   fully shipped end-to-end; see `MONITORING_TAB_SPIKE.md`'s gap table.
+
+**T15 — Persist chart/thread-trace session across Hawtio nav-item switches**
+- **Description:** Found after M2 shipped, not part of the original spike sequence:
+  `useRemoteManagementChart`'s and `useThreadTraces`' session, subscriptions,
+  colors/visibility, and thread-trace queue all live in `ChartPanel`-scoped React
+  state. The Monitoring/Config/About tabs *within* the perfmon4j panel don't
+  unmount each other (PatternFly `Tabs` defaults to `mountOnEnter`/`unmountOnExit`
+  both `false`, so inactive tab content stays mounted, just hidden) - but Hawtio's
+  *other* nav items (JMX, Runtime, JVM Diagnostics, …) are separate react-router
+  routes, and navigating to one of those fully unmounts `ChartPanel`, tearing down
+  the RemoteManagement session (`disconnect()` in the effect cleanup) and losing
+  every charted field, its color/visibility, and the whole thread-trace queue.
+  Coming back to perfmon4j builds an entirely fresh session from nothing. Move
+  the session/poll lifecycle and its data out of per-mount `useState`/`useRef`
+  into a module-level singleton store that both hooks attach to (created once,
+  independent of any component's mount/unmount), so the connection keeps polling
+  live in the background the whole time the plugin's JS stays loaded, not just
+  while its panel happens to be visible - confirmed with the user as the wanted
+  behavior over a cheaper "remember selections, reconnect+resubscribe on return"
+  alternative, specifically so charted values have no visible data gap after
+  navigating back.
+- **Acceptance criteria:** Navigate to a different Hawtio nav item and back -
+  charted fields (with colors/visibility unchanged) and the thread-trace queue
+  are exactly as left, and the chart shows no gap in its rolling window (points
+  kept accumulating while away). A hard page reload still starts fresh - this is
+  in-session persistence only, not cross-reload persistence (that's T14's job for
+  the charted-field *set*, and remains out of scope entirely for live chart data
+  and the thread-trace queue).
+- **Effort:** M
+- **Dependencies:** — (touches the same code T6/T7/T8's hooks own, but has no
+  hard prerequisite).
+- **Risk:** The per-effect `cancelled`-flag idiom both hooks use today for React
+  18 StrictMode safety is inherently tied to a *component's* mount/unmount cycle
+  - a module singleton created once needs a different lazy-init-exactly-once
+  guard instead. A long-lived background session also means a closed/refreshed
+  browser tab relies entirely on the server's existing 5-minute idle-session
+  reaper to clean up (same as today's documented "tab closed mid-flight" case -
+  no new failure mode, just a longer-lived normal one). `base`'s root CLAUDE.md
+  anti-patterns section warns against assuming one attach/session pattern
+  generalizes elsewhere in this codebase - this singleton is scoped tightly to
+  this plugin's own two RemoteManagement-backed hooks, not a general pattern to
+  reuse without re-justifying it.
+- **Test plan:** Playwright against `dev-target/`: chart fields with custom
+  colors/visibility, schedule a thread trace, navigate to a different Hawtio nav
+  item, wait through at least one poll interval, navigate back, assert charted
+  fields/colors/visibility/queue are unchanged and chart points show no gap.
+- **Observability:** n/a.
+- **Docs:** `CLAUDE.md`: document the new singleton-store pattern as a deliberate
+  deviation from "hook owns its own component-scoped session," and why.
+- **Note (done):** New `remoteManagementChartStore.ts`/`threadTraceStore.ts` are
+  plain (non-React) classes, each exported as a single `export const ... = new
+  ...Store()` instance - ES modules are already evaluated exactly once and
+  cached by the module system, so this needed no manual "create once" guard, and
+  turned out to sidestep the stated StrictMode risk entirely rather than needing
+  a new guard idiom for it: construction happens at module-evaluation time (on
+  first `import`, i.e. this plugin's first-ever mount), not inside a component
+  effect, so React's double-invoke-on-mount behavior in development never
+  touches it. `useRemoteManagementChart.ts`/`useThreadTraces.ts` shrank to thin
+  `useSyncExternalStore(store.subscribe, store.getSnapshot)` wrappers - no
+  `useState`/`useRef`/`useEffect` left in either. The old per-effect
+  disconnect-on-cleanup is gone entirely (there is no more "unmount" for a
+  module singleton to react to); an abandoned session now relies solely on the
+  server's existing 5-minute idle-session reaper, exactly the accepted tradeoff
+  from this task's own Risk note. The `pollMs`/`windowMs`/`maxPoints` options
+  both hooks used to accept were dropped (confirmed via grep that no caller
+  anywhere ever passed non-default values) - a per-call override doesn't mean
+  anything once the session is a shared singleton, only one set of constants can
+  apply. Verified end-to-end in a real browser (Playwright against
+  `dev-target/`): charted two fields, set a custom color, hid one, scheduled a
+  thread trace, noted the exact charted-row text/color/visibility-button-count,
+  clicked away to the JMX nav item (confirmed the perfmon4j panel itself
+  actually unmounted - `text=perfmon4j: Live Chart` disappears), waited 7s
+  (more than one 5s poll cycle), navigated back: row count/color/visibility all
+  unchanged, and critically the *values themselves had moved* (StdDeviation
+  went from `1` to `0.522…`, TotalHits from `5` to `25`) and the previously-
+  pending thread trace was now `completed` - direct proof the connection kept
+  polling live in the background the whole time the panel was gone, not just
+  that stale state survived. The tree's own expand/search state (owned locally
+  by `MonitorTree`, unrelated to the RemoteManagement session) resets on
+  remount as before - out of scope here, since the user's original report was
+  specifically about charted elements disappearing, not tree UI state.
 
 **T12 — base: port RemoteInterfaceExt1 to the RemoteManagement MBean**
 - **Description:** Add `forceDynamicChildCreation`/`unForceDynamicChildCreation`

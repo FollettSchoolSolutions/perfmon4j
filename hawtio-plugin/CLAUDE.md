@@ -43,7 +43,36 @@
   tabular attributes (e.g. dotted paths like `Usage.max`) are filtered out — deferred.
 - `src/chart/` — the "perfmon4j Chart" nav item (live field charting via the `base`
   module's `RemoteManagement` MBean; see ROADMAP.md Status for the feature summary).
-  `useRemoteManagementChart.ts` owns the session/poll/reconnect lifecycle;
+  **The RemoteManagement session/poll/reconnect lifecycle itself lives in two
+  plain (non-React) module-level singletons, `remoteManagementChartStore.ts` and
+  `threadTraceStore.ts` (T15), not in the hooks or `ChartPanel.tsx`.** Each is a
+  class with a single `export const ... = new ...Store()` instance — since ES
+  modules are evaluated exactly once and cached, this needs no manual "create
+  once" guard, and its construction (at module-evaluation time, on this
+  plugin's first-ever mount) is entirely outside any component's render/effect
+  cycle, so React 18 StrictMode's double-invoke-on-mount never touches it.
+  `useRemoteManagementChart.ts`/`useThreadTraces.ts` are now thin
+  `useSyncExternalStore(store.subscribe, store.getSnapshot)` wrappers with no
+  `useState`/`useRef`/`useEffect` of their own. This exists specifically so the
+  session and its data (subscribed fields, colors/visibility, the thread-trace
+  queue) survive `ChartPanel` unmounting — which used to happen, and reset
+  everything, on *every* Hawtio nav-item switch away from and back to
+  perfmon4j (Hawtio's other nav items are separate react-router routes; the
+  Monitoring/Config/About tabs *within* this plugin's own panel don't unmount
+  each other, since PatternFly `Tabs` keeps inactive tab content mounted by
+  default). The poll loop now keeps running in the background for as long as
+  the plugin's JS stays loaded, regardless of which nav item is currently
+  visible — confirmed by a real value changing between navigating away and
+  back, not just state surviving. An abandoned session (tab closed, page
+  reloaded) has no unmount hook to clean it up anymore and relies entirely on
+  the server's existing 5-minute idle-session reaper, same as the
+  already-documented "tab closed mid-flight" case. See
+  `MONITORING_TAB_TASKS.md` T15 for the full verification. Don't assume this
+  singleton pattern generalizes to some other part of this plugin without
+  re-justifying it — it's scoped tightly to these two RemoteManagement-backed
+  hooks specifically because of their nav-survival requirement, not a default
+  way to manage state here (see root `CLAUDE.md`'s anti-patterns section on
+  not over-generalizing one attach/session pattern).
   `monitorKey.ts`/`rollingSeries.ts` are pure, Jest-tested logic (parsing monitor/field
   key strings, rolling-window trimming), following the same "keep pure logic
   dependency-free" convention as `generateSnapshotXml.ts`. `src/jolokia/
@@ -54,9 +83,9 @@
   Jest's default transform can't parse, which is also why `readMBeanAttributes.ts`/
   `readPerfmon4jVersion.ts` have never had test files of their own.
   `connectionStatus.ts` factors the connect/poll/reconnect error-classification types
-  and function out of `useRemoteManagementChart.ts` (dependency-free, importing only
-  `remoteManagementErrors.ts` — same CSS-avoidance reasoning) so `useThreadTraces.ts`
-  can share it exactly rather than duplicating it. `useThreadTraces.ts` owns its own
+  and function out of `remoteManagementChartStore.ts` (dependency-free, importing only
+  `remoteManagementErrors.ts` — same CSS-avoidance reasoning) so `threadTraceStore.ts`
+  can share it exactly rather than duplicating it. `threadTraceStore.ts` owns its own
   independent RemoteManagement session (separate `connect()`/poll/reconnect from the
   chart's) dedicated to thread-trace scheduling — `threadTraceKey.ts` (pure,
   `buildThreadTraceFieldKey` — mirrors `FieldKey.buildThreadTraceKeyFromInterval`'s
