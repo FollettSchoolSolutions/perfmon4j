@@ -51,3 +51,18 @@ export async function subscribeFields(sessionID: string, fieldKeys: string[]): P
 export async function getData(sessionID: string): Promise<Record<string, unknown>> {
   return (await execute('getData', 'java.lang.String', [sessionID])) as Record<string, unknown>
 }
+
+/**
+ * fieldKey must be a THREADTRACE-type field key built by threadTraceKey.ts's
+ * buildThreadTraceFieldKey() - the server validates the type and throws
+ * InvalidMonitorTypeException otherwise. The result of a scheduled trace is not
+ * returned here - it arrives later through getData(), merged into the same result
+ * map as regular subscribed fields (see RemoteManagement.getData()).
+ */
+export async function scheduleThreadTrace(sessionID: string, fieldKey: string): Promise<void> {
+  await execute('scheduleThreadTrace', 'java.lang.String,java.lang.String', [sessionID, fieldKey])
+}
+
+export async function unScheduleThreadTrace(sessionID: string, fieldKey: string): Promise<void> {
+  await execute('unScheduleThreadTrace', 'java.lang.String,java.lang.String', [sessionID, fieldKey])
+}

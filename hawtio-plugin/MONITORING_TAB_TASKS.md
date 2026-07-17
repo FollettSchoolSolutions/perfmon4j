@@ -23,7 +23,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         | Done   |
 | T6  | Per-series color assignment + customization | B     | M      | T3         | Done   |
 | T7  | Per-series visibility toggle                | B     | S      | T3, T6     | Done   |
-| T8  | Thread-trace client + queue state hook      | C     | M      | —          |        |
+| T8  | Thread-trace client + queue state hook      | C     | M      | —          | Done   |
 | T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     |        |
 | T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     |        |
 | T11 | Thread-trace result viewer tab              | C     | S      | T10        |        |
@@ -307,6 +307,57 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   Playwright end-to-end against `dev-target`.
 - **Observability:** n/a.
 - **Docs:** `CLAUDE.md`: new hook alongside `useRemoteManagementChart`.
+- **Note (done):** New `threadTraceKey.ts` (`buildThreadTraceFieldKey`, 5 Jest
+  tests) mirrors `FieldKey.buildThreadTraceKeyFromInterval` server-side: a
+  thread-trace field key is built from an INTERVAL monitor's *name only*
+  (any instance is dropped, matching the Java source), with `MonitorKey`'s
+  normally-unused `instance` slot repurposed to carry
+  `MinDurationToCapture=<n>,MaxDepth=<n>` args that the server re-tokenizes
+  and applies via bean-property reflection - confirmed this string format
+  round-trips correctly against a real JVM (see below), not just inferred
+  from reading the Java source. New `threadTraceQueue.ts` (pure
+  `addPendingTrace`/`removeTrace`/`applyPollResult`, 6 Jest tests) is the
+  queue-state reducer - `applyPollResult`'s key behavior is that a
+  completed trace's server-side record is a **one-shot read**
+  (`ExternalAppender.MonitorMap.getThreadTraceData()` removes each entry
+  from its own map the instant it's returned), unlike ordinary
+  chart-subscribed fields, so this is the only place a completed trace's
+  stack text is ever captured, and an already-`completed` queue entry is
+  never re-touched even if its field key reappears in a later poll.
+  `remoteManagementClient.ts` gained thin `scheduleThreadTrace`/
+  `unScheduleThreadTrace` wrappers (same `execute()`-and-classify pattern
+  as every other operation there). New `useThreadTraces.ts` owns its
+  **own independent RemoteManagement session** - deliberately not the
+  chart hook's session, so this hook works standalone from any tree-row
+  action with no live chart mounted, and so the two features' polling
+  cadences can't couple or block each other. It mirrors
+  `useRemoteManagementChart.ts`'s connect/poll/reconnect skeleton exactly
+  (same StrictMode-safe per-effect `cancelled` convention, same
+  exec-denied/incompatible-version-terminal vs. any-other-failure-is-a-
+  reconnect-candidate classification) and, on reconnect, re-issues
+  `scheduleThreadTrace` for any trace still `pending` in a
+  `pendingFieldKeysRef` (mirroring the chart hook's resubscribe-on-
+  reconnect) - completed traces need no resend since there's nothing left
+  server-side to re-request. To keep both hooks' error classification
+  identical without duplicating it, factored `ConnectionStatus`/
+  `ConnectionError`/`classifyConnectionError` out of
+  `useRemoteManagementChart.ts` into a new dependency-free
+  `connectionStatus.ts` (imports only `remoteManagementErrors.ts`, not
+  `remoteManagementClient.ts`, to avoid pulling in `jolokiaService`'s CSS
+  imports and staying Jest-testable) - `useRemoteManagementChart.ts` now
+  re-exports the same names from there so `ChartPanel.tsx`'s existing
+  import is unaffected. No UI consumes this hook yet (T9's dialog is the
+  first real consumer) - end-to-end verification used a temporary debug
+  harness (a throwaway button + JSON dump wired into `ChartPanel.tsx`, not
+  committed) driven by Playwright against `dev-target/`: scheduled a real
+  trace on the `dev.target.demo` monitor with
+  `MinDurationToCapture=0,MaxDepth=20`, confirmed the queue entry started
+  `pending`, and within one poll cycle transitioned to `completed` with a
+  real captured stack (`dev.target.demo` frame at the expected depth) -
+  proving the full field-key round-trip (client-built string -> server
+  `FieldKey.parse()` -> server-rebuilt `toString()` used as the
+  `getData()` result key) actually matches character-for-character against
+  live Jolokia, not just in Jest.
 
 **T9 — Schedule Thread Trace dialog**
 - **Description:** Add a "Schedule thread trace…" tree-row action (T4 menu)

@@ -53,6 +53,21 @@
   `jolokiaService` (transitively, via `@patternfly/react-core`) pulls in CSS imports
   Jest's default transform can't parse, which is also why `readMBeanAttributes.ts`/
   `readPerfmon4jVersion.ts` have never had test files of their own.
+  `connectionStatus.ts` factors the connect/poll/reconnect error-classification types
+  and function out of `useRemoteManagementChart.ts` (dependency-free, importing only
+  `remoteManagementErrors.ts` — same CSS-avoidance reasoning) so `useThreadTraces.ts`
+  can share it exactly rather than duplicating it. `useThreadTraces.ts` owns its own
+  independent RemoteManagement session (separate `connect()`/poll/reconnect from the
+  chart's) dedicated to thread-trace scheduling — `threadTraceKey.ts` (pure,
+  `buildThreadTraceFieldKey` — mirrors `FieldKey.buildThreadTraceKeyFromInterval`'s
+  reuse of `MonitorKey`'s otherwise-unused "instance" slot to carry
+  `MinDurationToCapture`/`MaxDepth` args) and `threadTraceQueue.ts` (pure,
+  `addPendingTrace`/`applyPollResult`/`removeTrace`) are its Jest-tested pure logic.
+  A completed trace's server-side record is a **one-shot read** — `ExternalAppender`
+  removes it from its own map the instant `getData()` returns it (ordinary
+  chart-subscribed fields are not one-shot) — so `applyPollResult` is the only place
+  a completed trace's stack text is ever captured; a poll that misses it loses it for
+  good, and an already-`completed` queue entry is never re-touched.
 - `src/index.ts` / `src/bootstrap.tsx` — a **local dev harness only**. It bootstraps a full
   standalone `<Hawtio>` console with this plugin registered, so the plugin can be exercised
   with `npm start` against a real Jolokia-enabled JVM without needing a separate Hawtio

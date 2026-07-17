@@ -1,18 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as remoteManagementClient from '../jolokia/remoteManagementClient'
-import { ExecAccessDeniedError, IncompatibleClientVersionError } from '../jolokia/remoteManagementClient'
+import { classifyConnectionError, ConnectionError, ConnectionStatus } from './connectionStatus'
 import { isNumericFieldType, toFieldDescriptor, toMonitorDescriptor } from './monitorKey'
 import { appendPoint, DEFAULT_MAX_POINTS, DEFAULT_WINDOW_MS, trimToWindow } from './rollingSeries'
 import { colorForIndex } from './seriesColor'
 import { FieldDescriptor, FieldSeries, MonitorDescriptor } from './types'
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
-export type ConnectionErrorKind = 'exec-denied' | 'incompatible-version' | 'other'
-
-export interface ConnectionError {
-  kind: ConnectionErrorKind
-  message: string
-}
+export type { ConnectionStatus, ConnectionErrorKind, ConnectionError } from './connectionStatus'
 
 export interface UseRemoteManagementChartOptions {
   pollMs?: number
@@ -43,12 +37,6 @@ export interface UseRemoteManagementChartResult {
 // rather than one that can silently drift if that shared, global setting changes
 // for reasons unrelated to this screen.
 const DEFAULT_POLL_MS = 5000
-
-function classifyConnectionError(e: unknown): ConnectionError {
-  if (e instanceof ExecAccessDeniedError) return { kind: 'exec-denied', message: e.message }
-  if (e instanceof IncompatibleClientVersionError) return { kind: 'incompatible-version', message: e.message }
-  return { kind: 'other', message: e instanceof Error ? e.message : String(e) }
-}
 
 /**
  * Owns the RemoteManagement session lifecycle (connect/subscribe/poll/disconnect)
