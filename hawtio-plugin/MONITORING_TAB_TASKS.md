@@ -24,7 +24,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T6  | Per-series color assignment + customization | B     | M      | T3         | Done   |
 | T7  | Per-series visibility toggle                | B     | S      | T3, T6     | Done   |
 | T8  | Thread-trace client + queue state hook      | C     | M      | —          | Done   |
-| T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     |        |
+| T9  | Schedule Thread Trace dialog                | C     | M      | T4, T8     | Done   |
 | T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     |        |
 | T11 | Thread-trace result viewer tab              | C     | S      | T10        |        |
 | T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          |        |
@@ -371,6 +371,44 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Test plan:** Unit-test validation; Playwright: schedule → pending row.
 - **Observability:** n/a.
 - **Docs:** —
+- **Note (done):** New pure `threadTraceOptionsValidation.ts`
+  (`validateThreadTraceForm`/`isThreadTraceFormValid`/`toThreadTraceOptions`,
+  10 Jest tests) validates for real what the legacy VisualVM dialog
+  (`ThreadTraceOptionsDlg.okButtonActionPerformed`) never did - that method
+  has two `// TODO should check for non-numeric and or negative values...`
+  comments left unresolved for over a decade. Both fields (min duration
+  to capture, max stack depth) stay optional - a blank field is "not
+  passed" (server defaults it to 0), matching the legacy dialog's own
+  semantics - but a non-blank value must now be a non-negative integer or
+  the field shows an inline error and Schedule is disabled. New
+  `ScheduleThreadTraceModal.tsx` (PatternFly `NumberInput` x2 with
+  `FormHelperText` errors, pre-filled `0`/`20` defaults for a sensible
+  one-click trace) opens from a new "Schedule thread trace…" kebab item -
+  added to the same `MonitorRowAction` menu `AddFieldModal` already uses
+  in `MonitorTree.tsx`, gated to `monitor.type === 'INTERVAL'` only (a
+  thread trace can only ever be built from an INTERVAL monitor's name -
+  see `threadTraceKey.ts`) and disabled (not hidden) when the thread-trace
+  session isn't `connected`, mirroring the existing not-connected-disables
+  pattern elsewhere in this tree. `ChartPanel.tsx` now also mounts
+  `useThreadTraces()` alongside the chart's own hook - its own independent
+  connection status/error surfaces through a second `Alert` (reusing the
+  chart's exec-denied/incompatible-version copy pattern, reworded for
+  thread-trace scheduling specifically) so a write/exec-denied Jolokia ACL
+  degrades this feature visibly rather than silently no-opping the kebab
+  item. To satisfy this task's own "adds a pending row to the queue tab"
+  acceptance criterion without building T10's full interactive table
+  early, added a deliberately minimal `ThreadTraceQueueTable.tsx`
+  (Monitor/Submitted/Status columns only, no View/Cancel yet) filling the
+  previously-stub "Thread traces" detail tab - a natural base for T10 to
+  add action columns to, not a throwaway. Verified end-to-end in a real
+  browser (Playwright against `dev-target/`): kebab on the `demo` leaf
+  under `dev > target > demo` (perfmon4j auto-registers every ancestor
+  segment as its own real INTERVAL monitor, not just the leaf - all three
+  levels got their own kebab) → "Schedule thread trace…" → modal → Schedule
+  → modal closes → Thread traces tab shows one `pending` row → transitions
+  to `completed` within one poll cycle; separately confirmed a negative
+  min-duration value disables Schedule with a visible inline error, and
+  Cancel closes the modal with no row ever appearing in the queue tab.
 
 **T10 — Thread-trace queue tab (view / cancel)**
 - **Description:** Fill the "Thread traces" detail tab with a table of

@@ -2,6 +2,8 @@ import { EmptyState, EmptyStateBody, Tab, TabTitleText, Tabs } from '@patternfly
 import React, { useState } from 'react'
 import { SubscribedFieldsTable } from './SubscribedFieldsTable'
 import { TextFieldsTable } from './TextFieldsTable'
+import { ThreadTraceEntry } from './threadTraceQueue'
+import { ThreadTraceQueueTable } from './ThreadTraceQueueTable'
 import { FieldSeries } from './types'
 
 export interface MonitoringDetailTabsProps {
@@ -12,6 +14,7 @@ export interface MonitoringDetailTabsProps {
   onRemoveField: (fieldKey: string) => void
   onColorChange: (fieldKey: string, color: string) => void
   onVisibilityChange: (fieldKey: string, visible: boolean) => void
+  threadTraces: ThreadTraceEntry[]
 }
 
 type DetailTabKey = 'charted' | 'text' | 'threadTraces' | 'traceDetail'
@@ -35,6 +38,7 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
   onRemoveField,
   onColorChange,
   onVisibilityChange,
+  threadTraces,
 }) => {
   const [activeTabKey, setActiveTabKey] = useState<DetailTabKey>('charted')
 
@@ -63,10 +67,14 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
         )}
       </Tab>
       <Tab eventKey='threadTraces' title={<TabTitleText>Thread traces</TabTitleText>}>
-        <StubTabBody
-          title='Thread traces'
-          body='Scheduled thread-trace captures will be queued here (coming soon - see MONITORING_TAB_TASKS.md T10).'
-        />
+        {threadTraces.length === 0 ? (
+          <StubTabBody
+            title='No thread traces yet'
+            body='Schedule a thread trace from the monitor tree to see its status here.'
+          />
+        ) : (
+          <ThreadTraceQueueTable traces={threadTraces} />
+        )}
       </Tab>
       <Tab eventKey='traceDetail' title={<TabTitleText>Trace detail</TabTitleText>}>
         <StubTabBody

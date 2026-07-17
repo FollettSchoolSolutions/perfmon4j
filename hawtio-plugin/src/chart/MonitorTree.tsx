@@ -17,6 +17,8 @@ import { EllipsisVIcon, SyncAltIcon } from '@patternfly/react-icons'
 import React, { ChangeEvent, useEffect, useState } from 'react'
 import { AddFieldModal } from './AddFieldModal'
 import { buildMonitorTree, filterMonitorTree, MonitorTreeNode } from './monitorTreeLogic'
+import { ScheduleThreadTraceModal } from './ScheduleThreadTraceModal'
+import { ThreadTraceOptions } from './threadTraceKey'
 import { FieldDescriptor, MonitorDescriptor } from './types'
 
 export interface MonitorTreeProps {
@@ -24,17 +26,30 @@ export interface MonitorTreeProps {
   listMonitors: () => Promise<MonitorDescriptor[]>
   listFieldsForMonitor: (monitorKey: string) => Promise<FieldDescriptor[]>
   addFields: (fields: FieldDescriptor[]) => Promise<void>
+  /** Whether the (separate, independently-connected) thread-trace session is ready -
+   * see useThreadTraces.ts. Gates the "Schedule thread trace…" row action alone;
+   * the chart's own `enabled` above already gates everything else. */
+  canScheduleThreadTrace: boolean
+  onScheduleThreadTrace: (monitor: MonitorDescriptor, options: ThreadTraceOptions) => Promise<void>
 }
 
 interface MonitorRowActionProps {
   monitor: MonitorDescriptor
   onAddField: (monitor: MonitorDescriptor) => void
+  canScheduleThreadTrace: boolean
+  onScheduleThreadTrace: (monitor: MonitorDescriptor) => void
 }
 
-/** Per-row kebab menu. Only "Add field to chart" today - the Schedule Thread
- * Trace (T9) and Force dynamic monitor creation (T13) items join this same
- * menu once their own MBean plumbing lands. */
-const MonitorRowAction: React.FunctionComponent<MonitorRowActionProps> = ({ monitor, onAddField }) => {
+/** Per-row kebab menu: "Add field to chart" plus, for INTERVAL monitors only,
+ * "Schedule thread trace…" (T9) - thread traces are only ever built from an
+ * INTERVAL monitor's name server-side (see threadTraceKey.ts). Force dynamic
+ * monitor creation (T13) joins this same menu once its own MBean plumbing lands. */
+const MonitorRowAction: React.FunctionComponent<MonitorRowActionProps> = ({
+  monitor,
+  onAddField,
+  canScheduleThreadTrace,
+  onScheduleThreadTrace,
+}) => {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -66,18 +81,46 @@ const MonitorRowAction: React.FunctionComponent<MonitorRowActionProps> = ({ moni
         >
           Add field to chart…
         </DropdownItem>
+        {monitor.type === 'INTERVAL' && (
+          <DropdownItem
+            isAriaDisabled={!canScheduleThreadTrace}
+            onClick={e => {
+              e.stopPropagation()
+              setIsOpen(false)
+              if (canScheduleThreadTrace) onScheduleThreadTrace(monitor)
+            }}
+          >
+            Schedule thread trace…
+          </DropdownItem>
+        )}
       </DropdownList>
     </Dropdown>
   )
 }
 
-function toTreeViewItem(node: MonitorTreeNode, depth: number, onAddField: (monitor: MonitorDescriptor) => void): TreeViewDataItem {
+function toTreeViewItem(
+  node: MonitorTreeNode,
+  depth: number,
+  onAddField: (monitor: MonitorDescriptor) => void,
+  canScheduleThreadTrace: boolean,
+  onScheduleThreadTrace: (monitor: MonitorDescriptor) => void,
+): TreeViewDataItem {
   return {
     id: node.id,
     name: node.label,
     defaultExpanded: depth === 0,
-    children: node.children.length > 0 ? node.children.map(c => toTreeViewItem(c, depth + 1, onAddField)) : undefined,
-    action: node.monitor ? <MonitorRowAction monitor={node.monitor} onAddField={onAddField} /> : undefined,
+    children:
+      node.children.length > 0
+        ? node.children.map(c => toTreeViewItem(c, depth + 1, onAddField, canScheduleThreadTrace, onScheduleThreadTrace))
+        : undefined,
+    action: node.monitor ? (
+      <MonitorRowAction
+        monitor={node.monitor}
+        onAddField={onAddField}
+        canScheduleThreadTrace={canScheduleThreadTrace}
+        onScheduleThreadTrace={onScheduleThreadTrace}
+      />
+    ) : undefined,
   }
 }
 
@@ -93,6 +136,8 @@ export const MonitorTree: React.FunctionComponent<MonitorTreeProps> = ({
   listMonitors,
   listFieldsForMonitor,
   addFields,
+  canScheduleThreadTrace,
+  onScheduleThreadTrace,
 }) => {
   const [monitors, setMonitors] = useState<MonitorDescriptor[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -104,6 +149,7 @@ export const MonitorTree: React.FunctionComponent<MonitorTreeProps> = ({
   // per-item defaultExpanded and forces everything collapsed.
   const [allExpanded, setAllExpanded] = useState<boolean | undefined>(undefined)
   const [addFieldMonitor, setAddFieldMonitor] = useState<MonitorDescriptor | null>(null)
+  const [scheduleTraceMonitor, setScheduleTraceMonitor] = useState<MonitorDescriptor | null>(null)
   const [refreshNonce, setRefreshNonce] = useState(0)
 
   useEffect(() => {
@@ -162,7 +208,9 @@ export const MonitorTree: React.FunctionComponent<MonitorTreeProps> = ({
 
   const tree = buildMonitorTree(monitors)
   const filteredTree = filterMonitorTree(tree, searchText)
-  const treeViewData = filteredTree.map(n => toTreeViewItem(n, 0, setAddFieldMonitor))
+  const treeViewData = filteredTree.map(n =>
+    toTreeViewItem(n, 0, setAddFieldMonitor, canScheduleThreadTrace, setScheduleTraceMonitor),
+  )
 
   const onSearch = (e: ChangeEvent<HTMLInputElement>) => setSearchText(e.target.value)
 
@@ -197,6 +245,12 @@ export const MonitorTree: React.FunctionComponent<MonitorTreeProps> = ({
         onClose={() => setAddFieldMonitor(null)}
         listFieldsForMonitor={listFieldsForMonitor}
         addFields={addFields}
+      />
+
+      <ScheduleThreadTraceModal
+        monitor={scheduleTraceMonitor}
+        onClose={() => setScheduleTraceMonitor(null)}
+        onSchedule={onScheduleThreadTrace}
       />
     </>
   )

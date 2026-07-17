@@ -6,6 +6,7 @@ import { MonitoringDetailTabs } from './MonitoringDetailTabs'
 import { MonitoringLayout } from './MonitoringLayout'
 import { MonitorTree } from './MonitorTree'
 import { ConnectionErrorKind, useRemoteManagementChart } from './useRemoteManagementChart'
+import { useThreadTraces } from './useThreadTraces'
 import { DEFAULT_WINDOW_MS } from './rollingSeries'
 
 const CONNECTION_ERROR_COPY: Record<ConnectionErrorKind, string> = {
@@ -13,6 +14,16 @@ const CONNECTION_ERROR_COPY: Record<ConnectionErrorKind, string> = {
     "This Hawtio console's Jolokia connection doesn't have permission to execute MBean operations, which the " +
     "perfmon4j chart requires. Ask your administrator to allow exec access for org.perfmon4j:type=RemoteManagement " +
     '(see the "Graceful degradation when Jolokia write/exec access is unavailable" item in the plugin\'s ROADMAP.md).',
+  'incompatible-version':
+    "The connected JVM's perfmon4j RemoteManagement version doesn't match this plugin - likely a version skew " +
+    'between the plugin and the attached base build.',
+  other: '',
+}
+
+const THREAD_TRACE_ERROR_COPY: Record<ConnectionErrorKind, string> = {
+  'exec-denied':
+    "This Hawtio console's Jolokia connection doesn't have permission to execute MBean operations, which scheduling " +
+    'a thread trace requires. Ask your administrator to allow exec access for org.perfmon4j:type=RemoteManagement.',
   'incompatible-version':
     "The connected JVM's perfmon4j RemoteManagement version doesn't match this plugin - likely a version skew " +
     'between the plugin and the attached base build.',
@@ -33,6 +44,14 @@ export const ChartPanel: React.FunctionComponent = () => {
     retryConnect,
   } = useRemoteManagementChart()
   const { chartable, textOnly } = partitionByChartability(series)
+
+  const {
+    status: threadTraceStatus,
+    connectionError: threadTraceConnectionError,
+    traces: threadTraces,
+    scheduleTrace,
+    retryConnect: retryThreadTraceConnect,
+  } = useThreadTraces()
 
   return (
     <>
@@ -64,6 +83,23 @@ export const ChartPanel: React.FunctionComponent = () => {
         />
       )}
 
+      {threadTraceStatus === 'disconnected' && threadTraceConnectionError && (
+        <Alert
+          variant='danger'
+          isInline
+          title={
+            threadTraceConnectionError.kind === 'other'
+              ? threadTraceConnectionError.message
+              : THREAD_TRACE_ERROR_COPY[threadTraceConnectionError.kind]
+          }
+          actionLinks={
+            <Button variant='link' isInline onClick={retryThreadTraceConnect}>
+              Retry
+            </Button>
+          }
+        />
+      )}
+
       <MonitoringLayout
         left={
           <MonitorTree
@@ -71,6 +107,8 @@ export const ChartPanel: React.FunctionComponent = () => {
             listMonitors={listMonitors}
             listFieldsForMonitor={listFieldsForMonitor}
             addFields={addFields}
+            canScheduleThreadTrace={threadTraceStatus === 'connected'}
+            onScheduleThreadTrace={scheduleTrace}
           />
         }
         chart={<LiveChart series={chartable} windowMs={DEFAULT_WINDOW_MS} />}
@@ -81,6 +119,7 @@ export const ChartPanel: React.FunctionComponent = () => {
             onRemoveField={removeField}
             onColorChange={setFieldColor}
             onVisibilityChange={setFieldVisibility}
+            threadTraces={threadTraces}
           />
         }
       />
