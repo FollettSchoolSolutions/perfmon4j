@@ -1,4 +1,4 @@
-import { Alert, Button, Content, Spinner } from '@patternfly/react-core'
+import { Alert, Button, Content, EmptyState, EmptyStateBody, Spinner } from '@patternfly/react-core'
 import React, { useEffect, useState } from 'react'
 import { ChartDashboardControls } from './ChartDashboardControls'
 import { LiveChart } from './LiveChart'
@@ -166,18 +166,28 @@ export const ChartPanel: React.FunctionComponent = () => {
             onToggleForceDynamicCreation={onToggleForceDynamicCreation}
           />
         }
-        chart={<LiveChart series={chartable} windowMs={DEFAULT_WINDOW_MS} />}
+        chart={
+          chartable.length === 0 ? (
+            <EmptyState titleText='No fields charted yet' headingLevel='h4'>
+              <EmptyStateBody>Add a monitor field to display</EmptyStateBody>
+            </EmptyState>
+          ) : (
+            <LiveChart series={chartable} windowMs={DEFAULT_WINDOW_MS} />
+          )
+        }
         detail={
-          <MonitoringDetailTabs
-            chartableSeries={chartable}
-            textSeries={textOnly}
-            onRemoveField={removeField}
-            onColorChange={setFieldColor}
-            onVisibilityChange={setFieldVisibility}
-            onScaleChange={setFieldScale}
-            threadTraces={threadTraces}
-            onCancelThreadTrace={fieldKey => void cancelTrace(fieldKey)}
-          />
+          chartable.length === 0 ? null : (
+            <MonitoringDetailTabs
+              chartableSeries={chartable}
+              textSeries={textOnly}
+              onRemoveField={removeField}
+              onColorChange={setFieldColor}
+              onVisibilityChange={setFieldVisibility}
+              onScaleChange={setFieldScale}
+              threadTraces={threadTraces}
+              onCancelThreadTrace={fieldKey => void cancelTrace(fieldKey)}
+            />
+          )
         }
       />
     </>

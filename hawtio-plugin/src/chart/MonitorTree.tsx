@@ -291,6 +291,7 @@ export const MonitorTree: React.FunctionComponent<MonitorTreeProps> = ({
           aria-label='Monitors'
           data={treeViewData}
           hasGuides
+          variant='compact'
           allExpanded={allExpanded}
           toolbar={<PluginTreeViewToolbar onSearch={onSearch} onSetExpanded={setAllExpanded} />}
         />

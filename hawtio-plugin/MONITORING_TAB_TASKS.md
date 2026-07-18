@@ -34,6 +34,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    | Done   |
 | T14 | Save / load chart dashboard to file         | D     | M      | T6, T7, T15 | Done   |
 | T16 | Per-series y-axis normalization (scale)     | —     | M      | T6, T7, T14 | Done   |
+| T17 | Manual-testing UI pass (tree pane, toolbar, empty state) | — | S | T1, T3, T14 | Done |
 
 ### Tasks
 
@@ -797,6 +798,71 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   not a bug); Saved the dashboard and confirmed the downloaded JSON's `version` is `2`
   and the field's `scale` is `10`; removed the field, loaded the file back, and confirmed
   the Scale dropdown was restored to ×10 with no manual re-selection needed.
+
+**T17 — Manual-testing UI pass (tree pane, toolbar, empty state)**
+- **Description:** Three UI rough edges found doing manual testing of the shipped
+  Monitoring tab: (1) the left monitor-tree pane had no width cap/overflow guard and
+  no way to resize it; (2) the Save/Load dashboard buttons (T14) visually collided
+  with the tree's Refresh button; (3) the "No fields charted yet" empty state
+  rendered twice (once in the chart slot, once in the Charted-fields detail tab)
+  when nothing was charted.
+- **Acceptance criteria:** Tree pane is a compact, user-resizable pane (drag a
+  splitter handle) instead of a fixed proportion; Save/Load dashboard buttons are
+  right-justified, clear of Refresh; exactly one "No fields charted yet" /
+  "Add a monitor field to display" message shows for the whole content area
+  (chart + detail tabs) when nothing is charted, and the detail-tabs bar itself is
+  hidden in that state.
+- **Effort:** S
+- **Dependencies:** T1 (layout scaffold being replaced), T3 (detail-tabs shell), T14
+  (Save/Load toolbar being repositioned).
+- **Risk:** PatternFly's `Drawer` has no built-in responsive stacking at narrow
+  viewports (unlike the `Grid` it replaces, which stacked below ~768px) - accepted
+  tradeoff since this plugin is desktop/admin-tool usage in practice. Hiding the
+  entire detail-tabs bar (not just the Charted-fields tab) when no fields are
+  charted also hides Text fields/Thread traces tabs even if they have their own
+  data - accepted tradeoff, confirmed with the user.
+- **Test plan:** Playwright against `dev-target/`: drag the splitter and confirm the
+  tree pane resizes and clamps at its min/max bounds; confirm no page-body
+  horizontal overflow; confirm Save/Load's bounding box doesn't overlap Refresh's;
+  confirm exactly one empty-state message and a hidden tab bar on first load and
+  after removing the only charted field, and that both disappear once a field is
+  charted.
+- **Observability:** n/a.
+- **Docs:** none beyond this file.
+- **Note (done):** `MonitoringLayout.tsx`'s `Grid`/`GridItem` scaffold was replaced
+  with PatternFly `Drawer`/`DrawerContent`/`DrawerPanelContent` used inline
+  (`isInline`) and always-open (`isStatic isExpanded`) as a plain two-pane layout
+  rather than its usual slide-out-overlay role - **both `isStatic` and `isExpanded`
+  are required** to actually show the panel; PatternFly's panel-visibility CSS keys
+  off the `pf-m-expanded` modifier class on the drawer root regardless of
+  `isStatic`, so `isStatic` alone left the panel in the DOM but
+  `visibility: hidden` (found via Playwright showing a completely blank left pane,
+  then tracing the compiled `DrawerPanelContent.js`/`drawer.css` to the `hidden`
+  computation and the `.pf-m-expanded > ... .pf-v6-c-drawer__panel { visibility:
+  visible }` rule). The pane is user-resizable via `DrawerPanelContent`'s built-in
+  `isResizable` (`minSize='180px'`, `defaultSize='260px'`, `maxSize='50%'`) - no
+  custom drag logic needed. `MonitorTree.tsx`'s `TreeView` gained `variant='compact'`
+  (a built-in PatternFly density prop, no custom CSS) for the denser
+  Hawtio-JMX-tree-like row spacing. `ChartDashboardControls.tsx`'s Save/Load
+  `<Flex>` gained `justifyContent={{ default: 'justifyContentFlexEnd' }}` - the
+  Refresh button lives in a separate component tree (inside the tree pane) so this
+  alone was sufficient, no restructuring needed. For the empty state,
+  `ChartPanel.tsx` now branches on `chartable.length === 0` and renders a single
+  `EmptyState` (title "No fields charted yet", subtitle "Add a monitor field to
+  display") in `MonitoringLayout`'s `chart` slot while passing `null` for `detail`
+  - `LiveChart.tsx`'s own now-unreachable empty-state branch was removed rather
+  than left as dead code, and `MonitoringDetailTabs.tsx`'s "Charted fields" tab
+  simplified to render `SubscribedFieldsTable` unconditionally (its
+  `chartableSeries.length === 0` `StubTabBody` branch was likewise unreachable,
+  since `ChartPanel` never mounts `MonitoringDetailTabs` at all in that case) -
+  `StubTabBody` itself stays in use for Text fields/Thread traces' own independent
+  empty states. Verified end-to-end via Playwright against `dev-target/`: dragging
+  the splitter resizes the tree pane and clamps at bounds; no horizontal page
+  overflow at 1440px; Save/Load bounding box doesn't overlap Refresh's and sits at
+  the row's right edge; exactly one empty-state message with a hidden tab bar on
+  first load, exactly one detail-tabs bar (Charted fields/Text fields/Thread
+  traces/Trace detail) with no empty-state message once a field is charted, and
+  back to the single empty state with hidden tab bar after removing that field.
 
 ### Milestones
 

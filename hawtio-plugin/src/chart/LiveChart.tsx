@@ -1,5 +1,4 @@
 import { Chart, ChartAxis, ChartGroup, ChartLine, ChartVoronoiContainer } from '@patternfly/react-charts/victory'
-import { EmptyState, EmptyStateBody } from '@patternfly/react-core'
 import React from 'react'
 import { applyScale } from './seriesScale'
 import { FieldSeries } from './types'
@@ -30,16 +29,11 @@ const Y_DOMAIN: [number, number] = [0, 100]
  * obsoletes the old per-render auto-domain-with-minimum-pad computation this
  * component used to need to avoid a degenerate near-zero-width domain for a
  * perfectly flat series - a fixed domain has no such degeneracy to guard against.
+ * The `series.length === 0` case (no fields charted at all) is guarded by the
+ * caller, ChartPanel.tsx, which renders a single shared empty state for the
+ * whole content area instead of invoking this component - see MONITORING_TAB_TASKS.md.
  */
 export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, windowMs }) => {
-  if (series.length === 0) {
-    return (
-      <EmptyState titleText='No fields charted yet' headingLevel='h4'>
-        <EmptyStateBody>Add a monitor field above to start charting its live values.</EmptyStateBody>
-      </EmptyState>
-    )
-  }
-
   // Hidden series (T7) keep their subscription and keep accumulating points -
   // only what's drawn is filtered here, so re-showing a series doesn't need to
   // re-fetch anything.

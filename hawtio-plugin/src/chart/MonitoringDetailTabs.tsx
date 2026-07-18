@@ -62,17 +62,16 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
   return (
     <Tabs activeKey={activeTabKey} onSelect={(_event, tabKey) => setActiveTabKey(tabKey as DetailTabKey)}>
       <Tab eventKey='charted' title={<TabTitleText>Charted fields</TabTitleText>}>
-        {chartableSeries.length === 0 ? (
-          <StubTabBody title='No fields charted yet' body='Add a numeric field from the monitor tree to see it here.' />
-        ) : (
-          <SubscribedFieldsTable
-            series={chartableSeries}
-            onRemove={onRemoveField}
-            onColorChange={onColorChange}
-            onVisibilityChange={onVisibilityChange}
-            onScaleChange={onScaleChange}
-          />
-        )}
+        {/* chartableSeries is never empty here - ChartPanel.tsx only renders this
+            component once at least one field is charted, showing its own single
+            shared empty state for the whole content area otherwise. */}
+        <SubscribedFieldsTable
+          series={chartableSeries}
+          onRemove={onRemoveField}
+          onColorChange={onColorChange}
+          onVisibilityChange={onVisibilityChange}
+          onScaleChange={onScaleChange}
+        />
       </Tab>
       <Tab eventKey='text' title={<TabTitleText>Text fields</TabTitleText>}>
         {textSeries.length === 0 ? (

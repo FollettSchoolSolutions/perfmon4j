@@ -153,6 +153,14 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
     different-magnitude fields can be usefully overlaid on one chart. This
     was the last item from the original v1 chart deferral list - nothing
     remains open from that list.
+- **UI polish from manual testing has since shipped too** (T17): the left
+  monitor-tree pane is now a compact (`TreeView variant='compact'`),
+  user-resizable pane (a PatternFly `Drawer` splitter, replacing a fixed-proportion
+  `Grid` column that had no overflow guard); the Save/Load dashboard buttons (T14)
+  are right-justified, clear of the tree's Refresh button; and the "No fields
+  charted yet" empty state, which used to render twice (chart slot and
+  Charted-fields tab), now renders once for the whole content area, with the
+  detail-tabs bar itself hidden until at least one field is charted.
 
 ## Backlog
 

@@ -107,7 +107,7 @@ export const ChartDashboardControls: React.FunctionComponent<ChartDashboardContr
 
   return (
     <>
-      <Flex>
+      <Flex justifyContent={{ default: 'justifyContentFlexEnd' }}>
         <FlexItem>
           <Button variant='secondary' onClick={handleSave} isDisabled={series.length === 0}>
             Save dashboard…
