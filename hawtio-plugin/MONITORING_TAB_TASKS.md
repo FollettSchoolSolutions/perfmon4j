@@ -30,7 +30,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T10 | Thread-trace queue tab (view / cancel)      | C     | M      | T8, T3     | Done   |
 | T11 | Thread-trace result viewer tab              | C     | S      | T10        | Done   |
 | T15 | Persist chart/thread-trace session across nav | —   | M      | —          | Done   |
-| T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          |        |
+| T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          | Done   |
 | T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    |        |
 | T14 | Save / load chart dashboard to file         | D     | M      | T6, T7, T15 | Done   |
 
@@ -590,6 +590,47 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   (`extends TestCase`); manual Jolokia serialization check.
 - **Observability:** MBean op reachable via existing JMX tooling.
 - **Docs:** ROADMAP: move the `RemoteInterfaceExt1` backlog item to Status.
+- **Note (done):** Added `getServerManagementVersion`/`forceDynamicChildCreation`/
+  `unForceDynamicChildCreation` to `RemoteManagementMBean`/`RemoteManagement.java`
+  (`base/src/main/java/org/perfmon4j/remotemanagement/jmx/`), following the exact
+  delegate-don't-reimplement pattern the file's Javadoc already documents:
+  `forceDynamicChildCreation`/`unForceDynamicChildCreation` parse the `String
+  monitorKey` param into a `MonitorKey` (wrapping a caught `UnableToParseKeyException`
+  as `IllegalArgumentException`, matching `scheduleThreadTrace`'s existing convention)
+  then call the identically-named `ExternalAppender` statics `RemoteImplExt1` already
+  calls - no new logic, same session-scoped `SessionNotFoundException` behavior.
+  `getServerManagementVersion()` has no `ExternalAppender` counterpart at all (mirrors
+  `RemoteImplExt1`) - it just returns the `ManagementVersion.VERSION` constant
+  directly. One non-obvious JMX finding worth flagging for anyone adding a similar
+  op later: because `getServerManagementVersion()` takes no arguments and is named
+  `getXxx`, JMX Standard MBean introspection classifies it as a **read-only attribute**
+  (`ServerManagementVersion`), not an operation - confirmed via a live Jolokia
+  `list`/`read` against `dev-target/` (`forceDynamicChildCreation`/
+  `unForceDynamicChildCreation` remained ops, since their parameters exclude them from
+  that convention). Still fully Jolokia-reachable, just via `read` rather than `exec` -
+  locked in with a dedicated `MBeanServer.getAttribute(...)` test
+  (`testGetServerManagementVersionReachableAsAttributeViaMBeanServer`) rather than
+  documented as a surprise for the frontend to rediscover later. Added 7 new JUnit
+  3-style tests to `RemoteManagementTest.java`: direct-call and unparsable-key/
+  unknown-session error-path coverage for the two new ops, an
+  `ExternalAppenderTest.testForceDynamicChildCreation`-mirrored end-to-end dynamic-
+  child-creation assertion, an RMI/MBean session-coexistence variant of that same
+  assertion (mirrors `testCoexistsWithRemoteImplSessions`, confirming the effect of an
+  MBean-driven force-dynamic-creation call is visible process-wide, not scoped to the
+  MBean's own session), and a real-`MBeanServer.invoke(...)`-based reachability test
+  for `forceDynamicChildCreation`/`unForceDynamicChildCreation` (mirroring
+  `testMBeanIsRegisteredAndReachableViaMBeanServer`) - 23/23 tests pass, plus the full
+  `org.perfmon4j.remotemanagement.**` package (55/55) with no regressions. Manual
+  Jolokia serialization check performed against a live `dev-target/` JVM (JSON POST
+  `EXEC`/`read` requests via curl): `getServerManagementVersion` reads `"1.001"`;
+  `forceDynamicChildCreation`/`unForceDynamicChildCreation` both exec cleanly
+  (`value:null`, JMX void-return convention) against a real INTERVAL monitor key; a
+  bogus session ID correctly serializes as a JSON `SessionNotFoundException`
+  (`status:500`); an unparsable monitor key correctly serializes as a JSON
+  `IllegalArgumentException` (`status:400`). No `base/CLAUDE.md` update needed - the
+  delegate-don't-proxy pattern and MBean/RMI coexistence story were already documented
+  there and in `RemoteManagement.java`'s own class Javadoc before this task; only the
+  interface's stale "deliberately not included yet" doc comment needed updating (done).
 
 **T13 — Force dynamic creation action + graceful degradation**
 - **Description:** Add "Force dynamic monitor creation" tree-row action calling

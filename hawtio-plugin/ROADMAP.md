@@ -60,9 +60,15 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
   `ExternalAppender` session table), confirmed with a dedicated coexistence test. Also
   manually verified against a real Jolokia agent that the plain `String[]`/
   `Map<String,Object>` return types serialize cleanly to JSON with no `CompositeData`
-  translation needed. `RemoteInterfaceExt1`'s dynamic-child-creation operations remain
-  unported (see Backlog). This is `base`-module plumbing only - no `hawtio-plugin` UI
-  consumes this MBean yet.
+  translation needed. `RemoteInterfaceExt1`'s dynamic-child-creation operations
+  (`forceDynamicChildCreation`/`unForceDynamicChildCreation`/
+  `getServerManagementVersion`) have since been ported too (`MONITORING_TAB_TASKS.md`
+  T12), same delegate-don't-proxy approach - one non-obvious finding from that work:
+  `getServerManagementVersion()`, being a no-arg `getXxx()` method, is classified by
+  JMX Standard MBean introspection as a read-only attribute (`ServerManagementVersion`)
+  rather than an operation; still fully Jolokia-reachable, just via `read` instead of
+  `exec`. This is still `base`-module plumbing only - no `hawtio-plugin` UI consumes
+  the Ext1 ops yet (that's T13, blocked on this).
 - **"perfmon4j Chart" nav item shipped** on `feature/HawtioPluginSprint1`: a third nav
   item (`src/chart/`) where a user browses perfmon4j's interval/snapshot monitors via
   the `RemoteManagement` MBean, picks one or more numeric fields, and watches their
@@ -144,15 +150,6 @@ Roughly in the order they'd most improve the plugin - not a committed sequence.
   earlier discussion: this should **add** a
   "push live" option alongside the XML snippet, not replace it - the XML is still needed
   so the monitor survives a JVM restart.
-- **`RemoteInterfaceExt1`'s dynamic-child-creation operations for the RemoteManagement
-  MBean.** The RemoteManagement MBean shipped (see Status above) covers monitor
-  browsing and thread-trace scheduling, but not `forceDynamicChildCreation`/
-  `unForceDynamicChildCreation`/`getServerManagementVersion` - deliberately deferred as
-  lower priority per `LEGACY_VISUALVM_FEATURES.md`. Same delegate-don't-proxy approach
-  applies (`ExternalAppender.forceDynamicChildCreation`/`unForceDynamicChildCreation`).
-  Like "Live dynamic push" above, this is write/exec - it raises the stakes of the host's
-  own Jolokia hardening (see "Jolokia access-control resolved as out of scope" under
-  Status above), though it opens no new access path of its own.
 - **Graceful degradation when Jolokia write/exec access is unavailable.** No longer
   speculative: the "perfmon4j Chart" nav item (see Status above) is a real, shipped
   consumer of write/exec JMX operations (`connect`/`subscribe`/`getData`/`disconnect`

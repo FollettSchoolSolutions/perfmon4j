@@ -42,9 +42,10 @@ import org.perfmon4j.remotemanagement.intf.SessionNotFoundException;
  * <p>
  * This covers the monitor-tree-browsing surface (connect, disconnect,
  * getMonitors, getFieldsForMonitor, subscribe, getData) plus thread-trace
- * scheduling (scheduleThreadTrace, unScheduleThreadTrace). The
- * RemoteInterfaceExt1 dynamic-child-creation operations are deliberately not
- * included yet.
+ * scheduling (scheduleThreadTrace, unScheduleThreadTrace) and the
+ * RemoteInterfaceExt1 dynamic-child-creation operations
+ * (forceDynamicChildCreation, unForceDynamicChildCreation,
+ * getServerManagementVersion).
  */
 public interface RemoteManagementMBean {
 	String connect(String clientVersion) throws IncompatibleClientVersionException;
@@ -64,4 +65,10 @@ public interface RemoteManagementMBean {
 
 	void unScheduleThreadTrace(String sessionID, String fieldKey)
 			throws SessionNotFoundException, InvalidMonitorTypeException;
+
+	String getServerManagementVersion();
+
+	void forceDynamicChildCreation(String sessionID, String monitorKey) throws SessionNotFoundException;
+
+	void unForceDynamicChildCreation(String sessionID, String monitorKey) throws SessionNotFoundException;
 }

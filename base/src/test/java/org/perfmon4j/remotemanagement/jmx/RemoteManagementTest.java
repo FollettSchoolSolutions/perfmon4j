@@ -29,6 +29,7 @@ import java.util.Map;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
 import org.perfmon4j.java.management.JVMSnapShot;
@@ -333,6 +334,146 @@ public class RemoteManagementTest extends PerfMonTestCase {
 			mgmt.disconnect(mbeanSessionID);
 			assertNotNull("RMI session should still be valid", RemoteImpl.getSingleton().getMonitors(rmiSessionID));
 		} finally {
+			RemoteImpl.getSingleton().disconnect(rmiSessionID);
+		}
+	}
+
+	public void testGetServerManagementVersion() throws Exception {
+		RemoteManagement mgmt = new RemoteManagement();
+		assertEquals(ManagementVersion.VERSION, mgmt.getServerManagementVersion());
+	}
+
+	/**
+	 * getServerManagementVersion() is a no-arg "getXxx()" method, so JMX Standard
+	 * MBean introspection classifies it as a read-only attribute ("ServerManagementVersion"),
+	 * not an operation - unlike forceDynamicChildCreation/unForceDynamicChildCreation,
+	 * whose parameters keep them as ops. Confirmed against a real MBeanServer (not
+	 * just a direct Java call) so this JMX convention doesn't silently regress.
+	 */
+	public void testGetServerManagementVersionReachableAsAttributeViaMBeanServer() throws Exception {
+		MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+		ObjectName objectName = new ObjectName(RemoteManagement.OBJECT_NAME);
+
+		Object version = server.getAttribute(objectName, "ServerManagementVersion");
+		assertEquals(ManagementVersion.VERSION, version);
+	}
+
+	/**
+	 * Mirrors ExternalAppenderTest.testForceDynamicChildCreation - confirms the MBean
+	 * op reaches the exact same PerfMon effect via ExternalAppender, not a
+	 * reimplementation.
+	 */
+	public void testForceDynamicChildCreation() throws Exception {
+		final String baseMonitor = "jmxForceDynamicChildCreationBase";
+		final String child1 = baseMonitor + ".1";
+		final String child2 = baseMonitor + ".2";
+
+		MonitorKey baseKey = MonitorKey.newIntervalKey(baseMonitor);
+		PerfMon.getMonitor(baseMonitor);
+
+		RemoteManagement mgmt = new RemoteManagement();
+		String sessionID = mgmt.connect(ManagementVersion.VERSION);
+		try {
+			PerfMon mon = PerfMon.getMonitor(child1, true);
+			assertEquals("Should not create child since dynamicPath = true", baseMonitor, mon.getName());
+
+			mgmt.forceDynamicChildCreation(sessionID, baseKey.toString());
+
+			mon = PerfMon.getMonitor(child1, true);
+			assertEquals("Should create child since monitor specified base should create children",
+					child1, mon.getName());
+
+			mgmt.unForceDynamicChildCreation(sessionID, baseKey.toString());
+
+			mon = PerfMon.getMonitor(child2, true);
+			assertEquals("Should no longer create child since dynamicPath = true", baseMonitor, mon.getName());
+		} finally {
+			mgmt.disconnect(sessionID);
+		}
+	}
+
+	public void testForceDynamicChildCreationWithUnparsableKeyThrowsIllegalArgument() throws Exception {
+		RemoteManagement mgmt = new RemoteManagement();
+		String sessionID = mgmt.connect(ManagementVersion.VERSION);
+		try {
+			mgmt.forceDynamicChildCreation(sessionID, "not a valid monitor key");
+			fail("Should have thrown IllegalArgumentException");
+		} catch (IllegalArgumentException ex) {
+			// Expected.
+		} finally {
+			mgmt.disconnect(sessionID);
+		}
+	}
+
+	/**
+	 * Mirrors testMBeanIsRegisteredAndReachableViaMBeanServer, exercising
+	 * forceDynamicChildCreation/unForceDynamicChildCreation through actual MBeanServer
+	 * reflection (JMX signature dispatch) rather than a direct Java call, since that's
+	 * the code path Jolokia actually uses.
+	 */
+	public void testForceDynamicChildCreationReachableViaMBeanServer() throws Exception {
+		final String baseMonitor = "jmxMBeanServerForceDynamicChildCreationBase";
+		final String child = baseMonitor + ".1";
+		MonitorKey baseKey = MonitorKey.newIntervalKey(baseMonitor);
+		PerfMon.getMonitor(baseMonitor);
+
+		MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+		ObjectName objectName = new ObjectName(RemoteManagement.OBJECT_NAME);
+
+		String sessionID = (String)server.invoke(objectName, "connect",
+				new Object[]{ManagementVersion.VERSION}, new String[]{"java.lang.String"});
+		try {
+			server.invoke(objectName, "forceDynamicChildCreation",
+					new Object[]{sessionID, baseKey.toString()},
+					new String[]{"java.lang.String", "java.lang.String"});
+
+			PerfMon mon = PerfMon.getMonitor(child, true);
+			assertEquals(child, mon.getName());
+
+			server.invoke(objectName, "unForceDynamicChildCreation",
+					new Object[]{sessionID, baseKey.toString()},
+					new String[]{"java.lang.String", "java.lang.String"});
+		} finally {
+			server.invoke(objectName, "disconnect",
+					new Object[]{sessionID}, new String[]{"java.lang.String"});
+		}
+	}
+
+	public void testForceDynamicChildCreationWithUnknownSessionThrowsSessionNotFound() throws Exception {
+		MonitorKey baseKey = MonitorKey.newIntervalKey("jmxForceDynamicChildCreationUnknownSession");
+		RemoteManagement mgmt = new RemoteManagement();
+		try {
+			mgmt.forceDynamicChildCreation("bogus-session-id", baseKey.toString());
+			fail("Should have thrown SessionNotFoundException");
+		} catch (SessionNotFoundException ex) {
+			// Expected.
+		}
+	}
+
+	/**
+	 * Same coexistence property as testCoexistsWithRemoteImplSessions, applied to the
+	 * Ext1 ops specifically: a session opened over RMI can drive
+	 * forceDynamicChildCreation and have the effect observed (and reversed) through a
+	 * concurrently open MBean session, since both ultimately share the same
+	 * process-wide PerfMon state.
+	 */
+	public void testForceDynamicChildCreationCoexistsWithRemoteImplSession() throws Exception {
+		final String baseMonitor = "jmxForceDynamicChildCreationCoexist";
+		final String child = baseMonitor + ".1";
+		MonitorKey baseKey = MonitorKey.newIntervalKey(baseMonitor);
+		PerfMon.getMonitor(baseMonitor);
+
+		String rmiSessionID = RemoteImpl.getSingleton().connect(ManagementVersion.VERSION);
+		RemoteManagement mgmt = new RemoteManagement();
+		String mbeanSessionID = mgmt.connect(ManagementVersion.VERSION);
+		try {
+			mgmt.forceDynamicChildCreation(mbeanSessionID, baseKey.toString());
+
+			PerfMon mon = PerfMon.getMonitor(child, true);
+			assertEquals("Effect of MBean-driven force-dynamic-creation should be visible globally",
+					child, mon.getName());
+		} finally {
+			mgmt.disconnect(mbeanSessionID);
 			RemoteImpl.getSingleton().disconnect(rmiSessionID);
 		}
 	}

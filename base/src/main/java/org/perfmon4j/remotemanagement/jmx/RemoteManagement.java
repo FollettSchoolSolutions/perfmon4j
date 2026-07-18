@@ -215,6 +215,31 @@ public final class RemoteManagement implements RemoteManagementMBean {
 		}
 	}
 
+	@Override
+	public String getServerManagementVersion() {
+		return ManagementVersion.VERSION;
+	}
+
+	@Override
+	public void forceDynamicChildCreation(String sessionID, String monitorKey) throws SessionNotFoundException {
+		try {
+			MonitorKey key = MonitorKey.parse(monitorKey);
+			ExternalAppender.forceDynamicChildCreation(sessionID, key);
+		} catch (UnableToParseKeyException e) {
+			throw new IllegalArgumentException("Unable to parse key: " + monitorKey, e);
+		}
+	}
+
+	@Override
+	public void unForceDynamicChildCreation(String sessionID, String monitorKey) throws SessionNotFoundException {
+		try {
+			MonitorKey key = MonitorKey.parse(monitorKey);
+			ExternalAppender.unForceDynamicChildCreation(sessionID, key);
+		} catch (UnableToParseKeyException e) {
+			throw new IllegalArgumentException("Unable to parse key: " + monitorKey, e);
+		}
+	}
+
 	// Deliberately logs via System.err rather than org.perfmon4j.util.Logger: this runs
 	// from PerfMon's static initializer, at -javaagent premain time, before an app
 	// server's own logging (or java.util.logging.LogManager) can safely be touched -
