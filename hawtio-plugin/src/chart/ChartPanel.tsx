@@ -1,11 +1,12 @@
 import { Alert, Button, Content, Spinner } from '@patternfly/react-core'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { ChartDashboardControls } from './ChartDashboardControls'
 import { LiveChart } from './LiveChart'
 import { partitionByChartability } from './fieldRouting'
 import { MonitoringDetailTabs } from './MonitoringDetailTabs'
 import { MonitoringLayout } from './MonitoringLayout'
 import { MonitorTree } from './MonitorTree'
+import { MonitorDescriptor } from './types'
 import { ConnectionErrorKind, useRemoteManagementChart } from './useRemoteManagementChart'
 import { useThreadTraces } from './useThreadTraces'
 import { DEFAULT_WINDOW_MS } from './rollingSeries'
@@ -31,6 +32,17 @@ const THREAD_TRACE_ERROR_COPY: Record<ConnectionErrorKind, string> = {
   other: '',
 }
 
+// Unlike the two error copies above (terminal - the whole session/feature is down),
+// this one specifically covers T13's graceful-degradation case: the rest of the
+// session keeps working (monitor browsing, charting, thread traces) but this one
+// operation is excluded from the host's Jolokia ACL - a real, supported Jolokia
+// capability (per-operation allow/deny, not just an all-or-nothing exec toggle).
+const FORCE_DYNAMIC_CREATION_DENIED_COPY =
+  "This Hawtio console's Jolokia connection doesn't have permission to execute " +
+  'forceDynamicChildCreation/unForceDynamicChildCreation specifically, so the "Force dynamic monitor creation" ' +
+  'row action has been hidden. Everything else (browsing, charting, thread traces) is unaffected. Ask your ' +
+  'administrator to allow exec access for these two operations on org.perfmon4j:type=RemoteManagement if you need it.'
+
 export const ChartPanel: React.FunctionComponent = () => {
   const {
     status,
@@ -43,6 +55,9 @@ export const ChartPanel: React.FunctionComponent = () => {
     setFieldColor,
     setFieldVisibility,
     retryConnect,
+    forcedDynamicMonitors,
+    forceDynamicCreationError,
+    setForceDynamicChildCreation,
   } = useRemoteManagementChart()
   const { chartable, textOnly } = partitionByChartability(series)
 
@@ -54,6 +69,16 @@ export const ChartPanel: React.FunctionComponent = () => {
     cancelTrace,
     retryConnect: retryThreadTraceConnect,
   } = useThreadTraces()
+
+  const forceDynamicCreationDenied = forceDynamicCreationError?.kind === 'exec-denied'
+  const [forceDynamicCreationAlertDismissed, setForceDynamicCreationAlertDismissed] = useState(false)
+  useEffect(() => {
+    if (!forceDynamicCreationDenied) setForceDynamicCreationAlertDismissed(false)
+  }, [forceDynamicCreationDenied])
+
+  const onToggleForceDynamicCreation = (monitor: MonitorDescriptor) => {
+    void setForceDynamicChildCreation(monitor.monitorKey, !forcedDynamicMonitors.has(monitor.monitorKey))
+  }
 
   return (
     <>
@@ -102,6 +127,19 @@ export const ChartPanel: React.FunctionComponent = () => {
         />
       )}
 
+      {forceDynamicCreationDenied && !forceDynamicCreationAlertDismissed && (
+        <Alert
+          variant='warning'
+          isInline
+          title={FORCE_DYNAMIC_CREATION_DENIED_COPY}
+          actionLinks={
+            <Button variant='link' isInline onClick={() => setForceDynamicCreationAlertDismissed(true)}>
+              Dismiss
+            </Button>
+          }
+        />
+      )}
+
       <ChartDashboardControls
         series={series}
         enabled={status === 'connected'}
@@ -121,6 +159,9 @@ export const ChartPanel: React.FunctionComponent = () => {
             addFields={addFields}
             canScheduleThreadTrace={threadTraceStatus === 'connected'}
             onScheduleThreadTrace={scheduleTrace}
+            forcedDynamicMonitors={forcedDynamicMonitors}
+            canForceDynamicCreation={!forceDynamicCreationDenied}
+            onToggleForceDynamicCreation={onToggleForceDynamicCreation}
           />
         }
         chart={<LiveChart series={chartable} windowMs={DEFAULT_WINDOW_MS} />}

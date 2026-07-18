@@ -31,7 +31,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T11 | Thread-trace result viewer tab              | C     | S      | T10        | Done   |
 | T15 | Persist chart/thread-trace session across nav | —   | M      | —          | Done   |
 | T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          | Done   |
-| T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    |        |
+| T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    | Done   |
 | T14 | Save / load chart dashboard to file         | D     | M      | T6, T7, T15 | Done   |
 
 ### Tasks
@@ -647,6 +647,56 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Test plan:** Playwright with an exec-denied Jolokia ACL → degraded UX.
 - **Observability:** n/a.
 - **Docs:** ROADMAP: mark graceful-degradation item done.
+- **Note (done):** `remoteManagementClient.ts` gained thin `forceDynamicChildCreation`/
+  `unForceDynamicChildCreation` wrappers (same `execute()`-and-classify pattern as every
+  other op there). `remoteManagementChartStore.ts` (T15's singleton, reused rather than
+  spun up as a third independent session - this action is scoped to the chart's own
+  monitor tree, not a standalone feature like thread traces) gained a
+  `forcedDynamicMonitors: ReadonlySet<string>` snapshot field (which monitorKeys *this
+  session* has itself force-called - there's no server-side query op, so a fresh
+  session can't know what an earlier session left forced; deliberately not
+  resubscribed/reapplied on reconnect like T15 does for charted fields, since this is a
+  one-off debugging action, not a standing subscription worth restoring) and a
+  `setForceDynamicChildCreation(monitorKey, forced)` method that catches any failure
+  into a new `forceDynamicCreationError: ConnectionError | null` field rather than
+  throwing, reusing `connectionStatus.ts`'s existing `classifyConnectionError`/
+  `ExecAccessDeniedError` classification (T8/T15's Risk note already flagged this as
+  "already partially solved"). `MonitorTree.tsx`'s per-row kebab (`MonitorRowAction`)
+  gained a third INTERVAL-only item ("Force dynamic monitor creation" / "Stop forcing
+  dynamic monitor creation", label driven by `forcedDynamicMonitors.has(monitor.monitorKey)`)
+  that is **hidden entirely** (not just disabled) once `forceDynamicCreationError?.kind
+  === 'exec-denied'` - the acceptance criteria's "hidden/disabled" is satisfied as
+  "hidden" specifically, since a denied op has no reason to re-enable mid-session and a
+  visible-but-dead button would just invite repeat clicks. `ChartPanel.tsx` renders a
+  dismissible (locally-dismissed, independent of the underlying denial staying in
+  effect - dismissing the alert doesn't un-hide the action) warning `Alert` explaining
+  which two operations were denied and that everything else (browsing/charting/thread
+  traces) is unaffected - this is a **per-operation** ACL scenario, distinct from the
+  existing terminal exec-denied handling for the whole session (a real Jolokia
+  capability: `jolokia-access.xml` can allow/deny individual operation names within an
+  MBean, not just gate `exec` as a single all-or-nothing category). No new pure/Jest-
+  testable module was warranted here - the new logic is thin Jolokia-calling
+  side-effect code with no independently interesting branching, matching how
+  `addFields`/`removeField` in the same store have never had dedicated unit tests
+  either (covered by browser verification instead). Verified end-to-end in a real
+  browser (Playwright against `dev-target/`): golden path - "Force…" click flips the
+  row's own kebab item to "Stop forcing…" with no alert, a second click flips it back,
+  confirmed by re-opening the menu after each click (no direct way to observe the
+  server-side dynamic-child-creation effect itself from this harness without a
+  `TargetMain.java` change to actually create a dynamically-named child, which was
+  judged out of scope given that exact effect is already covered by T12's `base`-level
+  JUnit tests - this pass targets the UI wiring, not re-proving the server behavior).
+  Degraded path - used Playwright's request interception to return a real Jolokia 403
+  body (`error_type: java.lang.SecurityException`, matching what `jolokia-access.xml`
+  actually returns) specifically for `forceDynamicChildCreation`/
+  `unForceDynamicChildCreation` POSTs while every other op continued through
+  untouched (a more reliable, portable way to exercise this exact scenario than
+  standing up a real `jolokia-access.xml` for one test run, and it still exercises
+  real app code end-to-end - only the network response is substituted): the warning
+  alert appeared with the exact expected copy and a working Dismiss button, the kebab
+  item disappeared from the menu on the very next open, and "Add field to chart…" plus
+  the rest of the session (subscribing/charting a field afterward) continued to work
+  normally, confirming read-only-and-then-some browsing survives the denial untouched.
 
 **T14 — Save / load chart dashboard to file**
 - **Description:** Persist the charted-field set (key, color, scale,
@@ -697,7 +747,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   full thread-trace UX; everything reachable with read + exec Jolokia access.
   **Reached** — T5–T11 all Done.
 - **M3 (GA):** Slice D (T12–T14) — dynamic creation, save/load, and graceful
-  degradation under a write/exec-restricted Jolokia ACL.
+  degradation under a write/exec-restricted Jolokia ACL. **Reached** — T12–T14 all Done.
 
 ### NFRs
 

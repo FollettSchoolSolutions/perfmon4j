@@ -9,6 +9,18 @@ export interface RemoteManagementChartSnapshot {
   status: ConnectionStatus
   connectionError: ConnectionError | null
   series: FieldSeries[]
+  /** monitorKeys this session has itself called forceDynamicChildCreation on and not
+   * yet un-forced. Not resubscribed/reapplied on reconnect (T13) - unlike charted
+   * fields, this is a transient debugging action, not a standing subscription worth
+   * automatically restoring, and there is no server-side query op to even confirm
+   * whether a *new* session's forced state matches what the old one left behind. */
+  forcedDynamicMonitors: ReadonlySet<string>
+  /** Set when the most recent force/un-force call failed - 'exec-denied' specifically
+   * means this op is excluded from the host's Jolokia ACL even though the rest of the
+   * session's ops are allowed (T13's "graceful degradation" case: per-operation ACLs
+   * are a real Jolokia capability, not just all-or-nothing). Reset on every successful
+   * force/un-force call and on every fresh establishSession(). */
+  forceDynamicCreationError: ConnectionError | null
 }
 
 // Deliberately independent of jolokiaService's own console-wide update-rate
@@ -32,7 +44,13 @@ const POLL_MS = 5000
  * this instance.
  */
 class RemoteManagementChartStore {
-  private snapshot: RemoteManagementChartSnapshot = { status: 'connecting', connectionError: null, series: [] }
+  private snapshot: RemoteManagementChartSnapshot = {
+    status: 'connecting',
+    connectionError: null,
+    series: [],
+    forcedDynamicMonitors: new Set(),
+    forceDynamicCreationError: null,
+  }
   private readonly listeners = new Set<() => void>()
 
   private sessionId: string | null = null
@@ -108,7 +126,7 @@ class RemoteManagementChartStore {
   }
 
   private async establishSession(): Promise<void> {
-    this.publish({ connectionError: null })
+    this.publish({ connectionError: null, forceDynamicCreationError: null, forcedDynamicMonitors: new Set() })
     try {
       const sessionId = await remoteManagementClient.connect()
       this.sessionId = sessionId
@@ -201,6 +219,34 @@ class RemoteManagementChartStore {
   retryConnect = (): void => {
     this.publish({ status: 'connecting' })
     void this.establishSession()
+  }
+
+  /**
+   * Forces or un-forces dynamic child-monitor creation for an INTERVAL monitor (T13,
+   * porting RemoteInterfaceExt1 - see MONITORING_TAB_TASKS.md T12). Errors are caught
+   * and surfaced through `forceDynamicCreationError` in the published snapshot rather
+   * than thrown, so a caller (a plain kebab-menu click, not a form submit with its own
+   * error state) doesn't need its own try/catch.
+   */
+  setForceDynamicChildCreation = async (monitorKey: string, forced: boolean): Promise<void> => {
+    const sessionId = this.sessionId
+    if (!sessionId) return
+    try {
+      if (forced) {
+        await remoteManagementClient.forceDynamicChildCreation(sessionId, monitorKey)
+      } else {
+        await remoteManagementClient.unForceDynamicChildCreation(sessionId, monitorKey)
+      }
+      const updated = new Set(this.snapshot.forcedDynamicMonitors)
+      if (forced) {
+        updated.add(monitorKey)
+      } else {
+        updated.delete(monitorKey)
+      }
+      this.publish({ forcedDynamicMonitors: updated, forceDynamicCreationError: null })
+    } catch (e) {
+      this.publish({ forceDynamicCreationError: classifyConnectionError(e) })
+    }
   }
 }
 

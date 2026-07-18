@@ -66,3 +66,17 @@ export async function scheduleThreadTrace(sessionID: string, fieldKey: string): 
 export async function unScheduleThreadTrace(sessionID: string, fieldKey: string): Promise<void> {
   await execute('unScheduleThreadTrace', 'java.lang.String,java.lang.String', [sessionID, fieldKey])
 }
+
+/**
+ * Only has an observable effect on an INTERVAL-type monitorKey - a no-op server-side
+ * for SNAPSHOT/THREADTRACE keys (see ExternalAppender.forceDynamicChildCreation).
+ * There is no corresponding "is this forced?" query op, so callers must track the
+ * forced/not-forced state themselves (see remoteManagementChartStore.ts).
+ */
+export async function forceDynamicChildCreation(sessionID: string, monitorKey: string): Promise<void> {
+  await execute('forceDynamicChildCreation', 'java.lang.String,java.lang.String', [sessionID, monitorKey])
+}
+
+export async function unForceDynamicChildCreation(sessionID: string, monitorKey: string): Promise<void> {
+  await execute('unForceDynamicChildCreation', 'java.lang.String,java.lang.String', [sessionID, monitorKey])
+}

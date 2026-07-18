@@ -130,10 +130,25 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
     closing out legacy feature #8) - a "Save dashboard.../Load dashboard..."
     toolbar in the Monitoring tab downloads/reloads a JSON file of every
     subscribed field's key/color/visibility, skipping (with a dismissible
-    warning) any field no longer present on the currently-connected JVM. Only
-    per-series y-axis normalization (deferred at v1 shipping above) remains
-    open - it has no dedicated Backlog entry of its own, being a small
-    leftover of that same item rather than a separate initiative.
+    warning) any field no longer present on the currently-connected JVM. A
+    "Force dynamic monitor creation" tree-row action has since shipped too
+    (T13, closing out legacy feature #4's UI half - see T12 above for the
+    MBean plumbing it calls): INTERVAL-only, toggles between "Force…"/"Stop
+    forcing…" per row based on what this session has itself forced (there's
+    no server-side query op for current state, so this isn't restored across
+    a reconnect the way charted fields are - a deliberate simplification for
+    what's a one-off debugging action, not a standing subscription). This was
+    also the first concrete instance of graceful degradation under a
+    *per-operation* Jolokia ACL denial (see the Backlog item below, now
+    narrowed accordingly): if `forceDynamicChildCreation`/
+    `unForceDynamicChildCreation` specifically come back exec-denied, the row
+    action is hidden and a dismissible alert explains why, while the rest of
+    the session (browsing/charting/thread traces) is entirely unaffected -
+    distinct from, and not a replacement for, the still-open whole-session
+    exec-denied case below. Only per-series y-axis normalization (deferred at
+    v1 shipping above) remains open - it has no dedicated Backlog entry of its
+    own, being a small leftover of that same item rather than a separate
+    initiative.
 
 ## Backlog
 
@@ -150,19 +165,22 @@ Roughly in the order they'd most improve the plugin - not a committed sequence.
   earlier discussion: this should **add** a
   "push live" option alongside the XML snippet, not replace it - the XML is still needed
   so the monitor survives a JVM restart.
-- **Graceful degradation when Jolokia write/exec access is unavailable.** No longer
-  speculative: the "perfmon4j Chart" nav item (see Status above) is a real, shipped
-  consumer of write/exec JMX operations (`connect`/`subscribe`/`getData`/`disconnect`
-  on `RemoteManagement`), alongside the still-unbuilt "Live dynamic push" feature. A
-  write/exec Jolokia call can fail specifically because the *deploying organization's
-  own* ACL (`jolokia-access.xml`, a role-based restriction, etc.) allows reads but
-  denies writes/exec - a legitimate, expected configuration, not a bug. The Chart
-  screen's `useRemoteManagementChart` hook already classifies this distinctly as an
-  `'exec-denied'` connection-error kind (see `remoteManagementErrors.ts`) and shows a
-  dedicated `Alert` explaining the likely cause rather than a generic error - but it
-  still just dead-ends there with a Retry button; it doesn't fall back to any
-  degraded-but-useful read-only experience. That fallback UX (and doing the same for
-  "Live dynamic push" once built) is what remains open here.
+- **Graceful degradation when the *whole* RemoteManagement session's Jolokia exec
+  access is unavailable.** Narrowed by T13 (see Status above): a *per-operation* ACL
+  denial (specific op names allow/deny-listed in `jolokia-access.xml` while the rest of
+  the session's ops remain allowed) is now handled gracefully for
+  `forceDynamicChildCreation`/`unForceDynamicChildCreation` specifically - the row
+  action hides itself with an explanatory alert, and everything else keeps working.
+  What remains open is the coarser case: a `jolokia-access.xml` (or role-based
+  restriction) that denies exec *entirely*, so even `connect()` - the very first call -
+  fails. The Chart screen's `useRemoteManagementChart` hook already classifies this
+  distinctly as an `'exec-denied'` connection-error kind (see
+  `remoteManagementErrors.ts`) and shows a dedicated `Alert` explaining the likely cause
+  rather than a generic error - but it still just dead-ends there with a Retry button;
+  there is no read-only fallback to fall back *to*, since monitor browsing
+  (`getMonitors`/`getFieldsForMonitor`) is itself an exec op under Jolokia's ACL model,
+  not a plain attribute read. Doing the same for the still-unbuilt "Live dynamic push"
+  feature, once built, is also part of what remains open here.
 - **`ratios` support** (computed numerator/denominator attributes), matching the
   `mBeanSnapshotMonitor` grammar's `ratios='name=numerator/denominator'` syntax.
 - **Multi-instance fan-out** - `instanceKey`/`instanceValueFilter`/`attributeValueFilter`,

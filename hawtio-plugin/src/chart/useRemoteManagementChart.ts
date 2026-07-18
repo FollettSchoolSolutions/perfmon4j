@@ -21,6 +21,12 @@ export interface UseRemoteManagementChartResult {
    * accumulation) stays live while hidden, only the chart line disappears. */
   setFieldVisibility: (fieldKey: string, visible: boolean) => void
   retryConnect: () => void
+  /** monitorKeys this session has forced dynamic child creation on (T13). */
+  forcedDynamicMonitors: ReadonlySet<string>
+  /** Set (until the next successful call) when force/un-force fails - see
+   * remoteManagementChartStore.ts. */
+  forceDynamicCreationError: ConnectionError | null
+  setForceDynamicChildCreation: (monitorKey: string, forced: boolean) => Promise<void>
 }
 
 /**
@@ -45,5 +51,8 @@ export function useRemoteManagementChart(): UseRemoteManagementChartResult {
     setFieldColor: chartStore.setFieldColor,
     setFieldVisibility: chartStore.setFieldVisibility,
     retryConnect: chartStore.retryConnect,
+    forcedDynamicMonitors: snapshot.forcedDynamicMonitors,
+    forceDynamicCreationError: snapshot.forceDynamicCreationError,
+    setForceDynamicChildCreation: chartStore.setForceDynamicChildCreation,
   }
 }

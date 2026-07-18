@@ -31,6 +31,14 @@ export interface MonitorTreeProps {
    * the chart's own `enabled` above already gates everything else. */
   canScheduleThreadTrace: boolean
   onScheduleThreadTrace: (monitor: MonitorDescriptor, options: ThreadTraceOptions) => Promise<void>
+  /** monitorKeys this session has forced dynamic child creation on (T13) - decides
+   * whether a row's toggle item reads "Force…" or "Stop forcing…". */
+  forcedDynamicMonitors: ReadonlySet<string>
+  /** False once a force/un-force call has come back exec-denied (T13 graceful
+   * degradation) - hides the row action entirely rather than leaving a dead-end
+   * button, since a denied op won't un-deny itself mid-session. */
+  canForceDynamicCreation: boolean
+  onToggleForceDynamicCreation: (monitor: MonitorDescriptor) => void
 }
 
 interface MonitorRowActionProps {
@@ -38,19 +46,27 @@ interface MonitorRowActionProps {
   onAddField: (monitor: MonitorDescriptor) => void
   canScheduleThreadTrace: boolean
   onScheduleThreadTrace: (monitor: MonitorDescriptor) => void
+  forcedDynamicMonitors: ReadonlySet<string>
+  canForceDynamicCreation: boolean
+  onToggleForceDynamicCreation: (monitor: MonitorDescriptor) => void
 }
 
 /** Per-row kebab menu: "Add field to chart" plus, for INTERVAL monitors only,
- * "Schedule thread trace…" (T9) - thread traces are only ever built from an
- * INTERVAL monitor's name server-side (see threadTraceKey.ts). Force dynamic
- * monitor creation (T13) joins this same menu once its own MBean plumbing lands. */
+ * "Schedule thread trace…" (T9 - thread traces are only ever built from an INTERVAL
+ * monitor's name server-side, see threadTraceKey.ts) and "Force dynamic monitor
+ * creation…" (T13 - forceDynamicChildCreation is likewise an INTERVAL-only op
+ * server-side, see ExternalAppender.forceDynamicChildCreation). */
 const MonitorRowAction: React.FunctionComponent<MonitorRowActionProps> = ({
   monitor,
   onAddField,
   canScheduleThreadTrace,
   onScheduleThreadTrace,
+  forcedDynamicMonitors,
+  canForceDynamicCreation,
+  onToggleForceDynamicCreation,
 }) => {
   const [isOpen, setIsOpen] = useState(false)
+  const isForced = forcedDynamicMonitors.has(monitor.monitorKey)
 
   return (
     <Dropdown
@@ -93,6 +109,17 @@ const MonitorRowAction: React.FunctionComponent<MonitorRowActionProps> = ({
             Schedule thread trace…
           </DropdownItem>
         )}
+        {monitor.type === 'INTERVAL' && canForceDynamicCreation && (
+          <DropdownItem
+            onClick={e => {
+              e.stopPropagation()
+              setIsOpen(false)
+              onToggleForceDynamicCreation(monitor)
+            }}
+          >
+            {isForced ? 'Stop forcing dynamic monitor creation' : 'Force dynamic monitor creation'}
+          </DropdownItem>
+        )}
       </DropdownList>
     </Dropdown>
   )
@@ -104,6 +131,9 @@ function toTreeViewItem(
   onAddField: (monitor: MonitorDescriptor) => void,
   canScheduleThreadTrace: boolean,
   onScheduleThreadTrace: (monitor: MonitorDescriptor) => void,
+  forcedDynamicMonitors: ReadonlySet<string>,
+  canForceDynamicCreation: boolean,
+  onToggleForceDynamicCreation: (monitor: MonitorDescriptor) => void,
 ): TreeViewDataItem {
   return {
     id: node.id,
@@ -111,7 +141,18 @@ function toTreeViewItem(
     defaultExpanded: depth === 0,
     children:
       node.children.length > 0
-        ? node.children.map(c => toTreeViewItem(c, depth + 1, onAddField, canScheduleThreadTrace, onScheduleThreadTrace))
+        ? node.children.map(c =>
+            toTreeViewItem(
+              c,
+              depth + 1,
+              onAddField,
+              canScheduleThreadTrace,
+              onScheduleThreadTrace,
+              forcedDynamicMonitors,
+              canForceDynamicCreation,
+              onToggleForceDynamicCreation,
+            ),
+          )
         : undefined,
     action: node.monitor ? (
       <MonitorRowAction
@@ -119,6 +160,9 @@ function toTreeViewItem(
         onAddField={onAddField}
         canScheduleThreadTrace={canScheduleThreadTrace}
         onScheduleThreadTrace={onScheduleThreadTrace}
+        forcedDynamicMonitors={forcedDynamicMonitors}
+        canForceDynamicCreation={canForceDynamicCreation}
+        onToggleForceDynamicCreation={onToggleForceDynamicCreation}
       />
     ) : undefined,
   }
@@ -138,6 +182,9 @@ export const MonitorTree: React.FunctionComponent<MonitorTreeProps> = ({
   addFields,
   canScheduleThreadTrace,
   onScheduleThreadTrace,
+  forcedDynamicMonitors,
+  canForceDynamicCreation,
+  onToggleForceDynamicCreation,
 }) => {
   const [monitors, setMonitors] = useState<MonitorDescriptor[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -209,7 +256,16 @@ export const MonitorTree: React.FunctionComponent<MonitorTreeProps> = ({
   const tree = buildMonitorTree(monitors)
   const filteredTree = filterMonitorTree(tree, searchText)
   const treeViewData = filteredTree.map(n =>
-    toTreeViewItem(n, 0, setAddFieldMonitor, canScheduleThreadTrace, setScheduleTraceMonitor),
+    toTreeViewItem(
+      n,
+      0,
+      setAddFieldMonitor,
+      canScheduleThreadTrace,
+      setScheduleTraceMonitor,
+      forcedDynamicMonitors,
+      canForceDynamicCreation,
+      onToggleForceDynamicCreation,
+    ),
   )
 
   const onSearch = (e: ChangeEvent<HTMLInputElement>) => setSearchText(e.target.value)
