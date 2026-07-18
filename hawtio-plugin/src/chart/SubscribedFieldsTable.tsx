@@ -2,6 +2,7 @@ import { Button } from '@patternfly/react-core'
 import { EyeIcon, EyeSlashIcon, TrashIcon } from '@patternfly/react-icons'
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table'
 import React from 'react'
+import { formatScaleLabel, SCALE_FACTORS } from './seriesScale'
 import { FieldSeries } from './types'
 
 export interface SubscribedFieldsTableProps {
@@ -9,6 +10,7 @@ export interface SubscribedFieldsTableProps {
   onRemove: (fieldKey: string) => void
   onColorChange: (fieldKey: string, color: string) => void
   onVisibilityChange: (fieldKey: string, visible: boolean) => void
+  onScaleChange: (fieldKey: string, scale: number) => void
 }
 
 export const SubscribedFieldsTable: React.FunctionComponent<SubscribedFieldsTableProps> = ({
@@ -16,6 +18,7 @@ export const SubscribedFieldsTable: React.FunctionComponent<SubscribedFieldsTabl
   onRemove,
   onColorChange,
   onVisibilityChange,
+  onScaleChange,
 }) => {
   if (series.length === 0) {
     return null
@@ -30,11 +33,12 @@ export const SubscribedFieldsTable: React.FunctionComponent<SubscribedFieldsTabl
           <Th>Monitor</Th>
           <Th>Field</Th>
           <Th>Latest Value</Th>
+          <Th>Scale</Th>
           <Th screenReaderText='Remove' />
         </Tr>
       </Thead>
       <Tbody>
-        {series.map(({ field, latestValue, color, visible }) => (
+        {series.map(({ field, latestValue, color, visible, scale }) => (
           <Tr key={field.fieldKey}>
             <Td dataLabel='Visible'>
               <Button
@@ -59,6 +63,23 @@ export const SubscribedFieldsTable: React.FunctionComponent<SubscribedFieldsTabl
             <Td dataLabel='Monitor'>{field.monitorKey}</Td>
             <Td dataLabel='Field'>{field.fieldName}</Td>
             <Td dataLabel='Latest Value'>{latestValue ?? '—'}</Td>
+            <Td dataLabel='Scale'>
+              {/* Plots this series on LiveChart's shared [0, 100] y-axis at
+                  rawValue * scale, clamped - see seriesScale.ts. A plain native
+                  <select>, matching the Color column's native-input convention
+                  (keyboard-operable, no new dependency). */}
+              <select
+                aria-label={`Y-axis scale factor for ${field.label}`}
+                value={scale}
+                onChange={e => onScaleChange(field.fieldKey, Number(e.target.value))}
+              >
+                {SCALE_FACTORS.map(factor => (
+                  <option key={factor} value={factor}>
+                    {formatScaleLabel(factor)}
+                  </option>
+                ))}
+              </select>
+            </Td>
             <Td dataLabel='Remove'>
               <Button
                 variant='plain'

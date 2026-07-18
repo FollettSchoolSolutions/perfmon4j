@@ -42,4 +42,14 @@ export interface FieldSeries {
    * accumulating while hidden. Only meaningful for chartable (numeric)
    * series, but kept on every entry for a uniform FieldSeries shape. */
   visible: boolean
+  /** Y-axis normalization factor (see seriesScale.ts) - LiveChart plots every
+   * series on one fixed [0, 100] axis, multiplying each raw value by its own
+   * `scale` (a power of ten, user-changeable from the Charted-fields row) and
+   * clamping into that range, so differently-scaled fields can be usefully
+   * overlaid. Never alters the raw value itself (Latest Value, tooltips,
+   * saved dashboard fields all stay unscaled) - only where the line is
+   * drawn. Only meaningful for chartable (numeric) series, but kept on every
+   * entry for a uniform FieldSeries shape, same as `color`/`visible`.
+   */
+  scale: number
 }

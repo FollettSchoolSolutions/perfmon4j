@@ -21,7 +21,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T1  | Split-pane Monitoring layout scaffold       | A     | M      | —          | Done   |
 | T2  | Left pane: persistent monitor tree + Refresh| A     | M      | T1         | Done (see note) |
 | T3  | Right pane: chart-over-tabbed-detail shell  | A     | M      | T1         | Done   |
-| T4  | Tree row actions (kebab): Add field to chart| A     | S      | T2, T3     | Add-field item done; Schedule Thread Trace / Force dynamic creation items remain (T9/T13) |
+| T4  | Tree row actions (kebab): Add field to chart| A     | S      | T2, T3     | Done (see note) |
 | T5  | Non-numeric fields → Text fields tab        | B     | M      | T3         | Done   |
 | T6  | Per-series color assignment + customization | B     | M      | T3         | Done   |
 | T7  | Per-series visibility toggle                | B     | S      | T3, T6     | Done   |
@@ -33,6 +33,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          | Done   |
 | T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    | Done   |
 | T14 | Save / load chart dashboard to file         | D     | M      | T6, T7, T15 | Done   |
+| T16 | Per-series y-axis normalization (scale)     | —     | M      | T6, T7, T14 | Done   |
 
 ### Tasks
 
@@ -148,19 +149,19 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 - **Test plan:** Playwright: kebab → Add → field charts; axe check on menu.
 - **Observability:** n/a.
 - **Docs:** —
-- **Note (partially done):** Built alongside T2 (see its note) since T2's own
+- **Note (done):** Built alongside T2 (see its note) since T2's own
   acceptance criteria needed a working add-field path to verify against.
-  Only the "Add field to chart…" item exists so far — it opens
-  `AddFieldModal.tsx` rather than subscribing directly, since a monitor can
-  have several numeric fields and the old picker's checkbox-selection UX was
-  worth keeping. Kebab currently appears on every monitor node (leaf or
-  hybrid group+monitor), not on individual fields — matches this task's own
-  wording ("Add field to chart" is a per-*monitor* action that then opens a
-  field picker, consistent with the legacy VisualVM dialog). No axe-specific
-  check run yet (deferred, not blocking); manual keyboard tab-through of the
-  `MenuToggle`/`DropdownItem` wasn't separately verified. Schedule Thread
-  Trace (T9) and Force dynamic creation (T13) still need their own menu
-  items added to `MonitorRowAction` in `MonitorTree.tsx`.
+  The "Add field to chart…" item opens `AddFieldModal.tsx` rather than
+  subscribing directly, since a monitor can have several numeric fields and
+  the old picker's checkbox-selection UX was worth keeping. Kebab currently
+  appears on every monitor node (leaf or hybrid group+monitor), not on
+  individual fields — matches this task's own wording ("Add field to chart"
+  is a per-*monitor* action that then opens a field picker, consistent with
+  the legacy VisualVM dialog). No axe-specific check run yet (deferred, not
+  blocking); manual keyboard tab-through of the `MenuToggle`/`DropdownItem`
+  wasn't separately verified. Schedule Thread Trace (T9) and Force dynamic
+  creation (T13) have since added their own menu items to `MonitorRowAction`
+  in `MonitorTree.tsx`, completing this task.
 
 **T5 — Non-numeric fields → Text fields tab**
 - **Description:** Route string-valued subscribed fields to the "Text fields"
@@ -738,6 +739,64 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   fieldKey belongs to a monitor that doesn't exist on this JVM charted the
   real field and showed a dismissible warning alert naming the skipped one by
   label, confirming the partial-success (some available, some missing) path.
+
+**T16 — Per-series y-axis normalization (scale)**
+- **Description:** Port legacy VisualVM's per-counter "Scale" factor (`FieldElement.factor`
+  / `DynamicTimeSeriesChart`, itself modeled on Windows Perfmon's classic Scale column):
+  every series shares one fixed [0, 100] y-axis, and the user picks a power-of-ten
+  multiplier per series (from a dropdown on its Charted-fields row) that's applied to the
+  raw value and clamped into [0, 100] before plotting - the last piece of the original v1
+  chart deferral (see ROADMAP.md).
+- **Acceptance criteria:** Chart y-axis is a fixed [0, 100] range; each charted series has
+  a scale-factor dropdown (powers of ten) that repositions its line without altering its
+  raw Latest Value; the scale factor round-trips through Save/Load (T14).
+- **Effort:** M
+- **Dependencies:** T6, T7 (established per-series client-state pattern), T14 (dashboard
+  format needs the new field).
+- **Risk:** Clamping can visually pin a line at 0 or 100 if the chosen factor is too
+  extreme for the data - an accepted tradeoff inherited directly from the legacy design,
+  not a bug to design around.
+- **Test plan:** Unit-test the scale/clamp math (pure); Playwright: change scale → line
+  position/round-trip through save/load.
+- **Observability:** n/a.
+- **Docs:** ROADMAP: mark per-series y-axis normalization done.
+- **Note (done):** New pure `seriesScale.ts` (`SCALE_FACTORS` - the same 12 powers of ten,
+  100000 down to 0.000001, as legacy `ChartElementsTable`'s factor combo box -
+  `applyScale`, `formatScaleLabel`, 4 Jest tests) mirrors legacy
+  `TimeSeriesWithFactor.adjustNumberBasedOnFactor` exactly: multiply the raw value by the
+  factor, then `Math.min(100, Math.max(0, ...))`. Added `scale: number` to `FieldSeries`
+  (`types.ts`), defaulted to `DEFAULT_SCALE` (1) in `addFields` and preserved untouched by
+  `poll()`'s `...entry` spreads - same "lives on the entry itself" pattern T6/T7 already
+  established for `color`/`visible`. New client-only `setFieldScale` on
+  `remoteManagementChartStore.ts`/`useRemoteManagementChart.ts` (no server call - scale
+  isn't part of the RemoteManagement protocol, same rationale as color/visibility).
+  `LiveChart.tsx` was rewritten to a **fixed** `domain.y = [0, 100]` instead of the
+  auto-computed-with-minimum-pad domain T3 introduced to avoid a degenerate near-zero-width
+  domain for a flat series - a fixed domain has no such degeneracy, so that whole
+  workaround (and its accompanying risk note) is obsolete and was removed rather than kept
+  dead. Each `ChartLine`'s plotted points now run through `applyScale(rawValue, s.scale)`;
+  the Voronoi tooltip was changed to read a new `rawValue` field carried alongside the
+  plotted `y` so hovering still shows the true value, not the scaled/clamped one.
+  `SubscribedFieldsTable.tsx` gained a "Scale" column with a plain native `<select>`
+  (matching the Color column's native-input convention - keyboard-operable, no new
+  dependency) listing all 12 factors via `formatScaleLabel`. `chartDashboard.ts` bumped
+  `DASHBOARD_FILE_VERSION` 1 → 2 to add `scale` to `DashboardFieldEntry`, but stayed
+  backward-compatible rather than rejecting older saves: the field-shape validator
+  (renamed `isDashboardFieldEntryBaseShape`) still only requires the pre-existing 7
+  fields, and `parseDashboardFile` defaults any missing/non-numeric `scale` to
+  `DEFAULT_SCALE` after that check - a real v1 file (from before this task) loads
+  cleanly with every field normalized back to ×1, confirmed by a dedicated test using a
+  literal v1-shaped JSON fixture with no `scale` key at all.
+  `ChartDashboardControls.tsx`'s load path now also calls `setFieldScale` alongside the
+  existing `setFieldColor`/`setFieldVisibility` calls for each restored field. Verified
+  end-to-end in a real browser (Playwright against `dev-target/`): confirmed the y-axis
+  ticks render fixed at 20/40/60/80/100 regardless of data; added a field (default scale
+  ×1, dropdown present); changed its scale to ×10 via the dropdown and confirmed the
+  value stuck; waited a poll cycle and confirmed the line visibly pinned at the top of
+  the chart (TotalHits=25 × 10 = 250, clamped to 100 - the expected clamping behavior,
+  not a bug); Saved the dashboard and confirmed the downloaded JSON's `version` is `2`
+  and the field's `scale` is `10`; removed the field, loaded the file back, and confirmed
+  the Scale dropdown was restored to ×10 with no manual re-selection needed.
 
 ### Milestones
 

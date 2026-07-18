@@ -1,7 +1,11 @@
+import { DEFAULT_SCALE } from './seriesScale'
 import { FieldSeries } from './types'
 
-/** Bumped only on a breaking change to the saved shape - see parseDashboardFile. */
-export const DASHBOARD_FILE_VERSION = 1
+/** Bumped only on a breaking change to the saved shape - see parseDashboardFile.
+ * Bumped 1 -> 2 when `scale` (T16) was added to DashboardFieldEntry; a v1 file
+ * (saved before `scale` existed) is still accepted, just defaulted to
+ * DEFAULT_SCALE per field rather than rejected - see isDashboardFieldEntryBaseShape. */
+export const DASHBOARD_FILE_VERSION = 2
 
 export interface DashboardFieldEntry {
   fieldKey: string
@@ -11,6 +15,9 @@ export interface DashboardFieldEntry {
   label: string
   color: string
   visible: boolean
+  /** Y-axis scale factor (T16, see seriesScale.ts) - defaults to DEFAULT_SCALE
+   * when loading a file saved before this field existed (version 1). */
+  scale: number
 }
 
 export interface DashboardFile {
@@ -19,16 +26,11 @@ export interface DashboardFile {
   fields: DashboardFieldEntry[]
 }
 
-/**
- * key/color/visible per T14 - "scale" (per-series y-axis normalization) isn't
- * tracked anywhere yet (see ROADMAP.md's "Y-axis normalization" backlog item,
- * still open), so there's nothing of that shape to persist until it exists.
- */
 export function serializeDashboard(series: FieldSeries[]): DashboardFile {
   return {
     version: DASHBOARD_FILE_VERSION,
     savedAt: new Date().toISOString(),
-    fields: series.map(({ field, color, visible }) => ({
+    fields: series.map(({ field, color, visible, scale }) => ({
       fieldKey: field.fieldKey,
       monitorKey: field.monitorKey,
       fieldName: field.fieldName,
@@ -36,11 +38,14 @@ export function serializeDashboard(series: FieldSeries[]): DashboardFile {
       label: field.label,
       color,
       visible,
+      scale,
     })),
   }
 }
 
-function isDashboardFieldEntry(value: unknown): value is DashboardFieldEntry {
+/** Validates every field except `scale`, which a version-1 file won't have -
+ * parseDashboardFile defaults it separately rather than requiring it here. */
+function isDashboardFieldEntryBaseShape(value: unknown): value is Omit<DashboardFieldEntry, 'scale'> {
   if (typeof value !== 'object' || value === null) return false
   const v = value as Record<string, unknown>
   return (
@@ -56,8 +61,9 @@ function isDashboardFieldEntry(value: unknown): value is DashboardFieldEntry {
 
 /**
  * Throws with a user-presentable message on anything not shaped like a file this
- * plugin saved - deliberately permissive on `version` (no fields have ever changed
- * shape yet) rather than rejecting a file just because a future version bumped it.
+ * plugin saved - deliberately permissive on `version` (only one field has ever been
+ * added, and it's defaulted rather than required) rather than rejecting a file just
+ * because a future version bumped it.
  */
 export function parseDashboardFile(json: string): DashboardFile {
   let parsed: unknown
@@ -69,10 +75,14 @@ export function parseDashboardFile(json: string): DashboardFile {
   if (typeof parsed !== 'object' || parsed === null || !Array.isArray((parsed as { fields?: unknown }).fields)) {
     throw new Error('That file is not a perfmon4j chart dashboard file.')
   }
-  const fields = (parsed as { fields: unknown[] }).fields
-  if (!fields.every(isDashboardFieldEntry)) {
+  const rawFields = (parsed as { fields: unknown[] }).fields
+  if (!rawFields.every(isDashboardFieldEntryBaseShape)) {
     throw new Error('That file is not a perfmon4j chart dashboard file.')
   }
+  const fields: DashboardFieldEntry[] = rawFields.map(f => {
+    const rawScale = (f as unknown as Record<string, unknown>).scale
+    return { ...f, scale: typeof rawScale === 'number' ? rawScale : DEFAULT_SCALE }
+  })
   const version = (parsed as { version?: unknown }).version
   return { version: typeof version === 'number' ? version : DASHBOARD_FILE_VERSION, savedAt: String((parsed as { savedAt?: unknown }).savedAt ?? ''), fields }
 }

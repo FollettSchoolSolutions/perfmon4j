@@ -145,10 +145,14 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
     action is hidden and a dismissible alert explains why, while the rest of
     the session (browsing/charting/thread traces) is entirely unaffected -
     distinct from, and not a replacement for, the still-open whole-session
-    exec-denied case below. Only per-series y-axis normalization (deferred at
-    v1 shipping above) remains open - it has no dedicated Backlog entry of its
-    own, being a small leftover of that same item rather than a separate
-    initiative.
+    exec-denied case below. Per-series y-axis normalization (deferred at v1
+    shipping above) has since shipped too (T16) - ported legacy VisualVM's
+    Windows-Perfmon-style "Scale" column: every series now plots on one fixed
+    [0, 100] y-axis, with a per-row dropdown (powers of ten) that multiplies
+    and clamps each series' raw value before plotting, so wildly
+    different-magnitude fields can be usefully overlaid on one chart. This
+    was the last item from the original v1 chart deferral list - nothing
+    remains open from that list.
 
 ## Backlog
 

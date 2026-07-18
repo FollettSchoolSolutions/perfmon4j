@@ -6,7 +6,7 @@ const monitor = toMonitorDescriptor('INTERVAL(name=com.example.Foo)')
 
 function seriesFor(fieldName: string, fieldType: string, latestValue: number | string | null = null): FieldSeries {
   const fieldKey = `${monitor.monitorKey}:FIELD(name=${fieldName};type=${fieldType})`
-  return { field: toFieldDescriptor(monitor, fieldKey), points: [], latestValue, color: '#000000', visible: true }
+  return { field: toFieldDescriptor(monitor, fieldKey), points: [], latestValue, color: '#000000', visible: true, scale: 1 }
 }
 
 describe('partitionByChartability', () => {

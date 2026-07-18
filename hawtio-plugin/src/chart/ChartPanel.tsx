@@ -54,6 +54,7 @@ export const ChartPanel: React.FunctionComponent = () => {
     removeField,
     setFieldColor,
     setFieldVisibility,
+    setFieldScale,
     retryConnect,
     forcedDynamicMonitors,
     forceDynamicCreationError,
@@ -148,6 +149,7 @@ export const ChartPanel: React.FunctionComponent = () => {
         addFields={addFields}
         setFieldColor={setFieldColor}
         setFieldVisibility={setFieldVisibility}
+        setFieldScale={setFieldScale}
       />
 
       <MonitoringLayout
@@ -172,6 +174,7 @@ export const ChartPanel: React.FunctionComponent = () => {
             onRemoveField={removeField}
             onColorChange={setFieldColor}
             onVisibilityChange={setFieldVisibility}
+            onScaleChange={setFieldScale}
             threadTraces={threadTraces}
             onCancelThreadTrace={fieldKey => void cancelTrace(fieldKey)}
           />

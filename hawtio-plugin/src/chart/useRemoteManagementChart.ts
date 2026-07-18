@@ -20,6 +20,9 @@ export interface UseRemoteManagementChartResult {
   /** Client-side only - no server call; the subscription (and point
    * accumulation) stays live while hidden, only the chart line disappears. */
   setFieldVisibility: (fieldKey: string, visible: boolean) => void
+  /** Client-side only - no server call; see seriesScale.ts for how this affects
+   * LiveChart's fixed [0, 100] y-axis. */
+  setFieldScale: (fieldKey: string, scale: number) => void
   retryConnect: () => void
   /** monitorKeys this session has forced dynamic child creation on (T13). */
   forcedDynamicMonitors: ReadonlySet<string>
@@ -50,6 +53,7 @@ export function useRemoteManagementChart(): UseRemoteManagementChartResult {
     removeField: chartStore.removeField,
     setFieldColor: chartStore.setFieldColor,
     setFieldVisibility: chartStore.setFieldVisibility,
+    setFieldScale: chartStore.setFieldScale,
     retryConnect: chartStore.retryConnect,
     forcedDynamicMonitors: snapshot.forcedDynamicMonitors,
     forceDynamicCreationError: snapshot.forceDynamicCreationError,

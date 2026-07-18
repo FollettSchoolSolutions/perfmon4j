@@ -1,6 +1,7 @@
 import { Chart, ChartAxis, ChartGroup, ChartLine, ChartVoronoiContainer } from '@patternfly/react-charts/victory'
 import { EmptyState, EmptyStateBody } from '@patternfly/react-core'
 import React from 'react'
+import { applyScale } from './seriesScale'
 import { FieldSeries } from './types'
 
 export interface LiveChartProps {
@@ -12,12 +13,23 @@ interface ChartPoint {
   x: number
   y: number
   name: string
+  /** Unscaled value, for the tooltip - `y` above is what's actually plotted
+   * (post-`applyScale`), which is not what a user hovering wants to read. */
+  rawValue: number
 }
 
+const Y_DOMAIN: [number, number] = [0, 100]
+
 /**
- * A single shared y-axis for v1 - fields with very different magnitudes/units (e.g.
- * a millisecond duration next to a 0-1 ratio) can look flat next to each other. A
- * known, accepted v1 rough edge; per-series normalization is a possible follow-up.
+ * Every series shares this fixed [0, 100] y-axis (T16, porting legacy VisualVM's
+ * Windows-Perfmon-style per-counter "Scale" - see seriesScale.ts) rather than an
+ * auto-computed one: each series' own `scale` factor (set from the Charted-fields
+ * row, SubscribedFieldsTable.tsx) is applied to its raw value and clamped into
+ * [0, 100] before plotting, so wildly different-magnitude fields (a 0-1 ratio next
+ * to a multi-thousand-ms duration) can be usefully overlaid on one chart. This also
+ * obsoletes the old per-render auto-domain-with-minimum-pad computation this
+ * component used to need to avoid a degenerate near-zero-width domain for a
+ * perfectly flat series - a fixed domain has no such degeneracy to guard against.
  */
 export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, windowMs }) => {
   if (series.length === 0) {
@@ -29,35 +41,22 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
   }
 
   // Hidden series (T7) keep their subscription and keep accumulating points -
-  // only what's drawn/domain-fitted is filtered here, so re-showing a series
-  // doesn't need to re-fetch anything.
+  // only what's drawn is filtered here, so re-showing a series doesn't need to
+  // re-fetch anything.
   const visibleSeries = series.filter(s => s.visible)
 
   const now = Date.now()
 
-  // Victory computes its own y-domain from the data range when none is given, but
-  // for a perfectly flat series (min === max - e.g. a monitor under constant load,
-  // exactly the case a bare dev-target demo loop produces) that degenerates to a
-  // near-zero-width domain, which renders absurdly over-precise axis labels (and is
-  // also what triggered a Victory "Infinity is an invalid value for width" console
-  // warning, observed with a single-point series before this fix). Computing an
-  // explicit domain with a sensible minimum pad avoids depending on Victory's own
-  // heuristic for this edge case.
-  const allValues = visibleSeries.flatMap(s => s.points.map(p => p.value))
-  const minValue = allValues.length > 0 ? Math.min(...allValues) : 0
-  const maxValue = allValues.length > 0 ? Math.max(...allValues) : 1
-  const valueRange = maxValue - minValue
-  const yPadding = valueRange > 0 ? valueRange * 0.1 : Math.max(Math.abs(maxValue) * 0.1, 1)
-  const yDomain: [number, number] = [minValue - yPadding, maxValue + yPadding]
-
   return (
     <Chart
       ariaTitle='perfmon4j live chart'
-      containerComponent={<ChartVoronoiContainer labels={({ datum }: { datum: ChartPoint }) => `${datum.name}: ${datum.y}`} />}
+      containerComponent={
+        <ChartVoronoiContainer labels={({ datum }: { datum: ChartPoint }) => `${datum.name}: ${datum.rawValue}`} />
+      }
       legendData={visibleSeries.map(s => ({ name: s.field.label, symbol: { fill: s.color } }))}
       legendPosition='bottom'
       scale={{ x: 'time', y: 'linear' }}
-      domain={{ x: [now - windowMs, now], y: yDomain }}
+      domain={{ x: [now - windowMs, now], y: Y_DOMAIN }}
       height={300}
       width={800}
       padding={{ top: 20, bottom: 75, left: 60, right: 30 }}
@@ -70,7 +69,9 @@ export const LiveChart: React.FunctionComponent<LiveChartProps> = ({ series, win
             key={s.field.fieldKey}
             name={s.field.label}
             style={{ data: { stroke: s.color } }}
-            data={s.points.map((p): ChartPoint => ({ x: p.timestamp, y: p.value, name: s.field.label }))}
+            data={s.points.map(
+              (p): ChartPoint => ({ x: p.timestamp, y: applyScale(p.value, s.scale), name: s.field.label, rawValue: p.value }),
+            )}
           />
         ))}
       </ChartGroup>

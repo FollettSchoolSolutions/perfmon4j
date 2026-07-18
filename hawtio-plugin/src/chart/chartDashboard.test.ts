@@ -1,4 +1,5 @@
 import { DASHBOARD_FILE_VERSION, parseDashboardFile, partitionAvailableFields, serializeDashboard } from './chartDashboard'
+import { DEFAULT_SCALE } from './seriesScale'
 import { FieldSeries } from './types'
 
 const series: FieldSeries[] = [
@@ -14,11 +15,12 @@ const series: FieldSeries[] = [
     latestValue: 2,
     color: '#123456',
     visible: false,
+    scale: 0.01,
   },
 ]
 
 describe('serializeDashboard / parseDashboardFile', () => {
-  it('round-trips a charted series (key, color, visibility) without points/latestValue', () => {
+  it('round-trips a charted series (key, color, visibility, scale) without points/latestValue', () => {
     const file = serializeDashboard(series)
     expect(file.version).toBe(DASHBOARD_FILE_VERSION)
     expect(file.fields).toEqual([
@@ -30,6 +32,7 @@ describe('serializeDashboard / parseDashboardFile', () => {
         label: 'com.example.Foo — AverageDuration',
         color: '#123456',
         visible: false,
+        scale: 0.01,
       },
     ])
 
@@ -52,6 +55,28 @@ describe('serializeDashboard / parseDashboardFile', () => {
   it('defaults a missing/non-numeric version rather than rejecting the file', () => {
     const withoutVersion = parseDashboardFile(JSON.stringify({ fields: [] }))
     expect(withoutVersion.version).toBe(DASHBOARD_FILE_VERSION)
+  })
+
+  it('defaults scale to DEFAULT_SCALE when loading a version-1 file saved before scale existed', () => {
+    const v1File = {
+      version: 1,
+      savedAt: '2026-01-01T00:00:00.000Z',
+      fields: [
+        {
+          fieldKey: 'INTERVAL(name=com.example.Foo):FIELD(name=AverageDuration;type=DOUBLE)',
+          monitorKey: 'INTERVAL(name=com.example.Foo)',
+          fieldName: 'AverageDuration',
+          fieldType: 'DOUBLE',
+          label: 'com.example.Foo — AverageDuration',
+          color: '#123456',
+          visible: false,
+          // no `scale` field - this is what a real v1 save produced.
+        },
+      ],
+    }
+    const parsed = parseDashboardFile(JSON.stringify(v1File))
+    expect(parsed.version).toBe(1)
+    expect(parsed.fields[0].scale).toBe(DEFAULT_SCALE)
   })
 })
 

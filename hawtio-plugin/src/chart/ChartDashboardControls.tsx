@@ -14,6 +14,7 @@ export interface ChartDashboardControlsProps {
   addFields: (fields: FieldDescriptor[]) => Promise<void>
   setFieldColor: (fieldKey: string, color: string) => void
   setFieldVisibility: (fieldKey: string, visible: boolean) => void
+  setFieldScale: (fieldKey: string, scale: number) => void
 }
 
 function toFieldDescriptor(entry: DashboardFieldEntry): FieldDescriptor {
@@ -43,6 +44,7 @@ export const ChartDashboardControls: React.FunctionComponent<ChartDashboardContr
   addFields,
   setFieldColor,
   setFieldVisibility,
+  setFieldScale,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -90,6 +92,7 @@ export const ChartDashboardControls: React.FunctionComponent<ChartDashboardContr
         available.forEach(entry => {
           setFieldColor(entry.fieldKey, entry.color)
           setFieldVisibility(entry.fieldKey, entry.visible)
+          setFieldScale(entry.fieldKey, entry.scale)
         })
       }
       if (missing.length > 0) {

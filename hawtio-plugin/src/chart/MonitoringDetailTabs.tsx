@@ -15,6 +15,7 @@ export interface MonitoringDetailTabsProps {
   onRemoveField: (fieldKey: string) => void
   onColorChange: (fieldKey: string, color: string) => void
   onVisibilityChange: (fieldKey: string, visible: boolean) => void
+  onScaleChange: (fieldKey: string, scale: number) => void
   threadTraces: ThreadTraceEntry[]
   onCancelThreadTrace: (fieldKey: string) => void
 }
@@ -38,6 +39,7 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
   onRemoveField,
   onColorChange,
   onVisibilityChange,
+  onScaleChange,
   threadTraces,
   onCancelThreadTrace,
 }) => {
@@ -68,6 +70,7 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
             onRemove={onRemoveField}
             onColorChange={onColorChange}
             onVisibilityChange={onVisibilityChange}
+            onScaleChange={onScaleChange}
           />
         )}
       </Tab>

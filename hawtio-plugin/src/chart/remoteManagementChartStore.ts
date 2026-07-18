@@ -3,6 +3,7 @@ import { classifyConnectionError, ConnectionError, ConnectionStatus } from './co
 import { isNumericFieldType, toFieldDescriptor, toMonitorDescriptor } from './monitorKey'
 import { appendPoint, DEFAULT_MAX_POINTS, DEFAULT_WINDOW_MS, trimToWindow } from './rollingSeries'
 import { colorForIndex } from './seriesColor'
+import { DEFAULT_SCALE } from './seriesScale'
 import { FieldDescriptor, FieldSeries, MonitorDescriptor } from './types'
 
 export interface RemoteManagementChartSnapshot {
@@ -191,6 +192,7 @@ class RemoteManagementChartStore {
           latestValue: null,
           color: colorForIndex(startColorIndex + i),
           visible: true,
+          scale: DEFAULT_SCALE,
         })),
       ],
     })
@@ -214,6 +216,10 @@ class RemoteManagementChartStore {
 
   setFieldVisibility = (fieldKey: string, visible: boolean): void => {
     this.publish({ series: this.snapshot.series.map(entry => (entry.field.fieldKey === fieldKey ? { ...entry, visible } : entry)) })
+  }
+
+  setFieldScale = (fieldKey: string, scale: number): void => {
+    this.publish({ series: this.snapshot.series.map(entry => (entry.field.fieldKey === fieldKey ? { ...entry, scale } : entry)) })
   }
 
   retryConnect = (): void => {
