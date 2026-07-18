@@ -32,7 +32,7 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
 | T15 | Persist chart/thread-trace session across nav | —   | M      | —          | Done   |
 | T12 | base: port RemoteInterfaceExt1 to the MBean | D     | L      | —          |        |
 | T13 | Force dynamic creation action + degradation | D     | M      | T4, T12    |        |
-| T14 | Save / load chart dashboard to file         | D     | M      | T6, T7, T15 |        |
+| T14 | Save / load chart dashboard to file         | D     | M      | T6, T7, T15 | Done   |
 
 ### Tasks
 
@@ -621,6 +621,32 @@ Grounding: existing frontend lives in `hawtio-plugin/src/chart/`
   round-trip incl. a missing-field case.
 - **Observability:** n/a.
 - **Docs:** ROADMAP: mark #8 done.
+- **Note (done):** New pure `chartDashboard.ts` (`serializeDashboard`/
+  `parseDashboardFile`/`partitionAvailableFields`, 7 Jest tests) plus
+  `ChartDashboardControls.tsx` (Save/Load buttons wired into `ChartPanel.tsx`
+  above `MonitoringLayout`, so they apply to the whole charted-field set
+  regardless of which detail tab is active). Saves every subscribed field
+  (chartable + Text-fields-tab, i.e. `series` from `useRemoteManagementChart`,
+  not just `chartable`) - fieldKey/monitorKey/fieldName/fieldType/label/color/
+  visible per field, as downloadable JSON (no `.p4j` properties-file format -
+  this is a browser download, not desktop file I/O). No "scale" field is saved
+  - per-series y-axis normalization doesn't exist yet (still an open ROADMAP
+  backlog item), so there's nothing of that shape to persist until it does.
+  Load re-subscribes via the existing `addFields`, then reapplies saved color/
+  visibility via `setFieldColor`/`setFieldVisibility` - all three already
+  existed on `useRemoteManagementChart`, so no `remoteManagementChartStore.ts`
+  changes were needed. "Skip a missing field with a warning" is resolved by
+  checking each saved fieldKey against a live `listMonitors`/
+  `listFieldsForMonitor` query (not by relying on `subscribe()` throwing - it
+  doesn't; a stale fieldKey subscribes without error and just never appears in
+  `getData()`, so availability has to be checked up front instead). Verified
+  end-to-end against the real `dev-target/` JVM (headless Chromium via
+  Playwright): add a field, recolor it, hide it, Save downloads a JSON file
+  with the exact color/visibility; Remove clears it; Load re-adds it with that
+  same color/visibility restored. A second load of a two-field file where one
+  fieldKey belongs to a monitor that doesn't exist on this JVM charted the
+  real field and showed a dismissible warning alert naming the skipped one by
+  label, confirming the partial-success (some available, some missing) path.
 
 ### Milestones
 

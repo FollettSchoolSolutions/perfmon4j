@@ -119,9 +119,15 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
     end-to-end as well (T8-T11): scheduling (min-duration/max-depth, with real
     input validation the legacy VisualVM dialog never had), a pending/completed
     queue tab with View/Cancel, and a captured-stack result viewer - closing out
-    legacy features #9/#10/#11 (see `MONITORING_TAB_SPIKE.md`'s gap table). Y-axis
-    normalization and save/load remain open (see Backlog / `MONITORING_TAB_TASKS.md`
-    T14).
+    legacy features #9/#10/#11 (see `MONITORING_TAB_SPIKE.md`'s gap table).
+    Save/load of the charted-field set to a file has since shipped too (T14,
+    closing out legacy feature #8) - a "Save dashboard.../Load dashboard..."
+    toolbar in the Monitoring tab downloads/reloads a JSON file of every
+    subscribed field's key/color/visibility, skipping (with a dismissible
+    warning) any field no longer present on the currently-connected JVM. Only
+    per-series y-axis normalization (deferred at v1 shipping above) remains
+    open - it has no dedicated Backlog entry of its own, being a small
+    leftover of that same item rather than a separate initiative.
 
 ## Backlog
 

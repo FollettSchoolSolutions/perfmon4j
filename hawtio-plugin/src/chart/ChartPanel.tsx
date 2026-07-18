@@ -1,5 +1,6 @@
 import { Alert, Button, Content, Spinner } from '@patternfly/react-core'
 import React from 'react'
+import { ChartDashboardControls } from './ChartDashboardControls'
 import { LiveChart } from './LiveChart'
 import { partitionByChartability } from './fieldRouting'
 import { MonitoringDetailTabs } from './MonitoringDetailTabs'
@@ -100,6 +101,16 @@ export const ChartPanel: React.FunctionComponent = () => {
           }
         />
       )}
+
+      <ChartDashboardControls
+        series={series}
+        enabled={status === 'connected'}
+        listMonitors={listMonitors}
+        listFieldsForMonitor={listFieldsForMonitor}
+        addFields={addFields}
+        setFieldColor={setFieldColor}
+        setFieldVisibility={setFieldVisibility}
+      />
 
       <MonitoringLayout
         left={
