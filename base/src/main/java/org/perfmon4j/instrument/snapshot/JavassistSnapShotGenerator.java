@@ -697,8 +697,30 @@ public class JavassistSnapShotGenerator extends SnapShotGenerator {
 	
 	
 	public MonitorKeyWithFields[] generateExternalMonitorKeys (Class<?> clazz) {
-		MonitorKey monitorKey[] = getMonitorKeysForClass(clazz);
-		
+		return buildExternalMonitorKeys(clazz, getMonitorKeysForClass(clazz));
+	}
+
+	public MonitorKeyWithFields[] generateExternalMonitorKeysForPOJO(Class<?> clazz, String[] instanceNames) {
+		List<MonitorKey> keys = new ArrayList<MonitorKey>();
+
+		for (int i = 0; i < instanceNames.length; i++) {
+			String instanceName = instanceNames[i];
+			if (instanceName == null) {
+				keys.add(MonitorKey.newSnapShotKey(clazz.getName()));
+			} else {
+				keys.add(MonitorKey.newSnapShotKey(clazz.getName(), instanceName));
+			}
+		}
+		if (keys.isEmpty()) {
+			// No live instances == no external monitor keys.  Do NOT fall back
+			// to a no-instance key the way the legacy path does.
+			return new MonitorKeyWithFields[]{};
+		}
+
+		return buildExternalMonitorKeys(clazz, keys.toArray(new MonitorKey[keys.size()]));
+	}
+
+	private MonitorKeyWithFields[] buildExternalMonitorKeys(Class<?> clazz, MonitorKey monitorKey[]) {
 		List<FieldKey> fields = new ArrayList<FieldKey>();
 		
 		SnapShotRatios snapShotRatios = transformer.findAnotation(SnapShotRatios.class, clazz);
