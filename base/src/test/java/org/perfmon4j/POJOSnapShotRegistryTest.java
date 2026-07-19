@@ -60,9 +60,68 @@ public class POJOSnapShotRegistryTest extends TestCase {
 		
 		assertTrue("Since it was not registered as a weak reference, registry should maintain a strong reference", instance.isActive());
 	}
-	
-    
-/*----------------------------------------------------------------------------*/    
+
+	public void testGetRegisteredClassNames() throws Exception {
+		POJOSnapShotRegistry registry = new POJOSnapShotRegistry();
+		final String pojoClassName = POJO.class.getName();
+
+		assertEquals("Should start with no registered class names", 0, registry.getRegisteredClassNames().length);
+		assertFalse("isRegistered", registry.isRegistered(pojoClassName));
+
+		POJO pojo = new POJO();
+		registry.register(pojo, false);
+
+		String[] classNames = registry.getRegisteredClassNames();
+		assertEquals("classNames.length", 1, classNames.length);
+		assertEquals("classNames[0]", pojoClassName, classNames[0]);
+		assertTrue("isRegistered", registry.isRegistered(pojoClassName));
+
+		registry.deRegister(pojo);
+
+		assertEquals("Class name should be removed when last instance is deRegistered",
+			0, registry.getRegisteredClassNames().length);
+		assertFalse("isRegistered after deRegister", registry.isRegistered(pojoClassName));
+	}
+
+	public void testGetInstanceByName() throws Exception {
+		POJOSnapShotRegistry registry = new POJOSnapShotRegistry();
+		final String pojoClassName = POJO.class.getName();
+
+		POJO unnamed = new POJO();
+		POJO named = new POJO();
+
+		registry.register(unnamed, false);
+		registry.register(named, "InstanceA", false);
+
+		POJOInstance instance = registry.getInstance(pojoClassName, "InstanceA");
+		assertNotNull("Should find named instance", instance);
+		assertEquals("instanceName", "InstanceA", instance.getInstanceName());
+
+		instance = registry.getInstance(pojoClassName, null);
+		assertNotNull("Should find unnamed (default) instance", instance);
+		assertNull("instanceName", instance.getInstanceName());
+
+		assertNull("Should not find unregistered instance name",
+			registry.getInstance(pojoClassName, "NoSuchInstance"));
+		assertNull("Should not find unregistered class",
+			registry.getInstance("com.acme.NoSuchClass", null));
+	}
+
+	public void testGetPOJOClass() throws Exception {
+		POJOSnapShotRegistry registry = new POJOSnapShotRegistry();
+		final String pojoClassName = POJO.class.getName();
+
+		POJO pojo = new POJO();
+		registry.register(pojo, false);
+
+		POJOSnapShotRegistry.POJORegistryEntry entry = registry.lookupRegistryEntry(pojoClassName);
+		assertNotNull("entry", entry);
+		assertEquals("For a true POJO registration, getPOJOClass returns the POJO's class",
+			POJO.class, entry.getPOJOClass());
+	}
+
+
+/*----------------------------------------------------------------------------*/
     public static void main(String[] args) {
         String[] testCaseName = {POJOSnapShotRegistryTest.class.getName()};
         
