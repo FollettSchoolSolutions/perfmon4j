@@ -23,13 +23,21 @@ package org.perfmon4j.remotemanagement;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.perfmon4j.ExternalThreadTraceConfig;
 import org.perfmon4j.IntervalData;
+import org.perfmon4j.POJOSnapShotRegistry;
+import org.perfmon4j.POJOSnapShotRegistry.POJOInstance;
+import org.perfmon4j.POJOSnapShotRegistry.POJORegistryEntry;
+import org.perfmon4j.POJOSnapShotWrapper;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonData;
 import org.perfmon4j.SnapShotData;
@@ -292,13 +300,20 @@ public class ExternalAppender {
 					String className = monitorKey.getName();
 					String instanceName = monitorKey.getInstance();
 					try {
-						Class<?> clazz = PerfMon.getClassLoader().loadClass(className);
-						JavassistSnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, instanceName);
-		            	SnapShotMonitor monitor = new SnapShotProviderWrapper("", bundle);
+						SnapShotMonitor monitor;
+						POJOSnapShotRegistry pojoRegistry = POJOSnapShotRegistry.getSingleton();
+						POJORegistryEntry pojoEntry = pojoRegistry.lookupRegistryEntry(className);
+						if (pojoEntry != null && pojoEntry.getPOJOClass() != null) {
+							monitor = new POJOSnapShotWrapper("", className, instanceName, pojoRegistry);
+						} else {
+							Class<?> clazz = PerfMon.getClassLoader().loadClass(className);
+							JavassistSnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, instanceName);
+							monitor = new SnapShotProviderWrapper("", bundle);
+						}
 		            	SnapShotData data = monitor.initSnapShot(MiscHelper.currentTimeWithMilliResolution());
-		            	
+
 		            	snapShotMonitors.put(monitorKey, new SnapShotMonitorAndData(monitor, data));
-		            	
+
 					} catch (Exception e) {
 						logger.logError("Unable to create snapShotInstance for monitor: " + monitorKey, e);
 					}
@@ -403,16 +418,77 @@ public class ExternalAppender {
 	}
 	
 
+	/**
+	 * Builds monitor keys/fields for the POJO snapshot classes currently
+	 * registered with the POJOSnapShotRegistry.  Rebuilt on each call (lazy
+	 * pull) so keys appear/disappear as instances are registered, deregistered
+	 * or garbage collected.  MBeanInstance-backed entries are excluded (their
+	 * data cannot be sampled through the FieldKey mechanism).
+	 *
+	 * NOTE: Deliberately called without holding snapShotLockToken -- the
+	 * registry has its own locks and lock ordering between the two must be
+	 * avoided.
+	 */
+	private static MonitorKeyWithFields[] getPOJOMonitorKeysWithFields() {
+		List<MonitorKeyWithFields> result = new ArrayList<MonitorKeyWithFields>();
+		POJOSnapShotRegistry registry = POJOSnapShotRegistry.getSingleton();
+
+		for (String className : registry.getRegisteredClassNames()) {
+			POJORegistryEntry entry = registry.lookupRegistryEntry(className);
+			if (entry == null || entry.getPOJOClass() == null) {
+				// Entry was concurrently removed, or wraps an MBeanInstance.
+				continue;
+			}
+			List<String> instanceNames = new ArrayList<String>();
+			for (POJOInstance instance : registry.getInstances(className)) {
+				if (instance.isActive()) {
+					instanceNames.add(instance.getInstanceName());
+				}
+			}
+			if (!instanceNames.isEmpty()) {
+				result.addAll(Arrays.asList(PerfMonTimerTransformer.snapShotGenerator
+					.generateExternalMonitorKeysForPOJO(entry.getPOJOClass(),
+						instanceNames.toArray(new String[]{}))));
+			}
+		}
+
+		return result.toArray(new MonitorKeyWithFields[]{});
+	}
+
+	private static Set<String> getPOJORegisteredClassNames() {
+		Set<String> result = new HashSet<String>();
+		POJOSnapShotRegistry registry = POJOSnapShotRegistry.getSingleton();
+
+		for (String className : registry.getRegisteredClassNames()) {
+			POJORegistryEntry entry = registry.lookupRegistryEntry(className);
+			if (entry != null && entry.getPOJOClass() != null) {
+				result.add(className);
+			}
+		}
+
+		return result;
+	}
+
 	public static MonitorKey[] getSnapShotMonitorKeys() {
-		List<MonitorKey> result = new ArrayList<MonitorKey>();
+		Set<MonitorKey> result = new LinkedHashSet<MonitorKey>();
+
+		// POJO-registered classes are excluded from the legacy list -- the legacy
+		// path would surface a phantom no-instance key that cannot be subscribed.
+		Set<String> pojoClassNames = getPOJORegisteredClassNames();
+
 		RegisteredSnapShotElement elements[] = populateAndRetrieveElements();
 		for (int i = 0; i < elements.length; i++) {
 			MonitorKeyWithFields keys[] = elements[i].monitors;
 			if (keys != null) {
 				for (int j = 0; j < keys.length; j++) {
-					result.add(keys[j].getMonitorKeyOnly());
+					if (!pojoClassNames.contains(keys[j].getName())) {
+						result.add(keys[j].getMonitorKeyOnly());
+					}
 				}
 			}
+		}
+		for (MonitorKeyWithFields pojoKey : getPOJOMonitorKeysWithFields()) {
+			result.add(pojoKey.getMonitorKeyOnly());
 		}
 		return result.toArray(new MonitorKey[result.size()]);
 	}
@@ -434,16 +510,27 @@ public class ExternalAppender {
 
 	public static FieldKey[] getFieldsForSnapShotMonitor(MonitorKey monitorKey) {
 		MonitorKeyWithFields result = null;
-		
+
 		if (MonitorKey.SNAPSHOT_TYPE.equals(monitorKey.getType())) {
-			RegisteredSnapShotElement elements[] = populateAndRetrieveElements();
-			for (int i = 0; i < elements.length && result == null; i++) {
-				MonitorKeyWithFields monitors[] = elements[i].monitors;
-				if (monitors != null) {
-					for (int j = 0; j < monitors.length && result == null; j++) {
-						MonitorKeyWithFields m = monitors[j];
-						if (monitorKey.equals(m.getMonitorKeyOnly())) {
-							result = m;
+			// POJO-registered snapshot classes take precedence over the legacy registry.
+			for (MonitorKeyWithFields m : getPOJOMonitorKeysWithFields()) {
+				if (monitorKey.equals(m.getMonitorKeyOnly())) {
+					result = m;
+					break;
+				}
+			}
+			if (result == null) {
+				Set<String> pojoClassNames = getPOJORegisteredClassNames();
+				RegisteredSnapShotElement elements[] = populateAndRetrieveElements();
+				for (int i = 0; i < elements.length && result == null; i++) {
+					MonitorKeyWithFields monitors[] = elements[i].monitors;
+					if (monitors != null) {
+						for (int j = 0; j < monitors.length && result == null; j++) {
+							MonitorKeyWithFields m = monitors[j];
+							if (monitorKey.equals(m.getMonitorKeyOnly())
+								&& !pojoClassNames.contains(m.getName())) {
+								result = m;
+							}
 						}
 					}
 				}

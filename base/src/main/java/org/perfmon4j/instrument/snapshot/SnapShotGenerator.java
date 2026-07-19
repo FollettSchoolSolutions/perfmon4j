@@ -11,6 +11,15 @@ public abstract class SnapShotGenerator {
 	public abstract Bundle generateBundle(Class<?> provider, String instanceName) throws GenerateSnapShotException;
 	public abstract Bundle generateBundleForPOJO(Class<?> provider) throws GenerateSnapShotException;
 	public abstract MonitorKeyWithFields[] generateExternalMonitorKeys (Class<?> clazz);
+	/**
+	 * Builds external monitor keys for a POJO snapshot class.  Unlike
+	 * {@link #generateExternalMonitorKeys(Class)}, instances are supplied by the
+	 * caller (typically the live instance names found in POJOSnapShotRegistry)
+	 * rather than derived from a static @SnapShotInstanceDefinition method.
+	 * A null element in instanceNames represents the unnamed (default) instance.
+	 * An empty instanceNames array yields an empty result (no fallback key).
+	 */
+	public abstract MonitorKeyWithFields[] generateExternalMonitorKeysForPOJO(Class<?> clazz, String[] instanceNames);
 
 	
     static public interface SnapShotLifecycle {
