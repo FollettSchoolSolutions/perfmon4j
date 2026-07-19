@@ -17,6 +17,17 @@ Follett Software
 McHenry, IL 60050
 
 ** 2.2.3 - TBD
+- POJO-style snapshot monitors registered with POJOSnapShotRegistry (including
+  those registered through the agent-api) are now visible to remote-management
+  clients (VisualVM plugin, Hawtio plugin, RemoteManagement MBean). Each
+  registered POJO instance appears as a SNAPSHOT monitor key (carrying its
+  instance name, when one was provided), supports field enumeration and
+  subscription, and appears/disappears dynamically as instances are registered,
+  deregistered, or garbage collected. Previously POJO snapshots were never
+  registered with the ExternalAppender, so they could not be viewed or charted
+  from the remote plugins; a POJO class configured via snapShotMonitor also no
+  longer surfaces a phantom, unsubscribable no-instance monitor key.
+
 - Bumped the dbupgrader tool's Liquibase dependency from 3.6.1 to 4.8.0,
   resolving CVE-2022-0839. As of Liquibase 4.x, it no longer bundles slf4j/
   logback transitively, so dbupgrader now declares those directly.
