@@ -125,8 +125,12 @@ public class SnapShotManager {
 	                    	SnapShotGenerator.Bundle bundle = PerfMonTimerTransformer.snapShotGenerator.generateBundle(clazz, attr.getProperty(INSTANCE_NAME_PROPERTY));
 	                    	result = new SnapShotProviderWrapper(monitorID.getName(), bundle);
 	                    	logger.logDebug("Found Legacy based SnapShotMonitor for class: " + clazz.getName());
+		                	// Only legacy snapshot classes belong in the ExternalAppender's
+		                	// class-name registry.  POJO classes are discovered dynamically
+		                	// from the POJOSnapShotRegistry; registering them here would
+		                	// surface a phantom no-instance key that cannot be subscribed.
+		                	ExternalAppender.registerSnapShotClass(clazz.getName());
 	                	}
-	                	ExternalAppender.registerSnapShotClass(clazz.getName());
 	                }
 	            } catch (ClassNotFoundException nfe) {
 	            	throw nfe;

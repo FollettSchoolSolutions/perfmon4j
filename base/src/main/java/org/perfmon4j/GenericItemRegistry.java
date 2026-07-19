@@ -55,6 +55,16 @@ public abstract class GenericItemRegistry <T>{
 	
 	}
 	
+	public String[] getRegisteredClassNames() {
+		synchronized (entriesLockToken) {
+			return entries.keySet().toArray(new String[]{});
+		}
+	}
+
+	public boolean isRegistered(String className) {
+		return lookupItemRegistry(className) != null;
+	}
+
 	protected ItemRegistry<T> lookupItemRegistry(String className) {
 		ItemRegistry<T> entry = null;
 		
@@ -144,7 +154,7 @@ public abstract class GenericItemRegistry <T>{
 			return itemWeakReference != null ? itemWeakReference.get() : itemStrongReference;
 		}
 		
-	    boolean isActive() {
+	    public boolean isActive() {
 	    	return getItem() != null;
 	    }
 		

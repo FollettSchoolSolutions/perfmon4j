@@ -1189,6 +1189,80 @@ System.out.println(appenderString);
     	
     }
 
+    @SnapShotPOJO
+    public static final class MyExternalPOJO {
+    	private long counter = 0;
+
+    	@SnapShotCounter
+    	public long getCounter() {
+    		return counter++;
+    	}
+
+    	@SnapShotGauge
+    	public int getActiveThreads() {
+    		return 5;
+    	}
+
+    	@SnapShotString
+    	public String getStatus() {
+    		return "OK";
+    	}
+    }
+
+    private FieldKey findField(MonitorKeyWithFields keyWithFields, String fieldName) {
+    	for (FieldKey field : keyWithFields.getFields()) {
+    		if (field.getFieldName().equals(fieldName)) {
+    			return field;
+    		}
+    	}
+    	return null;
+    }
+
+    public void testGenerateExternalMonitorKeysForPOJONamedInstances() throws Exception {
+    	MonitorKeyWithFields[] keys = PerfMonTimerTransformer.snapShotGenerator
+    		.generateExternalMonitorKeysForPOJO(MyExternalPOJO.class, new String[]{"InstanceA", "InstanceB"});
+
+    	assertEquals("Should have one key per instance", 2, keys.length);
+    	for (MonitorKeyWithFields key : keys) {
+    		assertEquals("type", MonitorKey.SNAPSHOT_TYPE, key.getType());
+    		assertEquals("name", MyExternalPOJO.class.getName(), key.getName());
+
+    		FieldKey counterField = findField(key, "counter" + SnapShotGenerator.DELTA_FIELD_SUFFIX);
+    		assertNotNull("Should have counterPerSecond field", counterField);
+    		assertEquals("counter field type", FieldKey.DOUBLE_TYPE, counterField.getFieldType());
+
+    		FieldKey gaugeField = findField(key, "activeThreads");
+    		assertNotNull("Should have activeThreads field", gaugeField);
+    		assertEquals("gauge field type (int return)", FieldKey.INTEGER_TYPE, gaugeField.getFieldType());
+
+    		FieldKey stringField = findField(key, "status");
+    		assertNotNull("Should have status field", stringField);
+    		assertEquals("string field type", FieldKey.STRING_TYPE, stringField.getFieldType());
+    	}
+    	// groupFields does not guarantee ordering -- just verify both instances are present.
+    	Set<String> instances = new java.util.HashSet<String>();
+    	instances.add(keys[0].getInstance());
+    	instances.add(keys[1].getInstance());
+    	assertTrue("Should contain InstanceA", instances.contains("InstanceA"));
+    	assertTrue("Should contain InstanceB", instances.contains("InstanceB"));
+    }
+
+    public void testGenerateExternalMonitorKeysForPOJONullInstanceName() throws Exception {
+    	MonitorKeyWithFields[] keys = PerfMonTimerTransformer.snapShotGenerator
+    		.generateExternalMonitorKeysForPOJO(MyExternalPOJO.class, new String[]{null});
+
+    	assertEquals("Should have a single key", 1, keys.length);
+    	assertNull("A null instanceName represents the default instance -- no instance attribute on the key",
+    		keys[0].getInstance());
+    }
+
+    public void testGenerateExternalMonitorKeysForPOJOEmptyInstances() throws Exception {
+    	MonitorKeyWithFields[] keys = PerfMonTimerTransformer.snapShotGenerator
+    		.generateExternalMonitorKeysForPOJO(MyExternalPOJO.class, new String[]{});
+
+    	assertEquals("No live instances == no keys (no fallback to a no-instance key)", 0, keys.length);
+    }
+
     @Deprecated
     private SnapShotData initSnapShot(Bundle bundle, Object pojo, long currentTimeMillis) {
     	SnapShotData result =  bundle.newSnapShotData();
