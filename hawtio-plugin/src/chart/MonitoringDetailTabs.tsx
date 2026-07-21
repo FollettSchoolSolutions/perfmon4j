@@ -1,10 +1,12 @@
 import { EmptyState, EmptyStateBody, Tab, TabTitleText, Tabs } from '@patternfly/react-core'
 import React, { useState } from 'react'
+import { buildThreadTraceReportHtml } from './buildThreadTraceReportHtml'
+import { openThreadTraceReport } from './openThreadTraceReport'
+import { parseThreadTrace } from './parseThreadTrace'
 import { SubscribedFieldsTable } from './SubscribedFieldsTable'
 import { TextFieldsTable } from './TextFieldsTable'
 import { ThreadTraceEntry } from './threadTraceQueue'
 import { ThreadTraceQueueTable } from './ThreadTraceQueueTable'
-import { TraceDetailView } from './TraceDetailView'
 import { FieldSeries } from './types'
 
 export interface MonitoringDetailTabsProps {
@@ -20,7 +22,7 @@ export interface MonitoringDetailTabsProps {
   onCancelThreadTrace: (fieldKey: string) => void
 }
 
-type DetailTabKey = 'charted' | 'text' | 'threadTraces' | 'traceDetail'
+type DetailTabKey = 'charted' | 'text' | 'threadTraces'
 
 const StubTabBody: React.FunctionComponent<{ title: string; body: string }> = ({ title, body }) => (
   <EmptyState titleText={title} headingLevel='h4'>
@@ -30,8 +32,9 @@ const StubTabBody: React.FunctionComponent<{ title: string; body: string }> = ({
 
 /**
  * Bottom-right tabbed detail panel (T3) - Charted fields (SubscribedFieldsTable),
- * Text fields (TextFieldsTable, T5), Thread traces (ThreadTraceQueueTable, T9/T10),
- * and Trace detail (TraceDetailView, T11). See MONITORING_TAB_TASKS.md.
+ * Text fields (TextFieldsTable, T5), and Thread traces (ThreadTraceQueueTable, T9/T10).
+ * A completed trace's View opens a standalone HTML report in a new browser tab (built
+ * by buildThreadTraceReportHtml) rather than an in-panel viewer. See MONITORING_TAB_TASKS.md.
  */
 export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsProps> = ({
   chartableSeries,
@@ -44,20 +47,25 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
   onCancelThreadTrace,
 }) => {
   const [activeTabKey, setActiveTabKey] = useState<DetailTabKey>('charted')
-  // Set by a completed row's View action (T10), consumed by TraceDetailView (T11) -
-  // kept here rather than in either child, since View's tab switch and the viewer
-  // both need to agree on the same selection.
-  const [selectedTraceFieldKey, setSelectedTraceFieldKey] = useState<string | null>(null)
 
+  // View parses the completed trace's stack into a tree and opens a self-contained,
+  // savable HTML report in a new tab. The trace is looked up by fieldKey from the live
+  // list at click time, so a since-cancelled row simply no-ops.
   const onViewTrace = (fieldKey: string) => {
-    setSelectedTraceFieldKey(fieldKey)
-    setActiveTabKey('traceDetail')
+    const trace = threadTraces.find(t => t.fieldKey === fieldKey)
+    if (!trace || trace.stack === null) return
+    const { roots, truncated } = parseThreadTrace(trace.stack)
+    const html = buildThreadTraceReportHtml({
+      category: trace.monitorLabel,
+      submittedText: new Date(trace.submittedAt).toLocaleString(),
+      minDurationToCaptureMillis: trace.options.minDurationToCaptureMillis,
+      maxDepth: trace.options.maxDepth,
+      roots,
+      truncated,
+      rawText: trace.stack,
+    })
+    openThreadTraceReport(html)
   }
-
-  // Looked up by fieldKey each render, not held as its own copy - if the selected
-  // trace is since Cancel/Delete'd from the queue (T10), this naturally reverts to
-  // null and TraceDetailView falls back to its empty state.
-  const selectedTrace = threadTraces.find(t => t.fieldKey === selectedTraceFieldKey) ?? null
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={(_event, tabKey) => setActiveTabKey(tabKey as DetailTabKey)}>
@@ -92,9 +100,6 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
         ) : (
           <ThreadTraceQueueTable traces={threadTraces} onView={onViewTrace} onCancel={onCancelThreadTrace} />
         )}
-      </Tab>
-      <Tab eventKey='traceDetail' title={<TabTitleText>Trace detail</TabTitleText>}>
-        <TraceDetailView trace={selectedTrace} />
       </Tab>
     </Tabs>
   )

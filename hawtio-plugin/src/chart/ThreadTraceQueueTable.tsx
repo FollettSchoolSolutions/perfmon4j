@@ -6,7 +6,9 @@ import { ThreadTraceEntry } from './threadTraceQueue'
 
 export interface ThreadTraceQueueTableProps {
   traces: ThreadTraceEntry[]
-  /** Enabled only for a `completed` row - a pending trace has no stack yet. */
+  /** Enabled only for a `completed` row - a pending trace has no stack yet. Opens the
+   * captured stack as a standalone HTML report in a new browser tab (see
+   * MonitoringDetailTabs' onViewTrace / buildThreadTraceReportHtml). */
   onView: (fieldKey: string) => void
   /** Safe to call on either status - unScheduleThreadTrace() is a harmless no-op
    * server-side once a trace has already completed (see remoteManagementClient.ts /

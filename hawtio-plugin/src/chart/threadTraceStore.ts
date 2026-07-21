@@ -114,7 +114,7 @@ class ThreadTraceStore {
     if (this.pendingFieldKeys.has(fieldKey)) return
     await remoteManagementClient.scheduleThreadTrace(sessionId, fieldKey)
     this.pendingFieldKeys.add(fieldKey)
-    this.publish({ traces: addPendingTrace(this.snapshot.traces, fieldKey, monitor.label, Date.now()) })
+    this.publish({ traces: addPendingTrace(this.snapshot.traces, fieldKey, monitor.label, Date.now(), options ?? {}) })
   }
 
   cancelTrace = async (fieldKey: string): Promise<void> => {

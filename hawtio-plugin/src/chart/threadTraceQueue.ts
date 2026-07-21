@@ -1,4 +1,4 @@
-import { THREAD_TRACE_PENDING } from './threadTraceKey'
+import { THREAD_TRACE_PENDING, ThreadTraceOptions } from './threadTraceKey'
 
 export type ThreadTraceStatus = 'pending' | 'completed'
 
@@ -6,13 +6,23 @@ export interface ThreadTraceEntry {
   fieldKey: string
   monitorLabel: string
   submittedAt: number
+  /** The min-duration/max-depth args this trace was scheduled with, surfaced in the
+   * report header (buildThreadTraceReportHtml.ts). Kept here rather than re-decoded
+   * from fieldKey at view time. */
+  options: ThreadTraceOptions
   status: ThreadTraceStatus
   /** The captured stack text once completed; null while pending. */
   stack: string | null
 }
 
-export function addPendingTrace(traces: ThreadTraceEntry[], fieldKey: string, monitorLabel: string, submittedAt: number): ThreadTraceEntry[] {
-  return [...traces, { fieldKey, monitorLabel, submittedAt, status: 'pending', stack: null }]
+export function addPendingTrace(
+  traces: ThreadTraceEntry[],
+  fieldKey: string,
+  monitorLabel: string,
+  submittedAt: number,
+  options: ThreadTraceOptions,
+): ThreadTraceEntry[] {
+  return [...traces, { fieldKey, monitorLabel, submittedAt, options, status: 'pending', stack: null }]
 }
 
 export function removeTrace(traces: ThreadTraceEntry[], fieldKey: string): ThreadTraceEntry[] {

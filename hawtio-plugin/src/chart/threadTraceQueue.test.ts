@@ -6,15 +6,22 @@ const FIELD_KEY_B = 'THREADTRACE(name=com.example.Bar):FIELD(name=stack;type=STR
 
 describe('addPendingTrace', () => {
   it('appends a new pending entry', () => {
-    const result = addPendingTrace([], FIELD_KEY_A, 'com.example.Foo', 1000)
+    const result = addPendingTrace([], FIELD_KEY_A, 'com.example.Foo', 1000, { minDurationToCaptureMillis: 5, maxDepth: 20 })
     expect(result).toEqual<ThreadTraceEntry[]>([
-      { fieldKey: FIELD_KEY_A, monitorLabel: 'com.example.Foo', submittedAt: 1000, status: 'pending', stack: null },
+      {
+        fieldKey: FIELD_KEY_A,
+        monitorLabel: 'com.example.Foo',
+        submittedAt: 1000,
+        options: { minDurationToCaptureMillis: 5, maxDepth: 20 },
+        status: 'pending',
+        stack: null,
+      },
     ])
   })
 
   it('does not mutate the input array', () => {
     const input: ThreadTraceEntry[] = []
-    addPendingTrace(input, FIELD_KEY_A, 'com.example.Foo', 1000)
+    addPendingTrace(input, FIELD_KEY_A, 'com.example.Foo', 1000, {})
     expect(input).toEqual([])
   })
 })
@@ -22,15 +29,15 @@ describe('addPendingTrace', () => {
 describe('removeTrace', () => {
   it('removes only the matching entry', () => {
     const traces = [
-      { fieldKey: FIELD_KEY_A, monitorLabel: 'A', submittedAt: 1, status: 'pending' as const, stack: null },
-      { fieldKey: FIELD_KEY_B, monitorLabel: 'B', submittedAt: 2, status: 'pending' as const, stack: null },
+      { fieldKey: FIELD_KEY_A, monitorLabel: 'A', submittedAt: 1, options: {}, status: 'pending' as const, stack: null },
+      { fieldKey: FIELD_KEY_B, monitorLabel: 'B', submittedAt: 2, options: {}, status: 'pending' as const, stack: null },
     ]
     expect(removeTrace(traces, FIELD_KEY_A)).toEqual([traces[1]])
   })
 })
 
 describe('applyPollResult', () => {
-  const pending: ThreadTraceEntry = { fieldKey: FIELD_KEY_A, monitorLabel: 'A', submittedAt: 1, status: 'pending', stack: null }
+  const pending: ThreadTraceEntry = { fieldKey: FIELD_KEY_A, monitorLabel: 'A', submittedAt: 1, options: {}, status: 'pending', stack: null }
 
   it('leaves a pending entry untouched when the field key is absent from the poll data', () => {
     expect(applyPollResult([pending], {})).toEqual([pending])

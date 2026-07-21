@@ -161,6 +161,24 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
   charted yet" empty state, which used to render twice (chart slot and
   Charted-fields tab), now renders once for the whole content area, with the
   detail-tabs bar itself hidden until at least one field is charted.
+- **Thread-trace report viewer reworked into a standalone HTML page.** A completed
+  trace's **View** no longer switches to an in-panel `<pre>` "Trace detail" tab
+  (that tab and `TraceDetailView.tsx` are gone); it now opens a fully self-contained
+  HTML document in a **new browser tab** (`buildThreadTraceReportHtml.ts` +
+  `openThreadTraceReport.ts`'s Blob URL) that the user can also save and reopen
+  offline. The page has a metadata header (category, submitted time, the
+  min-duration/max-depth the trace was scheduled with - now carried on the
+  `ThreadTraceEntry`) and renders the trace as an **actionable, collapsible tree**:
+  the server's `ThreadTraceData.toAppenderString()` text (every frame an explicit
+  open line + close line) is parsed by pure, Jest-tested `parseThreadTrace.ts` into a
+  tree, and each frame with children becomes a nested `<details>` accordion (with
+  Expand-all/Collapse-all controls, fully expanded on load), its exit shown as a
+  subtle close footer so the open/close bracket stays visible. Frame duration is
+  encoded as a proportional bar in a sequential blue ramp - prominence tracking
+  magnitude in both light and dark - with the millisecond value in plain ink beside
+  it (per the `dataviz` skill's text-wears-ink-tokens rule). Verified in a real
+  browser (Playwright, light + dark) that the tree renders, collapses, and survives
+  being saved to disk and reopened with no network access.
 
 ## Backlog
 
