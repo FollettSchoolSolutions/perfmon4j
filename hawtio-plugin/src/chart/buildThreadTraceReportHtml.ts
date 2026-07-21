@@ -58,33 +58,43 @@ function meterHtml(node: TraceNode, referenceMs: number): string {
   )
 }
 
-function nodeHtml(node: TraceNode, referenceMs: number): string {
+// Renders one frame. Collapsible frames use a checkbox+label disclosure rather than
+// <details>, deliberately: a closed <details>'s content can't be force-revealed by
+// author CSS, so a pure-CSS (JS-forbidden under the host CSP) "Expand all" is
+// impossible with <details>; a checkbox-controlled .children has no such restriction.
+// Only the root frame(s) start expanded (depth 0), so clicking a collapsed frame's
+// chevron reveals just its next level - deeper levels stay collapsed until clicked
+// (use "Expand all" for every level at once).
+function nodeHtml(node: TraceNode, referenceMs: number, depth: number, nextId: () => string): string {
   const name = escapeHtml(node.name)
   const meter = meterHtml(node, referenceMs)
   const end = node.endTime ?? '—'
 
   if (node.children.length === 0) {
-    // Leaf: nothing to collapse, so a plain row showing start -> end inline.
+    // Leaf: nothing to expand, so a plain row showing start -> end inline.
     return (
       `<div class="row leaf">` +
-      `<span class="tw"></span>` +
+      `<span class="tw" aria-hidden="true"></span>` +
       `<span class="t">${node.startTime} → ${end}</span>` +
       `${meter}<span class="name" title="${name}">${name}</span>` +
       `</div>`
     )
   }
 
-  const children = node.children.map(child => nodeHtml(child, referenceMs)).join('')
+  const id = nextId()
+  const children = node.children.map(child => nodeHtml(child, referenceMs, depth + 1, nextId)).join('')
   return (
-    `<details open>` +
-    `<summary class="row">` +
-    `<span class="tw tri"></span>` +
+    `<div class="node">` +
+    `<input class="exp" type="checkbox" id="${id}"${depth === 0 ? ' checked' : ''}>` +
+    `<label class="row" for="${id}">` +
+    `<span class="tw tri" aria-hidden="true"></span>` +
     `<span class="t">${node.startTime}</span>` +
     `${meter}<span class="name" title="${name}">${name}</span>` +
-    `</summary>` +
-    `<div class="children">${children}</div>` +
+    `</label>` +
+    `<div class="children">${children}` +
     `<div class="close">↳ ended ${end} · ${name}</div>` +
-    `</details>`
+    `</div>` +
+    `</div>`
   )
 }
 
@@ -117,9 +127,11 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
     ? `<div class="banner">⚠ Thread trace limit exceeded — the capture was truncated; some frames are missing.</div>`
     : ''
 
+  let seq = 0
+  const nextId = () => `f${seq++}`
   const tree =
     input.roots.length > 0
-      ? input.roots.map(root => nodeHtml(root, referenceMs)).join('')
+      ? input.roots.map(root => nodeHtml(root, referenceMs, 0, nextId)).join('')
       : `<div class="empty">This trace captured no frames.</div>`
 
   const title = `perfmon4j thread trace: ${escapeHtml(input.category)}`
@@ -180,32 +192,37 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
   .tb { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
         border-radius: 6px; padding: 0.3rem 0.75rem; cursor: pointer; user-select: none; }
   .tb:hover { border-color: var(--muted); }
-  /* Bulk expand/collapse via pure-CSS radios - deliberately NO JavaScript, so it works
-     both in the saved offline file AND inside a host Hawtio console whose CSP is
-     "script-src 'self'" (no 'unsafe-inline'), which blocks inline scripts in the
-     blob: document this report is opened as. "Collapse all" force-hides every frame's
-     children/close (and resets its disclosure triangle); "Expand all" returns to the
-     native per-node state, which defaults to fully expanded. */
+  /* Bulk mode is three mutually-exclusive pure-CSS radios (manual/expand/collapse) -
+     deliberately NO JavaScript, so it works both in the saved offline file AND inside a
+     host Hawtio console whose CSP is "script-src 'self'" (no 'unsafe-inline'), which
+     blocks inline scripts in the blob: document this report opens as. Radios (not
+     checkboxes) so Expand and Collapse can't both be "on" at once - a checkbox pair let
+     Collapse-then-Expand leave both set, and one always lost. "Reset" reselects manual,
+     restoring the per-frame .exp drill state; Expand/Collapse override every frame. */
   .bulk { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-  #bulk-collapse:checked ~ .card .children,
-  #bulk-collapse:checked ~ .card .close { display: none !important; }
-  #bulk-collapse:checked ~ .card details[open] > summary .tri::before { transform: none; }
+  #bulk-expand:checked ~ .card .children { display: block !important; }
+  #bulk-expand:checked ~ .card .tri::before { transform: rotate(90deg); transform-origin: 2px 4px; }
+  #bulk-collapse:checked ~ .card .children { display: none !important; }
+  #bulk-collapse:checked ~ .card .tri::before { transform: none !important; }
   #bulk-expand:checked ~ .toolbar label[for="bulk-expand"],
   #bulk-collapse:checked ~ .toolbar label[for="bulk-collapse"] {
     border-color: var(--muted); background: color-mix(in srgb, var(--muted) 16%, transparent); font-weight: 600; }
   .tree { font-variant-numeric: tabular-nums; }
-  details { border: 0; }
-  summary { list-style: none; cursor: pointer; }
-  summary::-webkit-details-marker { display: none; }
+  /* Per-frame disclosure: the hidden .exp checkbox drives its own .children. Only root
+     frames render pre-checked, so a click reveals exactly the next level. */
+  .exp { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   .row { display: flex; align-items: center; gap: 0.6rem; padding: 0.12rem 0.25rem; border-radius: 5px; white-space: nowrap; }
+  label.row { cursor: pointer; }
   .row:hover { background: color-mix(in srgb, var(--muted) 14%, transparent); }
-  .children { margin-left: 0.7rem; padding-left: 0.7rem; border-left: 1px solid var(--guide); }
+  .exp:focus-visible ~ .row { outline: 2px solid var(--b3); outline-offset: -2px; }
+  .children { display: none; margin-left: 0.7rem; padding-left: 0.7rem; border-left: 1px solid var(--guide); }
+  .exp:checked ~ .children { display: block; }
   .close { color: var(--muted); padding: 0.05rem 0.25rem 0.2rem 1.9rem; font-size: 0.85em; white-space: nowrap; }
   .tw { flex: 0 0 0.8rem; width: 0.8rem; height: 0.8rem; position: relative; }
   .tri::before { content: ""; position: absolute; top: 0.15rem; left: 0.15rem;
                  border-left: 5px solid var(--muted); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
                  transition: transform 0.1s ease; }
-  details[open] > summary .tri::before { transform: rotate(90deg); transform-origin: 2px 4px; }
+  .exp:checked ~ .row .tri::before { transform: rotate(90deg); transform-origin: 2px 4px; }
   .t { color: var(--ink-2); flex: 0 0 auto; }
   .meter { flex: 0 0 120px; height: 0.7rem; background: var(--track); border-radius: 4px; overflow: hidden; }
   .bar { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
@@ -228,11 +245,13 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
     <p class="sub">${escapeHtml(input.category)}</p>
     ${truncatedBanner}
     <div class="meta">${meta}</div>
-    <input class="bulk" type="radio" name="bulk" id="bulk-expand" checked>
+    <input class="bulk" type="radio" name="bulk" id="bulk-manual" checked>
+    <input class="bulk" type="radio" name="bulk" id="bulk-expand">
     <input class="bulk" type="radio" name="bulk" id="bulk-collapse">
-    <div class="toolbar" role="group" aria-label="Expand or collapse all frames">
+    <div class="toolbar" role="group" aria-label="Expand, collapse, or reset the frame tree">
       <label class="tb" for="bulk-expand">Expand all</label>
       <label class="tb" for="bulk-collapse">Collapse all</label>
+      <label class="tb" for="bulk-manual" title="Return to per-frame expand/collapse">Reset</label>
     </div>
     <div class="card scroller">
       <div class="tree">${tree}</div>

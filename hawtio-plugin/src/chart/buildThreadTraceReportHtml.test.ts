@@ -42,11 +42,13 @@ describe('buildThreadTraceReportHtml', () => {
     // CSP once opened as a blob: document - bulk expand/collapse must be pure CSS.
     expect(html).not.toContain('<script')
     expect(html).not.toMatch(/\son[a-z]+\s*=/i)
-    // The pure-CSS radio bulk controls and their labels are present.
+    // The pure-CSS mutually-exclusive radio bulk controls and their labels are present.
+    expect(html).toContain('id="bulk-manual"')
     expect(html).toContain('id="bulk-expand"')
     expect(html).toContain('id="bulk-collapse"')
     expect(html).toContain('>Expand all</label>')
     expect(html).toContain('>Collapse all</label>')
+    expect(html).toContain('>Reset</label>')
   })
 
   it('renders the metadata header including the capture parameters', () => {
@@ -58,14 +60,22 @@ describe('buildThreadTraceReportHtml', () => {
     expect(html).toContain('Frames')
   })
 
-  it('renders frames-with-children as nested collapsible <details> and leaves as plain rows', () => {
+  it('renders frames-with-children as checkbox-disclosure nodes and leaves as plain rows', () => {
     const html = buildFrom()
-    expect(html).toContain('<details open>')
+    expect(html).toContain('class="node"')
     expect(html).toContain('class="children"')
-    // The leaf child (Child.a) has no children, so it must NOT introduce its own details.
-    const detailsCount = (html.match(/<details open>/g) ?? []).length
-    expect(detailsCount).toBe(1) // only WebRequest wraps a details; Child.a is a leaf row
+    // Only WebRequest has children, so exactly one .exp checkbox; Child.a is a leaf row.
+    const expCount = (html.match(/class="exp"/g) ?? []).length
+    expect(expCount).toBe(1)
     expect(html).toContain('class="row leaf"')
+  })
+
+  it('expands only root frames by default so a click reveals just the next level', () => {
+    // The one node with children here is a root, so its checkbox is `checked`; a deeper
+    // node would render unchecked. Guard the root-only default-expansion contract.
+    const html = buildFrom()
+    expect(html).toMatch(/<input class="exp" type="checkbox" id="f0" checked>/)
+    expect(html).not.toContain('id="f1" checked') // deeper frames (if any) start collapsed
   })
 
   it('shows a frame exit as a close footer so the open/close bracket stays visible', () => {
