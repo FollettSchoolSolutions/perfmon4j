@@ -177,9 +177,22 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
   .banner { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-bd);
             border-radius: 8px; padding: 0.6rem 0.9rem; margin: 0 0 1rem; }
   .toolbar { display: flex; gap: 0.5rem; margin: 0 0 0.75rem; }
-  button.tb { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
-              border-radius: 6px; padding: 0.3rem 0.75rem; cursor: pointer; }
-  button.tb:hover { border-color: var(--muted); }
+  .tb { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+        border-radius: 6px; padding: 0.3rem 0.75rem; cursor: pointer; user-select: none; }
+  .tb:hover { border-color: var(--muted); }
+  /* Bulk expand/collapse via pure-CSS radios - deliberately NO JavaScript, so it works
+     both in the saved offline file AND inside a host Hawtio console whose CSP is
+     "script-src 'self'" (no 'unsafe-inline'), which blocks inline scripts in the
+     blob: document this report is opened as. "Collapse all" force-hides every frame's
+     children/close (and resets its disclosure triangle); "Expand all" returns to the
+     native per-node state, which defaults to fully expanded. */
+  .bulk { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  #bulk-collapse:checked ~ .card .children,
+  #bulk-collapse:checked ~ .card .close { display: none !important; }
+  #bulk-collapse:checked ~ .card details[open] > summary .tri::before { transform: none; }
+  #bulk-expand:checked ~ .toolbar label[for="bulk-expand"],
+  #bulk-collapse:checked ~ .toolbar label[for="bulk-collapse"] {
+    border-color: var(--muted); background: color-mix(in srgb, var(--muted) 16%, transparent); font-weight: 600; }
   .tree { font-variant-numeric: tabular-nums; }
   details { border: 0; }
   summary { list-style: none; cursor: pointer; }
@@ -215,9 +228,11 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
     <p class="sub">${escapeHtml(input.category)}</p>
     ${truncatedBanner}
     <div class="meta">${meta}</div>
-    <div class="toolbar">
-      <button class="tb" id="expandAll" type="button">Expand all</button>
-      <button class="tb" id="collapseAll" type="button">Collapse all</button>
+    <input class="bulk" type="radio" name="bulk" id="bulk-expand" checked>
+    <input class="bulk" type="radio" name="bulk" id="bulk-collapse">
+    <div class="toolbar" role="group" aria-label="Expand or collapse all frames">
+      <label class="tb" for="bulk-expand">Expand all</label>
+      <label class="tb" for="bulk-collapse">Collapse all</label>
     </div>
     <div class="card scroller">
       <div class="tree">${tree}</div>
@@ -227,14 +242,6 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
       <pre>${escapeHtml(input.rawText)}</pre>
     </details>
   </div>
-  <script>
-    (function () {
-      var all = function () { return document.querySelectorAll('.tree details'); };
-      var set = function (open) { all().forEach(function (d) { d.open = open; }); };
-      document.getElementById('expandAll').addEventListener('click', function () { set(true); });
-      document.getElementById('collapseAll').addEventListener('click', function () { set(false); });
-    })();
-  </script>
 </body>
 </html>`
 }

@@ -36,6 +36,19 @@ describe('buildThreadTraceReportHtml', () => {
     expect(html).not.toMatch(/<link\b/i)
   })
 
+  it('uses no JavaScript, so it works under a script-src CSP (blob: inherits the host CSP)', () => {
+    const html = buildFrom()
+    // A <script> or inline on* handler would be blocked by Hawtio's "script-src 'self'"
+    // CSP once opened as a blob: document - bulk expand/collapse must be pure CSS.
+    expect(html).not.toContain('<script')
+    expect(html).not.toMatch(/\son[a-z]+\s*=/i)
+    // The pure-CSS radio bulk controls and their labels are present.
+    expect(html).toContain('id="bulk-expand"')
+    expect(html).toContain('id="bulk-collapse"')
+    expect(html).toContain('>Expand all</label>')
+    expect(html).toContain('>Collapse all</label>')
+  })
+
   it('renders the metadata header including the capture parameters', () => {
     const html = buildFrom()
     expect(html).toContain('Category')
