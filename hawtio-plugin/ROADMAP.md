@@ -171,14 +171,33 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
   `ThreadTraceEntry`) and renders the trace as an **actionable, collapsible tree**:
   the server's `ThreadTraceData.toAppenderString()` text (every frame an explicit
   open line + close line) is parsed by pure, Jest-tested `parseThreadTrace.ts` into a
-  tree, and each frame with children becomes a nested `<details>` accordion (with
-  Expand-all/Collapse-all controls, fully expanded on load), its exit shown as a
-  subtle close footer so the open/close bracket stays visible. Frame duration is
-  encoded as a proportional bar in a sequential blue ramp - prominence tracking
-  magnitude in both light and dark - with the millisecond value in plain ink beside
-  it (per the `dataviz` skill's text-wears-ink-tokens rule). Verified in a real
-  browser (Playwright, light + dark) that the tree renders, collapses, and survives
-  being saved to disk and reopened with no network access.
+  tree, each frame's exit shown as a subtle close footer so the open/close bracket
+  stays visible. Frame duration is encoded as a proportional bar in a sequential blue
+  ramp - prominence tracking magnitude in both light and dark - with the millisecond
+  value in plain ink beside it (per the `dataviz` skill's text-wears-ink-tokens rule).
+  - **The report page uses zero JavaScript, by hard constraint.** It opens as a
+    `blob:` document, which inherits the host Hawtio console's CSP
+    (`script-src 'self'`, no `'unsafe-inline'` - `style-src` does allow inline), so any
+    inline `<script>` is silently blocked once deployed - a bug invisible to a
+    `file://` test (no CSP) and only caught by exercising it in the live console. All
+    interactivity is therefore pure CSS. Any future plugin-generated page opened this
+    way must follow the same rule and be tested in-console, not just from a saved file.
+  - **The tree drills one level per click.** It renders collapsed with only the root
+    frame's first level shown; clicking a frame reveals just its next level (deeper
+    levels stay collapsed) - "Expand all" opens every level at once. Each collapsible
+    frame is a checkbox+label disclosure (only root frames start checked), *not*
+    `<details>` - a closed `<details>`'s content can't be force-revealed by author CSS,
+    which would make a pure-CSS "Expand all" impossible. Bulk mode is three
+    mutually-exclusive radios (Expand all / Collapse all / **Reset** back to per-frame
+    drilling); radios rather than a checkbox pair specifically so Collapse-all followed
+    by Expand-all works (two independent checkboxes could both stay set, and one always
+    lost). While a bulk mode is active it overrides per-frame chevrons until Reset - the
+    cleanest behavior achievable with no JS under the CSP.
+  - **Verified end-to-end against the live WildFly-hosted console** (headless Chromium):
+    schedule a trace on the WebRequest monitor, View opens a new tab with the captured
+    23-frame stack, a single drill reveals only the next level, Collapse all -> root
+    only, Expand-all-after-Collapse -> all frames, Reset -> back to the drilled state;
+    plus light/dark and save-to-disk-and-reopen-offline checks.
 
 ## Backlog
 
