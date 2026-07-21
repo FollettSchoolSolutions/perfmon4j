@@ -153,6 +153,8 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
     --border: rgba(11,11,11,0.10);
     --guide: #e1e0d9;
     --track: #eef0f2;
+    /* horizontal inset each nested level adds; the close footer's pullback is derived from it */
+    --child-indent: 0.7rem;
     /* sequential blue ramp, small -> large = light -> dark on the light surface */
     --b1: #86b6ef; --b2: #5598e7; --b3: #2a78d6; --b4: #1c5cab; --b5: #104281;
     --warn-bg: #fff4d6; --warn-ink: #6b4e00; --warn-bd: #fab219;
@@ -215,9 +217,14 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
   label.row { cursor: pointer; }
   .row:hover { background: color-mix(in srgb, var(--muted) 14%, transparent); }
   .exp:focus-visible ~ .row { outline: 2px solid var(--b3); outline-offset: -2px; }
-  .children { display: none; margin-left: 0.7rem; padding-left: 0.7rem; border-left: 1px solid var(--guide); }
+  .children { display: none; margin-left: var(--child-indent); padding-left: var(--child-indent); border-left: 1px solid var(--guide); }
   .exp:checked ~ .children { display: block; }
-  .close { color: var(--muted); padding: 0.05rem 0.25rem 0.2rem 1.9rem; font-size: 0.85em; white-space: nowrap; }
+  /* The close footer marks where the parent frame ended. It lives inside .children (so it
+     hides/shows with them), but is pulled back out of the child indent by exactly the
+     .children left inset (margin + border + padding) so "↳ ended …" lines up with the parent
+     frame's own opening row instead of rendering a level deeper than the frame it closes. */
+  .close { color: var(--muted); margin-left: calc(-2 * var(--child-indent) - 1px);
+           padding: 0.05rem 0.25rem 0.2rem 0.25rem; font-size: 0.85em; white-space: nowrap; }
   .tw { flex: 0 0 0.8rem; width: 0.8rem; height: 0.8rem; position: relative; }
   .tri::before { content: ""; position: absolute; top: 0.15rem; left: 0.15rem;
                  border-left: 5px solid var(--muted); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
