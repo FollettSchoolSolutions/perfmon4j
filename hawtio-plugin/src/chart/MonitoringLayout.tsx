@@ -48,7 +48,14 @@ export const MonitoringLayout: React.FunctionComponent<MonitoringLayoutProps> = 
                 here so an overflow scrolls this pane, not the page body. */}
             <div style={{ overflowX: 'auto' }}>{chart}</div>
           </StackItem>
-          <StackItem>{detail}</StackItem>
+          <StackItem>
+            {/* Same treatment as the chart above - without its own overflow container, a wide
+                detail table (e.g. a long dot-notation field name column) only scrolled via
+                the whole right column's shared DrawerContentBody overflow, dragging the chart
+                out of view along with it. This gives detail its own independent horizontal
+                scrollbar instead. */}
+            <div style={{ overflowX: 'auto' }}>{detail}</div>
+          </StackItem>
         </Stack>
       </DrawerContentBody>
     </DrawerContent>
