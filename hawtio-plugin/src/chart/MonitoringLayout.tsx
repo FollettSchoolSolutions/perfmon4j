@@ -34,7 +34,10 @@ export const MonitoringLayout: React.FunctionComponent<MonitoringLayoutProps> = 
     <DrawerContent
       panelContent={
         <DrawerPanelContent isResizable minSize='180px' defaultSize='260px' maxSize='50%'>
-          {left}
+          {/* Same overflow-scrolls-its-own-pane treatment as the chart below - a deep/long
+              monitor name can be wider than the resized panel, so this scrolls instead of
+              clipping or forcing the panel itself wider than the user's chosen size. */}
+          <div style={{ overflowX: 'auto' }}>{left}</div>
         </DrawerPanelContent>
       }
     >

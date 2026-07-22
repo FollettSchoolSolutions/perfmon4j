@@ -16,6 +16,7 @@ import {
 import { EllipsisVIcon, SyncAltIcon } from '@patternfly/react-icons'
 import React, { ChangeEvent, useEffect, useState } from 'react'
 import { AddFieldModal } from './AddFieldModal'
+import './MonitorTree.css'
 import { buildMonitorTree, filterMonitorTree, MonitorTreeNode } from './monitorTreeLogic'
 import { ScheduleThreadTraceModal } from './ScheduleThreadTraceModal'
 import { ThreadTraceOptions } from './threadTraceKey'
@@ -287,14 +288,16 @@ export const MonitorTree: React.FunctionComponent<MonitorTreeProps> = ({
           <EmptyStateBody>Monitors appear here as instrumented code paths run. Try Refresh after some activity.</EmptyStateBody>
         </EmptyState>
       ) : (
-        <TreeView
-          aria-label='Monitors'
-          data={treeViewData}
-          hasGuides
-          variant='compact'
-          allExpanded={allExpanded}
-          toolbar={<PluginTreeViewToolbar onSearch={onSearch} onSetExpanded={setAllExpanded} />}
-        />
+        <div className='p4j-monitor-tree'>
+          <TreeView
+            aria-label='Monitors'
+            data={treeViewData}
+            hasGuides
+            variant='compact'
+            allExpanded={allExpanded}
+            toolbar={<PluginTreeViewToolbar onSearch={onSearch} onSetExpanded={setAllExpanded} />}
+          />
+        </div>
       )}
 
       <AddFieldModal

@@ -1,0 +1,18 @@
+/* Tightens PatternFly's compact TreeView row spacing to match the thread-trace report's
+   collapsible tree (buildThreadTraceReportHtml.ts's .row: 14px font, ~0.15rem vertical
+   padding) - PatternFly's own "compact" variant is still noticeably roomier (1.5rem/1rem
+   block padding) than that. Font size is left alone: PatternFly's body font-size token is
+   already 14px, matching the report without an override. Scoped via custom-property
+   overrides on a wrapper class (2 classes = higher specificity than the single-class rules
+   that set these in PatternFly's own tree-view.css, so this wins regardless of CSS load
+   order between this file and PatternFly's). */
+.p4j-monitor-tree .pf-v6-c-tree-view {
+  --pf-v6-c-tree-view--m-compact__node-container--PaddingBlockStart: 0.15rem;
+  --pf-v6-c-tree-view--m-compact__node-container--PaddingBlockEnd: 0.15rem;
+  --pf-v6-c-tree-view--m-compact__node-container--nested--PaddingBlockStart: 0.15rem;
+  --pf-v6-c-tree-view--m-compact__node-container--nested--PaddingBlockEnd: 0.15rem;
+  --pf-v6-c-tree-view--m-compact__node--nested--PaddingBlockStart: 0.1rem;
+  --pf-v6-c-tree-view--m-compact__node--nested--PaddingBlockEnd: 0.1rem;
+  --pf-v6-c-tree-view__node-toggle--PaddingBlockStart: 0.1rem;
+  --pf-v6-c-tree-view__node-toggle--PaddingBlockEnd: 0.1rem;
+}
