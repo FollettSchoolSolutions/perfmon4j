@@ -237,7 +237,10 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
   .b4 { background: var(--b4); } .b5 { background: var(--b5); }
   .dur { flex: 0 0 auto; min-width: 4.5rem; color: var(--ink); }
   .sql { flex: 0 0 auto; color: var(--ink-2); font-size: 0.85em; }
-  .name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+  /* flex-shrink:0 (not the usual flex:1 1 auto) so a long name overflows its row instead of
+     ellipsis-truncating - the .scroller/.raw pre ancestors pick that overflow up as a
+     horizontal scrollbar, so the full name stays reachable rather than being cut off for good. */
+  .name { flex: 1 0 auto; white-space: nowrap; }
   .leaf .name { color: var(--ink-2); }
   .empty { color: var(--ink-2); padding: 1rem 0; }
   .scroller { overflow-x: auto; }
