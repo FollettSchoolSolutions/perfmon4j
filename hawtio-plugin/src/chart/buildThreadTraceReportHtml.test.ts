@@ -60,6 +60,16 @@ describe('buildThreadTraceReportHtml', () => {
     expect(html).toContain('Frames')
   })
 
+  it('renders an em dash for the trigger row when no trigger was set', () => {
+    const html = buildFrom()
+    expect(html).toContain('<div class="mk">Trigger</div><div class="mv">—</div>')
+  })
+
+  it('renders the trigger type, name, and value when a trigger was set', () => {
+    const html = buildFrom({ trigger: { type: 'HTTP_COOKIE', name: 'JSESSIONID', value: 'abc123' } })
+    expect(html).toContain('<div class="mk">Trigger</div><div class="mv">Cookie JSESSIONID = abc123</div>')
+  })
+
   it('renders frames-with-children as checkbox-disclosure nodes and leaves as plain rows', () => {
     const html = buildFrom()
     expect(html).toContain('class="node"')

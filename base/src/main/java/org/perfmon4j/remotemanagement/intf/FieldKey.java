@@ -21,7 +21,9 @@
 
 package org.perfmon4j.remotemanagement.intf;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -43,7 +45,8 @@ public class FieldKey implements Comparable<FieldKey>{
 	
 	final public static String THREAD_TRACE_MIN_DURATION_ARG = "MinDurationToCapture";
 	final public static String THREAD_TRACE_MAX_DEPTH_ARG = "MaxDepth";
-	
+	final public static String THREAD_TRACE_TRIGGER_ARG = "Trigger";
+
 	
 	public final MonitorKey monitorKey;
 	public final String fieldName;
@@ -124,6 +127,18 @@ public class FieldKey implements Comparable<FieldKey>{
 
 	public static FieldKey buildThreadTraceKeyFromInterval(MonitorKey intervalKey) {
 		return buildThreadTraceKeyFromInterval(intervalKey, null);
+	}
+
+	/**
+	 * Encodes a thread trace trigger as Base64 URL-safe (no padding) so it can survive
+	 * the naive comma/equals tokenizing used to pass extraParams to a scheduled thread
+	 * trace, regardless of characters (',', '=') present in the underlying name/value.
+	 *
+	 * @param triggerTypePrefix a {@code ThreadTraceConfig.TriggerType} prefix, e.g. "HTTP_COOKIE"
+	 */
+	public static String encodeTriggerArg(String triggerTypePrefix, String name, String value) {
+		String raw = triggerTypePrefix + ":" + name + "=" + value;
+		return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
 	}
 
 	/**

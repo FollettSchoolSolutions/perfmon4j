@@ -1,6 +1,10 @@
-import { ThreadTraceOptions } from './threadTraceKey'
+import { ThreadTraceOptions, ThreadTraceTriggerType } from './threadTraceKey'
 
-// Both fields are optional here, mirroring the legacy VisualVM dialog
+// 'NONE' is the form-only "no trigger selected" state; ThreadTraceOptions.trigger is
+// simply omitted in that case (see toThreadTraceOptions below).
+export type ThreadTraceTriggerFormType = ThreadTraceTriggerType | 'NONE'
+
+// Both min-duration/max-depth are optional here, mirroring the legacy VisualVM dialog
 // (ThreadTraceOptionsDlg.okButtonActionPerformed) treating a blank field as "not
 // passed" rather than defaulting it - the server itself defaults an omitted arg to 0
 // (ThreadTraceConfig's own field defaults). Unlike that legacy dialog, whose
@@ -9,11 +13,16 @@ import { ThreadTraceOptions } from './threadTraceKey'
 export interface ThreadTraceFormState {
   minDurationToCaptureMillis: number | ''
   maxDepth: number | ''
+  triggerType: ThreadTraceTriggerFormType
+  triggerName: string
+  triggerValue: string
 }
 
 export interface ThreadTraceFieldValidation {
   minDurationError: string | null
   maxDepthError: string | null
+  triggerNameError: string | null
+  triggerValueError: string | null
 }
 
 function validateNonNegativeInteger(value: number | ''): string | null {
@@ -24,14 +33,22 @@ function validateNonNegativeInteger(value: number | ''): string | null {
 }
 
 export function validateThreadTraceForm(values: ThreadTraceFormState): ThreadTraceFieldValidation {
+  const triggerSelected = values.triggerType !== 'NONE'
   return {
     minDurationError: validateNonNegativeInteger(values.minDurationToCaptureMillis),
     maxDepthError: validateNonNegativeInteger(values.maxDepth),
+    triggerNameError: triggerSelected && values.triggerName.trim() === '' ? 'Required' : null,
+    triggerValueError: triggerSelected && values.triggerValue.trim() === '' ? 'Required' : null,
   }
 }
 
 export function isThreadTraceFormValid(validation: ThreadTraceFieldValidation): boolean {
-  return validation.minDurationError === null && validation.maxDepthError === null
+  return (
+    validation.minDurationError === null &&
+    validation.maxDepthError === null &&
+    validation.triggerNameError === null &&
+    validation.triggerValueError === null
+  )
 }
 
 /** Only call once isThreadTraceFormValid(validateThreadTraceForm(values)) is true. */
@@ -39,5 +56,8 @@ export function toThreadTraceOptions(values: ThreadTraceFormState): ThreadTraceO
   const options: ThreadTraceOptions = {}
   if (values.minDurationToCaptureMillis !== '') options.minDurationToCaptureMillis = values.minDurationToCaptureMillis
   if (values.maxDepth !== '') options.maxDepth = values.maxDepth
+  if (values.triggerType !== 'NONE') {
+    options.trigger = { type: values.triggerType, name: values.triggerName, value: values.triggerValue }
+  }
   return options
 }

@@ -13,6 +13,7 @@
 // never the mark color).
 
 import { countFrames, TraceNode } from './parseThreadTrace'
+import { ThreadTraceTrigger } from './threadTraceKey'
 
 export interface ThreadTraceReportInput {
   /** Monitor/category label the trace was captured for. */
@@ -21,10 +22,22 @@ export interface ThreadTraceReportInput {
   submittedText: string
   minDurationToCaptureMillis?: number
   maxDepth?: number
+  trigger?: ThreadTraceTrigger
   roots: TraceNode[]
   truncated: boolean
   /** The original server text, shown verbatim in a collapsed "Raw trace text" section. */
   rawText: string
+}
+
+const TRIGGER_TYPE_LABELS: Record<ThreadTraceTrigger['type'], string> = {
+  HTTP: 'Request parameter',
+  HTTP_SESSION: 'Session attribute',
+  HTTP_COOKIE: 'Cookie',
+}
+
+function triggerText(trigger: ThreadTraceTrigger | undefined): string {
+  if (!trigger) return '—'
+  return `${TRIGGER_TYPE_LABELS[trigger.type]} ${trigger.name} = ${trigger.value}`
 }
 
 function escapeHtml(value: string): string {
@@ -118,6 +131,7 @@ export function buildThreadTraceReportHtml(input: ThreadTraceReportInput): strin
     metaRow('Submitted', input.submittedText),
     metaRow('Min duration to capture', input.minDurationToCaptureMillis !== undefined ? `${input.minDurationToCaptureMillis} ms` : '—'),
     metaRow('Max stack depth', input.maxDepth !== undefined ? String(input.maxDepth) : '—'),
+    metaRow('Trigger', triggerText(input.trigger)),
     metaRow('Total duration', totalText),
     metaRow('Frames', String(frames)),
     metaRow('Time span', spanText),

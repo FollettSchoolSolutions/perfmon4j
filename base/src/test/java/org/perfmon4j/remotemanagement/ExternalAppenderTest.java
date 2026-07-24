@@ -34,6 +34,7 @@ import org.perfmon4j.IntervalData;
 import org.perfmon4j.PerfMon;
 import org.perfmon4j.PerfMonTestCase;
 import org.perfmon4j.PerfMonTimer;
+import org.perfmon4j.ThreadTraceConfig;
 import org.perfmon4j.instrument.SnapShotCounter;
 import org.perfmon4j.instrument.SnapShotProvider;
 import org.perfmon4j.remotemanagement.intf.FieldKey;
@@ -277,6 +278,53 @@ public class ExternalAppenderTest extends PerfMonTestCase {
         		!result.contains("shouldbefiltered"));
     }
 
+
+    /*----------------------------------------------------------------------------*/
+    public void testScheduleThreadTraceWithTriggerOnlyFiresOnMatch() throws Exception {
+        final String MON_NAME = "aaa.b.ccc";
+
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MonitorKey.newIntervalKey(MON_NAME));
+        Map<String, String> params = new HashMap<String, String>();
+        // Name/value deliberately contain ',' and '=' to prove the Base64 URL-safe
+        // encoding survives the naive CSV/'='-split tokenizer used to carry extraParams
+        // (MiscHelper.tokenizeCSVString + String.split("=")) untouched.
+        params.put(FieldKey.THREAD_TRACE_TRIGGER_ARG,
+        		FieldKey.encodeTriggerArg("HTTP_COOKIE", "cookieName", "a,b=c"));
+
+        FieldKey threadTraceKey = FieldKey.buildThreadTraceKeyFromInterval(monitorKey, params);
+        ExternalAppender.scheduleThreadTrace(sessionID, threadTraceKey);
+
+        // First invocation: no matching trigger validator pushed on this thread -- the
+        // scheduled trace must stay pending rather than firing for an unrelated request.
+        PerfMonTimer t = PerfMonTimer.start(MON_NAME);
+        PerfMonTimer.stop(t);
+
+        Map<FieldKey, Object> map = ExternalAppender.getThreadTraceData(sessionID);
+        assertEquals("map.size()", 1, map.size());
+        assertEquals("Trace should still be pending, trigger did not match",
+        		FieldKey.THREAD_TRACE_PENDING, map.get(threadTraceKey));
+
+        // Second invocation: push a validator matching the same HTTP_COOKIE trigger --
+        // the trace should now fire.
+        final ThreadTraceConfig.Trigger expectedTrigger = new ThreadTraceConfig.HTTPCookieTrigger("cookieName", "a,b=c");
+        ThreadTraceConfig.pushValidator(new ThreadTraceConfig.TriggerValidator() {
+        	public boolean isValid(ThreadTraceConfig.Trigger trigger) {
+        		return expectedTrigger.getTriggerString().equals(trigger.getTriggerString());
+        	}
+        });
+        try {
+        	t = PerfMonTimer.start(MON_NAME);
+        	PerfMonTimer.stop(t);
+        } finally {
+        	ThreadTraceConfig.popValidator();
+        }
+
+        map = ExternalAppender.getThreadTraceData(sessionID);
+        assertEquals("map.size()", 1, map.size());
+        String result = (String)map.get(threadTraceKey);
+        assertNotNull("Trace should have captured now that the trigger matched", result);
+        assertFalse("Should no longer be pending", FieldKey.THREAD_TRACE_PENDING.equals(result));
+    }
 
     @SnapShotProvider(type=SnapShotProvider.Type.INSTANCE_PER_MONITOR)
     public static final class SimpleInstancePerMonitorSnapShot {

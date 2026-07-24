@@ -198,6 +198,27 @@ breakdown: [`MONITORING_TAB_SPIKE.md`](MONITORING_TAB_SPIKE.md) (proposed layout
     23-frame stack, a single drill reveals only the next level, Collapse all -> root
     only, Expand-all-after-Collapse -> all frames, Reset -> back to the drilled state;
     plus light/dark and save-to-disk-and-reopen-offline checks.
+- **On-demand thread trace triggers shipped**, end to end across both remote clients
+  (this plugin's `ScheduleThreadTraceModal.tsx` and `visualvm-plugin`'s
+  `ThreadTraceOptionsDlg.java`): a user can now attach one optional trigger (cookie,
+  request/query parameter, or session attribute name+value - the three
+  HTTP-request-associated `ThreadTraceConfig.TriggerType`s; `ThreadNameTrigger`/
+  `ThreadPropertyTrigger` stay XML-config-only) so a scheduled trace only fires for a
+  matching request instead of the next invocation by any thread. Required no RMI or
+  MBean signature changes - both `RemoteInterface.scheduleThreadTrace`/
+  `RemoteManagementMBean.scheduleThreadTrace` already funnel a `FieldKey`'s
+  `extraParams` map through `ExternalAppender`'s existing `BeanHelper.setValue`
+  reflection onto `ExternalThreadTraceConfig`, so a trigger is just one more key in
+  that map (`FieldKey.THREAD_TRACE_TRIGGER_ARG`) handled by one new
+  `ExternalThreadTraceConfig.setTrigger` setter. The trigger's `name=value` is carried
+  Base64 URL-safe (no padding) encoded, not raw text - `ExternalAppender`'s extraParams
+  wire format is a naive comma/`=`-split tokenizer with no quoting, which would corrupt
+  or silently drop a real cookie/session/JWT value containing a `,` or `=`; Base64
+  URL-safe's alphabet contains neither. Verified byte-for-byte identical encoding
+  between the hawtio-plugin TS helper and the Java `FieldKey.encodeTriggerArg` it
+  mirrors. Cardinality is deliberately one optional trigger per scheduled trace -
+  `ThreadTraceConfig.shouldTrace()`'s trigger-array loop is OR-only (fires on the first
+  match) with no AND mode, and this feature doesn't add one.
 
 ## Backlog
 

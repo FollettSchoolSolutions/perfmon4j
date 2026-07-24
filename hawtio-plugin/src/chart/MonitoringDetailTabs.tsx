@@ -60,6 +60,7 @@ export const MonitoringDetailTabs: React.FunctionComponent<MonitoringDetailTabsP
       submittedText: new Date(trace.submittedAt).toLocaleString(),
       minDurationToCaptureMillis: trace.options.minDurationToCaptureMillis,
       maxDepth: trace.options.maxDepth,
+      trigger: trace.options.trigger,
       roots,
       truncated,
       rawText: trace.stack,

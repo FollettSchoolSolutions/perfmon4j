@@ -56,6 +56,15 @@ McHenry, IL 60050
   reflectively at runtime and never bundles its own copy), so this clears
   Dependabot noise rather than fixing a real runtime exposure.
 
+- On-demand thread traces scheduled remotely (VisualVM plugin over RMI, or the
+  Hawtio plugin/RemoteManagement MBean over JMX/Jolokia) can now be given an
+  optional trigger, so the trace only fires for a matching request instead of
+  the next invocation by any thread. Supported trigger types are a cookie,
+  request/query parameter, or session attribute name+value - the same trigger
+  types perfmonconfig.xml's <threadTrace><Triggers> XML config already
+  supported, now also settable ad hoc. Only one trigger may be attached per
+  scheduled trace.
+
 ** 2.2.2 - 07/09/26
 - Perfmon4j can now bind its internal logging to the JBoss Logging facade
   (org.jboss.logging) and to the Log4j 2.x API (org.apache.logging.log4j), in

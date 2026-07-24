@@ -31,7 +31,16 @@ import org.perfmon4j.remotemanagement.intf.MonitorKey;
  */
 public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
     private Map<String, String> result = null;
-    
+
+    // Index-aligned with triggerTypeComboBox's model. Index 0 ("(none)") has no
+    // corresponding prefix -- no trigger is attached in that case.
+    private static final String[] TRIGGER_TYPE_LABELS = {
+        "(none)", "Request Parameter", "Session Attribute", "Cookie"
+    };
+    private static final String[] TRIGGER_TYPE_PREFIXES = {
+        null, "HTTP", "HTTP_SESSION", "HTTP_COOKIE"
+    };
+
     /** Creates new form ThreadTraceOptions */
     public ThreadTraceOptionsDlg(MainWindow mainWindow) {
         super(mainWindow.getParentFrame(), true);
@@ -47,7 +56,10 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
         ThreadTraceOptionsDlg dlg = mainWindow.threadTraceOptionsDlg;
         
         dlg.result = null;
-        
+        dlg.triggerTypeComboBox.setSelectedIndex(0);
+        dlg.triggerNameField.setText("");
+        dlg.triggerValueField.setText("");
+
         dlg.monitorNameTextField.setText(key.getName());
         dlg.setDefaultCloseOperation(HIDE_ON_CLOSE);
         dlg.pack();
@@ -77,6 +89,12 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
         monitorNameTextField = new javax.swing.JTextField();
         minDurationToCaptureField = new javax.swing.JFormattedTextField();
         maxDepthField = new javax.swing.JFormattedTextField();
+        jLabel4 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
+        triggerTypeComboBox = new javax.swing.JComboBox<String>(TRIGGER_TYPE_LABELS);
+        triggerNameField = new javax.swing.JTextField();
+        triggerValueField = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.title")); // NOI18N
@@ -110,6 +128,22 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
 
         maxDepthField.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(new javax.swing.text.NumberFormatter(java.text.NumberFormat.getIntegerInstance())));
 
+        jLabel4.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.jLabel4.text")); // NOI18N
+
+        jLabel5.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.jLabel5.text")); // NOI18N
+
+        jLabel6.setText(org.openide.util.NbBundle.getMessage(ThreadTraceOptionsDlg.class, "ThreadTraceOptionsDlg.jLabel6.text")); // NOI18N
+
+        triggerNameField.setEnabled(false);
+
+        triggerValueField.setEnabled(false);
+
+        triggerTypeComboBox.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                triggerTypeComboBoxItemStateChanged(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -129,6 +163,18 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(maxDepthField, javax.swing.GroupLayout.DEFAULT_SIZE, 208, Short.MAX_VALUE)
                             .addComponent(minDurationToCaptureField, javax.swing.GroupLayout.DEFAULT_SIZE, 208, Short.MAX_VALUE)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jLabel4)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(triggerTypeComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jLabel5)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(triggerNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel6)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(triggerValueField, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(okButton)
                         .addGap(10, 10, 10)
@@ -150,6 +196,16 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel2)
                     .addComponent(maxDepthField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel4)
+                    .addComponent(triggerTypeComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel5)
+                    .addComponent(triggerNameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel6)
+                    .addComponent(triggerValueField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(okButton)
@@ -174,6 +230,17 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
             // TODO should check for non-numeric and or negative values...
             result.put(FieldKey.THREAD_TRACE_MIN_DURATION_ARG, minDur);
         }
+
+        int triggerTypeIndex = triggerTypeComboBox.getSelectedIndex();
+        String triggerTypePrefix = triggerTypeIndex >= 0 ? TRIGGER_TYPE_PREFIXES[triggerTypeIndex] : null;
+        String triggerName = triggerNameField.getText();
+        String triggerValue = triggerValueField.getText();
+        if (triggerTypePrefix != null && triggerName != null && !"".equals(triggerName)
+                && triggerValue != null && !"".equals(triggerValue)) {
+            result.put(FieldKey.THREAD_TRACE_TRIGGER_ARG,
+                    FieldKey.encodeTriggerArg(triggerTypePrefix, triggerName, triggerValue));
+        }
+
         this.setVisible(false);
     }//GEN-LAST:event_okButtonActionPerformed
 
@@ -181,15 +248,27 @@ public class ThreadTraceOptionsDlg extends javax.swing.JDialog {
         this.result = null;
         this.setVisible(false);
     }//GEN-LAST:event_cancelButtonActionPerformed
-    
+
+    private void triggerTypeComboBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_triggerTypeComboBoxItemStateChanged
+        boolean triggerSelected = triggerTypeComboBox.getSelectedIndex() > 0;
+        triggerNameField.setEnabled(triggerSelected);
+        triggerValueField.setEnabled(triggerSelected);
+    }//GEN-LAST:event_triggerTypeComboBoxItemStateChanged
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton cancelButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
     private javax.swing.JFormattedTextField maxDepthField;
     private javax.swing.JFormattedTextField minDurationToCaptureField;
     private javax.swing.JTextField monitorNameTextField;
     private javax.swing.JButton okButton;
+    private javax.swing.JComboBox<String> triggerTypeComboBox;
+    private javax.swing.JTextField triggerNameField;
+    private javax.swing.JTextField triggerValueField;
     // End of variables declaration//GEN-END:variables
 }

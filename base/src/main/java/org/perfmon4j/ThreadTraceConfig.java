@@ -164,6 +164,18 @@ public class ThreadTraceConfig {
 		public String getPrefix() {
 			return prefix;
 		}
+
+		/**
+		 * Returns null if no TriggerType matches the given prefix.
+		 */
+		public static TriggerType fromPrefix(String prefix) {
+			for (TriggerType t : values()) {
+				if (t.prefix.equals(prefix)) {
+					return t;
+				}
+			}
+			return null;
+		}
 	}
 	
 	public static class Trigger {

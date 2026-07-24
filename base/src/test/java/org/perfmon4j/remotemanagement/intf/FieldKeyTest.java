@@ -21,6 +21,9 @@
 
 package org.perfmon4j.remotemanagement.intf;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
@@ -51,7 +54,32 @@ public class FieldKeyTest extends PerfMonTestCase {
     	assertEquals("field name", "avgMillis", fieldKey.getFieldName());
     	assertEquals("field type", FieldKey.LONG_TYPE, fieldKey.getFieldType());
     }
-    
+
+    public void testEncodeTriggerArg() {
+    	String encoded = FieldKey.encodeTriggerArg("HTTP_COOKIE", "JSESSIONID", "abc123");
+
+    	// Must be URL-safe with no padding -- no ',' or '=' can appear, since these
+    	// values are carried through a naive comma-separated/'='-split tokenizer.
+    	assertFalse("Encoded trigger must not contain ','", encoded.contains(","));
+    	assertFalse("Encoded trigger must not contain '='", encoded.contains("="));
+
+    	String decoded = new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8);
+    	assertEquals("HTTP_COOKIE:JSESSIONID=abc123", decoded);
+    }
+
+    public void testEncodeTriggerArgSurvivesEmbeddedCommaAndEquals() {
+    	// A real cookie/session/JWT value may itself contain ',' or '=' -- confirm the
+    	// Base64 URL-safe encoding still round-trips it untouched.
+    	String encoded = FieldKey.encodeTriggerArg("HTTP", "token", "a,b=c=d");
+
+    	assertFalse("Encoded trigger must not contain ','", encoded.contains(","));
+    	assertFalse("Encoded trigger must not contain '='", encoded.contains("="));
+
+    	String decoded = new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8);
+    	assertEquals("HTTP:token=a,b=c=d", decoded);
+    }
+
+
 /*----------------------------------------------------------------------------*/    
     public static void main(String[] args) {
         BasicConfigurator.configure();
