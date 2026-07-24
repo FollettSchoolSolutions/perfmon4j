@@ -326,6 +326,105 @@ public class ExternalAppenderTest extends PerfMonTestCase {
         assertFalse("Should no longer be pending", FieldKey.THREAD_TRACE_PENDING.equals(result));
     }
 
+    private static FieldKey buildCookieTriggerKey(String monName, String cookieName, String cookieValue) {
+        MonitorKeyWithFields monitorKey = IntervalData.getFields(MonitorKey.newIntervalKey(monName));
+        Map<String, String> params = new HashMap<String, String>();
+        params.put(FieldKey.THREAD_TRACE_TRIGGER_ARG, FieldKey.encodeTriggerArg("HTTP_COOKIE", cookieName, cookieValue));
+        return FieldKey.buildThreadTraceKeyFromInterval(monitorKey, params);
+    }
+
+    private static void fireWithMatchingCookie(String monName, String cookieName, String cookieValue) {
+        final ThreadTraceConfig.Trigger expectedTrigger = new ThreadTraceConfig.HTTPCookieTrigger(cookieName, cookieValue);
+        ThreadTraceConfig.pushValidator(new ThreadTraceConfig.TriggerValidator() {
+            public boolean isValid(ThreadTraceConfig.Trigger trigger) {
+                return expectedTrigger.getTriggerString().equals(trigger.getTriggerString());
+            }
+        });
+        try {
+            PerfMonTimer t = PerfMonTimer.start(monName);
+            PerfMonTimer.stop(t);
+        } finally {
+            ThreadTraceConfig.popValidator();
+        }
+    }
+
+    /*----------------------------------------------------------------------------*/
+    public void testExternalCookieTriggerGateTracksSchedulingAndExplicitUnschedule() throws Exception {
+        final String MON_NAME = "cookieGate.a";
+        assertFalse("Gate should be false before anything is scheduled",
+                PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+
+        FieldKey key = buildCookieTriggerKey(MON_NAME, "c1", "v1");
+        ExternalAppender.scheduleThreadTrace(sessionID, key);
+        assertTrue("Gate should be true once a cookie-triggered trace is scheduled",
+                PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+
+        ExternalAppender.unScheduleThreadTrace(sessionID, key);
+        assertFalse("Gate should be false again after explicit unschedule",
+                PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+    }
+
+    /*----------------------------------------------------------------------------*/
+    public void testExternalCookieTriggerGateResetsWhenTraceFiresWithNoExplicitUnschedule() throws Exception {
+        final String MON_NAME = "cookieGate.b";
+
+        FieldKey key = buildCookieTriggerKey(MON_NAME, "c2", "v2");
+        ExternalAppender.scheduleThreadTrace(sessionID, key);
+        assertTrue(PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+
+        fireWithMatchingCookie(MON_NAME, "c2", "v2");
+
+        assertFalse("Gate should drop as soon as the trace fires, before any poll/unschedule",
+                PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+
+        // Draining the (now completed) result should not change the already-correct gate.
+        Map<FieldKey, Object> map = ExternalAppender.getThreadTraceData(sessionID);
+        assertNotNull(map.get(key));
+        assertFalse(PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+    }
+
+    /*----------------------------------------------------------------------------*/
+    public void testExternalCookieTriggerGateNoDoubleDecrementWhenUnscheduledAfterFiring() throws Exception {
+        final String MON_A = "cookieGate.c1";
+        final String MON_B = "cookieGate.c2";
+
+        FieldKey keyA = buildCookieTriggerKey(MON_A, "ca", "va");
+        FieldKey keyB = buildCookieTriggerKey(MON_B, "cb", "vb");
+        ExternalAppender.scheduleThreadTrace(sessionID, keyA);
+        ExternalAppender.scheduleThreadTrace(sessionID, keyB);
+        assertTrue(PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+
+        // Fire A; it is now off PerfMon's internal queue (consumed) but is still sitting
+        // in ExternalAppender's scheduledThreadTraces map, since nobody has polled it yet.
+        fireWithMatchingCookie(MON_A, "ca", "va");
+        assertTrue("B is still pending, so the gate must stay true", PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+
+        // Unscheduling A now (after it already fired) must be a no-op for the counter --
+        // it must NOT double-decrement past what firing already did.
+        ExternalAppender.unScheduleThreadTrace(sessionID, keyA);
+        assertTrue("Gate must still be true -- B alone should still hold it open",
+                PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+
+        ExternalAppender.unScheduleThreadTrace(sessionID, keyB);
+        assertFalse("Gate should now be false -- nothing left pending", PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+    }
+
+    /*----------------------------------------------------------------------------*/
+    public void testExternalCookieTriggerGateResetsOnSessionDisconnect() throws Exception {
+        final String MON_NAME = "cookieGate.d";
+        String otherSessionID = ExternalAppender.connect();
+        try {
+            FieldKey key = buildCookieTriggerKey(MON_NAME, "cd", "vd");
+            ExternalAppender.scheduleThreadTrace(otherSessionID, key);
+            assertTrue(PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+        } finally {
+            ExternalAppender.disconnect(otherSessionID);
+        }
+
+        assertFalse("Disconnecting the session that scheduled the only pending trigger "
+                + "must release the gate, not leak it forever", PerfMon.hasHttpCookieBasedThreadTraceTriggers());
+    }
+
     @SnapShotProvider(type=SnapShotProvider.Type.INSTANCE_PER_MONITOR)
     public static final class SimpleInstancePerMonitorSnapShot {
     	@SnapShotCounter()

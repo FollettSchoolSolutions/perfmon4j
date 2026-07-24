@@ -103,10 +103,12 @@ public class ExternalThreadTraceConfig  extends ThreadTraceConfig  {
 			}
 		}
 		
-		public void unSchedule(ExternalThreadTraceConfig config) {
+		/** @return true if config was still queued (and so was actually removed) */
+		public boolean unSchedule(ExternalThreadTraceConfig config) {
 			synchronized (lockToken) {
-				list.remove(config);
+				boolean removed = list.remove(config);
 				pendingElements = list.size() > 0;
+				return removed;
 			}
 		}
 

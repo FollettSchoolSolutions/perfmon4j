@@ -491,6 +491,10 @@ public class PerfMon {
         	if (externalThreadTraceQueue.hasPendingElements()) {
         		ExternalThreadTraceConfig externalConfig = externalThreadTraceQueue.assignToThread();
 	        	if (externalConfig != null) {
+	        		// Fired/consumed -- no longer needs matching, so its trigger
+	        		// contribution comes off the gate immediately rather than waiting
+	        		// for the client to eventually poll/unschedule it.
+	        		adjustExternalTriggerCounts(externalConfig, -1);
 	        		long sqlTime = 0;
 	        		count.hasExternalThreadTrace = true;
 	        		
@@ -1329,36 +1333,74 @@ public class PerfMon {
         }
     }
     
-    // A count of the number of thread traces that have 
-    // Triggers assigned to them.  This is used to inform the 
+    // A count of the number of thread traces that have
+    // Triggers assigned to them.  This is used to inform the
     // HttpRequestFilter if it should push the HttpRequest parameter
     // onto the request processing thread.
     private static int requestBasedTriggerCount = 0;
-    
-    public static boolean  hasHttpRequestBasedThreadTraceTriggers() {
-    	return configured && (requestBasedTriggerCount > 0);
-    }
 
-    // A count of the number of thread traces that have 
-    // Triggers assigned to them.  This is used to inform the 
+    // A count of the number of thread traces that have
+    // Triggers assigned to them.  This is used to inform the
     // HttpRequestFilter if it should push the HttpSessionValidator
     // onto the request processing thread.
     private static int sessionBasedTriggerCount = 0;
-    
-    public static boolean  hasHttpSessionBasedThreadTraceTriggers() {
-    	return configured && (sessionBasedTriggerCount > 0);
-    }
-    
-    // A count of the number of thread traces that have 
-    // Triggers assigned to them.  This is used to inform the 
+
+    // A count of the number of thread traces that have
+    // Triggers assigned to them.  This is used to inform the
     // HttpRequestFilter if it should push the HttpCookieValidator
     // onto the request processing thread.
     private static int cookieBasedTriggerCount = 0;
-    
-    public static boolean  hasHttpCookieBasedThreadTraceTriggers() {
-    	return configured && (cookieBasedTriggerCount > 0);
+
+    // Dynamic counterparts to the three counts above, covering triggers attached to an
+    // on-demand scheduled ExternalThreadTraceConfig (RMI/JMX remote scheduling) rather than
+    // perfmonconfig.xml. Unlike the XML-driven ints (wholesale rebuilt on every configure()
+    // call), these are adjusted one config at a time as it's scheduled, unscheduled, or fires
+    // -- see adjustExternalTriggerCounts -- so they need real thread-safety: concurrent
+    // JMX/RMI management calls and concurrent request threads can all touch them at once.
+    private static final AtomicInteger externalRequestBasedTriggerCount = new AtomicInteger();
+    private static final AtomicInteger externalSessionBasedTriggerCount = new AtomicInteger();
+    private static final AtomicInteger externalCookieBasedTriggerCount = new AtomicInteger();
+
+    private static AtomicInteger externalTriggerCounterFor(ThreadTraceConfig.TriggerType type) {
+    	if (type == ThreadTraceConfig.TriggerType.HTTP_REQUEST_PARAM) {
+    		return externalRequestBasedTriggerCount;
+    	} else if (type == ThreadTraceConfig.TriggerType.HTTP_SESSION_PARAM) {
+    		return externalSessionBasedTriggerCount;
+    	} else if (type == ThreadTraceConfig.TriggerType.HTTP_COOKIE_PARAM) {
+    		return externalCookieBasedTriggerCount;
+    	}
+    	return null;
     }
-    
+
+    /**
+     * Applies delta (+1 on schedule, -1 on unschedule/fire) to the dynamic counter(s)
+     * matching config's triggers, if any. config.getTriggers() is null for a plain
+     * no-trigger scheduled trace (the common case), which is a no-op here.
+     */
+    private static void adjustExternalTriggerCounts(ExternalThreadTraceConfig config, int delta) {
+    	ThreadTraceConfig.Trigger[] triggers = config.getTriggers();
+    	if (triggers != null) {
+    		for (ThreadTraceConfig.Trigger t : triggers) {
+    			AtomicInteger counter = externalTriggerCounterFor(t.getType());
+    			if (counter != null) {
+    				counter.addAndGet(delta);
+    			}
+    		}
+    	}
+    }
+
+    public static boolean  hasHttpRequestBasedThreadTraceTriggers() {
+    	return (configured && (requestBasedTriggerCount > 0)) || externalRequestBasedTriggerCount.get() > 0;
+    }
+
+    public static boolean  hasHttpSessionBasedThreadTraceTriggers() {
+    	return (configured && (sessionBasedTriggerCount > 0)) || externalSessionBasedTriggerCount.get() > 0;
+    }
+
+    public static boolean  hasHttpCookieBasedThreadTraceTriggers() {
+    	return (configured && (cookieBasedTriggerCount > 0)) || externalCookieBasedTriggerCount.get() > 0;
+    }
+
     private static AppenderToMonitorMapper mapper = (new AppenderToMonitorMapper.Builder()).build();
     
     
@@ -1617,11 +1659,17 @@ public class PerfMon {
 
     public void scheduleExternalThreadTrace(ExternalThreadTraceConfig config) {
         externalThreadTraceQueue.schedule(config);
+        adjustExternalTriggerCounts(config, 1);
         clearCachedPerfMonTimer();
     }
-    
+
     public void unScheduleExternalThreadTrace(ExternalThreadTraceConfig config) {
-        externalThreadTraceQueue.unSchedule(config);
+        // Only decrement if config was actually still queued -- it may have already
+        // fired (and been decremented in start()) if the caller is unscheduling after
+        // the trace already captured but before the client polled/observed that.
+        if (externalThreadTraceQueue.unSchedule(config)) {
+        	adjustExternalTriggerCounts(config, -1);
+        }
         clearCachedPerfMonTimer();
     }
     

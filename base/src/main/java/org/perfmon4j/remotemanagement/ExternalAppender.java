@@ -374,6 +374,15 @@ public class ExternalAppender {
 			for (int i = 0; i < keys.length; i++) {
 				unSubscribe(keys[i]);
 			}
+			// Also release any thread traces still pending for this session -- without
+			// this a disconnected (or reaped-on-timeout) session's pending trace leaks
+			// into the owning PerfMon's queue forever, and if it carries a trigger, that
+			// trigger type's PerfMon.hasHttpXBasedThreadTraceTriggers() gate would stay
+			// permanently pinned true.
+			FieldKey pendingTraces[] = scheduledThreadTraces.keySet().toArray(new FieldKey[scheduledThreadTraces.size()]);
+			for (int i = 0; i < pendingTraces.length; i++) {
+				unScheduleThreadTrace(pendingTraces[i]);
+			}
 		}
 	}
 
