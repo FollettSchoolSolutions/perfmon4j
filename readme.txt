@@ -65,6 +65,19 @@ McHenry, IL 60050
   supported, now also settable ad hoc. Only one trigger may be attached per
   scheduled trace.
 
+- Under JBoss/WildFly (-Djava.util.logging.manager=org.jboss.logmanager.LogManager)
+  perfmon4j no longer guesses how long to wait for the JBoss LogManager. It now
+  waits until org.jboss.logmanager.LogManager is actually loadable before
+  registering its JMX MBeans or loading perfmonconfig.xml. This closes an
+  intermittent startup race in which perfmon4j could touch java.util.logging
+  first, causing the JVM to silently install the default LogManager instead of
+  JBoss's ("Could not load Logmanager" / WFLYLOG0078). If the LogManager never
+  becomes loadable within 60 seconds the configuration is loaded anyway, but MBean
+  registration is skipped. The system properties
+  Perfmon4j.configDelayMillisForJBossLogManager and
+  Perfmon4j.mbeanRegistrationDelayMillisForJBossLogManager now set a short extra
+  settle time after the LogManager is ready (default 500ms, was a fixed 5000ms delay).
+
 ** 2.2.2 - 07/09/26
 - Perfmon4j can now bind its internal logging to the JBoss Logging facade
   (org.jboss.logging) and to the Log4j 2.x API (org.apache.logging.log4j), in

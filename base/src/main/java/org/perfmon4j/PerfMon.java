@@ -54,6 +54,7 @@ import org.perfmon4j.util.ActiveThreadMonitor;
 import org.perfmon4j.util.EnhancedAppenderPatternHelper;
 import org.perfmon4j.util.FailSafeTimerTask;
 import org.perfmon4j.util.GlobalClassLoader;
+import org.perfmon4j.util.JBossLogManagerReadiness;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -170,26 +171,24 @@ public class PerfMon {
         // (WFLYLOG0078). Same root cause class (something touches java.util.logging
         // before jboss-modules is ready) and same mitigation as
         // XMLConfigurator.start()'s deferred initial config load for this exact
-        // JBoss/WildFly condition - delay registration to give the app server time to
-        // install its own LogManager first.
-        long mbeanRegistrationDelayMillis = 0;
-        if ("org.jboss.logmanager.LogManager".equals(System.getProperty("java.util.logging.manager"))) {
-        	System.err.println("org.jboss.logmanager.LogManager found. Will delay perfmon4j "
-        		+ "self-management/remote-management MBean registration to allow JBoss/WildFly "
-        		+ "time to load its LogManager first.");
-        	mbeanRegistrationDelayMillis = Integer.getInteger(
-        		"Perfmon4j.mbeanRegistrationDelayMillisForJBossLogManager", 5000).longValue();
-        }
-
-        if (mbeanRegistrationDelayMillis <= 0) {
-        	registerManagementMBeans();
+        // JBoss/WildFly condition - defer registration until org.jboss.logmanager.LogManager
+        // is actually loadable (see JBossLogManagerReadiness), rather than guessing a delay.
+        // If it never becomes loadable, skip registration: a missing MBean is better than
+        // pinning the wrong LogManager.
+        if (JBossLogManagerReadiness.isJBossLogManagerRequested()) {
+        	System.err.println("org.jboss.logmanager.LogManager found. Will defer perfmon4j "
+        		+ "self-management/remote-management MBean registration until JBoss/WildFly "
+        		+ "has made the LogManager available.");
+        	JBossLogManagerReadiness.runWhenReady("perfmon4j MBean registration",
+        		Integer.getInteger("Perfmon4j.mbeanRegistrationDelayMillisForJBossLogManager", 500).longValue(),
+        		false, new Runnable() {
+        			@Override
+        			public void run() {
+        				registerManagementMBeans();
+        			}
+        		});
         } else {
-        	utilityTimer.schedule(new FailSafeTimerTask() {
-        		@Override
-        		public void failSafeRun() {
-        			registerManagementMBeans();
-        		}
-        	}, mbeanRegistrationDelayMillis);
+        	registerManagementMBeans();
         }
 
     	if (USE_LEGACY_MONITOR_MAP_LOCK) {

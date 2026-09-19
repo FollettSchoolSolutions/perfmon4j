@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.perfmon4j.instrument.TransformerParams;
 import org.perfmon4j.util.FailSafeTimerTask;
+import org.perfmon4j.util.JBossLogManagerReadiness;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -141,21 +142,32 @@ public class XMLConfigurator implements Closeable {
         synchronized (LOCK_TOKEN) {
         	close();
             scheduledLoader = new PerfmonConfigLoaderRunnable(this, xmlFile, configFromClassloaderName, reloadSeconds);
-            long initialDelay = 500;
-            
+
             // Having problems with JBoss 7.x when loading the perfmon4j configuration, particularly
-            // when loading the Microsoft JDBCDriver.  When the driver is instantiated, it 
+            // when loading the Microsoft JDBCDriver.  When the driver is instantiated, it
             // attempts to log output and the jboss logger is not yet initialized.  This
             // causes JBoss to throw an exception, and then subsequently fails to start.
-            // To mitigate this issue we will delay 5 seconds before initial configuration
-            // of perfmon4j to give jboss time to initialize its log manager.
+            // To mitigate this issue we wait until org.jboss.logmanager.LogManager is actually
+            // loadable (see JBossLogManagerReadiness) before the initial configuration load.
+            // The wait happens on its own thread: premain must not block, since JBoss may only
+            // make the LogManager available after premain returns. If it never becomes loadable
+            // we load the configuration anyway - monitoring is worth more than the risk.
             //
-            if ("org.jboss.logmanager.LogManager".equals(System.getProperty("java.util.logging.manager"))) {
-            	System.err.println("org.jboss.logmanager.LogManager found.  Will delay initial load of perfmon4j config for 5 seconds to allow JBoss time to load the LogManager");
-            	initialDelay = Integer.getInteger("Perfmon4j.configDelayMillisForJBossLogManager", 5000).longValue();
+            if (JBossLogManagerReadiness.isJBossLogManagerRequested()) {
+            	System.err.println("org.jboss.logmanager.LogManager found.  Will delay initial load of perfmon4j config until JBoss has made the LogManager available");
+            	final PerfmonConfigLoaderRunnable loaderToSchedule = scheduledLoader;
+            	JBossLogManagerReadiness.runWhenReady("initial load of perfmon4j configuration",
+            		Integer.getInteger("Perfmon4j.configDelayMillisForJBossLogManager", 500).longValue(),
+            		true, new Runnable() {
+            			@Override
+            			public void run() {
+            				scheduleForRun(loaderToSchedule, 0);
+            			}
+            		});
+            } else {
+            	scheduleForRun(scheduledLoader, 500);
             }
-            scheduleForRun(scheduledLoader, initialDelay);
-            
+
             logger.logDebug(this + " started.");
         }
     }
