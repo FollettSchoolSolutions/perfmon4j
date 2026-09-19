@@ -147,10 +147,10 @@ public class XMLConfigurator implements Closeable {
             // when loading the Microsoft JDBCDriver.  When the driver is instantiated, it
             // attempts to log output and the jboss logger is not yet initialized.  This
             // causes JBoss to throw an exception, and then subsequently fails to start.
-            // To mitigate this issue we wait until org.jboss.logmanager.LogManager is actually
-            // loadable (see JBossLogManagerReadiness) before the initial configuration load.
+            // To mitigate this issue we wait until JBoss has loaded org.jboss.logmanager.LogManager
+            // (see JBossLogManagerReadiness) before the initial configuration load.
             // The wait happens on its own thread: premain must not block, since JBoss may only
-            // make the LogManager available after premain returns. If it never becomes loadable
+            // make the LogManager available after premain returns. If it never appears
             // we load the configuration anyway - monitoring is worth more than the risk.
             //
             if (JBossLogManagerReadiness.isJBossLogManagerRequested()) {

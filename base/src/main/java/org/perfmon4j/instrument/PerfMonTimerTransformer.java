@@ -61,6 +61,7 @@ import org.perfmon4j.instrument.jmx.JMXSnapShotProxyFactory;
 import org.perfmon4j.instrument.snapshot.SnapShotGenerator;
 import org.perfmon4j.remotemanagement.RemoteImpl;
 import org.perfmon4j.util.GlobalClassLoader;
+import org.perfmon4j.util.JBossLogManagerReadiness;
 import org.perfmon4j.util.Logger;
 import org.perfmon4j.util.LoggerFactory;
 import org.perfmon4j.util.MiscHelper;
@@ -686,6 +687,9 @@ public class PerfMonTimerTransformer implements ClassFileTransformer {
     public static void premain(String packageName,  Instrumentation inst)  {    	
     	try {
     		InstrumentationRecursionPreventor.setThreadInPremain(true);
+    		// Must be first: lets perfmon4j observe JBoss LogManager becoming available
+    		// (see JBossLogManagerReadiness) before anything can touch PerfMon.
+    		JBossLogManagerReadiness.setInstrumentation(inst);
     		doPremain(packageName, inst);
     	} finally {
     		InstrumentationRecursionPreventor.setThreadInPremain(false);

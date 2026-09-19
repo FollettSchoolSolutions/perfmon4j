@@ -67,13 +67,13 @@ McHenry, IL 60050
 
 - Under JBoss/WildFly (-Djava.util.logging.manager=org.jboss.logmanager.LogManager)
   perfmon4j no longer guesses how long to wait for the JBoss LogManager. It now
-  waits until org.jboss.logmanager.LogManager is actually loadable before
-  registering its JMX MBeans or loading perfmonconfig.xml. This closes an
-  intermittent startup race in which perfmon4j could touch java.util.logging
-  first, causing the JVM to silently install the default LogManager instead of
-  JBoss's ("Could not load Logmanager" / WFLYLOG0078). If the LogManager never
-  becomes loadable within 60 seconds the configuration is loaded anyway, but MBean
-  registration is skipped. The system properties
+  waits until JBoss has loaded org.jboss.logmanager.LogManager, and makes sure
+  java.util.logging initializes with it, before registering its JMX MBeans or
+  loading perfmonconfig.xml. This closes an intermittent startup race in which
+  perfmon4j could touch java.util.logging first, causing the JVM to silently
+  install the default LogManager instead of JBoss's ("Could not load Logmanager" /
+  WFLYLOG0078). If the LogManager never appears within 60 seconds the configuration
+  is loaded anyway, but MBean registration is skipped. The system properties
   Perfmon4j.configDelayMillisForJBossLogManager and
   Perfmon4j.mbeanRegistrationDelayMillisForJBossLogManager now set a short extra
   settle time after the LogManager is ready (default 500ms, was a fixed 5000ms delay).

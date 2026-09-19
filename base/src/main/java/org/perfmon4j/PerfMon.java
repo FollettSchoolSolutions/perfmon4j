@@ -172,8 +172,8 @@ public class PerfMon {
         // before jboss-modules is ready) and same mitigation as
         // XMLConfigurator.start()'s deferred initial config load for this exact
         // JBoss/WildFly condition - defer registration until org.jboss.logmanager.LogManager
-        // is actually loadable (see JBossLogManagerReadiness), rather than guessing a delay.
-        // If it never becomes loadable, skip registration: a missing MBean is better than
+        // has been loaded by JBoss (see JBossLogManagerReadiness), rather than guessing a delay.
+        // If it never appears, skip registration: a missing MBean is better than
         // pinning the wrong LogManager.
         if (JBossLogManagerReadiness.isJBossLogManagerRequested()) {
         	System.err.println("org.jboss.logmanager.LogManager found. Will defer perfmon4j "
