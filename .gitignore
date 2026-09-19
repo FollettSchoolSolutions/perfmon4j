@@ -35,3 +35,7 @@ quarkus2x/.classpath
 
 quarkus3x/.classpath
 .claude/settings.local.json
+
+# Local Gradle cache (docToolchain) and SDKMAN environment pin
+.gradle/
+.sdkmanrc
