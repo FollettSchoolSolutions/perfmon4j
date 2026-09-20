@@ -39,3 +39,13 @@ quarkus3x/.classpath
 # Local Gradle cache (docToolchain) and SDKMAN environment pin
 .gradle/
 .sdkmanrc
+
+.claude/skills/checkpoint/SKILL.md
+
+.claude/skills/git-side/SKILL.md
+
+.claude/skills/resume/SKILL.md
+
+.side-tracked
+
+RESUME.md
